@@ -1,68 +1,233 @@
-[8/4/2026 1:07 p. m.] Hermanish: @tailwind base;
-@tailwind components;
-@tailwind utilities;
+"use client";
 
-body {
-  background-color: white;
-  color: black;
-  margin: 0;
-  font-family: sans-serif;
-}
+import { useState } from "react";
 
-/* Esto arregla que el menú no se amontone en celulares */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-[8/4/2026 1:08 p. m.] Hermanish: export default function Home() {
-  const categorias = ["TODO", "RELOJES", "COLLARES", "LENTES", "BILLETERAS", "PULSERAS", "ANILLOS"];
-  const esqueleto = [1, 2, 3, 4, 5, 6];
+const categories = ["Todos", "Pulseras", "Collares", "Relojes", "Billeteras"];
+
+const products = [
+  {
+    id: 1,
+    name: "Pulsera Eslabón",
+    category: "Pulseras",
+    price: "Bs. 13.000",
+    img: "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=400&q=80",
+  },
+  {
+    id: 2,
+    name: "Collar Cruz Moderna",
+    category: "Collares",
+    price: "Bs. 13.000",
+    img: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400&q=80",
+  },
+  {
+    id: 3,
+    name: "Reloj Clásico Negro",
+    category: "Relojes",
+    price: "Bs. 28.000",
+    img: "https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=400&q=80",
+  },
+  {
+    id: 4,
+    name: "Billetera Minimalista",
+    category: "Billeteras",
+    price: "Bs. 18.000",
+    img: "https://images.unsplash.com/photo-1627123424574-724758594e93?w=400&q=80",
+  },
+  {
+    id: 5,
+    name: "Pulsera Trenzada",
+    category: "Pulseras",
+    price: "Bs. 11.000",
+    img: "https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=400&q=80",
+  },
+  {
+    id: 6,
+    name: "Collar Cadena Fina",
+    category: "Collares",
+    price: "Bs. 15.000",
+    img: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=400&q=80",
+  },
+  {
+    id: 7,
+    name: "Reloj Acero Mate",
+    category: "Relojes",
+    price: "Bs. 32.000",
+    img: "https://images.unsplash.com/photo-1542496658-e33a6d0d53f6?w=400&q=80",
+  },
+  {
+    id: 8,
+    name: "Tarjetero Cuero",
+    category: "Billeteras",
+    price: "Bs. 14.000",
+    img: "https://images.unsplash.com/photo-1556742031-c6961e8560b0?w=400&q=80",
+  },
+];
+
+export default function Home() {
+  const [activeCategory, setActiveCategory] = useState("Todos");
+  const [cart, setCart] = useState<number[]>([]);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const filtered =
+    activeCategory === "Todos"
+      ? products
+      : products.filter((p) => p.category === activeCategory);
+
+  const addToCart = (id: number) => {
+    setCart((prev) => [...prev, id]);
+  };
 
   return (
-    <div className="min-h-screen bg-white text-black">
-      {/* HEADER NEGRO PREMIUM */}
-      <header className="bg-black text-white p-5 sticky top-0 z-50">
-        <div className="flex justify-between items-center max-w-6xl mx-auto">
-          <div className="text-xl">☰</div>
-          <div className="text-center">
-            <h1 className="text-2xl font-black tracking-[0.3em]">MILTON</h1>
-            <p className="text-[9px] tracking-[0.2em] text-gray-400 -mt-1">ACCESORIOS</p>
-          </div>
-          <div className="text-xl">🛒</div>
-        </div>
-      </header>
-
-      {/* MENÚ DE CATEGORÍAS BLANCO */}
-      <nav className="border-b border-gray-100 bg-white sticky top-[80px] z-40">
-        <div className="flex gap-8 p-4 overflow-x-auto max-w-6xl mx-auto no-scrollbar">
-          {categorias.map((cat, i) => (
-            <span key={i} className={`text-[11px] font-bold tracking-widest whitespace-nowrap ${i === 0 ? 'text-black border-b-2 border-black' : 'text-gray-400'}`}>
-              {cat}
+    <>
+      {/* Navbar */}
+      <nav className="navbar">
+        <a href="#" className="navbar-logo">
+          Mi Tienda
+        </a>
+        <ul className="navbar-links">
+          <li><a href="#">Inicio</a></li>
+          <li><a href="#">Tienda</a></li>
+          <li><a href="#">Nosotros</a></li>
+          <li><a href="#">Contacto</a></li>
+        </ul>
+        <button
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            fontSize: "0.7rem",
+            letterSpacing: "0.15em",
+            textTransform: "uppercase",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            fontFamily: "inherit",
+          }}
+          onClick={() => setMenuOpen(!menuOpen)}
+        >
+          Carrito
+          {cart.length > 0 && (
+            <span
+              style={{
+                background: "#0a0a0a",
+                color: "#f5f5f0",
+                borderRadius: "50%",
+                width: "18px",
+                height: "18px",
+                fontSize: "0.6rem",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {cart.length}
             </span>
-          ))}
-        </div>
+          )}
+        </button>
       </nav>
 
-      {/* CUERPO CON GRILLA DE PRODUCTOS */}
-      <main className="p-4 max-w-6xl mx-auto">
-        <h2 className="text-sm font-black uppercase tracking-widest mb-6 py-4">Nuevos Ingresos</h2>
-        
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          {esqueleto.map((item) => (
-            <div key={item} className="flex flex-col">
-              <div className="aspect-[3/4] bg-gray-50 border border-gray-100 rounded-sm flex items-center justify-center mb-3">
-                <span className="text-[10px] text-gray-300 tracking-widest uppercase font-bold">Próximamente</span>
+      {/* Banner */}
+      <div className="shipping-banner">
+        ✦ Envío gratis a nivel nacional en todos los pedidos ✦
+      </div>
+
+      {/* Hero */}
+      <section className="hero">
+        <div>
+          <h1 className="hero-title">
+            Acce<br />
+            so<em>rios</em><br />
+            únicos.
+          </h1>
+        </div>
+        <div>
+          <p className="hero-subtitle">
+            Piezas diseñadas para quienes valoran el detalle.
+            Cada accesorio refleja carácter y autenticidad.
+            Envío a todo el país.
+          </p>
+        </div>
+      </section>
+
+      {/* Filtros */}
+      <div className="filters">
+        <span className="filter-label">Filtrar:</span>
+        {categories.map((cat) => (
+          <button
+            key={cat}
+            className={`filter-btn ${activeCategory === cat ? "active" : ""}`}
+            onClick={() => setActiveCategory(cat)}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+
+      {/* Productos */}
+      <section className="products-section">
+        <div className="products-header">
+          <h2 className="products-title">Colección</h2>
+          <span className="products-count">{filtered.length} productos</span>
+        </div>
+
+        <div className="products-grid">
+          {filtered.map((product, index) => (
+            <div key={product.id} className="product-card">
+              <span className="product-number">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <div className="product-img-wrapper">
+                <img src={product.img} alt={product.name} />
               </div>
-              <div className="h-3 w-3/4 bg-gray-100 rounded mb-2"></div>
-              <div className="h-4 w-1/4 bg-gray-200 rounded"></div>
+              <p className="product-category">{product.category}</p>
+              <h3 className="product-name">{product.name}</h3>
+              <p className="product-price">{product.price}</p>
+              <button
+                className="add-to-cart"
+                onClick={() => addToCart(product.id)}
+              >
+                Añadir al carrito
+              </button>
             </div>
           ))}
         </div>
-      </main>
+      </section>
 
-      {/* BOTÓN WHATSAPP */}
-      <div className="fixed bottom-6 right-6 bg-[#25D366] text-white p-4 rounded-full shadow-2xl font-bold">
-        WA
-      </div>
-    </div>
+      {/* Footer */}
+      <footer>
+        <div className="footer">
+          <div>
+            <div className="footer-brand">Mi<br />Tienda</div>
+            <p className="footer-tagline">
+              Accesorios exclusivos que reflejan<br />
+              confianza y autenticidad.<br />
+              Destaca con estilo.
+            </p>
+          </div>
+          <div>
+            <p className="footer-heading">Tienda</p>
+            <ul className="footer-links">
+              <li><a href="#">Pulseras</a></li>
+              <li><a href="#">Collares</a></li>
+              <li><a href="#">Relojes</a></li>
+              <li><a href="#">Billeteras</a></li>
+            </ul>
+          </div>
+          <div>
+            <p className="footer-heading">Info</p>
+            <ul className="footer-links">
+              <li><a href="#">Nosotros</a></li>
+              <li><a href="#">Envíos</a></li>
+              <li><a href="#">Devoluciones</a></li>
+              <li><a href="#">Contacto</a></li>
+            </ul>
+          </div>
+        </div>
+        <div className="footer-bottom">
+          <span className="footer-copy">© 2026 Mi Tienda. Todos los derechos reservados.</span>
+          <span className="footer-copy">Hecho con ♥</span>
+        </div>
+      </footer>
+    </>
   );
 }
