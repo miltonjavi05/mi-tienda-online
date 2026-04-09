@@ -296,13 +296,12 @@ export default function Home() {
     if(ready) loadProducts(); else { setProducts(DEMO); setLoading(false); }
 
     // Detectar ruta oculta del admin: URL que contenga #admin
-    const checkHash = () => {
-      if(window.location.hash==="#admin") setMainView("admin");
-    };
-    checkHash();
-    window.addEventListener("hashchange",checkHash);
-    return ()=>window.removeEventListener("hashchange",checkHash);
-  },[loadProducts]);
+   const checkPath = () => {
+  if(window.location.pathname==="/admin") setMainView("admin");
+};
+checkPath();
+window.addEventListener("popstate",checkPath);
+return ()=>window.removeEventListener("popstate",checkPath);
 
   // ── SHOP HELPERS ──────────────────────────────────────────────────────────
   // Qué categorías mostrar según el filtro activo
@@ -346,7 +345,7 @@ export default function Home() {
   const doLogout=()=>{
     setAdminLogged(false);setAdminEmail("");setAdminPwd("");
     setMainView("fokus");
-    window.history.pushState("","",window.location.pathname);
+    window.history.pushState("","","/");
   };
   const resetForm=()=>{
     setEditing(null);setFName("");setFDesc("");setFPrice("");setFCat("");
@@ -485,16 +484,14 @@ export default function Home() {
               </button>
               {lentesOpen && (
                 <div style={{paddingLeft:"1rem",borderBottom:"1px solid #eee"}}>
-                  {LENTES_SUBCATS.map(sub=>(
-                    <button key={sub} className="sub-cat-btn"
-                      onClick={()=>{setShopFilter(sub);setMenuOpen(false);setMainView("shop");}}
-                      style={{display:"block",width:"100%",background:"none",border:"none",padding:"0.65rem 0",textAlign:"left",fontSize:13,cursor:"pointer",fontFamily:"inherit",color:"#555",borderRadius:4}}>
-                      {catLabel(sub)}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+                  {(shopFilter==="LENTES" || LENTES_SUBCATS.includes(shopFilter as any)) &&
+  LENTES_SUBCATS.map(sub=>(
+    <button key={sub} onClick={()=>setShopFilter(sub)}
+      style={{background:"none",border:"none",borderBottom:shopFilter===sub?"2.5px solid #555":"2.5px solid transparent",padding:"0.8rem 0.85rem",fontSize:10,fontWeight:600,letterSpacing:1,cursor:"pointer",whiteSpace:"nowrap",color:shopFilter===sub?"#333":"#bbb",fontFamily:"inherit",flexShrink:0,borderLeft:"1px solid #f0f0f0"}}>
+      {catLabel(sub).toUpperCase()}
+    </button>
+  ))
+}
 
             {/* Resto de categorías */}
             {SHOP_CATS.filter(c=>c!=="LENTES").map(cat=>(
@@ -844,4 +841,5 @@ export default function Home() {
       )}
     </div>
   );
-}
+}// app/admin/page.tsx
+export { default } from "../page";
