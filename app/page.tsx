@@ -197,12 +197,12 @@ const TOTAL_NAV  = NAV_H + TABS_H;
 
 // ── Paleta oscura global ──────────────────────────────────────────────────────
 const C = {
-  bg:        "#0d0d0d",   // fondo principal
-  surface:   "#161616",   // tarjetas / secciones
-  border:    "#262626",   // bordes sutiles
-  text:      "#f0f0f0",   // texto principal
-  muted:     "#666",      // texto secundario
-  accent:    "#fff",      // blanco puro para énfasis
+  bg:        "#0d0d0d",
+  surface:   "#161616",
+  border:    "#262626",
+  text:      "#f0f0f0",
+  muted:     "#666",
+  accent:    "#fff",
   catActive: "#fff",
   catInact:  "#555",
 };
@@ -254,7 +254,6 @@ function catLabel(cat: string): string {
 export default function Home() {
   const [mainView,setMainView]         = useState<MainView>("fokus");
   const [shopFilter,setShopFilter]     = useState<ShopFilter>("TODO");
-  // lentesOpen ahora controla el dropdown en la barra de filtros
   const [lentesOpen,setLentesOpen]     = useState(false);
   const [cart,setCart]                 = useState<CartItem[]>([]);
   const [selectedProduct,setSelectedProduct] = useState<Product|null>(null);
@@ -431,6 +430,7 @@ export default function Home() {
         .nav-tab:hover{color:#fff!important}
         .nav-tab{transition:color 0.15s,border-color 0.15s}
         .lentes-subrow button:hover{color:#fff!important}
+        .lentes-subcat-pill:hover{background:#2a2a2a!important;color:#ddd!important}
         @media(max-width:480px){
           .products-grid-responsive{grid-template-columns:repeat(2,1fr)!important}
         }
@@ -586,15 +586,18 @@ export default function Home() {
       )}
 
       {/* ══════════════════════════════════════════════════════════════════════
-          FOKUS
+          FOKUS — HOME
       ══════════════════════════════════════════════════════════════════════ */}
       {mainView==="fokus" && (
         <main style={{paddingTop:mainPadTop,background:C.bg}}>
           <div style={{maxWidth:800,margin:"0 auto",padding:"3rem 1.5rem 5rem",textAlign:"center"}}>
             <img src="/favicon.png" alt="Fokus" width={72} height={72} style={{objectFit:"contain",marginBottom:"1.5rem"}}/>
             <h1 style={{fontSize:32,fontWeight:900,letterSpacing:6,marginBottom:"0.75rem",color:C.accent}}>FOKUS</h1>
-            <p style={{fontSize:15,color:C.muted,marginBottom:"2.5rem",lineHeight:1.7}}>
-              Accesorios de estilo para cada momento.<br/>Calidad, diseño y actitud.
+            <p style={{fontSize:15,color:C.muted,marginBottom:"0.4rem",lineHeight:1.7}}>
+              Cada detalle +
+            </p>
+            <p style={{fontSize:14,color:"#444",marginBottom:"2.5rem",lineHeight:1.7}}>
+              Calidad, diseño y actitud.
             </p>
             <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={{...S.darkBtn,fontSize:13,padding:"1rem 2.5rem",letterSpacing:2}}>
               VER TIENDA →
@@ -616,12 +619,6 @@ export default function Home() {
         <main style={{paddingTop:mainPadTop,background:C.bg}}>
 
           {/* ── Barra de filtros sticky ───────────────────────────────────── */}
-          {/*
-            La barra ahora tiene DOS capas:
-            1. Fila principal con TODO, LENTES▾, resto de cats
-            2. Si lentesOpen → fila secundaria con las subcats de lentes (debajo)
-            Ambas filas forman parte del mismo elemento sticky.
-          */}
           <div
             style={{
               position:"sticky",
@@ -654,26 +651,27 @@ export default function Home() {
                 TODO
               </button>
 
-              {/* LENTES toggle — abre/cierra la subrow */}
-              <button
-                onClick={()=>{
-                  const next = !lentesOpen;
-                  setLentesOpen(next);
-                  // Si se cierra sin haber elegido subcat, no cambiamos el filtro
-                  if(next) setShopFilter("LENTES");
-                }}
-                style={{
-                  background:"none",border:"none",
-                  borderBottom:isLentesActive?"2.5px solid #fff":"2.5px solid transparent",
-                  padding:"0 1rem",height:44,fontSize:11,fontWeight:700,letterSpacing:1.5,
-                  cursor:"pointer",whiteSpace:"nowrap",
-                  color:isLentesActive?C.catActive:C.catInact,
-                  fontFamily:"inherit",flexShrink:0,transition:"color 0.15s,border-color 0.15s",
-                  display:"flex",alignItems:"center",gap:4,
-                }}>
-                LENTES
-                <span style={{fontSize:9,transition:"transform 0.2s",display:"inline-block",transform:lentesOpen?"rotate(180deg)":"rotate(0deg)"}}>▼</span>
-              </button>
+              {/* LENTES toggle con subcats inline debajo del label */}
+              <div style={{position:"relative",flexShrink:0,display:"flex",flexDirection:"column"}}>
+                <button
+                  onClick={()=>{
+                    const next = !lentesOpen;
+                    setLentesOpen(next);
+                    if(next) setShopFilter("LENTES");
+                  }}
+                  style={{
+                    background:"none",border:"none",
+                    borderBottom:isLentesActive?"2.5px solid #fff":"2.5px solid transparent",
+                    padding:"0 1rem",height:44,fontSize:11,fontWeight:700,letterSpacing:1.5,
+                    cursor:"pointer",whiteSpace:"nowrap",
+                    color:isLentesActive?C.catActive:C.catInact,
+                    fontFamily:"inherit",flexShrink:0,transition:"color 0.15s,border-color 0.15s",
+                    display:"flex",alignItems:"center",gap:4,
+                  }}>
+                  LENTES
+                  <span style={{fontSize:9,transition:"transform 0.2s",display:"inline-block",transform:lentesOpen?"rotate(180deg)":"rotate(0deg)"}}>▼</span>
+                </button>
+              </div>
 
               {/* Separador */}
               <div style={{width:1,background:C.border,margin:"8px 0.25rem",flexShrink:0}}/>
@@ -696,29 +694,47 @@ export default function Home() {
               ))}
             </div>
 
-            {/* Fila secundaria: subcategorías de LENTES (se despliega hacia abajo) */}
+            {/* Subcategorías de LENTES — se expanden debajo como pills indentadas */}
             {lentesOpen && (
               <div
-                className="lentes-subrow cat-bar"
                 style={{
+                  background:"#0f0f0f",
+                  borderTop:`1px solid #1e1e1e`,
+                  padding:"0.6rem 1rem 0.7rem 1.2rem",
                   display:"flex",
-                  overflowX:"auto",
-                  scrollbarWidth:"none",
-                  borderTop:`1px solid ${C.border}`,
-                  background:"#161616",
-                  padding:"0 0.5rem",
+                  gap:"0.5rem",
+                  flexWrap:"wrap",
+                  alignItems:"center",
                 }}>
+                {/* Indicador visual de "dentro de LENTES" */}
+                <span style={{
+                  fontSize:9,
+                  color:"#444",
+                  letterSpacing:1.5,
+                  fontWeight:700,
+                  marginRight:"0.25rem",
+                  whiteSpace:"nowrap",
+                }}>
+                  LENTES /
+                </span>
                 {LENTES_SUBCATS.map(sub=>(
                   <button
                     key={sub}
-                    onClick={()=>{setShopFilter(sub);}}
+                    className="lentes-subcat-pill"
+                    onClick={()=>setShopFilter(sub)}
                     style={{
-                      background:"none",border:"none",
-                      borderBottom:shopFilter===sub?"2px solid #aaa":"2px solid transparent",
-                      padding:"0 0.9rem",height:38,fontSize:10,fontWeight:600,letterSpacing:1,
-                      cursor:"pointer",whiteSpace:"nowrap",
-                      color:shopFilter===sub?"#ddd":"#555",
-                      fontFamily:"inherit",flexShrink:0,transition:"color 0.15s,border-color 0.15s",
+                      background: shopFilter===sub ? "#fff" : "#1a1a1a",
+                      color:      shopFilter===sub ? "#111" : "#666",
+                      border:     shopFilter===sub ? "1px solid #fff" : `1px solid #2a2a2a`,
+                      padding:"0.3rem 0.85rem",
+                      borderRadius:20,
+                      fontSize:10,
+                      fontWeight:700,
+                      letterSpacing:1,
+                      cursor:"pointer",
+                      fontFamily:"inherit",
+                      whiteSpace:"nowrap",
+                      transition:"all 0.15s",
                     }}>
                     {catLabel(sub).toUpperCase()}
                   </button>
