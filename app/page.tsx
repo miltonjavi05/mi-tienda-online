@@ -191,17 +191,29 @@ const IcTT = ({s=22,c="#fff"}:{s?:number;c?:string}) => (
 );
 
 // ─── ESTILOS BASE ─────────────────────────────────────────────────────────────
-const NAV_H      = 56;   // altura fila logo
-const TABS_H     = 34;   // altura fila tabs
-const TOTAL_NAV  = NAV_H + TABS_H; // 90px total navbar
+const NAV_H      = 56;
+const TABS_H     = 34;
+const TOTAL_NAV  = NAV_H + TABS_H;
+
+// ── Paleta oscura global ──────────────────────────────────────────────────────
+const C = {
+  bg:        "#0d0d0d",   // fondo principal
+  surface:   "#161616",   // tarjetas / secciones
+  border:    "#262626",   // bordes sutiles
+  text:      "#f0f0f0",   // texto principal
+  muted:     "#666",      // texto secundario
+  accent:    "#fff",      // blanco puro para énfasis
+  catActive: "#fff",
+  catInact:  "#555",
+};
 
 const S = {
   iconBtn:  {background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:6} as React.CSSProperties,
-  darkBtn:  {background:"#111",color:"#fff",border:"none",padding:"0.85rem 1.5rem",fontSize:12,fontWeight:700,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",display:"inline-flex",alignItems:"center",gap:"0.5rem"} as React.CSSProperties,
-  qtyBtn:   {background:"none",border:"none",width:36,height:36,fontSize:20,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center"} as React.CSSProperties,
+  darkBtn:  {background:C.accent,color:"#111",border:"none",padding:"0.85rem 1.5rem",fontSize:12,fontWeight:700,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",display:"inline-flex",alignItems:"center",gap:"0.5rem"} as React.CSSProperties,
+  qtyBtn:   {background:"none",border:"none",width:36,height:36,fontSize:20,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",color:C.text} as React.CSSProperties,
   socialA:  {display:"flex",alignItems:"center",justifyContent:"center",width:38,height:38,borderRadius:"50%",background:"#222",textDecoration:"none"} as React.CSSProperties,
-  input:    {width:"100%",border:"1px solid #333",padding:"0.75rem 1rem",fontSize:14,outline:"none",fontFamily:"inherit",background:"#1c1c1c",color:"#fff",borderRadius:6,boxSizing:"border-box"} as React.CSSProperties,
-  adminBtn: {background:"#fff",color:"#111",border:"none",padding:"0.8rem 1.5rem",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",borderRadius:6,width:"100%"} as React.CSSProperties,
+  input:    {width:"100%",border:`1px solid ${C.border}`,padding:"0.75rem 1rem",fontSize:14,outline:"none",fontFamily:"inherit",background:"#1c1c1c",color:C.text,borderRadius:6,boxSizing:"border-box"} as React.CSSProperties,
+  adminBtn: {background:C.accent,color:"#111",border:"none",padding:"0.8rem 1.5rem",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",borderRadius:6,width:"100%"} as React.CSSProperties,
 };
 
 // ─── LAZY IMAGE ───────────────────────────────────────────────────────────────
@@ -209,7 +221,7 @@ function LazyImg({src,alt}:{src:string;alt:string}) {
   const [loaded,setLoaded]=useState(false);
   return (
     <div style={{position:"relative",width:"100%",height:"100%"}}>
-      {!loaded && <div style={{position:"absolute",inset:0,background:"linear-gradient(90deg,#eee 25%,#ddd 50%,#eee 75%)",backgroundSize:"200% 100%",animation:"shimmer 1.2s infinite"}}/>}
+      {!loaded && <div style={{position:"absolute",inset:0,background:"linear-gradient(90deg,#1e1e1e 25%,#2a2a2a 50%,#1e1e1e 75%)",backgroundSize:"200% 100%",animation:"shimmer 1.2s infinite"}}/>}
       <img src={optImg(src,400)} alt={alt} loading="lazy" decoding="async" onLoad={()=>setLoaded(true)}
         style={{width:"100%",height:"100%",objectFit:"cover",display:"block",opacity:loaded?1:0,transition:"opacity 0.3s"}}/>
     </div>
@@ -219,9 +231,9 @@ function LazyImg({src,alt}:{src:string;alt:string}) {
 function SkeletonCard() {
   return (
     <div>
-      <div style={{aspectRatio:"1",background:"linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%)",backgroundSize:"200% 100%",animation:"shimmer 1.2s infinite",marginBottom:"0.5rem",borderRadius:4}}/>
-      <div style={{height:13,background:"#f0f0f0",borderRadius:4,marginBottom:6,width:"72%"}}/>
-      <div style={{height:13,background:"#f0f0f0",borderRadius:4,width:"38%"}}/>
+      <div style={{aspectRatio:"1",background:"linear-gradient(90deg,#1e1e1e 25%,#2a2a2a 50%,#1e1e1e 75%)",backgroundSize:"200% 100%",animation:"shimmer 1.2s infinite",marginBottom:"0.5rem",borderRadius:4}}/>
+      <div style={{height:13,background:"#222",borderRadius:4,marginBottom:6,width:"72%"}}/>
+      <div style={{height:13,background:"#222",borderRadius:4,width:"38%"}}/>
     </div>
   );
 }
@@ -242,6 +254,7 @@ function catLabel(cat: string): string {
 export default function Home() {
   const [mainView,setMainView]         = useState<MainView>("fokus");
   const [shopFilter,setShopFilter]     = useState<ShopFilter>("TODO");
+  // lentesOpen ahora controla el dropdown en la barra de filtros
   const [lentesOpen,setLentesOpen]     = useState(false);
   const [cart,setCart]                 = useState<CartItem[]>([]);
   const [selectedProduct,setSelectedProduct] = useState<Product|null>(null);
@@ -254,7 +267,6 @@ export default function Home() {
   const [loading,setLoading]           = useState(true);
   const [fbReady,setFbReady]           = useState(false);
 
-  // ── Altura dinámica del navbar ─────────────────────────────────────────────
   const navRef = useRef<HTMLElement>(null);
   const [navHeight, setNavHeight] = useState(TOTAL_NAV);
 
@@ -265,7 +277,7 @@ export default function Home() {
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
-  },[mainView]);
+  },[mainView,lentesOpen,searchOpen]);
 
   // Admin
   const [adminLogged,setAdminLogged]   = useState(false);
@@ -306,15 +318,16 @@ export default function Home() {
     }
   },[loadProducts]);
 
-  // ── Re-medir navbar cuando cambia mainView ─────────────────────────────────
   useEffect(()=>{
     const t = setTimeout(()=>{
       if (navRef.current) setNavHeight(navRef.current.offsetHeight);
     }, 50);
     return () => clearTimeout(t);
-  },[mainView]);
+  },[mainView,lentesOpen,searchOpen]);
 
   // ── SHOP HELPERS ──────────────────────────────────────────────────────────
+  const isLentesSubcat = (LENTES_SUBCATS as readonly string[]).includes(shopFilter);
+
   const getVisibleCats = (): string[] => {
     if (shopFilter==="TODO") {
       return [...LENTES_SUBCATS, ...SHOP_CATS.filter(c=>c!=="LENTES")];
@@ -399,26 +412,25 @@ export default function Home() {
     adminSearch===""||p.name.toLowerCase().includes(adminSearch.toLowerCase())||p.category.toLowerCase().includes(adminSearch.toLowerCase())
   );
 
-  const isLentesActive = shopFilter==="LENTES" || (LENTES_SUBCATS as readonly string[]).includes(shopFilter);
+  const isLentesActive = shopFilter==="LENTES" || isLentesSubcat;
   const isShopView = mainView==="shop";
   const isAdmin    = mainView==="admin";
   const isCart     = mainView==="cart";
 
-  // Altura de búsqueda para offsets
-  const SEARCH_H = 53;
   const mainPadTop  = navHeight;
-  const catStickyTop = navHeight - 1; // -1 elimina el gap de 1px
+  const catStickyTop = navHeight - 1;
 
   // ─── RENDER ───────────────────────────────────────────────────────────────
   return (
-    <div style={{fontFamily:"'Helvetica Neue',Arial,sans-serif",background:"#fff",minHeight:"100vh",color:"#111"}}>
+    <div style={{fontFamily:"'Helvetica Neue',Arial,sans-serif",background:C.bg,minHeight:"100vh",color:C.text}}>
       <style>{`
         @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
         .cat-bar::-webkit-scrollbar{display:none}
         .prod-card:hover .prod-img{transform:scale(1.06)}
-        .sub-cat-btn:hover{background:#f5f5f5!important}
+        .sub-cat-btn:hover{background:#1e1e1e!important;color:#fff!important}
         .nav-tab:hover{color:#fff!important}
         .nav-tab{transition:color 0.15s,border-color 0.15s}
+        .lentes-subrow button:hover{color:#fff!important}
         @media(max-width:480px){
           .products-grid-responsive{grid-template-columns:repeat(2,1fr)!important}
         }
@@ -428,6 +440,8 @@ export default function Home() {
         @media(min-width:768px){
           .products-grid-responsive{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))!important}
         }
+        * { box-sizing: border-box; }
+        body { background: ${C.bg}; }
       `}</style>
 
       {/* ══ NAVBAR ══════════════════════════════════════════════════════════ */}
@@ -475,7 +489,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Fila 2: tabs de navegación (ocultas en admin) */}
+        {/* Fila 2: tabs (ocultas en admin) */}
         {!isAdmin && (
           <div style={{background:"#111",borderTop:"1px solid #1e1e1e",display:"flex",justifyContent:"center",gap:0,height:TABS_H}}>
             {([["fokus","FOKUS"],["shop","TIENDA"],["comunidad","COMUNIDAD"]] as const).map(([id,label])=>(
@@ -503,15 +517,15 @@ export default function Home() {
           </div>
         )}
 
-        {/* Barra de búsqueda — dentro del navbar para mantener el flow */}
+        {/* Barra de búsqueda */}
         {searchOpen && (
-          <div style={{background:"#fff",borderTop:"1px solid #ddd",padding:"0.6rem 1rem"}}>
+          <div style={{background:"#161616",borderTop:`1px solid ${C.border}`,padding:"0.6rem 1rem"}}>
             <input
               autoFocus
               value={searchQuery}
               onChange={e=>setSearchQuery(e.target.value)}
               placeholder="Buscar productos..."
-              style={{width:"100%",border:"1px solid #111",padding:"0.55rem 1rem",fontSize:14,outline:"none",fontFamily:"inherit",boxSizing:"border-box" as const}}
+              style={{width:"100%",border:`1px solid ${C.border}`,padding:"0.55rem 1rem",fontSize:14,outline:"none",fontFamily:"inherit",background:"#1c1c1c",color:C.text,boxSizing:"border-box"}}
             />
           </div>
         )}
@@ -520,28 +534,28 @@ export default function Home() {
       {/* ══ MENÚ LATERAL ════════════════════════════════════════════════════ */}
       {menuOpen && (
         <div style={{position:"fixed",inset:0,zIndex:300,display:"flex"}}>
-          <div onClick={()=>setMenuOpen(false)} style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)"}}/>
-          <div style={{position:"relative",background:"#fff",width:280,height:"100%",padding:"2rem 1.5rem",overflowY:"auto",display:"flex",flexDirection:"column"}}>
+          <div onClick={()=>setMenuOpen(false)} style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.7)"}}/>
+          <div style={{position:"relative",background:"#111",width:280,height:"100%",padding:"2rem 1.5rem",overflowY:"auto",display:"flex",flexDirection:"column"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"2rem"}}>
-              <span style={{fontWeight:900,fontSize:14,letterSpacing:2}}>TIENDA</span>
-              <button onClick={()=>setMenuOpen(false)} style={{background:"none",border:"none",cursor:"pointer",fontSize:18}}>✕</button>
+              <span style={{fontWeight:900,fontSize:14,letterSpacing:2,color:"#fff"}}>TIENDA</span>
+              <button onClick={()=>setMenuOpen(false)} style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"#888"}}>✕</button>
             </div>
 
             <div>
               <button
                 onClick={()=>setLentesOpen(o=>!o)}
-                style={{display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%",background:"none",border:"none",borderBottom:"1px solid #eee",padding:"0.9rem 0",textAlign:"left",fontSize:15,cursor:"pointer",fontFamily:"inherit",color:"#111"}}>
+                style={{display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%",background:"none",border:"none",borderBottom:`1px solid ${C.border}`,padding:"0.9rem 0",textAlign:"left",fontSize:15,cursor:"pointer",fontFamily:"inherit",color:"#e0e0e0"}}>
                 <span>Lentes</span>
-                <span style={{fontSize:10,color:"#aaa",transition:"transform 0.2s",transform:lentesOpen?"rotate(180deg)":"rotate(0deg)"}}>▼</span>
+                <span style={{fontSize:10,color:"#555",transition:"transform 0.2s",transform:lentesOpen?"rotate(180deg)":"rotate(0deg)"}}>▼</span>
               </button>
               {lentesOpen && (
-                <div style={{paddingLeft:"1rem",borderBottom:"1px solid #eee"}}>
+                <div style={{paddingLeft:"1rem",borderBottom:`1px solid ${C.border}`}}>
                   {LENTES_SUBCATS.map(sub=>(
                     <button
                       key={sub}
                       className="sub-cat-btn"
                       onClick={()=>{setShopFilter(sub);setMenuOpen(false);setMainView("shop");}}
-                      style={{display:"block",width:"100%",background:"none",border:"none",padding:"0.65rem 0",textAlign:"left",fontSize:13,cursor:"pointer",fontFamily:"inherit",color:"#555",borderRadius:4}}>
+                      style={{display:"block",width:"100%",background:"none",border:"none",padding:"0.65rem 0",textAlign:"left",fontSize:13,cursor:"pointer",fontFamily:"inherit",color:"#888",borderRadius:4}}>
                       {catLabel(sub)}
                     </button>
                   ))}
@@ -553,13 +567,13 @@ export default function Home() {
               <button
                 key={cat}
                 onClick={()=>{setShopFilter(cat);setMenuOpen(false);setMainView("shop");}}
-                style={{display:"block",width:"100%",background:"none",border:"none",borderBottom:"1px solid #eee",padding:"0.9rem 0",textAlign:"left",fontSize:15,cursor:"pointer",fontFamily:"inherit",color:"#111"}}>
+                style={{display:"block",width:"100%",background:"none",border:"none",borderBottom:`1px solid ${C.border}`,padding:"0.9rem 0",textAlign:"left",fontSize:15,cursor:"pointer",fontFamily:"inherit",color:"#e0e0e0"}}>
                 {catLabel(cat)}
               </button>
             ))}
 
             <div style={{marginTop:"1.5rem"}}>
-              <p style={{fontSize:10,letterSpacing:2,color:"#aaa",marginBottom:"1rem",fontWeight:700}}>SÍGUENOS</p>
+              <p style={{fontSize:10,letterSpacing:2,color:"#555",marginBottom:"1rem",fontWeight:700}}>SÍGUENOS</p>
               <div style={{display:"flex",gap:"0.75rem"}}>
                 <a href={SOCIAL.whatsapp}  target="_blank" rel="noreferrer" style={S.socialA}><IcWA s={18}/></a>
                 <a href={SOCIAL.instagram} target="_blank" rel="noreferrer" style={S.socialA}><IcIG s={18}/></a>
@@ -575,11 +589,11 @@ export default function Home() {
           FOKUS
       ══════════════════════════════════════════════════════════════════════ */}
       {mainView==="fokus" && (
-        <main style={{paddingTop:mainPadTop}}>
+        <main style={{paddingTop:mainPadTop,background:C.bg}}>
           <div style={{maxWidth:800,margin:"0 auto",padding:"3rem 1.5rem 5rem",textAlign:"center"}}>
             <img src="/favicon.png" alt="Fokus" width={72} height={72} style={{objectFit:"contain",marginBottom:"1.5rem"}}/>
-            <h1 style={{fontSize:32,fontWeight:900,letterSpacing:6,marginBottom:"0.75rem"}}>FOKUS</h1>
-            <p style={{fontSize:15,color:"#777",marginBottom:"2.5rem",lineHeight:1.7}}>
+            <h1 style={{fontSize:32,fontWeight:900,letterSpacing:6,marginBottom:"0.75rem",color:C.accent}}>FOKUS</h1>
+            <p style={{fontSize:15,color:C.muted,marginBottom:"2.5rem",lineHeight:1.7}}>
               Accesorios de estilo para cada momento.<br/>Calidad, diseño y actitud.
             </p>
             <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={{...S.darkBtn,fontSize:13,padding:"1rem 2.5rem",letterSpacing:2}}>
@@ -599,57 +613,118 @@ export default function Home() {
           TIENDA
       ══════════════════════════════════════════════════════════════════════ */}
       {isShopView && (
-        <main style={{paddingTop:mainPadTop}}>
+        <main style={{paddingTop:mainPadTop,background:C.bg}}>
+
           {/* ── Barra de filtros sticky ───────────────────────────────────── */}
+          {/*
+            La barra ahora tiene DOS capas:
+            1. Fila principal con TODO, LENTES▾, resto de cats
+            2. Si lentesOpen → fila secundaria con las subcats de lentes (debajo)
+            Ambas filas forman parte del mismo elemento sticky.
+          */}
           <div
-            className="cat-bar"
             style={{
               position:"sticky",
-              top:catStickyTop,       // ← dinámico, sin gap
+              top:catStickyTop,
               zIndex:100,
-              background:"#fff",
-              borderBottom:"1px solid #eee",
-              overflowX:"auto",
-              display:"flex",
-              scrollbarWidth:"none",
+              background:"#111",
+              borderBottom:`1px solid ${C.border}`,
             }}>
 
-            {/* TODO */}
-            <button
-              onClick={()=>setShopFilter("TODO")}
-              style={{background:"none",border:"none",borderBottom:shopFilter==="TODO"?"2.5px solid #111":"2.5px solid transparent",padding:"0 1rem",height:44,fontSize:11,fontWeight:700,letterSpacing:1.5,cursor:"pointer",whiteSpace:"nowrap",color:shopFilter==="TODO"?"#111":"#aaa",fontFamily:"inherit",flexShrink:0,transition:"color 0.15s,border-color 0.15s"}}>
-              TODO
-            </button>
+            {/* Fila principal */}
+            <div
+              className="cat-bar"
+              style={{
+                overflowX:"auto",
+                display:"flex",
+                scrollbarWidth:"none",
+              }}>
 
-            {/* LENTES toggle */}
-            <button
-              onClick={()=>setShopFilter(isLentesActive ? "TODO" : "LENTES")}
-              style={{background:"none",border:"none",borderBottom:isLentesActive?"2.5px solid #111":"2.5px solid transparent",padding:"0 1rem",height:44,fontSize:11,fontWeight:700,letterSpacing:1.5,cursor:"pointer",whiteSpace:"nowrap",color:isLentesActive?"#111":"#aaa",fontFamily:"inherit",flexShrink:0,transition:"color 0.15s,border-color 0.15s"}}>
-              LENTES {isLentesActive ? "▴" : "▾"}
-            </button>
-
-            {/* Sub-categorías lentes */}
-            {isLentesActive && LENTES_SUBCATS.map(sub=>(
+              {/* TODO */}
               <button
-                key={sub}
-                onClick={()=>setShopFilter(sub)}
-                style={{background:"none",border:"none",borderBottom:shopFilter===sub?"2.5px solid #555":"2.5px solid transparent",padding:"0 0.85rem",height:44,fontSize:10,fontWeight:600,letterSpacing:1,cursor:"pointer",whiteSpace:"nowrap",color:shopFilter===sub?"#333":"#bbb",fontFamily:"inherit",flexShrink:0,borderLeft:"1px solid #f0f0f0",transition:"color 0.15s,border-color 0.15s"}}>
-                {catLabel(sub).toUpperCase()}
+                onClick={()=>{setShopFilter("TODO");setLentesOpen(false);}}
+                style={{
+                  background:"none",border:"none",
+                  borderBottom:shopFilter==="TODO"?"2.5px solid #fff":"2.5px solid transparent",
+                  padding:"0 1rem",height:44,fontSize:11,fontWeight:700,letterSpacing:1.5,
+                  cursor:"pointer",whiteSpace:"nowrap",
+                  color:shopFilter==="TODO"?C.catActive:C.catInact,
+                  fontFamily:"inherit",flexShrink:0,transition:"color 0.15s,border-color 0.15s",
+                }}>
+                TODO
               </button>
-            ))}
 
-            {/* Separador */}
-            <div style={{width:1,background:"#e8e8e8",margin:"8px 0.25rem",flexShrink:0}}/>
-
-            {/* Resto de categorías */}
-            {SHOP_CATS.filter(c=>c!=="LENTES").map(cat=>(
+              {/* LENTES toggle — abre/cierra la subrow */}
               <button
-                key={cat}
-                onClick={()=>setShopFilter(cat)}
-                style={{background:"none",border:"none",borderBottom:shopFilter===cat?"2.5px solid #111":"2.5px solid transparent",padding:"0 1rem",height:44,fontSize:11,fontWeight:700,letterSpacing:1.5,cursor:"pointer",whiteSpace:"nowrap",color:shopFilter===cat?"#111":"#aaa",fontFamily:"inherit",flexShrink:0,transition:"color 0.15s,border-color 0.15s"}}>
-                {cat}
+                onClick={()=>{
+                  const next = !lentesOpen;
+                  setLentesOpen(next);
+                  // Si se cierra sin haber elegido subcat, no cambiamos el filtro
+                  if(next) setShopFilter("LENTES");
+                }}
+                style={{
+                  background:"none",border:"none",
+                  borderBottom:isLentesActive?"2.5px solid #fff":"2.5px solid transparent",
+                  padding:"0 1rem",height:44,fontSize:11,fontWeight:700,letterSpacing:1.5,
+                  cursor:"pointer",whiteSpace:"nowrap",
+                  color:isLentesActive?C.catActive:C.catInact,
+                  fontFamily:"inherit",flexShrink:0,transition:"color 0.15s,border-color 0.15s",
+                  display:"flex",alignItems:"center",gap:4,
+                }}>
+                LENTES
+                <span style={{fontSize:9,transition:"transform 0.2s",display:"inline-block",transform:lentesOpen?"rotate(180deg)":"rotate(0deg)"}}>▼</span>
               </button>
-            ))}
+
+              {/* Separador */}
+              <div style={{width:1,background:C.border,margin:"8px 0.25rem",flexShrink:0}}/>
+
+              {/* Resto de categorías */}
+              {SHOP_CATS.filter(c=>c!=="LENTES").map(cat=>(
+                <button
+                  key={cat}
+                  onClick={()=>{setShopFilter(cat);setLentesOpen(false);}}
+                  style={{
+                    background:"none",border:"none",
+                    borderBottom:shopFilter===cat?"2.5px solid #fff":"2.5px solid transparent",
+                    padding:"0 1rem",height:44,fontSize:11,fontWeight:700,letterSpacing:1.5,
+                    cursor:"pointer",whiteSpace:"nowrap",
+                    color:shopFilter===cat?C.catActive:C.catInact,
+                    fontFamily:"inherit",flexShrink:0,transition:"color 0.15s,border-color 0.15s",
+                  }}>
+                  {cat}
+                </button>
+              ))}
+            </div>
+
+            {/* Fila secundaria: subcategorías de LENTES (se despliega hacia abajo) */}
+            {lentesOpen && (
+              <div
+                className="lentes-subrow cat-bar"
+                style={{
+                  display:"flex",
+                  overflowX:"auto",
+                  scrollbarWidth:"none",
+                  borderTop:`1px solid ${C.border}`,
+                  background:"#161616",
+                  padding:"0 0.5rem",
+                }}>
+                {LENTES_SUBCATS.map(sub=>(
+                  <button
+                    key={sub}
+                    onClick={()=>{setShopFilter(sub);}}
+                    style={{
+                      background:"none",border:"none",
+                      borderBottom:shopFilter===sub?"2px solid #aaa":"2px solid transparent",
+                      padding:"0 0.9rem",height:38,fontSize:10,fontWeight:600,letterSpacing:1,
+                      cursor:"pointer",whiteSpace:"nowrap",
+                      color:shopFilter===sub?"#ddd":"#555",
+                      fontFamily:"inherit",flexShrink:0,transition:"color 0.15s,border-color 0.15s",
+                    }}>
+                    {catLabel(sub).toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Grid de productos */}
@@ -664,9 +739,9 @@ export default function Home() {
                 if(prods.length===0) return null;
                 return (
                   <div key={cat} style={{marginBottom:"3rem"}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1rem",borderBottom:"1px solid #eee",paddingBottom:"0.6rem"}}>
-                      <h2 style={{fontSize:15,fontWeight:900,letterSpacing:2,margin:0}}>{catLabel(cat).toUpperCase()}</h2>
-                      <button onClick={()=>setShopFilter(cat as ShopFilter)} style={{background:"none",border:"none",fontSize:12,color:"#bbb",cursor:"pointer",fontFamily:"inherit"}}>Ver solo esta</button>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1rem",borderBottom:`1px solid ${C.border}`,paddingBottom:"0.6rem"}}>
+                      <h2 style={{fontSize:15,fontWeight:900,letterSpacing:2,margin:0,color:C.accent}}>{catLabel(cat).toUpperCase()}</h2>
+                      <button onClick={()=>{setShopFilter(cat as ShopFilter);setLentesOpen(isLentesSubcat||(cat==="LENTES"));}} style={{background:"none",border:"none",fontSize:12,color:C.muted,cursor:"pointer",fontFamily:"inherit"}}>Ver solo esta</button>
                     </div>
                     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:"1rem"}} className="products-grid-responsive">
                       {prods.map(product=>(
@@ -675,13 +750,13 @@ export default function Home() {
                           className="prod-card"
                           onClick={()=>{setSelectedProduct(product);setModalQty(1);}}
                           style={{cursor:"pointer"}}>
-                          <div style={{background:"#f5f5f5",aspectRatio:"1",overflow:"hidden",marginBottom:"0.5rem",borderRadius:6}}>
+                          <div style={{background:C.surface,aspectRatio:"1",overflow:"hidden",marginBottom:"0.5rem",borderRadius:6}}>
                             <div className="prod-img" style={{width:"100%",height:"100%",transition:"transform 0.3s"}}>
                               <LazyImg src={product.img} alt={product.name}/>
                             </div>
                           </div>
-                          <p style={{margin:"0 0 3px",fontSize:13,lineHeight:1.3}}>{product.name}</p>
-                          <p style={{margin:0,fontSize:14,fontWeight:700}}>${product.price.toFixed(2)}</p>
+                          <p style={{margin:"0 0 3px",fontSize:13,lineHeight:1.3,color:C.text}}>{product.name}</p>
+                          <p style={{margin:0,fontSize:14,fontWeight:700,color:C.accent}}>${product.price.toFixed(2)}</p>
                         </div>
                       ))}
                     </div>
@@ -697,11 +772,11 @@ export default function Home() {
           COMUNIDAD
       ══════════════════════════════════════════════════════════════════════ */}
       {mainView==="comunidad" && (
-        <main style={{paddingTop:mainPadTop}}>
+        <main style={{paddingTop:mainPadTop,background:C.bg}}>
           <div style={{maxWidth:600,margin:"0 auto",padding:"4rem 1.5rem",textAlign:"center"}}>
             <p style={{fontSize:40,marginBottom:"1rem"}}>🤝</p>
-            <h2 style={{fontSize:22,fontWeight:900,letterSpacing:2,marginBottom:"1rem"}}>COMUNIDAD</h2>
-            <p style={{color:"#999",fontSize:15,lineHeight:1.7}}>Muy pronto podrás ver contenido, reviews y mucho más de la comunidad Fokus.</p>
+            <h2 style={{fontSize:22,fontWeight:900,letterSpacing:2,marginBottom:"1rem",color:C.accent}}>COMUNIDAD</h2>
+            <p style={{color:C.muted,fontSize:15,lineHeight:1.7}}>Muy pronto podrás ver contenido, reviews y mucho más de la comunidad Fokus.</p>
             <div style={{display:"flex",justifyContent:"center",gap:"1rem",marginTop:"2rem"}}>
               <a href={SOCIAL.instagram} target="_blank" rel="noreferrer" style={S.socialA}><IcIG s={20}/></a>
               <a href={SOCIAL.tiktok}    target="_blank" rel="noreferrer" style={S.socialA}><IcTT s={20}/></a>
@@ -714,41 +789,41 @@ export default function Home() {
           CARRITO
       ══════════════════════════════════════════════════════════════════════ */}
       {isCart && (
-        <main style={{paddingTop:mainPadTop}}>
+        <main style={{paddingTop:mainPadTop,background:C.bg}}>
           <div style={{maxWidth:700,margin:"0 auto",padding:"2rem 1rem 4rem"}}>
-            <h1 style={{fontSize:20,fontWeight:900,letterSpacing:2,marginBottom:"1.5rem"}}>CARRITO</h1>
+            <h1 style={{fontSize:20,fontWeight:900,letterSpacing:2,marginBottom:"1.5rem",color:C.accent}}>CARRITO</h1>
             {cart.length===0 ? (
-              <div style={{textAlign:"center",padding:"4rem 0",color:"#999"}}>
+              <div style={{textAlign:"center",padding:"4rem 0",color:C.muted}}>
                 <p style={{marginBottom:"1.5rem"}}>Tu carrito está vacío</p>
                 <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={S.darkBtn}>IR A LA TIENDA</button>
               </div>
             ) : (
               <>
                 {cart.map(item=>(
-                  <div key={item.product.id} style={{display:"grid",gridTemplateColumns:"1fr auto auto auto",gap:"0.75rem",padding:"1rem 0",borderBottom:"1px solid #eee",alignItems:"center"}}>
+                  <div key={item.product.id} style={{display:"grid",gridTemplateColumns:"1fr auto auto auto",gap:"0.75rem",padding:"1rem 0",borderBottom:`1px solid ${C.border}`,alignItems:"center"}}>
                     <div style={{display:"flex",alignItems:"center",gap:"0.75rem"}}>
-                      <button onClick={()=>updateQty(item.product.id,-item.qty)} style={{background:"none",border:"none",cursor:"pointer",color:"#ccc",fontSize:14,padding:0}}>✕</button>
+                      <button onClick={()=>updateQty(item.product.id,-item.qty)} style={{background:"none",border:"none",cursor:"pointer",color:C.muted,fontSize:14,padding:0}}>✕</button>
                       <img src={optImg(item.product.img,120)} alt={item.product.name} style={{width:52,height:52,objectFit:"cover",borderRadius:4}}/>
-                      <span style={{fontSize:13}}>{item.product.name}</span>
+                      <span style={{fontSize:13,color:C.text}}>{item.product.name}</span>
                     </div>
-                    <span style={{fontSize:14}}>${item.product.price.toFixed(2)}</span>
-                    <div style={{display:"flex",alignItems:"center",border:"1px solid #ddd"}}>
+                    <span style={{fontSize:14,color:C.text}}>${item.product.price.toFixed(2)}</span>
+                    <div style={{display:"flex",alignItems:"center",border:`1px solid ${C.border}`}}>
                       <button onClick={()=>updateQty(item.product.id,-1)} style={S.qtyBtn}>−</button>
-                      <span style={{padding:"0 0.5rem",fontSize:14}}>{item.qty}</span>
+                      <span style={{padding:"0 0.5rem",fontSize:14,color:C.text}}>{item.qty}</span>
                       <button onClick={()=>updateQty(item.product.id,1)} style={S.qtyBtn}>+</button>
                     </div>
-                    <span style={{fontSize:14,fontWeight:700}}>${(item.product.price*item.qty).toFixed(2)}</span>
+                    <span style={{fontSize:14,fontWeight:700,color:C.accent}}>${(item.product.price*item.qty).toFixed(2)}</span>
                   </div>
                 ))}
                 <div style={{display:"flex",gap:"0.75rem",marginTop:"1.5rem",flexWrap:"wrap"}}>
                   <button onClick={()=>setMainView("shop")} style={S.darkBtn}>← SEGUIR COMPRANDO</button>
-                  <button onClick={()=>setCart([])} style={{...S.darkBtn,background:"#fff",color:"#111",border:"1px solid #111"}}>Vaciar</button>
+                  <button onClick={()=>setCart([])} style={{...S.darkBtn,background:"transparent",color:C.text,border:`1px solid ${C.border}`}}>Vaciar</button>
                 </div>
-                <div style={{marginTop:"2rem",background:"#f8f8f8",padding:"1.5rem"}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:"0.75rem",fontSize:14}}><span>Subtotal</span><span>${totalPrice.toFixed(2)}</span></div>
-                  <div style={{borderTop:"1px solid #ddd",paddingTop:"0.75rem",display:"flex",justifyContent:"space-between",fontSize:16,fontWeight:700}}><span>Total</span><span>${totalPrice.toFixed(2)}</span></div>
+                <div style={{marginTop:"2rem",background:C.surface,padding:"1.5rem",borderRadius:8}}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:"0.75rem",fontSize:14,color:C.text}}><span>Subtotal</span><span>${totalPrice.toFixed(2)}</span></div>
+                  <div style={{borderTop:`1px solid ${C.border}`,paddingTop:"0.75rem",display:"flex",justifyContent:"space-between",fontSize:16,fontWeight:700,color:C.accent}}><span>Total</span><span>${totalPrice.toFixed(2)}</span></div>
                   <a href={waMsg()} target="_blank" rel="noreferrer"
-                    style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.75rem",marginTop:"1.5rem",background:"#25D366",color:"#fff",padding:"1rem",fontWeight:900,letterSpacing:1.5,fontSize:13,textDecoration:"none"}}>
+                    style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.75rem",marginTop:"1.5rem",background:"#25D366",color:"#fff",padding:"1rem",fontWeight:900,letterSpacing:1.5,fontSize:13,textDecoration:"none",borderRadius:6}}>
                     <IcWA s={20}/> FINALIZAR POR WHATSAPP
                   </a>
                 </div>
@@ -762,7 +837,7 @@ export default function Home() {
           ADMIN
       ══════════════════════════════════════════════════════════════════════ */}
       {isAdmin && (
-        <main style={{paddingTop:NAV_H,background:"#0f0f0f",minHeight:"100vh"}}>
+        <main style={{paddingTop:NAV_H,background:"#0a0a0a",minHeight:"100vh"}}>
           <div style={{maxWidth:680,margin:"0 auto",padding:"2rem 1rem 4rem"}}>
 
             {!adminLogged && (
@@ -881,23 +956,23 @@ export default function Home() {
 
       {/* ══ MODAL PRODUCTO ══════════════════════════════════════════════════ */}
       {selectedProduct && (
-        <div onClick={()=>setSelectedProduct(null)} style={{position:"fixed",inset:0,zIndex:400,background:"rgba(0,0,0,0.65)",display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-          <div onClick={e=>e.stopPropagation()} style={{background:"#fff",width:"100%",maxWidth:560,borderRadius:"16px 16px 0 0",padding:"1.5rem",maxHeight:"90vh",overflowY:"auto"}}>
+        <div onClick={()=>setSelectedProduct(null)} style={{position:"fixed",inset:0,zIndex:400,background:"rgba(0,0,0,0.8)",display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:"#161616",width:"100%",maxWidth:560,borderRadius:"16px 16px 0 0",padding:"1.5rem",maxHeight:"90vh",overflowY:"auto"}}>
             <div style={{display:"flex",justifyContent:"flex-end",marginBottom:"0.25rem"}}>
-              <button onClick={()=>setSelectedProduct(null)} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#ccc"}}>✕</button>
+              <button onClick={()=>setSelectedProduct(null)} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#555"}}>✕</button>
             </div>
-            <div style={{background:"#f5f5f5",aspectRatio:"4/3",overflow:"hidden",marginBottom:"1rem",borderRadius:10}}>
+            <div style={{background:C.surface,aspectRatio:"4/3",overflow:"hidden",marginBottom:"1rem",borderRadius:10}}>
               <LazyImg src={selectedProduct.img} alt={selectedProduct.name}/>
             </div>
-            <h2 style={{fontSize:20,fontWeight:900,margin:"0 0 0.4rem"}}>{selectedProduct.name}</h2>
-            {selectedProduct.description && <p style={{fontSize:14,color:"#666",margin:"0 0 0.75rem",lineHeight:1.6}}>{selectedProduct.description}</p>}
-            <p style={{fontSize:22,fontWeight:700,margin:"0 0 1.5rem"}}>${selectedProduct.price.toFixed(2)}</p>
-            <div style={{display:"flex",alignItems:"center",border:"1px solid #ddd",width:"fit-content",marginBottom:"1rem",borderRadius:4}}>
+            <h2 style={{fontSize:20,fontWeight:900,margin:"0 0 0.4rem",color:C.accent}}>{selectedProduct.name}</h2>
+            {selectedProduct.description && <p style={{fontSize:14,color:C.muted,margin:"0 0 0.75rem",lineHeight:1.6}}>{selectedProduct.description}</p>}
+            <p style={{fontSize:22,fontWeight:700,margin:"0 0 1.5rem",color:C.accent}}>${selectedProduct.price.toFixed(2)}</p>
+            <div style={{display:"flex",alignItems:"center",border:`1px solid ${C.border}`,width:"fit-content",marginBottom:"1rem",borderRadius:4}}>
               <button onClick={()=>setModalQty(Math.max(1,modalQty-1))} style={S.qtyBtn}>−</button>
-              <span style={{padding:"0 1rem",fontSize:16}}>{modalQty}</span>
+              <span style={{padding:"0 1rem",fontSize:16,color:C.text}}>{modalQty}</span>
               <button onClick={()=>setModalQty(modalQty+1)} style={S.qtyBtn}>+</button>
             </div>
-            <button onClick={()=>addToCart(selectedProduct,modalQty)} style={{...S.darkBtn,width:"100%",justifyContent:"center",fontSize:14,padding:"1rem"}}>
+            <button onClick={()=>addToCart(selectedProduct,modalQty)} style={{...S.darkBtn,width:"100%",justifyContent:"center",fontSize:14,padding:"1rem",borderRadius:6}}>
               Agregar al carrito
             </button>
           </div>
@@ -907,7 +982,7 @@ export default function Home() {
       {/* ══ WHATSAPP FLOTANTE ═══════════════════════════════════════════════ */}
       {!isAdmin && (
         <a href={SOCIAL.whatsapp} target="_blank" rel="noreferrer"
-          style={{position:"fixed",bottom:20,right:20,zIndex:150,background:"#25D366",borderRadius:"50%",width:52,height:52,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 20px rgba(0,0,0,0.3)",textDecoration:"none"}}>
+          style={{position:"fixed",bottom:20,right:20,zIndex:150,background:"#25D366",borderRadius:"50%",width:52,height:52,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 20px rgba(0,0,0,0.4)",textDecoration:"none"}}>
           <IcWA s={28}/>
         </a>
       )}
