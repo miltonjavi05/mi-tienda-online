@@ -280,18 +280,16 @@ export default function Home() {
     finally  { setLoading(false); }
   },[]);
 
+  // ── FIX: Detectar ruta /admin correctamente en Next.js ────────────────────
   useEffect(()=>{
     const ready = FIREBASE_CONFIG.projectId !== "TU_PROJECT_ID";
     setFbReady(ready);
     if(ready) loadProducts(); else { setProducts(DEMO); setLoading(false); }
 
-    // Detectar ruta /admin (sin numeral)
-    const checkPath = () => {
-      if(window.location.pathname==="/admin") setMainView("admin");
-    };
-    checkPath();
-    window.addEventListener("popstate",checkPath);
-    return ()=>window.removeEventListener("popstate",checkPath);
+    // Leer pathname en mount — funciona en App Router y Pages Router
+    if (typeof window !== "undefined" && window.location.pathname === "/admin") {
+      setMainView("admin");
+    }
   },[loadProducts]);
 
   // ── SHOP HELPERS ──────────────────────────────────────────────────────────
@@ -379,6 +377,7 @@ export default function Home() {
     adminSearch===""||p.name.toLowerCase().includes(adminSearch.toLowerCase())||p.category.toLowerCase().includes(adminSearch.toLowerCase())
   );
 
+  // ── FIX: isLentesActive incluye "LENTES" y todas sus subcats ─────────────
   const isLentesActive = shopFilter==="LENTES" || (LENTES_SUBCATS as readonly string[]).includes(shopFilter);
   const isShopView = mainView==="shop";
   const isAdmin    = mainView==="admin";
@@ -537,9 +536,9 @@ export default function Home() {
               TODO
             </button>
 
-            {/* LENTES — al hacer click muestra/oculta subcategorías */}
-            <button onClick={()=>setShopFilter("LENTES")}
-              style={{background:"none",border:"none",borderBottom:shopFilter==="LENTES"?"2.5px solid #111":"2.5px solid transparent",padding:"0.8rem 1rem",fontSize:11,fontWeight:700,letterSpacing:1.5,cursor:"pointer",whiteSpace:"nowrap",color:isLentesActive?"#111":"#aaa",fontFamily:"inherit",flexShrink:0}}>
+            {/* ── FIX: Toggle lentes — click de nuevo colapsa las subcategorías ── */}
+            <button onClick={()=>setShopFilter(isLentesActive ? "TODO" : "LENTES")}
+              style={{background:"none",border:"none",borderBottom:isLentesActive?"2.5px solid #111":"2.5px solid transparent",padding:"0.8rem 1rem",fontSize:11,fontWeight:700,letterSpacing:1.5,cursor:"pointer",whiteSpace:"nowrap",color:isLentesActive?"#111":"#aaa",fontFamily:"inherit",flexShrink:0}}>
               LENTES {isLentesActive ? "▴" : "▾"}
             </button>
 
