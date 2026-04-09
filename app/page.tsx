@@ -190,7 +190,11 @@ const IcTT = ({s=22,c="#fff"}:{s?:number;c?:string}) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill={c}><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
 );
 
-// ─── ESTILOS ──────────────────────────────────────────────────────────────────
+// ─── ESTILOS BASE ─────────────────────────────────────────────────────────────
+const NAV_H      = 56;   // altura fila logo
+const TABS_H     = 34;   // altura fila tabs
+const TOTAL_NAV  = NAV_H + TABS_H; // 90px total navbar
+
 const S = {
   iconBtn:  {background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:6} as React.CSSProperties,
   darkBtn:  {background:"#111",color:"#fff",border:"none",padding:"0.85rem 1.5rem",fontSize:12,fontWeight:700,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",display:"inline-flex",alignItems:"center",gap:"0.5rem"} as React.CSSProperties,
@@ -250,6 +254,19 @@ export default function Home() {
   const [loading,setLoading]           = useState(true);
   const [fbReady,setFbReady]           = useState(false);
 
+  // ── Altura dinámica del navbar ─────────────────────────────────────────────
+  const navRef = useRef<HTMLElement>(null);
+  const [navHeight, setNavHeight] = useState(TOTAL_NAV);
+
+  useEffect(()=>{
+    const update = () => {
+      if (navRef.current) setNavHeight(navRef.current.offsetHeight);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  },[mainView]);
+
   // Admin
   const [adminLogged,setAdminLogged]   = useState(false);
   const [adminEmail,setAdminEmail]     = useState("");
@@ -280,17 +297,22 @@ export default function Home() {
     finally  { setLoading(false); }
   },[]);
 
-  // ── FIX: Detectar ruta /admin correctamente en Next.js ────────────────────
   useEffect(()=>{
     const ready = FIREBASE_CONFIG.projectId !== "TU_PROJECT_ID";
     setFbReady(ready);
     if(ready) loadProducts(); else { setProducts(DEMO); setLoading(false); }
-
-    // Leer pathname en mount — funciona en App Router y Pages Router
     if (typeof window !== "undefined" && window.location.pathname === "/admin") {
       setMainView("admin");
     }
   },[loadProducts]);
+
+  // ── Re-medir navbar cuando cambia mainView ─────────────────────────────────
+  useEffect(()=>{
+    const t = setTimeout(()=>{
+      if (navRef.current) setNavHeight(navRef.current.offsetHeight);
+    }, 50);
+    return () => clearTimeout(t);
+  },[mainView]);
 
   // ── SHOP HELPERS ──────────────────────────────────────────────────────────
   const getVisibleCats = (): string[] => {
@@ -377,11 +399,15 @@ export default function Home() {
     adminSearch===""||p.name.toLowerCase().includes(adminSearch.toLowerCase())||p.category.toLowerCase().includes(adminSearch.toLowerCase())
   );
 
-  // ── FIX: isLentesActive incluye "LENTES" y todas sus subcats ─────────────
   const isLentesActive = shopFilter==="LENTES" || (LENTES_SUBCATS as readonly string[]).includes(shopFilter);
   const isShopView = mainView==="shop";
   const isAdmin    = mainView==="admin";
   const isCart     = mainView==="cart";
+
+  // Altura de búsqueda para offsets
+  const SEARCH_H = 53;
+  const mainPadTop  = navHeight;
+  const catStickyTop = navHeight - 1; // -1 elimina el gap de 1px
 
   // ─── RENDER ───────────────────────────────────────────────────────────────
   return (
@@ -391,64 +417,105 @@ export default function Home() {
         .cat-bar::-webkit-scrollbar{display:none}
         .prod-card:hover .prod-img{transform:scale(1.06)}
         .sub-cat-btn:hover{background:#f5f5f5!important}
-        .nav-tab:hover{color:#111!important}
+        .nav-tab:hover{color:#fff!important}
+        .nav-tab{transition:color 0.15s,border-color 0.15s}
+        @media(max-width:480px){
+          .products-grid-responsive{grid-template-columns:repeat(2,1fr)!important}
+        }
+        @media(min-width:481px) and (max-width:767px){
+          .products-grid-responsive{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))!important}
+        }
+        @media(min-width:768px){
+          .products-grid-responsive{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))!important}
+        }
       `}</style>
 
       {/* ══ NAVBAR ══════════════════════════════════════════════════════════ */}
-      <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:200,background:"#111",height:56,display:"flex",flexDirection:"column",justifyContent:"center"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 1rem",height:56}}>
+      <nav ref={navRef} style={{position:"fixed",top:0,left:0,right:0,zIndex:200,background:"#111"}}>
+        {/* Fila 1: logo + íconos */}
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 1rem",height:NAV_H,position:"relative"}}>
           <button onClick={()=>setMenuOpen(true)} style={S.iconBtn}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5">
               <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
             </svg>
           </button>
 
-          <button onClick={()=>setMainView("fokus")} style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:8,position:"absolute",left:"50%",transform:"translateX(-50%)"}}>
+          <button
+            onClick={()=>setMainView("fokus")}
+            style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:8,position:"absolute",left:"50%",transform:"translateX(-50%)",padding:"0 8px"}}>
             <img src="/favicon.png" alt="Fokus" width={28} height={28} style={{objectFit:"contain"}}/>
-            <span style={{color:"#fff",fontSize:17,fontWeight:900,letterSpacing:4}}>FOKUS</span>
+            <span style={{color:"#fff",fontSize:17,fontWeight:900,letterSpacing:4,whiteSpace:"nowrap"}}>FOKUS</span>
           </button>
 
           <div style={{display:"flex",gap:2,marginLeft:"auto"}}>
-            <button onClick={()=>{setSearchOpen(s=>!s);setSearchQuery("");}} style={S.iconBtn}>
+            <button
+              onClick={()=>{
+                const next = !searchOpen;
+                setSearchOpen(next);
+                setSearchQuery("");
+                if(next && mainView!=="shop") { setMainView("shop"); setShopFilter("TODO"); }
+              }}
+              style={S.iconBtn}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
                 <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
               </svg>
             </button>
             <button onClick={()=>setMainView("cart")} style={{...S.iconBtn,position:"relative"}}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
-                <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
+                <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+                <line x1="3" y1="6" x2="21" y2="6"/>
+                <path d="M16 10a4 4 0 01-8 0"/>
               </svg>
-              {totalItems>0&&<span style={{position:"absolute",top:2,right:2,background:"#fff",color:"#111",borderRadius:"50%",width:16,height:16,fontSize:9,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center"}}>{totalItems}</span>}
+              {totalItems>0&&(
+                <span style={{position:"absolute",top:2,right:2,background:"#fff",color:"#111",borderRadius:"50%",width:16,height:16,fontSize:9,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  {totalItems}
+                </span>
+              )}
             </button>
           </div>
         </div>
 
+        {/* Fila 2: tabs de navegación (ocultas en admin) */}
         {!isAdmin && (
-          <div style={{background:"#111",borderTop:"1px solid #222",display:"flex",justifyContent:"center",gap:0}}>
+          <div style={{background:"#111",borderTop:"1px solid #1e1e1e",display:"flex",justifyContent:"center",gap:0,height:TABS_H}}>
             {([["fokus","FOKUS"],["shop","TIENDA"],["comunidad","COMUNIDAD"]] as const).map(([id,label])=>(
-              <button key={id} className="nav-tab"
+              <button
+                key={id}
+                className="nav-tab"
                 onClick={()=>{ setMainView(id as MainView); if(id==="shop"){setShopFilter("TODO");} }}
                 style={{
-                  background:"none",border:"none",
+                  background:"none",
+                  border:"none",
                   borderBottom:mainView===id?"2px solid #fff":"2px solid transparent",
-                  padding:"0.6rem 1.5rem",fontSize:11,fontWeight:700,letterSpacing:2,
-                  cursor:"pointer",color:mainView===id?"#fff":"#666",fontFamily:"inherit",
-                  transition:"color 0.15s",whiteSpace:"nowrap",
+                  padding:"0 1.5rem",
+                  fontSize:11,
+                  fontWeight:700,
+                  letterSpacing:2,
+                  cursor:"pointer",
+                  color:mainView===id?"#fff":"#555",
+                  fontFamily:"inherit",
+                  whiteSpace:"nowrap",
+                  height:"100%",
                 }}>
                 {label}
               </button>
             ))}
           </div>
         )}
-      </nav>
 
-      {/* ══ BÚSQUEDA ════════════════════════════════════════════════════════ */}
-      {searchOpen && (
-        <div style={{position:"fixed",top:isAdmin?56:90,left:0,right:0,zIndex:190,background:"#fff",borderBottom:"1px solid #ddd",padding:"0.75rem 1rem"}}>
-          <input autoFocus value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} placeholder="Buscar productos..."
-            style={{width:"100%",border:"1px solid #111",padding:"0.6rem 1rem",fontSize:14,outline:"none",fontFamily:"inherit",boxSizing:"border-box"}}/>
-        </div>
-      )}
+        {/* Barra de búsqueda — dentro del navbar para mantener el flow */}
+        {searchOpen && (
+          <div style={{background:"#fff",borderTop:"1px solid #ddd",padding:"0.6rem 1rem"}}>
+            <input
+              autoFocus
+              value={searchQuery}
+              onChange={e=>setSearchQuery(e.target.value)}
+              placeholder="Buscar productos..."
+              style={{width:"100%",border:"1px solid #111",padding:"0.55rem 1rem",fontSize:14,outline:"none",fontFamily:"inherit",boxSizing:"border-box" as const}}
+            />
+          </div>
+        )}
+      </nav>
 
       {/* ══ MENÚ LATERAL ════════════════════════════════════════════════════ */}
       {menuOpen && (
@@ -461,7 +528,8 @@ export default function Home() {
             </div>
 
             <div>
-              <button onClick={()=>setLentesOpen(o=>!o)}
+              <button
+                onClick={()=>setLentesOpen(o=>!o)}
                 style={{display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%",background:"none",border:"none",borderBottom:"1px solid #eee",padding:"0.9rem 0",textAlign:"left",fontSize:15,cursor:"pointer",fontFamily:"inherit",color:"#111"}}>
                 <span>Lentes</span>
                 <span style={{fontSize:10,color:"#aaa",transition:"transform 0.2s",transform:lentesOpen?"rotate(180deg)":"rotate(0deg)"}}>▼</span>
@@ -469,7 +537,9 @@ export default function Home() {
               {lentesOpen && (
                 <div style={{paddingLeft:"1rem",borderBottom:"1px solid #eee"}}>
                   {LENTES_SUBCATS.map(sub=>(
-                    <button key={sub} className="sub-cat-btn"
+                    <button
+                      key={sub}
+                      className="sub-cat-btn"
                       onClick={()=>{setShopFilter(sub);setMenuOpen(false);setMainView("shop");}}
                       style={{display:"block",width:"100%",background:"none",border:"none",padding:"0.65rem 0",textAlign:"left",fontSize:13,cursor:"pointer",fontFamily:"inherit",color:"#555",borderRadius:4}}>
                       {catLabel(sub)}
@@ -480,7 +550,9 @@ export default function Home() {
             </div>
 
             {SHOP_CATS.filter(c=>c!=="LENTES").map(cat=>(
-              <button key={cat} onClick={()=>{setShopFilter(cat);setMenuOpen(false);setMainView("shop");}}
+              <button
+                key={cat}
+                onClick={()=>{setShopFilter(cat);setMenuOpen(false);setMainView("shop");}}
                 style={{display:"block",width:"100%",background:"none",border:"none",borderBottom:"1px solid #eee",padding:"0.9rem 0",textAlign:"left",fontSize:15,cursor:"pointer",fontFamily:"inherit",color:"#111"}}>
                 {catLabel(cat)}
               </button>
@@ -503,7 +575,7 @@ export default function Home() {
           FOKUS
       ══════════════════════════════════════════════════════════════════════ */}
       {mainView==="fokus" && (
-        <main style={{paddingTop:90}}>
+        <main style={{paddingTop:mainPadTop}}>
           <div style={{maxWidth:800,margin:"0 auto",padding:"3rem 1.5rem 5rem",textAlign:"center"}}>
             <img src="/favicon.png" alt="Fokus" width={72} height={72} style={{objectFit:"contain",marginBottom:"1.5rem"}}/>
             <h1 style={{fontSize:32,fontWeight:900,letterSpacing:6,marginBottom:"0.75rem"}}>FOKUS</h1>
@@ -527,36 +599,54 @@ export default function Home() {
           TIENDA
       ══════════════════════════════════════════════════════════════════════ */}
       {isShopView && (
-        <main style={{paddingTop:searchOpen?134:90}}>
-          {/* Barra de filtros */}
-          <div className="cat-bar" style={{position:"sticky",top:90,zIndex:100,background:"#fff",borderBottom:"1px solid #eee",overflowX:"auto",display:"flex",scrollbarWidth:"none"}}>
+        <main style={{paddingTop:mainPadTop}}>
+          {/* ── Barra de filtros sticky ───────────────────────────────────── */}
+          <div
+            className="cat-bar"
+            style={{
+              position:"sticky",
+              top:catStickyTop,       // ← dinámico, sin gap
+              zIndex:100,
+              background:"#fff",
+              borderBottom:"1px solid #eee",
+              overflowX:"auto",
+              display:"flex",
+              scrollbarWidth:"none",
+            }}>
+
             {/* TODO */}
-            <button onClick={()=>setShopFilter("TODO")}
-              style={{background:"none",border:"none",borderBottom:shopFilter==="TODO"?"2.5px solid #111":"2.5px solid transparent",padding:"0.8rem 1rem",fontSize:11,fontWeight:700,letterSpacing:1.5,cursor:"pointer",whiteSpace:"nowrap",color:shopFilter==="TODO"?"#111":"#aaa",fontFamily:"inherit",flexShrink:0,transition:"color 0.15s"}}>
+            <button
+              onClick={()=>setShopFilter("TODO")}
+              style={{background:"none",border:"none",borderBottom:shopFilter==="TODO"?"2.5px solid #111":"2.5px solid transparent",padding:"0 1rem",height:44,fontSize:11,fontWeight:700,letterSpacing:1.5,cursor:"pointer",whiteSpace:"nowrap",color:shopFilter==="TODO"?"#111":"#aaa",fontFamily:"inherit",flexShrink:0,transition:"color 0.15s,border-color 0.15s"}}>
               TODO
             </button>
 
-            {/* ── FIX: Toggle lentes — click de nuevo colapsa las subcategorías ── */}
-            <button onClick={()=>setShopFilter(isLentesActive ? "TODO" : "LENTES")}
-              style={{background:"none",border:"none",borderBottom:isLentesActive?"2.5px solid #111":"2.5px solid transparent",padding:"0.8rem 1rem",fontSize:11,fontWeight:700,letterSpacing:1.5,cursor:"pointer",whiteSpace:"nowrap",color:isLentesActive?"#111":"#aaa",fontFamily:"inherit",flexShrink:0}}>
+            {/* LENTES toggle */}
+            <button
+              onClick={()=>setShopFilter(isLentesActive ? "TODO" : "LENTES")}
+              style={{background:"none",border:"none",borderBottom:isLentesActive?"2.5px solid #111":"2.5px solid transparent",padding:"0 1rem",height:44,fontSize:11,fontWeight:700,letterSpacing:1.5,cursor:"pointer",whiteSpace:"nowrap",color:isLentesActive?"#111":"#aaa",fontFamily:"inherit",flexShrink:0,transition:"color 0.15s,border-color 0.15s"}}>
               LENTES {isLentesActive ? "▴" : "▾"}
             </button>
 
-            {/* Sub-categorías de lentes — solo visibles cuando lentes está activo */}
+            {/* Sub-categorías lentes */}
             {isLentesActive && LENTES_SUBCATS.map(sub=>(
-              <button key={sub} onClick={()=>setShopFilter(sub)}
-                style={{background:"none",border:"none",borderBottom:shopFilter===sub?"2.5px solid #555":"2.5px solid transparent",padding:"0.8rem 0.85rem",fontSize:10,fontWeight:600,letterSpacing:1,cursor:"pointer",whiteSpace:"nowrap",color:shopFilter===sub?"#333":"#bbb",fontFamily:"inherit",flexShrink:0,borderLeft:"1px solid #f0f0f0"}}>
+              <button
+                key={sub}
+                onClick={()=>setShopFilter(sub)}
+                style={{background:"none",border:"none",borderBottom:shopFilter===sub?"2.5px solid #555":"2.5px solid transparent",padding:"0 0.85rem",height:44,fontSize:10,fontWeight:600,letterSpacing:1,cursor:"pointer",whiteSpace:"nowrap",color:shopFilter===sub?"#333":"#bbb",fontFamily:"inherit",flexShrink:0,borderLeft:"1px solid #f0f0f0",transition:"color 0.15s,border-color 0.15s"}}>
                 {catLabel(sub).toUpperCase()}
               </button>
             ))}
 
             {/* Separador */}
-            <div style={{width:1,background:"#e8e8e8",margin:"0.5rem 0.25rem",flexShrink:0}}/>
+            <div style={{width:1,background:"#e8e8e8",margin:"8px 0.25rem",flexShrink:0}}/>
 
             {/* Resto de categorías */}
             {SHOP_CATS.filter(c=>c!=="LENTES").map(cat=>(
-              <button key={cat} onClick={()=>setShopFilter(cat)}
-                style={{background:"none",border:"none",borderBottom:shopFilter===cat?"2.5px solid #111":"2.5px solid transparent",padding:"0.8rem 1rem",fontSize:11,fontWeight:700,letterSpacing:1.5,cursor:"pointer",whiteSpace:"nowrap",color:shopFilter===cat?"#111":"#aaa",fontFamily:"inherit",flexShrink:0}}>
+              <button
+                key={cat}
+                onClick={()=>setShopFilter(cat)}
+                style={{background:"none",border:"none",borderBottom:shopFilter===cat?"2.5px solid #111":"2.5px solid transparent",padding:"0 1rem",height:44,fontSize:11,fontWeight:700,letterSpacing:1.5,cursor:"pointer",whiteSpace:"nowrap",color:shopFilter===cat?"#111":"#aaa",fontFamily:"inherit",flexShrink:0,transition:"color 0.15s,border-color 0.15s"}}>
                 {cat}
               </button>
             ))}
@@ -580,7 +670,11 @@ export default function Home() {
                     </div>
                     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:"1rem"}} className="products-grid-responsive">
                       {prods.map(product=>(
-                        <div key={product.id} className="prod-card" onClick={()=>{setSelectedProduct(product);setModalQty(1);}} style={{cursor:"pointer"}}>
+                        <div
+                          key={product.id}
+                          className="prod-card"
+                          onClick={()=>{setSelectedProduct(product);setModalQty(1);}}
+                          style={{cursor:"pointer"}}>
                           <div style={{background:"#f5f5f5",aspectRatio:"1",overflow:"hidden",marginBottom:"0.5rem",borderRadius:6}}>
                             <div className="prod-img" style={{width:"100%",height:"100%",transition:"transform 0.3s"}}>
                               <LazyImg src={product.img} alt={product.name}/>
@@ -603,7 +697,7 @@ export default function Home() {
           COMUNIDAD
       ══════════════════════════════════════════════════════════════════════ */}
       {mainView==="comunidad" && (
-        <main style={{paddingTop:90}}>
+        <main style={{paddingTop:mainPadTop}}>
           <div style={{maxWidth:600,margin:"0 auto",padding:"4rem 1.5rem",textAlign:"center"}}>
             <p style={{fontSize:40,marginBottom:"1rem"}}>🤝</p>
             <h2 style={{fontSize:22,fontWeight:900,letterSpacing:2,marginBottom:"1rem"}}>COMUNIDAD</h2>
@@ -620,7 +714,7 @@ export default function Home() {
           CARRITO
       ══════════════════════════════════════════════════════════════════════ */}
       {isCart && (
-        <main style={{paddingTop:90}}>
+        <main style={{paddingTop:mainPadTop}}>
           <div style={{maxWidth:700,margin:"0 auto",padding:"2rem 1rem 4rem"}}>
             <h1 style={{fontSize:20,fontWeight:900,letterSpacing:2,marginBottom:"1.5rem"}}>CARRITO</h1>
             {cart.length===0 ? (
@@ -665,10 +759,10 @@ export default function Home() {
       )}
 
       {/* ══════════════════════════════════════════════════════════════════════
-          ADMIN  — acceso vía /admin
+          ADMIN
       ══════════════════════════════════════════════════════════════════════ */}
       {isAdmin && (
-        <main style={{paddingTop:56,background:"#0f0f0f",minHeight:"100vh"}}>
+        <main style={{paddingTop:NAV_H,background:"#0f0f0f",minHeight:"100vh"}}>
           <div style={{maxWidth:680,margin:"0 auto",padding:"2rem 1rem 4rem"}}>
 
             {!adminLogged && (
