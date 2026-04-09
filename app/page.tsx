@@ -916,7 +916,7 @@ export default function Home() {
             </div>
             <p style={{fontSize:10,letterSpacing:6,color:"#333",fontWeight:700,marginBottom:"1rem"}}>ACCESORIOS</p>
             <h1 style={{fontSize:40,fontWeight:900,letterSpacing:8,marginBottom:"0.85rem",color:C.accent,lineHeight:1}}>FOKUS</h1>
-            <p style={{fontSize:14,color:"#444",marginBottom:"3rem",lineHeight:1.7,maxWidth:300,margin:"0 auto 3rem"}}>Cada detalle +.<br/>Calidad, diseño y actitud.</p>
+            <p style={{fontSize:14,color:"#444",marginBottom:"3rem",lineHeight:1.7,maxWidth:300,margin:"0 auto 3rem"}}>Cada detalle +<br/>Calidad, diseño y actitud.</p>
             <button
               onClick={()=>{setMainView("shop");setShopFilter("TODO");}}
               style={{...S.darkBtn,fontSize:11,padding:"1.1rem 2.8rem",letterSpacing:3,borderRadius:3}}
