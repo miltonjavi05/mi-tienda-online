@@ -25,9 +25,6 @@ const CLOUDINARY_PRESET = "fokus_products";
 // ═══════════════════════════════════════════════════════════════════════════════
 const ADMIN_EMAIL    = process.env.NEXT_PUBLIC_ADMIN_EMAIL    || "miltonjavi05@gmail.com";
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "2844242900";
-// ⚠️ El panel admin SOLO es accesible en:  /admin  (hash oculto)
-// No hay ningún botón visible en la tienda. Entra escribiendo /#admin en la URL
-// o navegando a: fokus-accesorios.vercel.app/#admin
 
 // ─── CONTACTO ─────────────────────────────────────────────────────────────────
 const WHATSAPP_NUMBER = "584243005733";
@@ -39,12 +36,10 @@ const SOCIAL = {
 };
 
 // ─── ESTRUCTURA DE CATEGORÍAS ─────────────────────────────────────────────────
-// Categorías de la tienda en orden de relevancia (sin sombreros)
 const SHOP_CATS = [
   "LENTES","RELOJES","COLLARES","PULSERAS","ANILLOS","ARETES","BILLETERAS",
 ] as const;
 
-// Sub-categorías de LENTES
 const LENTES_SUBCATS = [
   "LENTES·FOTOCROMATICOS",
   "LENTES·ANTI-LUZ-AZUL",
@@ -52,14 +47,12 @@ const LENTES_SUBCATS = [
   "LENTES·MOTORIZADOS",
 ] as const;
 
-// Todas las categorías (tienda + subcategorías de lentes)
 const ALL_SHOP_CATS = [
   "LENTES",
   ...LENTES_SUBCATS,
   "RELOJES","COLLARES","PULSERAS","ANILLOS","ARETES","BILLETERAS",
 ] as const;
 
-// Lo que muestra el selector del admin (todas las opciones)
 const ADMIN_CATS = [...ALL_SHOP_CATS] as string[];
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
@@ -74,12 +67,11 @@ interface Product {
 }
 interface CartItem { product: Product; qty: number; }
 
-// ─── NAV PRINCIPAL ────────────────────────────────────────────────────────────
 type MainView = "fokus" | "shop" | "comunidad" | "cart" | "admin";
 type ShopFilter = typeof ALL_SHOP_CATS[number] | "TODO" | typeof LENTES_SUBCATS[number];
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//  FIREBASE FIRESTORE REST API  (cero npm install)
+//  FIREBASE FIRESTORE REST API
 // ═══════════════════════════════════════════════════════════════════════════════
 const fsBase = () =>
   `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents`;
@@ -208,7 +200,7 @@ const S = {
   adminBtn: {background:"#fff",color:"#111",border:"none",padding:"0.8rem 1.5rem",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",borderRadius:6,width:"100%"} as React.CSSProperties,
 };
 
-// ─── LAZY IMAGE con skeleton ──────────────────────────────────────────────────
+// ─── LAZY IMAGE ───────────────────────────────────────────────────────────────
 function LazyImg({src,alt}:{src:string;alt:string}) {
   const [loaded,setLoaded]=useState(false);
   return (
@@ -220,7 +212,6 @@ function LazyImg({src,alt}:{src:string;alt:string}) {
   );
 }
 
-// ─── SKELETON ────────────────────────────────────────────────────────────────
 function SkeletonCard() {
   return (
     <div>
@@ -231,7 +222,6 @@ function SkeletonCard() {
   );
 }
 
-// ─── HELPER: etiqueta legible para categoría ─────────────────────────────────
 function catLabel(cat: string): string {
   const map: Record<string,string> = {
     "LENTES·FOTOCROMATICOS": "Fotocromaticos",
@@ -248,7 +238,7 @@ function catLabel(cat: string): string {
 export default function Home() {
   const [mainView,setMainView]         = useState<MainView>("fokus");
   const [shopFilter,setShopFilter]     = useState<ShopFilter>("TODO");
-  const [lentesOpen,setLentesOpen]     = useState(false);   // dropdown subcats lentes
+  const [lentesOpen,setLentesOpen]     = useState(false);
   const [cart,setCart]                 = useState<CartItem[]>([]);
   const [selectedProduct,setSelectedProduct] = useState<Product|null>(null);
   const [modalQty,setModalQty]         = useState(1);
@@ -295,19 +285,18 @@ export default function Home() {
     setFbReady(ready);
     if(ready) loadProducts(); else { setProducts(DEMO); setLoading(false); }
 
-    // Detectar ruta oculta del admin: URL que contenga #admin
-   const checkPath = () => {
-  if(window.location.pathname==="/admin") setMainView("admin");
-};
-checkPath();
-window.addEventListener("popstate",checkPath);
-return ()=>window.removeEventListener("popstate",checkPath);
+    // Detectar ruta /admin (sin numeral)
+    const checkPath = () => {
+      if(window.location.pathname==="/admin") setMainView("admin");
+    };
+    checkPath();
+    window.addEventListener("popstate",checkPath);
+    return ()=>window.removeEventListener("popstate",checkPath);
+  },[loadProducts]);
 
   // ── SHOP HELPERS ──────────────────────────────────────────────────────────
-  // Qué categorías mostrar según el filtro activo
   const getVisibleCats = (): string[] => {
     if (shopFilter==="TODO") {
-      // En "TODO" mostramos primero LENTES agrupando subcats, luego el resto
       return [...LENTES_SUBCATS, ...SHOP_CATS.filter(c=>c!=="LENTES")];
     }
     if (shopFilter==="LENTES") return [...LENTES_SUBCATS];
@@ -390,6 +379,7 @@ return ()=>window.removeEventListener("popstate",checkPath);
     adminSearch===""||p.name.toLowerCase().includes(adminSearch.toLowerCase())||p.category.toLowerCase().includes(adminSearch.toLowerCase())
   );
 
+  const isLentesActive = shopFilter==="LENTES" || (LENTES_SUBCATS as readonly string[]).includes(shopFilter);
   const isShopView = mainView==="shop";
   const isAdmin    = mainView==="admin";
   const isCart     = mainView==="cart";
@@ -408,20 +398,17 @@ return ()=>window.removeEventListener("popstate",checkPath);
       {/* ══ NAVBAR ══════════════════════════════════════════════════════════ */}
       <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:200,background:"#111",height:56,display:"flex",flexDirection:"column",justifyContent:"center"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 1rem",height:56}}>
-          {/* Hamburger — solo visible en móvil dentro de la tienda */}
           <button onClick={()=>setMenuOpen(true)} style={S.iconBtn}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5">
               <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
             </svg>
           </button>
 
-          {/* Logo centrado */}
-          <button onClick={()=>{setMainView("fokus");}} style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:8,position:"absolute",left:"50%",transform:"translateX(-50%)"}}>
+          <button onClick={()=>setMainView("fokus")} style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:8,position:"absolute",left:"50%",transform:"translateX(-50%)"}}>
             <img src="/favicon.png" alt="Fokus" width={28} height={28} style={{objectFit:"contain"}}/>
             <span style={{color:"#fff",fontSize:17,fontWeight:900,letterSpacing:4}}>FOKUS</span>
           </button>
 
-          {/* Íconos derecha */}
           <div style={{display:"flex",gap:2,marginLeft:"auto"}}>
             <button onClick={()=>{setSearchOpen(s=>!s);setSearchQuery("");}} style={S.iconBtn}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
@@ -437,7 +424,6 @@ return ()=>window.removeEventListener("popstate",checkPath);
           </div>
         </div>
 
-        {/* ── BARRA DE NAVEGACIÓN PRINCIPAL (3 secciones) ── */}
         {!isAdmin && (
           <div style={{background:"#111",borderTop:"1px solid #222",display:"flex",justifyContent:"center",gap:0}}>
             {([["fokus","FOKUS"],["shop","TIENDA"],["comunidad","COMUNIDAD"]] as const).map(([id,label])=>(
@@ -465,7 +451,7 @@ return ()=>window.removeEventListener("popstate",checkPath);
         </div>
       )}
 
-      {/* ══ MENÚ LATERAL (solo tienda) ══════════════════════════════════════ */}
+      {/* ══ MENÚ LATERAL ════════════════════════════════════════════════════ */}
       {menuOpen && (
         <div style={{position:"fixed",inset:0,zIndex:300,display:"flex"}}>
           <div onClick={()=>setMenuOpen(false)} style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)"}}/>
@@ -475,7 +461,6 @@ return ()=>window.removeEventListener("popstate",checkPath);
               <button onClick={()=>setMenuOpen(false)} style={{background:"none",border:"none",cursor:"pointer",fontSize:18}}>✕</button>
             </div>
 
-            {/* Lentes con subcategorías */}
             <div>
               <button onClick={()=>setLentesOpen(o=>!o)}
                 style={{display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%",background:"none",border:"none",borderBottom:"1px solid #eee",padding:"0.9rem 0",textAlign:"left",fontSize:15,cursor:"pointer",fontFamily:"inherit",color:"#111"}}>
@@ -484,16 +469,17 @@ return ()=>window.removeEventListener("popstate",checkPath);
               </button>
               {lentesOpen && (
                 <div style={{paddingLeft:"1rem",borderBottom:"1px solid #eee"}}>
-                  {(shopFilter==="LENTES" || LENTES_SUBCATS.includes(shopFilter as any)) &&
-  LENTES_SUBCATS.map(sub=>(
-    <button key={sub} onClick={()=>setShopFilter(sub)}
-      style={{background:"none",border:"none",borderBottom:shopFilter===sub?"2.5px solid #555":"2.5px solid transparent",padding:"0.8rem 0.85rem",fontSize:10,fontWeight:600,letterSpacing:1,cursor:"pointer",whiteSpace:"nowrap",color:shopFilter===sub?"#333":"#bbb",fontFamily:"inherit",flexShrink:0,borderLeft:"1px solid #f0f0f0"}}>
-      {catLabel(sub).toUpperCase()}
-    </button>
-  ))
-}
+                  {LENTES_SUBCATS.map(sub=>(
+                    <button key={sub} className="sub-cat-btn"
+                      onClick={()=>{setShopFilter(sub);setMenuOpen(false);setMainView("shop");}}
+                      style={{display:"block",width:"100%",background:"none",border:"none",padding:"0.65rem 0",textAlign:"left",fontSize:13,cursor:"pointer",fontFamily:"inherit",color:"#555",borderRadius:4}}>
+                      {catLabel(sub)}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
-            {/* Resto de categorías */}
             {SHOP_CATS.filter(c=>c!=="LENTES").map(cat=>(
               <button key={cat} onClick={()=>{setShopFilter(cat);setMenuOpen(false);setMainView("shop");}}
                 style={{display:"block",width:"100%",background:"none",border:"none",borderBottom:"1px solid #eee",padding:"0.9rem 0",textAlign:"left",fontSize:15,cursor:"pointer",fontFamily:"inherit",color:"#111"}}>
@@ -515,7 +501,7 @@ return ()=>window.removeEventListener("popstate",checkPath);
       )}
 
       {/* ══════════════════════════════════════════════════════════════════════
-          FOKUS  (página de inicio)
+          FOKUS
       ══════════════════════════════════════════════════════════════════════ */}
       {mainView==="fokus" && (
         <main style={{paddingTop:90}}>
@@ -543,7 +529,7 @@ return ()=>window.removeEventListener("popstate",checkPath);
       ══════════════════════════════════════════════════════════════════════ */}
       {isShopView && (
         <main style={{paddingTop:searchOpen?134:90}}>
-          {/* Filtros de subcategoría */}
+          {/* Barra de filtros */}
           <div className="cat-bar" style={{position:"sticky",top:90,zIndex:100,background:"#fff",borderBottom:"1px solid #eee",overflowX:"auto",display:"flex",scrollbarWidth:"none"}}>
             {/* TODO */}
             <button onClick={()=>setShopFilter("TODO")}
@@ -551,14 +537,14 @@ return ()=>window.removeEventListener("popstate",checkPath);
               TODO
             </button>
 
-            {/* LENTES con indicador de grupo */}
+            {/* LENTES — al hacer click muestra/oculta subcategorías */}
             <button onClick={()=>setShopFilter("LENTES")}
-              style={{background:"none",border:"none",borderBottom:shopFilter==="LENTES"?"2.5px solid #111":"2.5px solid transparent",padding:"0.8rem 1rem",fontSize:11,fontWeight:700,letterSpacing:1.5,cursor:"pointer",whiteSpace:"nowrap",color:shopFilter==="LENTES"?"#111":"#aaa",fontFamily:"inherit",flexShrink:0}}>
-              LENTES
+              style={{background:"none",border:"none",borderBottom:shopFilter==="LENTES"?"2.5px solid #111":"2.5px solid transparent",padding:"0.8rem 1rem",fontSize:11,fontWeight:700,letterSpacing:1.5,cursor:"pointer",whiteSpace:"nowrap",color:isLentesActive?"#111":"#aaa",fontFamily:"inherit",flexShrink:0}}>
+              LENTES {isLentesActive ? "▴" : "▾"}
             </button>
 
-            {/* Sub-categorías de lentes */}
-            {LENTES_SUBCATS.map(sub=>(
+            {/* Sub-categorías de lentes — solo visibles cuando lentes está activo */}
+            {isLentesActive && LENTES_SUBCATS.map(sub=>(
               <button key={sub} onClick={()=>setShopFilter(sub)}
                 style={{background:"none",border:"none",borderBottom:shopFilter===sub?"2.5px solid #555":"2.5px solid transparent",padding:"0.8rem 0.85rem",fontSize:10,fontWeight:600,letterSpacing:1,cursor:"pointer",whiteSpace:"nowrap",color:shopFilter===sub?"#333":"#bbb",fontFamily:"inherit",flexShrink:0,borderLeft:"1px solid #f0f0f0"}}>
                 {catLabel(sub).toUpperCase()}
@@ -615,7 +601,7 @@ return ()=>window.removeEventListener("popstate",checkPath);
       )}
 
       {/* ══════════════════════════════════════════════════════════════════════
-          COMUNIDAD  (placeholder — rellena después)
+          COMUNIDAD
       ══════════════════════════════════════════════════════════════════════ */}
       {mainView==="comunidad" && (
         <main style={{paddingTop:90}}>
@@ -680,13 +666,12 @@ return ()=>window.removeEventListener("popstate",checkPath);
       )}
 
       {/* ══════════════════════════════════════════════════════════════════════
-          ADMIN  (acceso solo vía /#admin — invisible para usuarios)
+          ADMIN  — acceso vía /admin
       ══════════════════════════════════════════════════════════════════════ */}
       {isAdmin && (
         <main style={{paddingTop:56,background:"#0f0f0f",minHeight:"100vh"}}>
           <div style={{maxWidth:680,margin:"0 auto",padding:"2rem 1rem 4rem"}}>
 
-            {/* LOGIN */}
             {!adminLogged && (
               <div style={{background:"#1a1a1a",borderRadius:14,padding:"2.5rem 2rem",maxWidth:400,margin:"2rem auto",boxShadow:"0 8px 40px rgba(0,0,0,0.5)"}}>
                 <h1 style={{color:"#fff",fontSize:22,fontWeight:900,marginBottom:"1.5rem",textAlign:"center"}}>Panel de administración</h1>
@@ -700,7 +685,6 @@ return ()=>window.removeEventListener("popstate",checkPath);
               </div>
             )}
 
-            {/* MENÚ ADMIN */}
             {adminLogged && adminSection==="menu" && (
               <div style={{background:"#1a1a1a",borderRadius:14,padding:"2.5rem 2rem",maxWidth:400,margin:"2rem auto",boxShadow:"0 8px 40px rgba(0,0,0,0.5)"}}>
                 <h1 style={{color:"#fff",fontSize:22,fontWeight:900,marginBottom:"0.4rem",textAlign:"center"}}>Panel de administración</h1>
@@ -712,7 +696,6 @@ return ()=>window.removeEventListener("popstate",checkPath);
               </div>
             )}
 
-            {/* GESTIÓN PRODUCTOS */}
             {adminLogged && adminSection==="products" && (
               <>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem"}}>
@@ -722,7 +705,6 @@ return ()=>window.removeEventListener("popstate",checkPath);
                   <button onClick={()=>{setAdminSection("menu");resetForm();}} style={{background:"none",border:"none",color:"#555",cursor:"pointer",fontSize:13,fontFamily:"inherit"}}>← Menú</button>
                 </div>
 
-                {/* FORMULARIO */}
                 <div style={{background:"#1a1a1a",borderRadius:10,padding:"1.5rem",marginBottom:"1.5rem",border:editing?"1px solid #333":"1px solid transparent"}}>
                   <p style={{color:"#555",fontSize:11,fontWeight:700,letterSpacing:1.5,margin:"0 0 1.25rem"}}>
                     {editing?`✏️ EDITANDO: ${editing.name}`:"➕ NUEVO PRODUCTO"}
@@ -732,7 +714,6 @@ return ()=>window.removeEventListener("popstate",checkPath);
                     <textarea placeholder="Descripción (opcional)" value={fDesc} onChange={e=>setFDesc(e.target.value)} rows={2} style={{...S.input,resize:"vertical",lineHeight:1.6}}/>
                     <input placeholder="Precio en USD *" type="number" min="0" step="0.01" value={fPrice} onChange={e=>setFPrice(e.target.value)} style={S.input}/>
 
-                    {/* Selector de categoría con subcategorías de lentes */}
                     <select value={fCat} onChange={e=>setFCat(e.target.value)} style={{...S.input,appearance:"auto"}}>
                       <option value="">Selecciona categoría *</option>
                       <optgroup label="── LENTES">
@@ -747,7 +728,6 @@ return ()=>window.removeEventListener("popstate",checkPath);
                       </optgroup>
                     </select>
 
-                    {/* Imagen */}
                     <div style={{background:"#151515",borderRadius:8,padding:"1rem",border:"1px dashed #333"}}>
                       <p style={{color:"#555",fontSize:11,letterSpacing:1.5,margin:"0 0 0.75rem",fontWeight:700}}>
                         IMAGEN {!editing&&"*"} — <span style={{color:"#444",fontWeight:400}}>Auto WebP via Cloudinary</span>
@@ -782,7 +762,6 @@ return ()=>window.removeEventListener("popstate",checkPath);
                   </div>
                 </div>
 
-                {/* LISTA PRODUCTOS */}
                 <div style={{background:"#1a1a1a",borderRadius:10,padding:"1.5rem"}}>
                   <p style={{color:"#555",fontSize:11,fontWeight:700,letterSpacing:1.5,margin:"0 0 1rem"}}>PRODUCTOS ({adminProds.length})</p>
                   <input placeholder="Buscar..." value={adminSearch} onChange={e=>setAdminSearch(e.target.value)} style={{...S.input,marginBottom:"1rem"}}/>
@@ -841,5 +820,4 @@ return ()=>window.removeEventListener("popstate",checkPath);
       )}
     </div>
   );
-}// app/admin/page.tsx
-export { default } from "../page";
+}
