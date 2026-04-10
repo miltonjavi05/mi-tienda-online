@@ -38,20 +38,93 @@ type MainView = "fokus"|"shop"|"comunidad"|"cart"|"admin";
 type ShopFilter = typeof SHOP_CATS[number]|typeof LENTES_SUBCATS[number]|"TODO";
 
 // ── Firestore REST ──────────────────────────────────────────────────────────
-const fsBase = ()=>`https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents`;
-type FsVal = {stringValue:string}|{doubleValue:number}|{integerValue:string}|{booleanValue:boolean}|{nullValue:null}|{arrayValue:{values?:FsVal[]}}|{mapValue:{fields?:Record<string,FsVal>}};
-function toFs(v:unknown):FsVal{if(v===null||v===undefined)return{nullValue:null};if(typeof v==="string")return{stringValue:v};if(typeof v==="number")return{doubleValue:v};if(typeof v==="boolean")return{booleanValue:v};if(Array.isArray(v))return{arrayValue:{values:v.map(toFs)}};if(typeof v==="object")return{mapValue:{fields:Object.fromEntries(Object.entries(v as Record<string,unknown>).map(([k,val])=>[k,toFs(val)]))}};return{stringValue:String(v)};}
-function fromFs(f:FsVal):unknown{if("stringValue" in f)return f.stringValue;if("doubleValue" in f)return f.doubleValue;if("integerValue" in f)return Number(f.integerValue);if("booleanValue" in f)return f.booleanValue;if("nullValue" in f)return null;if("arrayValue" in f)return((f as {arrayValue:{values?:FsVal[]}}).arrayValue.values||[]).map(fromFs);if("mapValue" in f){const fields=(f as {mapValue:{fields?:Record<string,FsVal>}}).mapValue.fields||{};return Object.fromEntries(Object.entries(fields).map(([k,v])=>[k,fromFs(v)]));}return null;}
-interface FsDoc{name:string;fields:Record<string,FsVal>;}
-function docToProduct(doc:FsDoc):Product{const f=doc.fields||{};return{id:doc.name.split("/").pop() as string,name:fromFs(f.name??{nullValue:null}) as string||"",category:((fromFs(f.category??{nullValue:null}) as string)||"").toUpperCase(),price:fromFs(f.price??{nullValue:null}) as number||0,img:fromFs(f.img??{nullValue:null}) as string||"",description:fromFs(f.description??{nullValue:null}) as string||"",createdAt:fromFs(f.createdAt??{nullValue:null}) as number||0};}
-async function fsGetAll():Promise<Product[]>{const r=await fetch(`${fsBase()}/products?pageSize=200`);if(!r.ok)throw new Error(await r.text());const d=await r.json() as{documents?:FsDoc[]};return(d.documents||[]).map(docToProduct);}
-async function fsAdd(p:Omit<Product,"id">):Promise<void>{const fields=Object.fromEntries(Object.entries({...p,createdAt:Date.now()}).map(([k,v])=>[k,toFs(v)]));const r=await fetch(`${fsBase()}/products`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fields})});if(!r.ok)throw new Error(await r.text());}
-async function fsUpdate(id:string,p:Partial<Omit<Product,"id">>):Promise<void>{const fields=Object.fromEntries(Object.entries(p).map(([k,v])=>[k,toFs(v)]));const mask=Object.keys(p).map(k=>`updateMask.fieldPaths=${encodeURIComponent(k)}`).join("&");const r=await fetch(`${fsBase()}/products/${id}?${mask}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({fields})});if(!r.ok)throw new Error(await r.text());}
-async function fsDelete(id:string):Promise<void>{await fetch(`${fsBase()}/products/${id}`,{method:"DELETE"});}
+const fsBase = ():string => `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents`;
 
-// ── Cloudinary ──────────────────────────────────────────────────────────────
-async function uploadImg(file:File):Promise<string>{const fd=new FormData();fd.append("file",file);fd.append("upload_preset",CLOUDINARY_PRESET);const r=await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`,{method:"POST",body:fd});if(!r.ok)throw new Error("Error subiendo imagen");return((await r.json()) as {secure_url:string}).secure_url;}
-function optImg(url:string,w=400):string{if(!url||!url.includes("cloudinary.com"))return url;return url.replace("/upload/",`/upload/w_${w},q_auto,f_webp,dpr_auto/`);}
+type FsVal =
+  | {stringValue:string}
+  | {doubleValue:number}
+  | {integerValue:string}
+  | {booleanValue:boolean}
+  | {nullValue:null}
+  | {arrayValue:{values?:FsVal[]}}
+  | {mapValue:{fields?:Record<string,FsVal>}};
+
+function toFs(v:unknown):FsVal {
+  if(v===null||v===undefined) return {nullValue:null};
+  if(typeof v==="string") return {stringValue:v};
+  if(typeof v==="number") return {doubleValue:v};
+  if(typeof v==="boolean") return {booleanValue:v};
+  if(Array.isArray(v)) return {arrayValue:{values:v.map(toFs)}};
+  if(typeof v==="object") return {mapValue:{fields:Object.fromEntries(Object.entries(v as Record<string,unknown>).map(([k,val])=>[k,toFs(val)]))}};
+  return {stringValue:String(v)};
+}
+
+function fromFs(f:FsVal):unknown {
+  if("stringValue" in f) return f.stringValue;
+  if("doubleValue" in f) return f.doubleValue;
+  if("integerValue" in f) return Number(f.integerValue);
+  if("booleanValue" in f) return f.booleanValue;
+  if("nullValue" in f) return null;
+  if("arrayValue" in f) return ((f as {arrayValue:{values?:FsVal[]}}).arrayValue.values||[]).map(fromFs);
+  if("mapValue" in f) {
+    const fields=(f as {mapValue:{fields?:Record<string,FsVal>}}).mapValue.fields||{};
+    return Object.fromEntries(Object.entries(fields).map(([k,v])=>[k,fromFs(v)]));
+  }
+  return null;
+}
+
+interface FsDoc { name:string; fields:Record<string,FsVal>; }
+
+function docToProduct(doc:FsDoc):Product {
+  const f=doc.fields||{};
+  return {
+    id:doc.name.split("/").pop() as string,
+    name:fromFs(f.name??{nullValue:null}) as string||"",
+    category:((fromFs(f.category??{nullValue:null}) as string)||"").toUpperCase(),
+    price:fromFs(f.price??{nullValue:null}) as number||0,
+    img:fromFs(f.img??{nullValue:null}) as string||"",
+    description:fromFs(f.description??{nullValue:null}) as string||"",
+    createdAt:fromFs(f.createdAt??{nullValue:null}) as number||0,
+  };
+}
+
+async function fsGetAll():Promise<Product[]> {
+  const r=await fetch(`${fsBase()}/products?pageSize=200`);
+  if(!r.ok) throw new Error(await r.text());
+  const d=await r.json() as {documents?:FsDoc[]};
+  return (d.documents||[]).map(docToProduct);
+}
+
+async function fsAdd(p:Omit<Product,"id">):Promise<void> {
+  const fields=Object.fromEntries(Object.entries({...p,createdAt:Date.now()}).map(([k,v])=>[k,toFs(v)]));
+  const r=await fetch(`${fsBase()}/products`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fields})});
+  if(!r.ok) throw new Error(await r.text());
+}
+
+async function fsUpdate(id:string,p:Partial<Omit<Product,"id">>):Promise<void> {
+  const fields=Object.fromEntries(Object.entries(p).map(([k,v])=>[k,toFs(v)]));
+  const mask=Object.keys(p).map(k=>`updateMask.fieldPaths=${encodeURIComponent(k)}`).join("&");
+  const r=await fetch(`${fsBase()}/products/${id}?${mask}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({fields})});
+  if(!r.ok) throw new Error(await r.text());
+}
+
+async function fsDelete(id:string):Promise<void> {
+  await fetch(`${fsBase()}/products/${id}`,{method:"DELETE"});
+}
+
+async function uploadImg(file:File):Promise<string> {
+  const fd=new FormData();
+  fd.append("file",file);
+  fd.append("upload_preset",CLOUDINARY_PRESET);
+  const r=await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`,{method:"POST",body:fd});
+  if(!r.ok) throw new Error("Error subiendo imagen");
+  return ((await r.json()) as {secure_url:string}).secure_url;
+}
+
+function optImg(url:string,w:number=400):string {
+  if(!url||!url.includes("cloudinary.com")) return url;
+  return url.replace("/upload/",`/upload/w_${w},q_auto,f_webp,dpr_auto/`);
+}
 
 // ── Demo data ───────────────────────────────────────────────────────────────
 const DEMO:Product[]=[
@@ -82,147 +155,119 @@ const S={
   darkBtn:{background:C.accent,color:"#080808",border:"none",padding:"0.9rem 1.8rem",fontSize:11,fontWeight:800,letterSpacing:2.5,cursor:"pointer",fontFamily:"inherit",display:"inline-flex",alignItems:"center",gap:"0.5rem",WebkitTapHighlightColor:"transparent"} as React.CSSProperties,
   qtyBtn:{background:"none",border:"none",width:40,height:40,fontSize:20,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",color:C.text,WebkitTapHighlightColor:"transparent"} as React.CSSProperties,
   socialA:{display:"flex",alignItems:"center",justifyContent:"center",width:38,height:38,borderRadius:"50%",background:"#141414",textDecoration:"none",border:"1px solid #1e1e1e"} as React.CSSProperties,
-  input:{width:"100%",border:"1px solid #1e1e1e",padding:"0.75rem 1rem",fontSize:14,outline:"none",fontFamily:"inherit",background:"#141414",color:C.text,borderRadius:8,boxSizing:"border-box"} as React.CSSProperties,
+  input:{width:"100%",border:"1px solid #1e1e1e",padding:"0.75rem 1rem",fontSize:14,outline:"none",fontFamily:"inherit",background:"#141414",color:C.text,borderRadius:8,boxSizing:"border-box" as const},
   adminBtn:{background:C.accent,color:"#080808",border:"none",padding:"0.8rem 1.5rem",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit",borderRadius:8,width:"100%",WebkitTapHighlightColor:"transparent"} as React.CSSProperties,
 };
 
-function catLabel(cat:string):string{const m:Record<string,string>={"LENTES·FOTOCROMATICOS":"Fotocromaticos","LENTES·ANTI-LUZ-AZUL":"Anti Luz Azul","LENTES·SOL":"De Sol","LENTES·MOTORIZADOS":"Para Motos"};return m[cat]??(cat[0]+cat.slice(1).toLowerCase());}
+function catLabel(cat:string):string {
+  const m:Record<string,string>={"LENTES·FOTOCROMATICOS":"Fotocromaticos","LENTES·ANTI-LUZ-AZUL":"Anti Luz Azul","LENTES·SOL":"De Sol","LENTES·MOTORIZADOS":"Para Motos"};
+  return m[cat]??(cat[0]+cat.slice(1).toLowerCase());
+}
 
 // ── LazyImg ─────────────────────────────────────────────────────────────────
-function LazyImg({src,alt,w=400}:{src:string;alt:string;w?:number}){
+function LazyImg({src,alt,w=400}:{src:string;alt:string;w?:number}) {
   const [loaded,setLoaded]=useState(false);
   const [inView,setInView]=useState(false);
   const ref=useRef<HTMLDivElement>(null);
   useEffect(()=>{
-    const el=ref.current;if(!el)return;
-    const obs=new IntersectionObserver(([e])=>{if(e.isIntersecting){setInView(true);obs.disconnect();}},{rootMargin:"400px"});
-    obs.observe(el);return()=>obs.disconnect();
+    const el=ref.current; if(!el) return;
+    const obs=new IntersectionObserver(([e])=>{if(e.isIntersecting){setInView(true);obs.disconnect();}},{rootMargin:"600px"});
+    obs.observe(el); return ()=>obs.disconnect();
   },[]);
   return(
-    <div ref={ref} style={{position:"relative",width:"100%",height:"100%",background:"#111"}}>
-      {!loaded&&<div style={{position:"absolute",inset:0,background:"linear-gradient(110deg,#111 25%,#1a1a1a 50%,#111 75%)",backgroundSize:"200% 100%",animation:"sk 1.4s linear infinite"}}/>}
+    <div ref={ref} style={{position:"relative",width:"100%",height:"100%",background:"#0e0e0e",pointerEvents:"none"}}>
+      {!loaded&&<div style={{position:"absolute",inset:0,background:"linear-gradient(110deg,#0e0e0e 25%,#161616 50%,#0e0e0e 75%)",backgroundSize:"200% 100%",animation:"sk 1.4s linear infinite"}}/>}
       {inView&&<img src={optImg(src,w)} alt={alt} loading="lazy" decoding="async" onLoad={()=>setLoaded(true)}
-        style={{width:"100%",height:"100%",objectFit:"cover",display:"block",opacity:loaded?1:0,transition:"opacity 0.3s"}}/>}
+        style={{width:"100%",height:"100%",objectFit:"cover",display:"block",opacity:loaded?1:0,transition:"opacity 0.25s",pointerEvents:"none",userSelect:"none",WebkitUserSelect:"none"}}/>}
     </div>
   );
 }
 
-// ── Skeleton row ─────────────────────────────────────────────────────────────
-function SkeletonHRow(){
+// ── Skeleton ─────────────────────────────────────────────────────────────────
+function SkeletonGrid() {
   return(
-    <div style={{display:"flex",gap:"0.75rem",padding:"0 1rem",overflowX:"hidden"}}>
-      {[0,1].map(i=>(
-        <div key={i} style={{flexShrink:0,width:"42vw",maxWidth:175}}>
-          <div style={{aspectRatio:"1",borderRadius:12,background:"linear-gradient(110deg,#111 25%,#1a1a1a 50%,#111 75%)",backgroundSize:"200% 100%",animation:"sk 1.4s linear infinite",marginBottom:8}}/>
-          <div style={{height:10,borderRadius:4,background:"#141414",width:"70%",marginBottom:5}}/>
-          <div style={{height:10,borderRadius:4,background:"#141414",width:"40%"}}/>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.75rem",padding:"0 1rem"}}>
+      {[0,1,2,3].map(i=>(
+        <div key={i}>
+          <div style={{aspectRatio:"1",borderRadius:14,background:"linear-gradient(110deg,#0e0e0e 25%,#161616 50%,#0e0e0e 75%)",backgroundSize:"200% 100%",animation:"sk 1.4s linear infinite",marginBottom:8}}/>
+          <div style={{height:9,borderRadius:4,background:"#111",width:"65%",marginBottom:4}}/>
+          <div style={{height:9,borderRadius:4,background:"#111",width:"35%"}}/>
         </div>
       ))}
     </div>
   );
 }
 
-// ══════════════════════════════════════════════════════════════════════════
-//  WA BUTTON — free drag, snaps to nearest vertical edge on release
-// ══════════════════════════════════════════════════════════════════════════
-function DraggableWA(){
+// ── DraggableWA ───────────────────────────────────────────────────────────────
+function DraggableWA() {
   const BTN=52, MARGIN=14;
-  const [cx,setCx]=useState(-1);
-  const [cy,setCy]=useState(-1);
-  const [isSnapped,setIsSnapped]=useState(false);
+  const [pos,setPos]=useState({x:-1,y:-1});
+  const [snapped,setSnapped]=useState(false);
   const [pressed,setPressed]=useState(false);
   const drag=useRef({active:false,moved:false,ox:0,oy:0,sx:0,sy:0});
-  const divRef=useRef<HTMLDivElement>(null);
 
-  // initialize
   useEffect(()=>{
-    const x=window.innerWidth-MARGIN-BTN/2;
-    const y=window.innerHeight*0.75;
-    setCx(x);setCy(y);setIsSnapped(true);
+    setPos({x:window.innerWidth-MARGIN-BTN/2,y:window.innerHeight*0.75});
+    setSnapped(true);
   },[]);
 
-  const getSnapped=(px:number,py:number):{x:number,y:number}=>{
+  const snap=(px:number,py:number):{x:number;y:number}=>{
     const W=window.innerWidth,H=window.innerHeight;
-    const clampY=Math.max(BTN/2+MARGIN,Math.min(H-BTN/2-MARGIN,py));
-    const snapX=px<W/2?BTN/2+MARGIN:W-BTN/2-MARGIN;
-    return{x:snapX,y:clampY};
+    return{x:px<W/2?BTN/2+MARGIN:W-BTN/2-MARGIN,y:Math.max(BTN/2+MARGIN,Math.min(H-BTN/2-MARGIN,py))};
   };
 
   const onPD=useCallback((e:React.PointerEvent)=>{
     e.currentTarget.setPointerCapture(e.pointerId);
-    const d=drag.current;
-    d.active=true;d.moved=false;
-    d.ox=e.clientX;d.oy=e.clientY;
-    d.sx=cx;d.sy=cy;
-    setPressed(true);setIsSnapped(false);
-  },[cx,cy]);
+    const d=drag.current;d.active=true;d.moved=false;d.ox=e.clientX;d.oy=e.clientY;d.sx=pos.x;d.sy=pos.y;
+    setPressed(true);setSnapped(false);
+  },[pos]);
 
   const onPM=useCallback((e:React.PointerEvent)=>{
-    const d=drag.current;if(!d.active)return;
+    const d=drag.current; if(!d.active) return;
     const dx=e.clientX-d.ox,dy=e.clientY-d.oy;
-    if(!d.moved&&Math.hypot(dx,dy)<5)return;
+    if(!d.moved&&Math.hypot(dx,dy)<5) return;
     d.moved=true;
     const W=window.innerWidth,H=window.innerHeight;
-    setCx(Math.max(BTN/2,Math.min(W-BTN/2,d.sx+dx)));
-    setCy(Math.max(BTN/2,Math.min(H-BTN/2,d.sy+dy)));
+    setPos({x:Math.max(BTN/2,Math.min(W-BTN/2,d.sx+dx)),y:Math.max(BTN/2,Math.min(H-BTN/2,d.sy+dy))});
   },[]);
 
   const onPU=useCallback(()=>{
-    const d=drag.current;d.active=false;setPressed(false);
-    // snap to nearest edge
-    setCx(p=>{setCy(q=>{const s=getSnapped(p,q);setCx(s.x);setCy(s.y);setIsSnapped(true);return s.y;});return p;});
-  },[]);
+    drag.current.active=false; setPressed(false);
+    setPos(p=>{const s=snap(p.x,p.y);setSnapped(true);return s;});
+  },[]);// eslint-disable-line react-hooks/exhaustive-deps
 
   const onClick=useCallback((e:React.MouseEvent)=>{
     if(drag.current.moved){e.preventDefault();return;}
     window.open(SOCIAL.whatsapp,"_blank","noreferrer");
   },[]);
 
-  if(cx<0)return null;
-
+  if(pos.x<0) return null;
   return(
-    <div ref={divRef}
-      onPointerDown={onPD} onPointerMove={onPM} onPointerUp={onPU} onPointerCancel={onPU} onClick={onClick}
-      style={{
-        position:"fixed",
-        left:cx-BTN/2,
-        top:cy-BTN/2,
-        zIndex:800,
-        width:BTN,height:BTN,
-        borderRadius:"50%",
-        background:pressed?"rgba(255,255,255,0.92)":"rgba(255,255,255,0.13)",
-        backdropFilter:"blur(20px)",
-        WebkitBackdropFilter:"blur(20px)",
-        border:"1px solid rgba(255,255,255,0.2)",
-        display:"flex",alignItems:"center",justifyContent:"center",
-        cursor:"grab",
-        touchAction:"none",
+    <div onPointerDown={onPD} onPointerMove={onPM} onPointerUp={onPU} onPointerCancel={onPU} onClick={onClick}
+      style={{position:"fixed",left:pos.x-BTN/2,top:pos.y-BTN/2,zIndex:800,width:BTN,height:BTN,borderRadius:"50%",
+        background:pressed?"rgba(255,255,255,0.92)":"rgba(255,255,255,0.1)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",
+        border:"1px solid rgba(255,255,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"grab",touchAction:"none",
         userSelect:"none",WebkitUserSelect:"none",
-        // spring animation ONLY when snapping, instant while dragging
-        transition:isSnapped
-          ?"left 0.4s cubic-bezier(0.34,1.2,0.64,1),top 0.4s cubic-bezier(0.34,1.2,0.64,1),background 0.18s,box-shadow 0.18s"
-          :"background 0.18s",
-        boxShadow:pressed?"0 0 0 8px rgba(255,255,255,0.05)":"0 4px 24px rgba(0,0,0,0.55)",
-        willChange:"left,top",
-      }}>
+        transition:snapped?"left 0.4s cubic-bezier(0.34,1.2,0.64,1),top 0.4s cubic-bezier(0.34,1.2,0.64,1),background 0.18s":"background 0.18s",
+        boxShadow:pressed?"0 0 0 8px rgba(255,255,255,0.04)":"0 4px 28px rgba(0,0,0,0.7)",willChange:"left,top"}}>
       <IcWA s={24} c={pressed?"#080808":"#fff"}/>
     </div>
   );
 }
 
-// ── NativeTabs ───────────────────────────────────────────────────────────────
-function NativeTabs({items,active,onSelect,renderItem,height=44,className=""}:{
+// ── NativeTabs ────────────────────────────────────────────────────────────────
+function NativeTabs({items,active,onSelect,renderItem,height=44}:{
   items:string[];active:string;onSelect:(v:string)=>void;
   renderItem:(item:string,isActive:boolean)=>React.ReactNode;
-  height?:number;className?:string;
-}){
+  height?:number;
+}) {
   const ref=useRef<HTMLDivElement>(null);
   useEffect(()=>{
-    const el=ref.current?.querySelector(`[data-active="true"]`) as HTMLElement|null;
+    const el=ref.current?.querySelector('[data-active="true"]') as HTMLElement|null;
     el?.scrollIntoView({block:"nearest",inline:"center",behavior:"smooth"});
   },[active]);
   return(
-    <div ref={ref} className={`ntabs ${className}`} style={{display:"flex",overflowX:"auto",overflowY:"hidden",height,touchAction:"pan-x",WebkitOverflowScrolling:"touch"}}>
+    <div ref={ref} style={{display:"flex",overflowX:"auto",overflowY:"hidden",height,touchAction:"pan-x",WebkitOverflowScrolling:"touch",scrollbarWidth:"none"}}>
       {items.map(item=>(
         <button key={item} data-active={item===active} onClick={()=>onSelect(item)}
           style={{background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",flexShrink:0,padding:0,WebkitTapHighlightColor:"transparent"}}>
@@ -233,54 +278,74 @@ function NativeTabs({items,active,onSelect,renderItem,height=44,className=""}:{
   );
 }
 
-// ── Horizontal category row ──────────────────────────────────────────────────
-function HCatRow({cat,prods,onProdClick,onViewAll}:{cat:string;prods:Product[];onProdClick:(p:Product)=>void;onViewAll:()=>void;}){
+// ── HCatRow ───────────────────────────────────────────────────────────────────
+function HCatRow({cat,prods,onProdClick,onViewAll}:{cat:string;prods:Product[];onProdClick:(p:Product)=>void;onViewAll:()=>void;}) {
   const isLente=(LENTES_SUBCATS as readonly string[]).includes(cat);
   const label=isLente?`LENTES · ${catLabel(cat).toUpperCase()}`:catLabel(cat).toUpperCase();
   return(
-    <div style={{marginBottom:"2.25rem"}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"0 1rem",marginBottom:"0.75rem"}}>
-        <span style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#404040"}}>{label}</span>
+    <div style={{marginBottom:"2.5rem"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"0 1rem",marginBottom:"0.7rem"}}>
+        <span style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#383838"}}>{label}</span>
         <button onClick={onViewAll} style={{background:"none",border:"none",fontSize:8,letterSpacing:1.5,fontWeight:800,color:"#282828",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",display:"flex",alignItems:"center",gap:3}}>
           VER TODOS <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
       </div>
-      <div className="hstrip" style={{display:"flex",gap:"0.6rem",overflowX:"auto",padding:"0 1rem 0.5rem",WebkitOverflowScrolling:"touch",touchAction:"pan-x"}}>
+      <div style={{display:"flex",gap:"0.55rem",overflowX:"auto",padding:"0 1rem 0.75rem",WebkitOverflowScrolling:"touch",touchAction:"pan-x",scrollbarWidth:"none"}}>
         {prods.map((p,i)=>(
-          <div key={p.id} className="hcard" onClick={()=>onProdClick(p)}
-            style={{flexShrink:0,width:"42vw",maxWidth:172,minWidth:128,cursor:"pointer",animation:`fadeUp 0.38s ease ${Math.min(i*45,180)}ms both`}}>
-            <div style={{aspectRatio:"1",borderRadius:11,overflow:"hidden",background:"#111",marginBottom:"0.48rem",position:"relative"}}>
-              <div className="hcard-img" style={{width:"100%",height:"100%",transition:"transform 0.55s cubic-bezier(0.25,0.46,0.45,0.94)"}}>
-                <LazyImg src={p.img} alt={p.name} w={280}/>
-              </div>
+          <div key={p.id} onClick={()=>onProdClick(p)}
+            style={{flexShrink:0,width:"42vw",maxWidth:172,minWidth:128,cursor:"pointer",animation:`fadeUp 0.32s ease ${Math.min(i*40,160)}ms both`}}>
+            <div style={{aspectRatio:"1",borderRadius:12,overflow:"hidden",background:"#0e0e0e",marginBottom:"0.45rem"}}>
+              <LazyImg src={p.img} alt={p.name} w={280}/>
             </div>
-            <p style={{margin:"0 0 2px",fontSize:11,color:"#999",lineHeight:1.3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</p>
+            <p style={{margin:"0 0 2px",fontSize:11,color:"#888",lineHeight:1.3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</p>
             <p style={{margin:0,fontSize:13,fontWeight:800,color:"#fff"}}>${p.price.toFixed(2)}</p>
           </div>
         ))}
-        {/* see-all card */}
-        <div className="see-all-card" onClick={onViewAll}
-          style={{flexShrink:0,width:"22vw",maxWidth:90,minWidth:68,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:5,borderRadius:11,border:"1px solid #161616",cursor:"pointer",aspectRatio:"1",transition:"border-color 0.15s"}}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#282828" strokeWidth="1.5"><polyline points="9 18 15 12 9 6"/></svg>
-          <span style={{fontSize:7,letterSpacing:1.5,color:"#242424",fontWeight:800}}>VER TODOS</span>
+        <div onClick={onViewAll}
+          style={{flexShrink:0,width:"22vw",maxWidth:88,minWidth:66,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:5,borderRadius:12,border:"1px solid #141414",cursor:"pointer",aspectRatio:"1",transition:"border-color 0.15s"}}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#252525" strokeWidth="1.5"><polyline points="9 18 15 12 9 6"/></svg>
+          <span style={{fontSize:7,letterSpacing:1.5,color:"#202020",fontWeight:800}}>VER TODOS</span>
         </div>
       </div>
     </div>
   );
 }
 
-// ── AddedToCartModal ─────────────────────────────────────────────────────────
-function AddedToCartModal({product,onClose,onGoCart}:{product:Product;onClose:()=>void;onGoCart:()=>void;}){
+// ── ProductGrid ───────────────────────────────────────────────────────────────
+function ProductGrid({prods,onProdClick}:{prods:Product[];onProdClick:(p:Product)=>void;}) {
+  if(prods.length===0) return(
+    <div style={{textAlign:"center",padding:"5rem 0",color:"#222",animation:"fadeIn 0.3s ease"}}>
+      <p style={{fontSize:12}}>Sin productos en esta categoría</p>
+    </div>
+  );
   return(
-    <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:700,background:"rgba(0,0,0,0.78)",display:"flex",alignItems:"flex-end",justifyContent:"center",animation:"fadeIn 0.15s ease"}}>
-      <div onClick={e=>e.stopPropagation()} style={{background:"#111",width:"100%",maxWidth:500,borderRadius:"20px 20px 0 0",padding:"1.25rem 1.25rem 2.25rem",animation:"slideUp 0.3s cubic-bezier(0.34,1.2,0.64,1)",border:"1px solid #1a1a1a",borderBottom:"none"}}>
-        <div style={{width:30,height:3,background:"#222",borderRadius:2,margin:"0 auto 1.25rem"}}/>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.75rem",padding:"0 1rem",animation:"fadeIn 0.2s ease"}}>
+      {prods.map((p,i)=>(
+        <div key={p.id} onClick={()=>onProdClick(p)}
+          style={{cursor:"pointer",animation:`fadeUp 0.32s ease ${Math.min(i*35,200)}ms both`}}>
+          <div style={{aspectRatio:"1",borderRadius:14,overflow:"hidden",background:"#0e0e0e",marginBottom:"0.5rem"}}>
+            <LazyImg src={p.img} alt={p.name} w={320}/>
+          </div>
+          <p style={{margin:"0 0 2px",fontSize:11,color:"#888",lineHeight:1.3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</p>
+          <p style={{margin:0,fontSize:13,fontWeight:800,color:"#fff"}}>${p.price.toFixed(2)}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── AddedToCartModal ──────────────────────────────────────────────────────────
+function AddedToCartModal({product,onClose,onGoCart}:{product:Product;onClose:()=>void;onGoCart:()=>void;}) {
+  return(
+    <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:700,background:"rgba(0,0,0,0.8)",display:"flex",alignItems:"flex-end",justifyContent:"center",animation:"fadeIn 0.15s ease"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:"#0d0d0d",width:"100%",maxWidth:500,borderRadius:"20px 20px 0 0",padding:"1.25rem 1.25rem 2.25rem",animation:"slideUp 0.28s cubic-bezier(0.34,1.2,0.64,1)",border:"1px solid #1a1a1a",borderBottom:"none"}}>
+        <div style={{width:30,height:3,background:"#1e1e1e",borderRadius:2,margin:"0 auto 1.25rem"}}/>
         <div style={{display:"flex",gap:"0.85rem",alignItems:"center",marginBottom:"1.25rem"}}>
           <div style={{width:54,height:54,borderRadius:10,overflow:"hidden",flexShrink:0}}>
             <img src={optImg(product.img,120)} alt={product.name} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
           </div>
           <div style={{flex:1}}>
-            <p style={{margin:"0 0 2px",fontSize:9,color:"#3a3a3a",letterSpacing:2,fontWeight:800}}>AÑADIDO AL CARRITO</p>
+            <p style={{margin:"0 0 2px",fontSize:9,color:"#303030",letterSpacing:2,fontWeight:800}}>AÑADIDO AL CARRITO</p>
             <p style={{margin:"0 0 2px",fontSize:13,color:C.text,fontWeight:700,lineHeight:1.3}}>{product.name}</p>
             <p style={{margin:0,fontSize:12,color:"#484848"}}>${product.price.toFixed(2)}</p>
           </div>
@@ -289,12 +354,10 @@ function AddedToCartModal({product,onClose,onGoCart}:{product:Product;onClose:()
           </div>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.6rem"}}>
-          <button onClick={onClose} className="sec-btn"
-            style={{background:"transparent",color:"#777",border:"1px solid #1e1e1e",padding:"0.9rem 1rem",fontSize:9,fontWeight:800,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",borderRadius:12,WebkitTapHighlightColor:"transparent",transition:"all 0.15s"}}>
+          <button onClick={onClose} style={{background:"transparent",color:"#666",border:"1px solid #1e1e1e",padding:"0.9rem 1rem",fontSize:9,fontWeight:800,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",borderRadius:12,WebkitTapHighlightColor:"transparent"}}>
             SEGUIR
           </button>
-          <button onClick={onGoCart}
-            style={{background:C.accent,color:"#080808",border:"none",padding:"0.9rem 1rem",fontSize:9,fontWeight:800,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",borderRadius:12,WebkitTapHighlightColor:"transparent"}}>
+          <button onClick={onGoCart} style={{background:C.accent,color:"#080808",border:"none",padding:"0.9rem 1rem",fontSize:9,fontWeight:800,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",borderRadius:12,WebkitTapHighlightColor:"transparent"}}>
             IR AL CARRITO →
           </button>
         </div>
@@ -303,10 +366,85 @@ function AddedToCartModal({product,onClose,onGoCart}:{product:Product;onClose:()
   );
 }
 
+// ── AdminRow ──────────────────────────────────────────────────────────────────
+function AdminRow({p,editing,onEdit,onDelete}:{p:Product;editing:Product|null;onEdit:(p:Product)=>void;onDelete:(id:string)=>void;}) {
+  return(
+    <div className="admin-row" style={{display:"flex",alignItems:"center",gap:"0.6rem",padding:"0.5rem 0.55rem",borderRadius:7,background:editing?.id===p.id?"#111":"transparent",transition:"background 0.1s"}}>
+      <img src={optImg(p.img,80)} alt={p.name} style={{width:38,height:38,objectFit:"cover",borderRadius:6,flexShrink:0,background:"#141414"}}/>
+      <div style={{flex:1,minWidth:0}}>
+        <p style={{color:"#b0b0b0",fontSize:10,fontWeight:700,margin:"0 0 1px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</p>
+        <p style={{color:"#282828",fontSize:8,margin:0}}>${p.price.toFixed(2)}</p>
+      </div>
+      <div style={{display:"flex",gap:"0.3rem",flexShrink:0}}>
+        <button onClick={()=>onEdit(p)} style={{background:"#131313",color:"#555",border:"1px solid #1a1a1a",padding:"0.25rem 0.55rem",borderRadius:5,cursor:"pointer",fontSize:8,fontFamily:"inherit",fontWeight:700,WebkitTapHighlightColor:"transparent"}}>Editar</button>
+        <button onClick={()=>onDelete(p.id)} style={{background:"none",color:"#773333",border:"1px solid #1e0e0e",padding:"0.25rem 0.55rem",borderRadius:5,cursor:"pointer",fontSize:8,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>✕</button>
+      </div>
+    </div>
+  );
+}
+
+// ── Footer ────────────────────────────────────────────────────────────────────
+function Footer({setMainView,setShopFilter}:{setMainView:(v:MainView)=>void;setShopFilter:(v:ShopFilter)=>void;}) {
+  const sA:React.CSSProperties={display:"flex",alignItems:"center",justifyContent:"center",width:33,height:33,borderRadius:"50%",background:"rgba(255,255,255,0.03)",textDecoration:"none",border:"1px solid rgba(255,255,255,0.05)",flexShrink:0};
+  const cats=[{l:"Lentes",c:"LENTES"},{l:"Relojes",c:"RELOJES"},{l:"Collares",c:"COLLARES"},{l:"Pulseras",c:"PULSERAS"},{l:"Anillos",c:"ANILLOS"},{l:"Aretes",c:"ARETES"},{l:"Billeteras",c:"BILLETERAS"}];
+  return(
+    <footer style={{background:"#040404",borderTop:"1px solid #0d0d0d",marginTop:"2rem",padding:"2.5rem 1.5rem 2rem"}}>
+      <div style={{maxWidth:1100,margin:"0 auto"}}>
+        <div className="footer-grid" style={{display:"grid",gap:"2rem",marginBottom:"2rem"}}>
+          <div>
+            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:"0.55rem"}}>
+              <img src="/favicon.png" alt="Fokus" width={17} height={17} style={{objectFit:"contain"}}/>
+              <span style={{fontWeight:900,fontSize:10,letterSpacing:5,color:"#fff"}}>FOKUS</span>
+            </div>
+            <p style={{fontSize:9,color:"#242424",lineHeight:1.75,margin:"0 0 0.75rem",maxWidth:160}}>Accesorios con actitud.<br/>Cada detalle importa.</p>
+            <div style={{display:"flex",gap:"0.35rem"}}>
+              {([{href:SOCIAL.instagram,ic:<IcIG s={12}/>},{href:SOCIAL.facebook,ic:<IcFB s={12}/>},{href:SOCIAL.tiktok,ic:<IcTT s={12}/>},{href:SOCIAL.whatsapp,ic:<IcWA s={12}/>}] as {href:string;ic:React.ReactNode}[]).map(({href,ic},i)=>(
+                <a key={i} href={href} target="_blank" rel="noreferrer" className="social-link" style={sA}>{ic}</a>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p style={{fontSize:7,fontWeight:800,letterSpacing:3,color:"#181818",marginBottom:"0.65rem"}}>TIENDA</p>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.3rem 0.9rem"}}>
+              {cats.map(({l,c})=>(
+                <button key={c} className="footer-link"
+                  onClick={()=>{setShopFilter(c as ShopFilter);setMainView("shop");typeof window!=="undefined"&&window.scrollTo({top:0,behavior:"smooth"});}}
+                  style={{background:"none",border:"none",textAlign:"left",cursor:"pointer",fontFamily:"inherit",fontSize:9,color:"#222",padding:0,WebkitTapHighlightColor:"transparent",transition:"color 0.12s"}}>
+                  {l}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p style={{fontSize:7,fontWeight:800,letterSpacing:3,color:"#181818",marginBottom:"0.65rem"}}>CONTACTO</p>
+            <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noreferrer"
+              style={{display:"inline-flex",alignItems:"center",gap:"0.4rem",background:"#081208",color:"#3a8a3a",padding:"0.45rem 0.8rem",borderRadius:7,fontSize:9,fontWeight:700,textDecoration:"none",marginBottom:"0.65rem",border:"1px solid #0e1e0e"}}>
+              <IcWA s={10} c="#3a8a3a"/> WhatsApp
+            </a>
+            <p style={{fontSize:8,color:"#1e1e1e",margin:0}}>miltonjavi05@gmail.com</p>
+            <p style={{fontSize:8,color:"#1e1e1e",margin:"2px 0 0"}}>+58 424-300-5733</p>
+          </div>
+        </div>
+        <div style={{borderTop:"1px solid #0d0d0d",paddingTop:"1rem",display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:"0.35rem"}}>
+          <p style={{fontSize:7,color:"#181818",margin:0,letterSpacing:1}}>© {new Date().getFullYear()} FOKUS. TODOS LOS DERECHOS RESERVADOS.</p>
+          <p style={{fontSize:7,color:"#111",margin:0,letterSpacing:1}}>FOKUS ®</p>
+        </div>
+      </div>
+      <style>{`
+        .footer-link:hover{color:#777!important}
+        .social-link:hover{border-color:#1e1e1e!important;transform:translateY(-1px)}
+        @media(max-width:480px){.footer-grid{grid-template-columns:1fr!important;gap:1.5rem!important}}
+        @media(min-width:481px) and (max-width:767px){.footer-grid{grid-template-columns:repeat(2,1fr)!important}}
+        @media(min-width:768px){.footer-grid{grid-template-columns:repeat(3,1fr)!important}}
+      `}</style>
+    </footer>
+  );
+}
+
 // ══════════════════════════════════════════════════════════════════════════
 //  MAIN
 // ══════════════════════════════════════════════════════════════════════════
-export default function Home(){
+export default function Home() {
   const [mainView,setMainView]=useState<MainView>("fokus");
   const [shopFilter,setShopFilter]=useState<ShopFilter>("TODO");
   const [lentesOpen,setLentesOpen]=useState(false);
@@ -323,7 +461,7 @@ export default function Home(){
   const [addedProd,setAddedProd]=useState<Product|null>(null);
 
   const navRef=useRef<HTMLElement>(null);
-  const [navH,setNavH]=useState(NAV_H+TABS_H+24); // +24 for ticker inside nav
+  const [navH,setNavH]=useState(NAV_H+TABS_H);
   useEffect(()=>{
     const upd=()=>{if(navRef.current)setNavH(navRef.current.offsetHeight);};
     upd();
@@ -332,7 +470,7 @@ export default function Home(){
     return()=>ro.disconnect();
   },[mainView,lentesOpen,searchOpen]);
 
-  // Admin
+  // Admin state
   const [adminLogged,setAdminLogged]=useState(false);
   const [adminEmail,setAdminEmail]=useState("");
   const [adminPwd,setAdminPwd]=useState("");
@@ -345,7 +483,7 @@ export default function Home(){
   const [fError,setFError]=useState(""); const [fSuccess,setFSuccess]=useState(""); const [adminSearch,setAdminSearch]=useState("");
   const fileRef=useRef<HTMLInputElement>(null); const formRef=useRef<HTMLDivElement>(null);
 
-  const loadProducts=useCallback(async()=>{
+  const loadProducts=useCallback(async():Promise<void>=>{
     setLoading(true);
     try{const d=await fsGetAll();setProducts(d.length>0?d:DEMO);}
     catch{setProducts(DEMO);}
@@ -361,37 +499,66 @@ export default function Home(){
 
   const isLentesSubcat=useMemo(()=>(LENTES_SUBCATS as readonly string[]).includes(shopFilter),[shopFilter]);
   const isLentesActive=useMemo(()=>shopFilter==="LENTES"||isLentesSubcat,[shopFilter,isLentesSubcat]);
+  const isSingleCat=useMemo(()=>shopFilter!=="TODO",[shopFilter]);
 
   const getVisibleCats=useCallback(():string[]=>{
-    if(shopFilter==="TODO")return[...LENTES_SUBCATS,...SHOP_CATS.filter(c=>c!=="LENTES")];
-    if(shopFilter==="LENTES")return[...LENTES_SUBCATS];
+    if(shopFilter==="TODO") return[...LENTES_SUBCATS,...SHOP_CATS.filter(c=>c!=="LENTES")];
+    if(shopFilter==="LENTES") return[...LENTES_SUBCATS];
     return[shopFilter];
   },[shopFilter]);
 
-  const getProds=useCallback((cat:string)=>products.filter(p=>p.category===cat&&(searchQ===""||p.name.toLowerCase().includes(searchQ.toLowerCase()))),[products,searchQ]);
+  const getProds=useCallback((cat:string):Product[]=>
+    products.filter(p=>p.category===cat&&(searchQ===""||p.name.toLowerCase().includes(searchQ.toLowerCase())))
+  ,[products,searchQ]);
+
+  const gridProds=useMemo(():Product[]=>{
+    const cats=getVisibleCats();
+    return cats.flatMap(c=>getProds(c));
+  },[getVisibleCats,getProds]);
 
   const totalItems=useMemo(()=>cart.reduce((s,i)=>s+i.qty,0),[cart]);
   const totalPrice=useMemo(()=>cart.reduce((s,i)=>s+i.product.price*i.qty,0),[cart]);
 
-  const addToCart=useCallback((product:Product,qty:number)=>{
+  const addToCart=useCallback((product:Product,qty:number):void=>{
     setCart(prev=>{const ex=prev.find(i=>i.product.id===product.id);return ex?prev.map(i=>i.product.id===product.id?{...i,qty:i.qty+qty}:i):[...prev,{product,qty}];});
     setSelProd(null);setAddedProd(product);
   },[]);
 
-  const updateQty=useCallback((id:string,delta:number)=>setCart(prev=>prev.map(i=>i.product.id===id?{...i,qty:i.qty+delta}:i).filter(i=>i.qty>0)),[]);
+  const updateQty=useCallback((id:string,delta:number):void=>
+    setCart(prev=>prev.map(i=>i.product.id===id?{...i,qty:i.qty+delta}:i).filter(i=>i.qty>0))
+  ,[]);
 
-  const waMsg=useCallback(()=>{
+  const waMsg=useCallback(():string=>{
     const lines=cart.map(i=>`• ${i.product.name} x${i.qty} — $${(i.product.price*i.qty).toFixed(2)}`);
     const pm=PAYMENT_METHODS.find(m=>m.id===payMethod);
     return`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`Hola! Quiero hacer un pedido:\n\n${lines.join("\n")}\n\nTotal: $${totalPrice.toFixed(2)}${pm?`\n\nMétodo de pago: ${pm.name} (${pm.detail})`:""}  \n\n¡Adjunto comprobante!`)}`;
   },[cart,totalPrice,payMethod]);
 
-  const doLogin=()=>{if(adminEmail===ADMIN_EMAIL&&adminPwd===ADMIN_PASSWORD){setAdminLogged(true);setAdminErr("");setAdminSection("menu");}else setAdminErr("Credenciales incorrectas");};
-  const doLogout=()=>{setAdminLogged(false);setAdminEmail("");setAdminPwd("");setMainView("fokus");if(typeof window!=="undefined")window.history.pushState("","","/");};
-  const resetForm=()=>{setEditing(null);setFName("");setFDesc("");setFPrice("");setFCat("");setFFile(null);setFPreview("");setFError("");setFSuccess("");if(fileRef.current)fileRef.current.value="";};
-  const startEdit=(p:Product)=>{setEditing(p);setFName(p.name);setFDesc(p.description||"");setFPrice(String(p.price));setFCat(p.category);setFPreview(p.img);setFFile(null);setFError("");setFSuccess("");if(fileRef.current)fileRef.current.value="";setTimeout(()=>formRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),50);};
-  const onFileChange=(e:React.ChangeEvent<HTMLInputElement>)=>{const file=e.target.files?.[0];if(!file)return;setFFile(file);const r=new FileReader();r.onload=ev=>setFPreview(ev.target?.result as string);r.readAsDataURL(file);};
-  const submitProduct=async()=>{
+  const doLogin=():void=>{
+    if(adminEmail===ADMIN_EMAIL&&adminPwd===ADMIN_PASSWORD){setAdminLogged(true);setAdminErr("");setAdminSection("menu");}
+    else setAdminErr("Credenciales incorrectas");
+  };
+  const doLogout=():void=>{
+    setAdminLogged(false);setAdminEmail("");setAdminPwd("");setMainView("fokus");
+    if(typeof window!=="undefined")window.history.pushState("","","/");
+  };
+  const resetForm=():void=>{
+    setEditing(null);setFName("");setFDesc("");setFPrice("");setFCat("");
+    setFFile(null);setFPreview("");setFError("");setFSuccess("");
+    if(fileRef.current)fileRef.current.value="";
+  };
+  const startEdit=(p:Product):void=>{
+    setEditing(p);setFName(p.name);setFDesc(p.description||"");setFPrice(String(p.price));
+    setFCat(p.category);setFPreview(p.img);setFFile(null);setFError("");setFSuccess("");
+    if(fileRef.current)fileRef.current.value="";
+    setTimeout(()=>formRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),50);
+  };
+  const onFileChange=(e:React.ChangeEvent<HTMLInputElement>):void=>{
+    const file=e.target.files?.[0]; if(!file) return;
+    setFFile(file);
+    const r=new FileReader();r.onload=ev=>setFPreview(ev.target?.result as string);r.readAsDataURL(file);
+  };
+  const submitProduct=async():Promise<void>=>{
     setFError("");setFSuccess("");
     if(!fName.trim()||!fPrice||!fCat){setFError("Nombre, precio y categoría son obligatorios.");return;}
     if(!editing&&!fFile){setFError("Selecciona una imagen.");return;}
@@ -407,15 +574,19 @@ export default function Home(){
     }catch(err){setFError("Error: "+(err instanceof Error?err.message:"desconocido"));}
     finally{setFLoading(false);}
   };
-  const deleteProduct=async(id:string)=>{if(!confirm("¿Eliminar?"))return;await fsDelete(id);await loadProducts();};
+  const deleteProduct=async(id:string):Promise<void>=>{
+    if(!confirm("¿Eliminar?")) return;
+    await fsDelete(id);await loadProducts();
+  };
 
-  const adminProds=useMemo(()=>{
+  const adminProds=useMemo(():Product[]=>{
     let list=products;
     if(adminCatFilter!=="ALL")list=list.filter(p=>p.category===adminCatFilter);
     if(adminSearch!=="")list=list.filter(p=>p.name.toLowerCase().includes(adminSearch.toLowerCase())||p.category.toLowerCase().includes(adminSearch.toLowerCase()));
     return list;
   },[products,adminCatFilter,adminSearch]);
-  const usedCats=useMemo(()=>[...new Set(products.map(p=>p.category))].sort(),[products]);
+
+  const usedCats=useMemo(():string[]=>[...new Set(products.map(p=>p.category))].sort(),[products]);
 
   const isShop=mainView==="shop", isAdmin=mainView==="admin", isCart=mainView==="cart";
   const catTop=navH-1;
@@ -426,39 +597,23 @@ export default function Home(){
       <style>{`
         @keyframes sk{0%{background-position:200% 0}100%{background-position:-200% 0}}
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-        @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes slideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes slideUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
         @keyframes slideL{from{opacity:0;transform:translateX(-16px)}to{opacity:1;transform:translateX(0)}}
         @keyframes scaleIn{from{opacity:0;transform:scale(0.85)}to{opacity:1;transform:scale(1)}}
-        @keyframes ticker{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
         *{box-sizing:border-box;-webkit-font-smoothing:antialiased;}
-        body{background:#080808;overscroll-behavior:none;margin:0}
-        .ntabs::-webkit-scrollbar,.hstrip::-webkit-scrollbar,.pills::-webkit-scrollbar{display:none}
-        .ntabs,.hstrip,.pills{scrollbar-width:none;-webkit-overflow-scrolling:touch;}
-        .hcard:active{transform:scale(0.96)!important}
-        .hcard:hover .hcard-img{transform:scale(1.06)!important}
-        .see-all-card:hover{border-color:#252525!important}
-        .sec-btn:hover{background:#161616!important;color:#ccc!important}
+        body{background:#080808;margin:0;overscroll-behavior-y:auto;}
+        ::-webkit-scrollbar{display:none}
+        *{scrollbar-width:none;}
         .social-link:hover{border-color:#252525!important;transform:translateY(-1px)}
-        .pay-card:hover{background:#141414!important}
         .footer-link:hover{color:#888!important}
         .admin-row:hover{background:#111!important}
-        .admin-pill:hover{opacity:0.72}
+        .admin-pill:hover{opacity:0.7}
+        img{-webkit-user-drag:none;}
       `}</style>
 
-      {/* ══ TICKER STRIP (top of page, outside nav) ══════════════════════ */}
-      <div style={{background:"#040404",borderBottom:"1px solid #0e0e0e",height:24,overflow:"hidden",display:"flex",alignItems:"center",position:"sticky",top:0,zIndex:201}}>
-        <div style={{display:"flex",animation:"ticker 20s linear infinite",whiteSpace:"nowrap",willChange:"transform"}}>
-          {Array.from({length:8}).map((_,i)=>(
-            <span key={i} style={{fontSize:8,letterSpacing:2.5,color:"#303030",fontWeight:800,padding:"0 2.5rem"}}>
-              ✦ ENVÍOS A TODA VENEZUELA &nbsp; ✦ PAGO SEGURO &nbsp; ✦ ACCESORIOS PREMIUM &nbsp; ✦ ENTREGA RÁPIDA
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* ══ NAVBAR ═════════════════════════════════════════════════════════ */}
-      <nav ref={navRef} style={{position:"sticky",top:24,zIndex:200,background:"rgba(8,8,8,0.97)",borderBottom:"1px solid #131313",backdropFilter:"blur(24px)",WebkitBackdropFilter:"blur(24px)"}}>
+      {/* ══ NAVBAR ═══════════════════════════════════════════════════════════ */}
+      <nav ref={navRef} style={{position:"sticky",top:0,zIndex:200,background:"rgba(8,8,8,0.97)",borderBottom:"1px solid #131313",backdropFilter:"blur(24px)",WebkitBackdropFilter:"blur(24px)"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 1rem",height:NAV_H,position:"relative"}}>
           <button onClick={()=>setMenuOpen(true)} style={S.iconBtn} aria-label="Menú">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
@@ -478,7 +633,7 @@ export default function Home(){
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
                 <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
               </svg>
-              {totalItems>0&&<span style={{position:"absolute",top:4,right:4,background:"#fff",color:"#080808",borderRadius:"50%",width:14,height:14,fontSize:7,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",animation:"scaleIn 0.2s ease"}}>{totalItems}</span>}
+              {totalItems>0&&<span style={{position:"absolute",top:4,right:4,background:"#fff",color:"#080808",borderRadius:"50%",width:14,height:14,fontSize:7,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center"}}>{totalItems}</span>}
             </button>
           </div>
         </div>
@@ -499,7 +654,7 @@ export default function Home(){
         )}
       </nav>
 
-      {/* ══ SIDE MENU ══════════════════════════════════════════════════════ */}
+      {/* ══ SIDE MENU ════════════════════════════════════════════════════════ */}
       {menuOpen&&(
         <div style={{position:"fixed",inset:0,zIndex:300,display:"flex"}}>
           <div onClick={()=>setMenuOpen(false)} style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.82)",animation:"fadeIn 0.18s ease"}}/>
@@ -527,19 +682,15 @@ export default function Home(){
               </div>
             )}
             {SHOP_CATS.filter(c=>c!=="LENTES").map(cat=>(
-              <button key={cat} onClick={()=>{setShopFilter(cat);setMenuOpen(false);setMainView("shop");}}
+              <button key={cat} onClick={()=>{setShopFilter(cat as ShopFilter);setMenuOpen(false);setMainView("shop");}}
                 style={{display:"block",width:"100%",background:"none",border:"none",borderBottom:"1px solid #141414",padding:"0.85rem 0",textAlign:"left",fontSize:13,cursor:"pointer",fontFamily:"inherit",color:"#ccc",WebkitTapHighlightColor:"transparent"}}>
                 {catLabel(cat)}
               </button>
             ))}
-            {/* Shipping note */}
-            <div style={{margin:"1.5rem 0",padding:"0.75rem",background:"#0a0a0a",borderRadius:8,border:"1px solid #141414"}}>
-              <p style={{margin:0,fontSize:9,letterSpacing:1.5,color:"#555",fontWeight:800}}>📦 ENVÍOS A TODA VENEZUELA</p>
-            </div>
             <div style={{marginTop:"auto",paddingTop:"1.5rem"}}>
               <p style={{fontSize:7,letterSpacing:3,color:"#1e1e1e",marginBottom:"0.7rem",fontWeight:800}}>SÍGUENOS</p>
               <div style={{display:"flex",gap:"0.45rem"}}>
-                {[{href:SOCIAL.whatsapp,ic:<IcWA s={13}/>},{href:SOCIAL.instagram,ic:<IcIG s={13}/>},{href:SOCIAL.facebook,ic:<IcFB s={13}/>},{href:SOCIAL.tiktok,ic:<IcTT s={13}/>}].map(({href,ic},i)=>(
+                {([{href:SOCIAL.whatsapp,ic:<IcWA s={13}/>},{href:SOCIAL.instagram,ic:<IcIG s={13}/>},{href:SOCIAL.facebook,ic:<IcFB s={13}/>},{href:SOCIAL.tiktok,ic:<IcTT s={13}/>}] as {href:string;ic:React.ReactNode}[]).map(({href,ic},i)=>(
                   <a key={i} href={href} target="_blank" rel="noreferrer" className="social-link" style={S.socialA}>{ic}</a>
                 ))}
               </div>
@@ -548,28 +699,19 @@ export default function Home(){
         </div>
       )}
 
-      {/* ══ HOME ═══════════════════════════════════════════════════════════ */}
+      {/* ══ HOME ═════════════════════════════════════════════════════════════ */}
       {mainView==="fokus"&&(
         <main style={{background:C.bg}}>
           <div style={{maxWidth:680,margin:"0 auto",padding:"5rem 1.5rem 0",textAlign:"center",animation:"fadeUp 0.45s ease"}}>
             <img src="/favicon.png" alt="Fokus" width={52} height={52} style={{objectFit:"contain",marginBottom:"1.75rem"}}/>
-            <p style={{fontSize:8,letterSpacing:5,color:"#242424",fontWeight:800,marginBottom:"0.75rem"}}>ACCESORIOS PREMIUM</p>
+            <p style={{fontSize:8,letterSpacing:5,color:"#242424",fontWeight:800,marginBottom:"0.75rem"}}>ACCESORIOS</p>
             <h1 style={{fontSize:40,fontWeight:900,letterSpacing:8,marginBottom:"0.85rem",color:C.accent,lineHeight:1}}>FOKUS</h1>
             <p style={{fontSize:12,color:"#323232",lineHeight:1.85,maxWidth:240,margin:"0 auto 2.5rem"}}>Cada detalle cuenta.<br/>Calidad, diseño y actitud.</p>
-            {/* Shipping badge */}
-            <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"#0a0a0a",border:"1px solid #141414",borderRadius:20,padding:"0.38rem 0.95rem",marginBottom:"2.5rem"}}>
-              <span style={{fontSize:12}}>📦</span>
-              <span style={{fontSize:8,letterSpacing:1.5,color:"#404040",fontWeight:800}}>ENVÍOS A TODA VENEZUELA</span>
-            </div>
-            <br/>
-            <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}}
-              style={{...S.darkBtn,fontSize:10,padding:"1.05rem 2.6rem",letterSpacing:3,borderRadius:2}}
-              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.opacity="0.82"}}
-              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.opacity="1"}}>
+            <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={{...S.darkBtn,fontSize:10,padding:"1.05rem 2.6rem",letterSpacing:3,borderRadius:2}}>
               VER COLECCIÓN →
             </button>
             <div style={{display:"flex",justifyContent:"center",gap:"0.55rem",marginTop:"2.5rem"}}>
-              {[{href:SOCIAL.instagram,ic:<IcIG s={15}/>},{href:SOCIAL.tiktok,ic:<IcTT s={15}/>},{href:SOCIAL.facebook,ic:<IcFB s={15}/>},{href:SOCIAL.whatsapp,ic:<IcWA s={15}/>}].map(({href,ic},i)=>(
+              {([{href:SOCIAL.instagram,ic:<IcIG s={15}/>},{href:SOCIAL.tiktok,ic:<IcTT s={15}/>},{href:SOCIAL.facebook,ic:<IcFB s={15}/>},{href:SOCIAL.whatsapp,ic:<IcWA s={15}/>}] as {href:string;ic:React.ReactNode}[]).map(({href,ic},i)=>(
                 <a key={i} href={href} target="_blank" rel="noreferrer" className="social-link" style={S.socialA}>{ic}</a>
               ))}
             </div>
@@ -578,10 +720,9 @@ export default function Home(){
         </main>
       )}
 
-      {/* ══ SHOP ═══════════════════════════════════════════════════════════ */}
+      {/* ══ SHOP ═════════════════════════════════════════════════════════════ */}
       {isShop&&(
         <main style={{background:C.bg}}>
-          {/* Sticky filter */}
           <div style={{position:"sticky",top:catTop,zIndex:100,background:"rgba(8,8,8,0.98)",borderBottom:"1px solid #131313",backdropFilter:"blur(24px)",WebkitBackdropFilter:"blur(24px)"}}>
             <NativeTabs
               items={["TODO","LENTES",...(SHOP_CATS.filter(c=>c!=="LENTES") as string[])]}
@@ -591,7 +732,7 @@ export default function Home(){
                 else{setShopFilter(item as ShopFilter);setLentesOpen(false);}
               }}
               height={44}
-              renderItem={(item,_)=>{
+              renderItem={(item)=>{
                 const a=item==="TODO"?shopFilter==="TODO":item==="LENTES"?isLentesActive:shopFilter===item;
                 return(
                   <span style={{display:"flex",alignItems:"center",gap:3,padding:"0 0.95rem",height:44,borderBottom:a?"2px solid #fff":"2px solid transparent",fontSize:9,fontWeight:800,letterSpacing:1.8,color:a?"#fff":"#2a2a2a",whiteSpace:"nowrap",transition:"color 0.12s,border-color 0.12s"}}>
@@ -601,7 +742,7 @@ export default function Home(){
                 );
               }}/>
             {lentesOpen&&(
-              <div className="ntabs" style={{background:"#060606",borderTop:"1px solid #0e0e0e",padding:"0.45rem 1rem",display:"flex",gap:"0.4rem",overflowX:"auto",WebkitOverflowScrolling:"touch",animation:"fadeIn 0.15s ease"}}>
+              <div style={{background:"#060606",borderTop:"1px solid #0e0e0e",padding:"0.45rem 1rem",display:"flex",gap:"0.4rem",overflowX:"auto",WebkitOverflowScrolling:"touch",animation:"fadeIn 0.15s ease",scrollbarWidth:"none"}}>
                 {LENTES_SUBCATS.map(sub=>(
                   <button key={sub} onClick={()=>setShopFilter(sub)}
                     style={{background:shopFilter===sub?"#fff":"transparent",color:shopFilter===sub?"#080808":"#303030",border:`1px solid ${shopFilter===sub?"#fff":"#1a1a1a"}`,padding:"0.25rem 0.8rem",borderRadius:20,fontSize:8,fontWeight:800,letterSpacing:1.2,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap",flexShrink:0,WebkitTapHighlightColor:"transparent",transition:"all 0.12s"}}>
@@ -612,22 +753,24 @@ export default function Home(){
             )}
           </div>
 
-          {/* Product rows */}
           <div style={{paddingTop:"1.5rem",paddingBottom:"5rem"}}>
             {loading?(
-              [0,1,2].map(i=>(
-                <div key={i} style={{marginBottom:"2.25rem"}}>
-                  <div style={{display:"flex",justifyContent:"space-between",padding:"0 1rem",marginBottom:"0.75rem"}}>
-                    <div style={{width:80,height:7,background:"#141414",borderRadius:4}}/>
-                    <div style={{width:48,height:7,background:"#141414",borderRadius:4}}/>
+              <SkeletonGrid/>
+            ):isSingleCat?(
+              <>
+                {shopFilter!=="LENTES"&&(
+                  <div style={{padding:"0 1rem",marginBottom:"1.25rem"}}>
+                    <span style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#303030"}}>
+                      {(LENTES_SUBCATS as readonly string[]).includes(shopFilter)?`LENTES · ${catLabel(shopFilter).toUpperCase()}`:catLabel(shopFilter).toUpperCase()}
+                    </span>
                   </div>
-                  <SkeletonHRow/>
-                </div>
-              ))
+                )}
+                <ProductGrid prods={gridProds} onProdClick={(p)=>{setSelProd(p);setModalQty(1);}}/>
+              </>
             ):(
               getVisibleCats().map(cat=>{
                 const prods=getProds(cat);
-                if(prods.length===0)return null;
+                if(prods.length===0) return null;
                 const isLenteCat=(LENTES_SUBCATS as readonly string[]).includes(cat);
                 return(
                   <HCatRow key={cat} cat={cat} prods={prods}
@@ -641,7 +784,7 @@ export default function Home(){
         </main>
       )}
 
-      {/* ══ COMUNIDAD ══════════════════════════════════════════════════════ */}
+      {/* ══ COMUNIDAD ════════════════════════════════════════════════════════ */}
       {mainView==="comunidad"&&(
         <main style={{background:C.bg}}>
           <div style={{maxWidth:480,margin:"0 auto",padding:"5rem 1.5rem",textAlign:"center",animation:"fadeUp 0.4s ease"}}>
@@ -656,7 +799,7 @@ export default function Home(){
         </main>
       )}
 
-      {/* ══ CART ═══════════════════════════════════════════════════════════ */}
+      {/* ══ CART ═════════════════════════════════════════════════════════════ */}
       {isCart&&(
         <main style={{background:C.bg}}>
           <div style={{maxWidth:620,margin:"0 auto",padding:"2rem 1rem 5rem",animation:"fadeIn 0.2s ease"}}>
@@ -695,8 +838,7 @@ export default function Home(){
                     <p style={{fontSize:7,fontWeight:800,letterSpacing:2.5,color:"#242424",marginBottom:"0.65rem"}}>MÉTODO DE PAGO</p>
                     <div style={{display:"flex",flexDirection:"column",gap:"0.4rem"}}>
                       {PAYMENT_METHODS.map(pm=>(
-                        <button key={pm.id} className="pay-card"
-                          onClick={()=>setPayMethod(pm.id)}
+                        <button key={pm.id} className="pay-card" onClick={()=>setPayMethod(pm.id)}
                           style={{display:"flex",alignItems:"center",gap:"0.75rem",background:payMethod===pm.id?"#fff":"#0d0d0d",color:payMethod===pm.id?"#080808":C.text,border:`1px solid ${payMethod===pm.id?"#fff":"#141414"}`,borderRadius:11,padding:"0.75rem 0.9rem",textAlign:"left",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",transition:"all 0.12s"}}>
                           <span style={{fontSize:16}}>{pm.icon}</span>
                           <div><p style={{margin:0,fontSize:11,fontWeight:700}}>{pm.name}</p><p style={{margin:0,fontSize:8,opacity:0.4,marginTop:1}}>{pm.detail}</p></div>
@@ -728,7 +870,7 @@ export default function Home(){
         </main>
       )}
 
-      {/* ══ ADMIN ══════════════════════════════════════════════════════════ */}
+      {/* ══ ADMIN ════════════════════════════════════════════════════════════ */}
       {isAdmin&&(
         <main style={{background:"#050505",minHeight:"100vh"}}>
           <div style={{maxWidth:680,margin:"0 auto",padding:"2rem 1rem 4rem"}}>
@@ -790,7 +932,7 @@ export default function Home(){
                 <div style={{background:"#0d0d0d",borderRadius:12,padding:"1.5rem",border:"1px solid #141414"}}>
                   <p style={{color:"#242424",fontSize:7,fontWeight:800,letterSpacing:2,margin:"0 0 0.75rem"}}>PRODUCTOS ({adminProds.length})</p>
                   <input placeholder="Buscar…" value={adminSearch} onChange={e=>setAdminSearch(e.target.value)} style={{...S.input,marginBottom:"0.65rem"}}/>
-                  <div className="pills ntabs" style={{display:"flex",gap:"0.3rem",overflowX:"auto",paddingBottom:"0.65rem",marginBottom:"0.4rem"}}>
+                  <div style={{display:"flex",gap:"0.3rem",overflowX:"auto",paddingBottom:"0.65rem",marginBottom:"0.4rem",scrollbarWidth:"none"}}>
                     {["ALL",...usedCats].map(cat=>{
                       const a=adminCatFilter===cat;
                       const count=cat==="ALL"?products.length:products.filter(p=>p.category===cat).length;
@@ -805,7 +947,7 @@ export default function Home(){
                   {adminCatFilter==="ALL"?(
                     usedCats.map(cat=>{
                       const cp=products.filter(p=>p.category===cat&&(adminSearch===""||p.name.toLowerCase().includes(adminSearch.toLowerCase())));
-                      if(cp.length===0)return null;
+                      if(cp.length===0) return null;
                       return(
                         <div key={cat} style={{marginBottom:"0.9rem"}}>
                           <div style={{display:"flex",alignItems:"center",gap:5,padding:"0.3rem 0",marginBottom:"0.25rem",borderBottom:"1px solid #111"}}>
@@ -829,7 +971,7 @@ export default function Home(){
         </main>
       )}
 
-      {/* ══ PRODUCT MODAL ══════════════════════════════════════════════════ */}
+      {/* ══ PRODUCT MODAL ════════════════════════════════════════════════════ */}
       {selProd&&(
         <div onClick={()=>setSelProd(null)} style={{position:"fixed",inset:0,zIndex:500,background:"rgba(0,0,0,0.92)",display:"flex",alignItems:"flex-end",justifyContent:"center",animation:"fadeIn 0.15s ease"}}>
           <div onClick={e=>e.stopPropagation()} style={{background:"#0d0d0d",width:"100%",maxWidth:480,borderRadius:"20px 20px 0 0",padding:"1.5rem 1.5rem 2.5rem",maxHeight:"92vh",overflowY:"auto",animation:"slideUp 0.28s cubic-bezier(0.25,0.46,0.45,0.94)",border:"1px solid #141414",borderBottom:"none"}}>
@@ -845,104 +987,18 @@ export default function Home(){
               <span style={{padding:"0 1rem",fontSize:14,color:C.text,fontWeight:800}}>{modalQty}</span>
               <button onClick={()=>setModalQty(modalQty+1)} style={S.qtyBtn}>+</button>
             </div>
-            <button onClick={()=>addToCart(selProd,modalQty)}
-              style={{...S.darkBtn,width:"100%",justifyContent:"center",fontSize:10,padding:"1.05rem",borderRadius:12}}
-              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.opacity="0.84"}}
-              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.opacity="1"}}>
+            <button onClick={()=>addToCart(selProd,modalQty)} style={{...S.darkBtn,width:"100%",justifyContent:"center",fontSize:10,padding:"1.05rem",borderRadius:12}}>
               AGREGAR AL CARRITO
             </button>
           </div>
         </div>
       )}
 
-      {/* ══ POST-CART MODAL ════════════════════════════════════════════════ */}
+      {/* ══ POST-CART MODAL ══════════════════════════════════════════════════ */}
       {addedProd&&<AddedToCartModal product={addedProd} onClose={()=>setAddedProd(null)} onGoCart={()=>{setAddedProd(null);setMainView("cart");}}/>}
 
-      {/* ══ WA FLOAT BUTTON ════════════════════════════════════════════════ */}
+      {/* ══ WA FLOAT BUTTON ══════════════════════════════════════════════════ */}
       {!isAdmin&&<DraggableWA/>}
     </div>
-  );
-}
-
-// ── AdminRow ─────────────────────────────────────────────────────────────────
-function AdminRow({p,editing,onEdit,onDelete}:{p:Product;editing:Product|null;onEdit:(p:Product)=>void;onDelete:(id:string)=>void;}){
-  return(
-    <div className="admin-row" style={{display:"flex",alignItems:"center",gap:"0.6rem",padding:"0.5rem 0.55rem",borderRadius:7,background:editing?.id===p.id?"#111":"transparent",transition:"background 0.1s"}}>
-      <img src={optImg(p.img,80)} alt={p.name} style={{width:38,height:38,objectFit:"cover",borderRadius:6,flexShrink:0,background:"#141414"}}/>
-      <div style={{flex:1,minWidth:0}}>
-        <p style={{color:"#b0b0b0",fontSize:10,fontWeight:700,margin:"0 0 1px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</p>
-        <p style={{color:"#282828",fontSize:8,margin:0}}>${p.price.toFixed(2)}</p>
-      </div>
-      <div style={{display:"flex",gap:"0.3rem",flexShrink:0}}>
-        <button onClick={()=>onEdit(p)} style={{background:"#131313",color:"#555",border:"1px solid #1a1a1a",padding:"0.25rem 0.55rem",borderRadius:5,cursor:"pointer",fontSize:8,fontFamily:"inherit",fontWeight:700,WebkitTapHighlightColor:"transparent"}}>Editar</button>
-        <button onClick={()=>onDelete(p.id)} style={{background:"none",color:"#773333",border:"1px solid #1e0e0e",padding:"0.25rem 0.55rem",borderRadius:5,cursor:"pointer",fontSize:8,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>✕</button>
-      </div>
-    </div>
-  );
-}
-
-// ── Footer ───────────────────────────────────────────────────────────────────
-function Footer({setMainView,setShopFilter}:{setMainView:(v:MainView)=>void;setShopFilter:(v:ShopFilter)=>void}){
-  const sA:React.CSSProperties={display:"flex",alignItems:"center",justifyContent:"center",width:33,height:33,borderRadius:"50%",background:"rgba(255,255,255,0.03)",textDecoration:"none",border:"1px solid rgba(255,255,255,0.05)",flexShrink:0};
-  const cats=[{l:"Lentes",c:"LENTES"},{l:"Relojes",c:"RELOJES"},{l:"Collares",c:"COLLARES"},{l:"Pulseras",c:"PULSERAS"},{l:"Anillos",c:"ANILLOS"},{l:"Aretes",c:"ARETES"},{l:"Billeteras",c:"BILLETERAS"}];
-  return(
-    <footer style={{background:"#040404",borderTop:"1px solid #0d0d0d",marginTop:"2rem",padding:"2.5rem 1.5rem 2rem"}}>
-      <div style={{maxWidth:1100,margin:"0 auto"}}>
-        {/* Shipping block */}
-        <div style={{display:"flex",alignItems:"center",gap:10,padding:"0.9rem 1.1rem",background:"#080808",border:"1px solid #0e0e0e",borderRadius:12,marginBottom:"2rem"}}>
-          <span style={{fontSize:18}}>📦</span>
-          <div>
-            <p style={{margin:0,fontSize:9,fontWeight:800,letterSpacing:2,color:"#bbb"}}>ENVÍOS A TODA VENEZUELA</p>
-            <p style={{margin:0,fontSize:9,color:"#303030",marginTop:2}}>Hacemos envíos a domicilio en todo el territorio nacional</p>
-          </div>
-        </div>
-
-        <div className="footer-grid" style={{display:"grid",gap:"2rem",marginBottom:"2rem"}}>
-          <div>
-            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:"0.55rem"}}>
-              <img src="/favicon.png" alt="Fokus" width={17} height={17} style={{objectFit:"contain"}}/>
-              <span style={{fontWeight:900,fontSize:10,letterSpacing:5,color:"#fff"}}>FOKUS</span>
-            </div>
-            <p style={{fontSize:9,color:"#242424",lineHeight:1.75,margin:"0 0 0.75rem",maxWidth:160}}>Accesorios con actitud.<br/>Cada detalle importa.</p>
-            <div style={{display:"flex",gap:"0.35rem"}}>
-              {[{href:SOCIAL.instagram,ic:<IcIG s={12}/>},{href:SOCIAL.facebook,ic:<IcFB s={12}/>},{href:SOCIAL.tiktok,ic:<IcTT s={12}/>},{href:SOCIAL.whatsapp,ic:<IcWA s={12}/>}].map(({href,ic},i)=>(
-                <a key={i} href={href} target="_blank" rel="noreferrer" className="social-link" style={sA}>{ic}</a>
-              ))}
-            </div>
-          </div>
-          <div>
-            <p style={{fontSize:7,fontWeight:800,letterSpacing:3,color:"#181818",marginBottom:"0.65rem"}}>TIENDA</p>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.3rem 0.9rem"}}>
-              {cats.map(({l,c})=>(
-                <button key={c} className="footer-link" onClick={()=>{setShopFilter(c as ShopFilter);setMainView("shop");typeof window!=="undefined"&&window.scrollTo({top:0,behavior:"smooth"});}}
-                  style={{background:"none",border:"none",textAlign:"left",cursor:"pointer",fontFamily:"inherit",fontSize:9,color:"#222",padding:0,WebkitTapHighlightColor:"transparent",transition:"color 0.12s"}}>
-                  {l}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <p style={{fontSize:7,fontWeight:800,letterSpacing:3,color:"#181818",marginBottom:"0.65rem"}}>CONTACTO</p>
-            <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noreferrer"
-              style={{display:"inline-flex",alignItems:"center",gap:"0.4rem",background:"#081208",color:"#3a8a3a",padding:"0.45rem 0.8rem",borderRadius:7,fontSize:9,fontWeight:700,textDecoration:"none",marginBottom:"0.65rem",border:"1px solid #0e1e0e"}}>
-              <IcWA s={10} c="#3a8a3a"/> WhatsApp
-            </a>
-            <p style={{fontSize:8,color:"#1e1e1e",margin:0}}>miltonjavi05@gmail.com</p>
-            <p style={{fontSize:8,color:"#1e1e1e",margin:"2px 0 0"}}>+58 424-300-5733</p>
-          </div>
-        </div>
-        <div style={{borderTop:"1px solid #0d0d0d",paddingTop:"1rem",display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:"0.35rem"}}>
-          <p style={{fontSize:7,color:"#181818",margin:0,letterSpacing:1}}>© {new Date().getFullYear()} FOKUS. TODOS LOS DERECHOS RESERVADOS.</p>
-          <p style={{fontSize:7,color:"#111",margin:0,letterSpacing:1}}>FOKUS ®</p>
-        </div>
-      </div>
-      <style>{`
-        .footer-link:hover{color:#777!important}
-        .social-link:hover{border-color:#1e1e1e!important;transform:translateY(-1px)}
-        @media(max-width:480px){.footer-grid{grid-template-columns:1fr!important;gap:1.5rem!important}}
-        @media(min-width:481px) and (max-width:767px){.footer-grid{grid-template-columns:repeat(2,1fr)!important}}
-        @media(min-width:768px){.footer-grid{grid-template-columns:repeat(3,1fr)!important}}
-      `}</style>
-    </footer>
   );
 }
