@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
 
 const FIREBASE_CONFIG = {
   apiKey:            "AIzaSyAyZI3aj5JBfRaIT875ydXeFiaHmtECoXI",
@@ -154,18 +154,25 @@ const DEMO: Product[] = [
   {id:"d11",name:"Billetera Cuero",       category:"BILLETERAS",             price:30,img:"https://images.unsplash.com/photo-1627123424574-724758594e93?w=400&q=80"},
 ];
 
-const IcWA = ({s=22,c="#fff"}:{s?:number;c?:string}) => (
+const IcWA = memo(({s=22,c="#fff"}:{s?:number;c?:string}) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill={c}><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-);
-const IcIG = ({s=22,c="#fff"}:{s?:number;c?:string}) => (
+));
+IcWA.displayName = "IcWA";
+
+const IcIG = memo(({s=22,c="#fff"}:{s?:number;c?:string}) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill={c}><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
-);
-const IcFB = ({s=22,c="#fff"}:{s?:number;c?:string}) => (
+));
+IcIG.displayName = "IcIG";
+
+const IcFB = memo(({s=22,c="#fff"}:{s?:number;c?:string}) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill={c}><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-);
-const IcTT = ({s=22,c="#fff"}:{s?:number;c?:string}) => (
+));
+IcFB.displayName = "IcFB";
+
+const IcTT = memo(({s=22,c="#fff"}:{s?:number;c?:string}) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill={c}><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
-);
+));
+IcTT.displayName = "IcTT";
 
 const NAV_H = 56;
 const TABS_H = 40;
@@ -179,23 +186,28 @@ const S = {
   adminBtn: {background:C.accent,color:"#080808",border:"none",padding:"0.8rem 1.5rem",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit",borderRadius:8,width:"100%",WebkitTapHighlightColor:"transparent"} as React.CSSProperties,
 };
 
-function LazyImg({src,alt}:{src:string;alt:string}) {
+// ── LazyImg optimizada ──────────────────────────────────────────────────────
+const LazyImg = memo(function LazyImg({src,alt}:{src:string;alt:string}) {
   const [loaded,setLoaded] = useState(false);
   const [inView,setInView] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(()=>{
     const el=ref.current; if(!el) return;
-    const obs=new IntersectionObserver(([e])=>{ if(e.isIntersecting){setInView(true);obs.disconnect();} },{rootMargin:"300px"});
+    const obs=new IntersectionObserver(([e])=>{ if(e.isIntersecting){setInView(true);obs.disconnect();} },{rootMargin:"400px"});
     obs.observe(el); return()=>obs.disconnect();
   },[]);
   return (
-    <div ref={ref} style={{position:"relative",width:"100%",height:"100%",pointerEvents:"none"}}>
+    <div ref={ref} style={{position:"relative",width:"100%",height:"100%"}}>
       {!loaded&&<div style={{position:"absolute",inset:0,background:"#161616"}}/>}
-      {inView&&<img src={optImg(src,400)} alt={alt} loading="lazy" decoding="async" onLoad={()=>setLoaded(true)}
-        style={{width:"100%",height:"100%",objectFit:"cover",display:"block",opacity:loaded?1:0,transition:"opacity 0.25s ease",pointerEvents:"none"}}/>}
+      {inView&&<img src={optImg(src,400)} alt={alt} loading="lazy" decoding="async" fetchPriority="low"
+        onLoad={()=>setLoaded(true)}
+        style={{width:"100%",height:"100%",objectFit:"cover",display:"block",opacity:loaded?1:0,transition:"opacity 0.25s ease",
+          // CRÍTICO: pointer-events:none para que el touch no quede atrapado en <img>
+          pointerEvents:"none",userSelect:"none",WebkitUserSelect:"none",touchAction:"none"
+        }}/>}
     </div>
   );
-}
+});
 
 function SkeletonCard() {
   return (
@@ -215,11 +227,14 @@ function catLabel(cat:string):string {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  WA BUTTON — libre mientras se arrastra, snap a borde al soltar
+//  DraggableWA — FIXED: posición inicial fuera de pantalla evitada con
+//  visibilidad oculta hasta el primer cálculo de posición.
 // ═══════════════════════════════════════════════════════════════════════════
 function DraggableWA() {
-  const BTN=48, MG=10;
-  const [pos,setPos]         = useState<{x:number;y:number}|null>(null);
+  const BTN=48, MG=12;
+  // Empezamos con visibility:hidden hasta calcular posición real
+  const [ready,setReady]     = useState(false);
+  const [pos,setPos]         = useState({x:0,y:0});
   const [pressed,setPressed] = useState(false);
   const [snap,setSnap]       = useState(false);
   const dragging  = useRef(false);
@@ -230,21 +245,26 @@ function DraggableWA() {
   const raf       = useRef(0);
 
   useEffect(()=>{
-    const x=window.innerWidth-BTN-MG, y=Math.round(window.innerHeight*0.75-BTN/2);
-    setPos({x,y}); live.current={x,y};
+    // Calculamos la posición correcta una sola vez al montar
+    const x = window.innerWidth - BTN - MG;
+    const y = Math.round(window.innerHeight * 0.78 - BTN / 2);
+    const p = {x, y};
+    live.current = p;
+    setPos(p);
+    setReady(true);
   },[]);
 
-  const clamp=useCallback((x:number,y:number)=>({
+  const clamp = useCallback((x:number,y:number)=>({
     x:Math.max(MG,Math.min(window.innerWidth-BTN-MG,x)),
-    y:Math.max(MG,Math.min(window.innerHeight-BTN-MG,y)),
+    y:Math.max(MG+80,Math.min(window.innerHeight-BTN-MG,y)),
   }),[]);
 
-  const snapPos=useCallback((x:number,y:number)=>{
+  const snapPos = useCallback((x:number,y:number)=>{
     const sx=(x+BTN/2)<window.innerWidth/2?MG:window.innerWidth-BTN-MG;
     return {x:sx,y:clamp(x,y).y};
   },[clamp]);
 
-  const onDown=useCallback((e:React.PointerEvent)=>{
+  const onDown = useCallback((e:React.PointerEvent)=>{
     e.preventDefault();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     dragging.current=true; moved.current=false;
@@ -253,7 +273,7 @@ function DraggableWA() {
     setPressed(true); setSnap(false);
   },[]);
 
-  const onMove=useCallback((e:React.PointerEvent)=>{
+  const onMove = useCallback((e:React.PointerEvent)=>{
     if(!dragging.current) return;
     e.preventDefault();
     const dx=e.clientX-startPtr.current.x, dy=e.clientY-startPtr.current.y;
@@ -264,7 +284,7 @@ function DraggableWA() {
     raf.current=requestAnimationFrame(()=>setPos({...n}));
   },[clamp]);
 
-  const onUp=useCallback(()=>{
+  const onUp = useCallback(()=>{
     if(!dragging.current) return;
     dragging.current=false; setPressed(false);
     if(moved.current){
@@ -273,27 +293,33 @@ function DraggableWA() {
     }
   },[snapPos]);
 
-  const onClick=useCallback((e:React.MouseEvent)=>{
+  const onClick = useCallback((e:React.MouseEvent)=>{
     if(moved.current){e.preventDefault();return;}
     window.open(SOCIAL.whatsapp,"_blank","noreferrer");
   },[]);
 
-  if(!pos) return null;
   const isSnapping=snap&&!dragging.current;
 
   return (
-    <div onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} onClick={onClick}
+    <div
+      onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
+      onClick={onClick}
       style={{
-        position:"fixed",left:pos.x,top:pos.y,zIndex:500,
+        position:"fixed",
+        left:pos.x,
+        top:pos.y,
+        zIndex:500,
         width:BTN,height:BTN,borderRadius:"50%",
         background:pressed?"rgba(255,255,255,0.85)":"rgba(255,255,255,0.13)",
         backdropFilter:"blur(16px)",WebkitBackdropFilter:"blur(16px)",
         border:"1px solid rgba(255,255,255,0.18)",
         display:"flex",alignItems:"center",justifyContent:"center",
         cursor:"grab",touchAction:"none",userSelect:"none",WebkitUserSelect:"none",
-        transition:isSnapping
-          ?"left 0.38s cubic-bezier(0.25,0.46,0.45,0.94),top 0.1s,background 0.2s"
-          :"background 0.2s",
+        // Ocultamos hasta tener la posición correcta para evitar el flash en el centro
+        visibility: ready ? "visible" : "hidden",
+        transition: isSnapping
+          ? "left 0.38s cubic-bezier(0.25,0.46,0.45,0.94),background 0.2s"
+          : "background 0.2s",
         willChange:"left,top",
         boxShadow:pressed?"0 0 0 8px rgba(255,255,255,0.07)":"0 2px 20px rgba(0,0,0,0.5)",
       }}>
@@ -302,7 +328,10 @@ function DraggableWA() {
   );
 }
 
-function NativeTabs({items,active,onSelect,renderItem,height=44}:{
+// ═══════════════════════════════════════════════════════════════════════════
+//  NativeTabs
+// ═══════════════════════════════════════════════════════════════════════════
+const NativeTabs = memo(function NativeTabs({items,active,onSelect,renderItem,height=44}:{
   items:string[];active:string;onSelect:(v:string)=>void;
   renderItem:(item:string,isActive:boolean)=>React.ReactNode;height?:number;
 }) {
@@ -312,7 +341,7 @@ function NativeTabs({items,active,onSelect,renderItem,height=44}:{
     if(el) el.scrollIntoView({block:"nearest",inline:"center",behavior:"smooth"});
   },[active]);
   return (
-    <div ref={ref} style={{display:"flex",overflowX:"auto",overflowY:"hidden",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",height,touchAction:"pan-x"}} className="ts">
+    <div ref={ref} className="ts" style={{display:"flex",overflowX:"auto",overflowY:"hidden",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",height,touchAction:"pan-x pan-y"}}>
       {items.map(item=>(
         <button key={item} data-active={item===active} onClick={()=>onSelect(item)}
           style={{background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",flexShrink:0,padding:0,display:"flex",alignItems:"center",WebkitTapHighlightColor:"transparent"}}>
@@ -321,9 +350,12 @@ function NativeTabs({items,active,onSelect,renderItem,height=44}:{
       ))}
     </div>
   );
-}
+});
 
-function ProductCard({product,onClick,index}:{product:Product;onClick:()=>void;index:number}) {
+// ═══════════════════════════════════════════════════════════════════════════
+//  ProductCard — memoizada para no re-renderizar si no cambia
+// ═══════════════════════════════════════════════════════════════════════════
+const ProductCard = memo(function ProductCard({product,onClick,index}:{product:Product;onClick:()=>void;index:number}) {
   const [vis,setVis]=useState(false);
   const ref=useRef<HTMLDivElement>(null);
   useEffect(()=>{
@@ -333,7 +365,9 @@ function ProductCard({product,onClick,index}:{product:Product;onClick:()=>void;i
   },[]);
   return (
     <div ref={ref} className="pc" onClick={onClick}
-      style={{cursor:"pointer",opacity:vis?1:0,transform:vis?"translateY(0)":"translateY(14px)",transition:`opacity 0.35s ease ${Math.min(index*35,160)}ms,transform 0.35s ease ${Math.min(index*35,160)}ms`,willChange:"transform,opacity"}}>
+      style={{cursor:"pointer",opacity:vis?1:0,transform:vis?"translateY(0)":"translateY(14px)",
+        transition:`opacity 0.35s ease ${Math.min(index*35,160)}ms,transform 0.35s ease ${Math.min(index*35,160)}ms`,
+        willChange:"transform,opacity"}}>
       <div style={{background:"#111",aspectRatio:"1",overflow:"hidden",marginBottom:"0.55rem",borderRadius:10,position:"relative"}}>
         <div className="iz" style={{width:"100%",height:"100%",transition:"transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94)"}}>
           <LazyImg src={product.img} alt={product.name}/>
@@ -344,10 +378,12 @@ function ProductCard({product,onClick,index}:{product:Product;onClick:()=>void;i
       <p style={{margin:0,fontSize:14,fontWeight:800,color:C.accent,letterSpacing:0.5}}>${product.price.toFixed(2)}</p>
     </div>
   );
-}
+});
 
-// Tarjeta en fila horizontal — pointer-events:none en imágenes para no bloquear touch
-function HCard({product,onClick}:{product:Product;onClick:()=>void}) {
+// ═══════════════════════════════════════════════════════════════════════════
+//  HCard — memoizada
+// ═══════════════════════════════════════════════════════════════════════════
+const HCard = memo(function HCard({product,onClick}:{product:Product;onClick:()=>void}) {
   return (
     <div className="hc" onClick={onClick} style={{cursor:"pointer",flexShrink:0,width:148}}>
       <div style={{background:"#111",width:148,height:148,overflow:"hidden",marginBottom:"0.5rem",borderRadius:10,position:"relative"}}>
@@ -360,35 +396,54 @@ function HCard({product,onClick}:{product:Product;onClick:()=>void}) {
       <p style={{margin:0,fontSize:13,fontWeight:800,color:C.accent}}>${product.price.toFixed(2)}</p>
     </div>
   );
-}
+});
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  HorizontalRow
-//  Solución al problema vertical/horizontal:
-//  - El wrapper exterior NO tiene overflow, touchAction:"pan-y" → el navegador
-//    propaga el scroll vertical a la página sin problema.
-//  - El div interior tiene overflow-x:auto y touchAction:"pan-x" → captura
-//    solo el gesto horizontal.
-//  - Las imágenes tienen pointerEvents:"none" (en LazyImg) para que el touch
-//    sobre la foto no quede "atrapado" por el elemento imagen.
+//  HRow — SOLUCIÓN DEFINITIVA iOS/Android
+//
+//  La clave en iOS Safari es:
+//  1. El contenedor con scroll usa overflow-x:scroll (no auto) + -webkit-overflow-scrolling:touch
+//  2. touch-action en el contenedor debe ser "pan-x" ÚNICAMENTE (no pan-y)
+//  3. Las imágenes deben tener pointer-events:none Y touch-action:none
+//  4. El wrapper EXTERIOR no debe interceptar eventos táctiles (sin touchAction)
+//  5. NO usar onTouchStart/Move nativos de React que bloqueen el scroll
 // ═══════════════════════════════════════════════════════════════════════════
-function HRow({products,onSelect}:{products:Product[];onSelect:(p:Product)=>void}) {
+const HRow = memo(function HRow({products,onSelect}:{products:Product[];onSelect:(p:Product)=>void}) {
   return (
-    <div style={{touchAction:"pan-y",overflow:"hidden"}}>
-      <div className="hr" style={{
-        display:"flex",gap:"0.75rem",
-        overflowX:"auto",overflowY:"hidden",
-        paddingBottom:"0.5rem",paddingLeft:"0.25rem",paddingRight:"0.25rem",
-        scrollbarWidth:"none",WebkitOverflowScrolling:"touch",
+    <div
+      className="hr"
+      style={{
+        display:"flex",
+        gap:"0.75rem",
+        overflowX:"scroll",      // scroll en vez de auto es más fiable en iOS
+        overflowY:"hidden",
+        paddingBottom:"0.5rem",
+        paddingLeft:"0.25rem",
+        paddingRight:"0.25rem",
+        scrollbarWidth:"none",
+        WebkitOverflowScrolling:"touch",
+        // pan-x: el navegador maneja el scroll horizontal, pan-y: deja el vertical a la página
         touchAction:"pan-x",
+        // Evita que el browser seleccione texto/imágenes al hacer swipe
+        userSelect:"none",
+        WebkitUserSelect:"none",
+        // Scroll snapping suave opcional
+        scrollSnapType:"x proximity",
+        willChange:"scroll-position",
       }}>
-        {products.map(p=><HCard key={p.id} product={p} onClick={()=>onSelect(p)}/>)}
-      </div>
+      {products.map(p=>(
+        <div key={p.id} style={{scrollSnapAlign:"start",flexShrink:0}}>
+          <HCard product={p} onClick={()=>onSelect(p)}/>
+        </div>
+      ))}
     </div>
   );
-}
+});
 
-function AddedModal({product,onClose,onGoCart}:{product:Product;onClose:()=>void;onGoCart:()=>void}) {
+// ═══════════════════════════════════════════════════════════════════════════
+//  AddedModal
+// ═══════════════════════════════════════════════════════════════════════════
+const AddedModal = memo(function AddedModal({product,onClose,onGoCart}:{product:Product;onClose:()=>void;onGoCart:()=>void}) {
   return (
     <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:600,background:"rgba(0,0,0,0.72)",display:"flex",alignItems:"flex-end",justifyContent:"center",animation:"fadeIn 0.18s ease"}}>
       <div onClick={e=>e.stopPropagation()} style={{background:"#161616",width:"100%",maxWidth:520,borderRadius:"18px 18px 0 0",padding:"1.25rem 1.25rem 2rem",animation:"slideUp 0.28s cubic-bezier(0.34,1.3,0.64,1)",border:"1px solid #222",borderBottom:"none"}}>
@@ -413,8 +468,11 @@ function AddedModal({product,onClose,onGoCart}:{product:Product;onClose:()=>void
       </div>
     </div>
   );
-}
+});
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  HOME
+// ═══════════════════════════════════════════════════════════════════════════
 export default function Home() {
   const [mainView,setMainView]           = useState<MainView>("fokus");
   const [shopFilter,setShopFilter]       = useState<ShopFilter>("TODO");
@@ -441,24 +499,24 @@ export default function Home() {
     return()=>ro.disconnect();
   },[mainView,lentesOpen,searchOpen]);
 
-  // Admin
-  const [adminLogged,setAdminLogged]     = useState(false);
-  const [adminEmail,setAdminEmail]       = useState("");
-  const [adminPwd,setAdminPwd]           = useState("");
-  const [adminErr,setAdminErr]           = useState("");
-  const [adminSec,setAdminSec]           = useState<"menu"|"products">("menu");
-  const [adminCat,setAdminCat]           = useState("ALL");
-  const [editing,setEditing]             = useState<Product|null>(null);
-  const [fName,setFName]                 = useState("");
-  const [fDesc,setFDesc]                 = useState("");
-  const [fPrice,setFPrice]               = useState("");
-  const [fCat,setFCat]                   = useState("");
-  const [fFile,setFFile]                 = useState<File|null>(null);
-  const [fPrev,setFPrev]                 = useState("");
-  const [fLoad,setFLoad]                 = useState(false);
-  const [fErr,setFErr]                   = useState("");
-  const [fOk,setFOk]                     = useState("");
-  const [adminSearch,setAdminSearch]     = useState("");
+  // Admin state
+  const [adminLogged,setAdminLogged]   = useState(false);
+  const [adminEmail,setAdminEmail]     = useState("");
+  const [adminPwd,setAdminPwd]         = useState("");
+  const [adminErr,setAdminErr]         = useState("");
+  const [adminSec,setAdminSec]         = useState<"menu"|"products">("menu");
+  const [adminCat,setAdminCat]         = useState("ALL");
+  const [editing,setEditing]           = useState<Product|null>(null);
+  const [fName,setFName]               = useState("");
+  const [fDesc,setFDesc]               = useState("");
+  const [fPrice,setFPrice]             = useState("");
+  const [fCat,setFCat]                 = useState("");
+  const [fFile,setFFile]               = useState<File|null>(null);
+  const [fPrev,setFPrev]               = useState("");
+  const [fLoad,setFLoad]               = useState(false);
+  const [fErr,setFErr]                 = useState("");
+  const [fOk,setFOk]                   = useState("");
+  const [adminSearch,setAdminSearch]   = useState("");
   const fileRef=useRef<HTMLInputElement>(null);
   const formRef=useRef<HTMLDivElement>(null);
 
@@ -581,19 +639,23 @@ export default function Home() {
         @keyframes scaleIn{from{opacity:0;transform:scale(0.88)}to{opacity:1;transform:scale(1)}}
         *{box-sizing:border-box;-webkit-font-smoothing:antialiased;}
         body{background:#080808;margin:0;overscroll-behavior-y:none;}
+        /* Ocultar scrollbars */
         .ts::-webkit-scrollbar,.hr::-webkit-scrollbar{display:none}
         .ts{-webkit-overflow-scrolling:touch;}
-        /* zoom en hover — no interfiere con touch porque las imgs tienen pointer-events:none */
-        .pc:hover .iz,.hc:hover .iz{transform:scale(1.05)!important}
-        .pc:hover .io,.hc:hover .io{background:rgba(255,255,255,0.04)!important}
+        .hr::-webkit-scrollbar{display:none}
+        /* Hover efectos — no interfieren con touch */
+        @media(hover:hover){
+          .pc:hover .iz,.hc:hover .iz{transform:scale(1.05)!important}
+          .pc:hover .io,.hc:hover .io{background:rgba(255,255,255,0.04)!important}
+          .sl:hover{border-color:#333!important;transform:translateY(-1px)}
+          .pc2:hover{background:#1a1a1a!important}
+          .ar:hover{background:#161616!important}
+          .fl:hover{color:#fff!important}
+          .pl:hover{opacity:0.8}
+        }
         .pc:active{transform:scale(0.97)}
         .hc:active{opacity:0.85}
-        .sl:hover{border-color:#333!important;transform:translateY(-1px)}
-        .pc2:hover{background:#1a1a1a!important}
         .nb:active{opacity:0.6}
-        .ar:hover{background:#161616!important}
-        .fl:hover{color:#fff!important}
-        .pl:hover{opacity:0.8}
         @media(max-width:480px){.pg{grid-template-columns:repeat(2,1fr)!important}.fg{grid-template-columns:1fr!important;gap:1.5rem!important}}
         @media(min-width:481px) and (max-width:767px){.pg{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))!important}.fg{grid-template-columns:repeat(2,1fr)!important;gap:1.5rem!important}}
         @media(min-width:768px){.pg{grid-template-columns:repeat(auto-fill,minmax(195px,1fr))!important}.fg{grid-template-columns:repeat(3,1fr)!important}}
@@ -605,9 +667,15 @@ export default function Home() {
           <button onClick={()=>setMenuOpen(true)} style={S.iconBtn} aria-label="Menú">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><line x1="3" y1="7" x2="21" y2="7"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="17" x2="21" y2="17"/></svg>
           </button>
-          <button onClick={()=>setMainView("fokus")} style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:7,position:"absolute",left:"50%",transform:"translateX(-50%)",padding:"0 8px",WebkitTapHighlightColor:"transparent"}}>
-            <img src="/favicon.png" alt="Fokus" width={26} height={26} style={{objectFit:"contain"}}/>
-            <span style={{color:"#fff",fontSize:16,fontWeight:900,letterSpacing:5}}>FOKUS</span>
+          {/* Logo centrado con position absolute para no depender del flex */}
+          <button onClick={()=>setMainView("fokus")}
+            style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:7,
+              position:"absolute",left:"50%",transform:"translateX(-50%)",
+              padding:"0 8px",WebkitTapHighlightColor:"transparent",
+              // Evitar que el logo se superponga a los botones laterales
+              maxWidth:"calc(100% - 120px)"}}>
+            <img src="/favicon.png" alt="Fokus" width={26} height={26} style={{objectFit:"contain",flexShrink:0}}/>
+            <span style={{color:"#fff",fontSize:16,fontWeight:900,letterSpacing:5,whiteSpace:"nowrap"}}>FOKUS</span>
           </button>
           <div style={{display:"flex",marginLeft:"auto"}}>
             <button onClick={()=>{ const n=!searchOpen;setSearchOpen(n);setSearchQuery("");if(n&&mainView!=="shop"){setMainView("shop");setShopFilter("TODO");} }} style={S.iconBtn}>
@@ -697,9 +765,7 @@ export default function Home() {
                 </div>
               </div>
             </div>
-            <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={{...S.darkBtn,fontSize:11,padding:"1.1rem 2.8rem",letterSpacing:3,borderRadius:3}}
-              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.opacity="0.88"}}
-              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.opacity="1"}}>
+            <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={{...S.darkBtn,fontSize:11,padding:"1.1rem 2.8rem",letterSpacing:3,borderRadius:3}}>
               VER COLECCIÓN →
             </button>
             <div style={{display:"flex",justifyContent:"center",gap:"0.75rem",marginTop:"3rem"}}>
@@ -1002,9 +1068,7 @@ export default function Home() {
               <span style={{padding:"0 1rem",fontSize:16,color:C.text,fontWeight:700}}>{modalQty}</span>
               <button onClick={()=>setModalQty(modalQty+1)} style={S.qtyBtn}>+</button>
             </div>
-            <button onClick={()=>addToCart(selectedProduct,modalQty)} style={{...S.darkBtn,width:"100%",justifyContent:"center",fontSize:12,padding:"1.05rem",borderRadius:10}}
-              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.opacity="0.88"}}
-              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.opacity="1"}}>
+            <button onClick={()=>addToCart(selectedProduct,modalQty)} style={{...S.darkBtn,width:"100%",justifyContent:"center",fontSize:12,padding:"1.05rem",borderRadius:10}}>
               AGREGAR AL CARRITO
             </button>
           </div>
@@ -1017,7 +1081,8 @@ export default function Home() {
   );
 }
 
-function ARow({p,editing,onEdit,onDel}:{p:Product;editing:Product|null;onEdit:(p:Product)=>void;onDel:(id:string)=>void}) {
+// ── ARow ────────────────────────────────────────────────────────────────────
+const ARow = memo(function ARow({p,editing,onEdit,onDel}:{p:Product;editing:Product|null;onEdit:(p:Product)=>void;onDel:(id:string)=>void}) {
   return (
     <div className="ar" style={{display:"flex",alignItems:"center",gap:"0.75rem",padding:"0.6rem 0.65rem",borderRadius:8,background:editing?.id===p.id?"#1a1a1a":"transparent"}}>
       <img src={optImg(p.img,120)} alt={p.name} style={{width:44,height:44,objectFit:"cover",borderRadius:6,flexShrink:0,background:"#1a1a1a"}}/>
@@ -1031,9 +1096,10 @@ function ARow({p,editing,onEdit,onDel}:{p:Product;editing:Product|null;onEdit:(p
       </div>
     </div>
   );
-}
+});
 
-function Footer({setMainView,setShopFilter}:{setMainView:(v:MainView)=>void;setShopFilter:(v:ShopFilter)=>void}) {
+// ── Footer ───────────────────────────────────────────────────────────────────
+const Footer = memo(function Footer({setMainView,setShopFilter}:{setMainView:(v:MainView)=>void;setShopFilter:(v:ShopFilter)=>void}) {
   const sA: React.CSSProperties={display:"flex",alignItems:"center",justifyContent:"center",width:36,height:36,borderRadius:"50%",background:"rgba(255,255,255,0.04)",textDecoration:"none",border:"1px solid rgba(255,255,255,0.07)",flexShrink:0};
   const cats=[{l:"Lentes",c:"LENTES"},{l:"Relojes",c:"RELOJES"},{l:"Collares",c:"COLLARES"},{l:"Pulseras",c:"PULSERAS"},{l:"Anillos",c:"ANILLOS"},{l:"Aretes",c:"ARETES"},{l:"Billeteras",c:"BILLETERAS"}];
   return (
@@ -1083,4 +1149,4 @@ function Footer({setMainView,setShopFilter}:{setMainView:(v:MainView)=>void;setS
       </div>
     </footer>
   );
-}
+});
