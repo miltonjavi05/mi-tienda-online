@@ -41,12 +41,6 @@ const LENTES_SUBCATS = [
   "LENTES·MOTORIZADOS",
 ] as const;
 
-const ALL_SHOP_CATS = [
-  "LENTES",
-  ...LENTES_SUBCATS,
-  "RELOJES","COLLARES","PULSERAS","ANILLOS","ARETES","BILLETERAS",
-] as const;
-
 interface Product {
   id: string;
   name: string;
@@ -59,7 +53,7 @@ interface Product {
 interface CartItem { product: Product; qty: number; }
 
 type MainView = "fokus" | "shop" | "comunidad" | "cart" | "admin";
-type ShopFilter = typeof ALL_SHOP_CATS[number] | "TODO" | typeof LENTES_SUBCATS[number];
+type ShopFilter = typeof SHOP_CATS[number] | "TODO" | typeof LENTES_SUBCATS[number] | "LENTES";
 
 // ── Firestore REST ──────────────────────────────────────────────────────────
 const fsBase = () =>
@@ -162,7 +156,7 @@ const DEMO: Product[] = [
   {id:"d11",name:"Billetera Cuero",       category:"BILLETERAS",             price:30,img:"https://images.unsplash.com/photo-1627123424574-724758594e93?w=400&q=80"},
 ];
 
-// ── Íconos SVG ──────────────────────────────────────────────────────────────
+// ── Íconos SVG (memoizados) ──────────────────────────────────────────────────
 const IcWA = ({s=22,c="#fff"}:{s?:number;c?:string}) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill={c}><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
 );
@@ -186,8 +180,6 @@ const C = {
   text:    "#ececec",
   muted:   "#555",
   accent:  "#fff",
-  catActive:"#fff",
-  catInact: "#444",
 };
 
 const S = {
@@ -244,56 +236,102 @@ function catLabel(cat: string): string {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  BOTÓN WA FLOTANTE — Solo en los bordes, translúcido blanco/negro, sin errores
+//  BOTÓN WA FLOTANTE — Estilo iPhone (AssistiveTouch), drag libre, snap al borde
 // ═══════════════════════════════════════════════════════════════════════════
 function DraggableWA() {
-  // side: "left" | "right", pct: porcentaje vertical 0-100
-  const [side, setSide]   = useState<"left"|"right">("right");
-  const [pct,  setPct]    = useState(75); // % desde arriba
-  const btnRef   = useRef<HTMLDivElement>(null);
-  const dragging = useRef(false);
-  const moved    = useRef(false);
-  const startY   = useRef(0);
-  const startPct = useRef(75);
-  const [pressed, setPressed] = useState(false);
-
-  const BTN = 52;
+  const BTN = 50;
   const MARGIN = 10;
+  // posición interna del centro del botón
+  const pos = useRef({ x: 0, y: 0 });
+  const [renderPos, setRenderPos] = useState({ x: 0, y: 0 });
+  const btnRef = useRef<HTMLDivElement>(null);
+  const dragging = useRef(false);
+  const moved = useRef(false);
+  const startPointer = useRef({ x: 0, y: 0 });
+  const startPos = useRef({ x: 0, y: 0 });
+  const [pressed, setPressed] = useState(false);
+  const animFrame = useRef<number>(0);
+
+  // Inicializar posición (derecha, 75% de pantalla)
+  useEffect(() => {
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+    const initX = W - BTN - MARGIN;
+    const initY = H * 0.75;
+    pos.current = { x: initX, y: initY };
+    setRenderPos({ x: initX, y: initY });
+  }, []);
+
+  const snapToEdge = useCallback(() => {
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+    const cx = pos.current.x + BTN / 2;
+    // snap a lado más cercano
+    const snapX = cx < W / 2
+      ? MARGIN
+      : W - BTN - MARGIN;
+    const snapY = Math.max(MARGIN, Math.min(H - BTN - MARGIN, pos.current.y));
+
+    // animación suave manual
+    const startX = pos.current.x;
+    const startY = pos.current.y;
+    const dx = snapX - startX;
+    const dy = snapY - startY;
+    const duration = 280;
+    const startTime = performance.now();
+
+    const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
+
+    const animate = (now: number) => {
+      const elapsed = now - startTime;
+      const t = Math.min(elapsed / duration, 1);
+      const ease = easeOut(t);
+      const nx = startX + dx * ease;
+      const ny = startY + dy * ease;
+      pos.current = { x: nx, y: ny };
+      setRenderPos({ x: nx, y: ny });
+      if (t < 1) animFrame.current = requestAnimationFrame(animate);
+    };
+    cancelAnimationFrame(animFrame.current);
+    animFrame.current = requestAnimationFrame(animate);
+  }, []);
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
     dragging.current = true;
-    moved.current    = false;
-    startY.current   = e.clientY;
-    startPct.current = pct;
+    moved.current = false;
+    startPointer.current = { x: e.clientX, y: e.clientY };
+    startPos.current = { ...pos.current };
     setPressed(true);
-  }, [pct]);
+    cancelAnimationFrame(animFrame.current);
+  }, []);
 
   const onPointerMove = useCallback((e: React.PointerEvent) => {
     if (!dragging.current) return;
-    const dy = e.clientY - startY.current;
-    if (Math.abs(dy) > 4) moved.current = true;
-    const H = window.innerHeight;
-    const newY = Math.max(MARGIN, Math.min(H - BTN - MARGIN, (startPct.current / 100) * H + dy));
-    setPct((newY / H) * 100);
-    // detectar lado según posición horizontal del pointer
+    const dx = e.clientX - startPointer.current.x;
+    const dy = e.clientY - startPointer.current.y;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved.current = true;
+
     const W = window.innerWidth;
-    setSide(e.clientX < W / 2 ? "left" : "right");
+    const H = window.innerHeight;
+    const nx = Math.max(MARGIN, Math.min(W - BTN - MARGIN, startPos.current.x + dx));
+    const ny = Math.max(MARGIN, Math.min(H - BTN - MARGIN, startPos.current.y + dy));
+    pos.current = { x: nx, y: ny };
+    setRenderPos({ x: nx, y: ny });
   }, []);
 
-  const onPointerUp = useCallback(() => {
+  const onPointerUp = useCallback((e: React.PointerEvent) => {
+    if (!dragging.current) return;
     dragging.current = false;
     setPressed(false);
-  }, []);
-
-  const handleClick = useCallback((e: React.MouseEvent) => {
-    if (moved.current) { e.preventDefault(); return; }
-    window.open(SOCIAL.whatsapp, "_blank", "noreferrer");
-  }, []);
-
-  const top = `${pct}%`;
-  const left  = side === "left"  ? MARGIN : undefined;
-  const right = side === "right" ? MARGIN : undefined;
+    if (moved.current) {
+      snapToEdge();
+    } else {
+      // tap → abrir WA
+      window.open(SOCIAL.whatsapp, "_blank", "noreferrer");
+    }
+  }, [snapToEdge]);
 
   return (
     <div
@@ -301,51 +339,46 @@ function DraggableWA() {
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
-      onClick={handleClick}
+      onPointerCancel={(e) => { dragging.current = false; setPressed(false); snapToEdge(); }}
       style={{
-        position:"fixed",
-        top,
-        left,
-        right,
-        transform:"translateY(-50%)",
-        zIndex:500,
+        position: "fixed",
+        left: renderPos.x,
+        top: renderPos.y,
+        zIndex: 500,
         width: BTN,
         height: BTN,
-        borderRadius:"50%",
+        borderRadius: "50%",
         background: pressed
-          ? "rgba(255,255,255,0.85)"
-          : "rgba(255,255,255,0.12)",
-        backdropFilter:"blur(16px)",
-        WebkitBackdropFilter:"blur(16px)",
-        border:"1px solid rgba(255,255,255,0.18)",
-        display:"flex",
-        alignItems:"center",
-        justifyContent:"center",
-        cursor:"grab",
-        touchAction:"none",
-        userSelect:"none",
-        WebkitUserSelect:"none",
-        transition:"background 0.2s, border-color 0.2s, transform 0.15s",
-        willChange:"top,transform",
+          ? "rgba(255,255,255,0.92)"
+          : "rgba(20,20,20,0.78)",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+        border: pressed
+          ? "1.5px solid rgba(255,255,255,0.9)"
+          : "1.5px solid rgba(255,255,255,0.15)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        cursor: "grab",
+        touchAction: "none",
+        userSelect: "none",
+        WebkitUserSelect: "none",
+        willChange: "left,top",
         boxShadow: pressed
-          ? "0 0 0 6px rgba(255,255,255,0.08)"
-          : "0 2px 16px rgba(0,0,0,0.4)",
+          ? "0 0 0 8px rgba(255,255,255,0.06), 0 4px 24px rgba(0,0,0,0.6)"
+          : "0 2px 20px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04)",
+        transition: "background 0.15s, border-color 0.15s, box-shadow 0.15s",
       }}>
-      <IcWA s={24} c={pressed ? "#080808" : "#fff"}/>
+      <IcWA s={22} c={pressed ? "#080808" : "#fff"} />
     </div>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  TABS — scroll nativo sin JS de drag, funciona perfecto en iOS y Android
+//  TABS — scroll nativo sin JS drag
 // ═══════════════════════════════════════════════════════════════════════════
 function NativeTabs({
-  items,
-  active,
-  onSelect,
-  renderItem,
-  height=44,
+  items, active, onSelect, renderItem, height=44,
 }: {
   items: string[];
   active: string;
@@ -355,44 +388,18 @@ function NativeTabs({
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
-  // scroll al activo
   useEffect(()=>{
     const el = ref.current?.querySelector(`[data-active="true"]`) as HTMLElement|null;
     if (el) el.scrollIntoView({block:"nearest",inline:"center",behavior:"smooth"});
   },[active]);
 
   return (
-    <div
-      ref={ref}
-      style={{
-        display:"flex",
-        overflowX:"auto",
-        overflowY:"hidden",
-        scrollbarWidth:"none",
-        WebkitOverflowScrolling:"touch",
-        height,
-        // cursor normal, scroll nativo del browser
-        touchAction:"pan-x",
-      }}
-      className="native-tabs-strip">
+    <div ref={ref} style={{display:"flex",overflowX:"auto",overflowY:"hidden",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",height,touchAction:"pan-x"}} className="native-tabs-strip">
       {items.map(item => {
         const isActive = item === active;
         return (
-          <button
-            key={item}
-            data-active={isActive}
-            onClick={() => onSelect(item)}
-            style={{
-              background:"none",
-              border:"none",
-              cursor:"pointer",
-              fontFamily:"inherit",
-              flexShrink:0,
-              padding:0,
-              display:"flex",
-              alignItems:"center",
-              WebkitTapHighlightColor:"transparent",
-            }}>
+          <button key={item} data-active={isActive} onClick={() => onSelect(item)}
+            style={{background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",flexShrink:0,padding:0,display:"flex",alignItems:"center",WebkitTapHighlightColor:"transparent"}}>
             {renderItem(item, isActive)}
           </button>
         );
@@ -416,22 +423,17 @@ function ProductCard({product,onClick,index}:{product:Product;onClick:()=>void;i
   },[]);
 
   return (
-    <div
-      ref={ref}
-      className="prod-card"
-      onClick={onClick}
-      style={{
-        cursor:"pointer",
-        opacity: visible ? 1 : 0,
-        transform: visible ? "translateY(0)" : "translateY(14px)",
-        transition:`opacity 0.35s ease ${Math.min(index*35,160)}ms, transform 0.35s ease ${Math.min(index*35,160)}ms`,
-        willChange:"transform,opacity",
-      }}>
+    <div ref={ref} className="prod-card" onClick={onClick} style={{
+      cursor:"pointer",
+      opacity: visible ? 1 : 0,
+      transform: visible ? "translateY(0)" : "translateY(14px)",
+      transition:`opacity 0.35s ease ${Math.min(index*35,160)}ms, transform 0.35s ease ${Math.min(index*35,160)}ms`,
+      willChange:"transform,opacity",
+    }}>
       <div style={{background:"#111",aspectRatio:"1",overflow:"hidden",marginBottom:"0.55rem",borderRadius:10,position:"relative"}}>
         <div className="prod-img-inner" style={{width:"100%",height:"100%",transition:"transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94)"}}>
           <LazyImg src={product.img} alt={product.name}/>
         </div>
-        {/* overlay sutil al hover */}
         <div className="prod-overlay" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",transition:"background 0.3s ease"}}/>
       </div>
       <p style={{margin:"0 0 3px",fontSize:12,lineHeight:1.35,color:"#bbb",letterSpacing:0.2}}>{product.name}</p>
@@ -440,41 +442,74 @@ function ProductCard({product,onClick,index}:{product:Product;onClick:()=>void;i
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-//  MODAL POST-CARRITO — aparece al añadir, ofrece ir al carrito o seguir
-// ═══════════════════════════════════════════════════════════════════════════
-function AddedToCartModal({
-  product,
-  onClose,
-  onGoCart,
-}: {
-  product: Product;
-  onClose: ()=>void;
-  onGoCart: ()=>void;
-}) {
+// ── ProductCardHorizontal — tarjeta compacta para scroll horizontal ──────────
+function ProductCardH({product,onClick}:{product:Product;onClick:()=>void}) {
+  const [loaded,setLoaded] = useState(false);
   return (
-    <div
-      onClick={onClose}
-      style={{
-        position:"fixed",inset:0,zIndex:600,
-        background:"rgba(0,0,0,0.72)",
-        display:"flex",alignItems:"flex-end",justifyContent:"center",
-        animation:"fadeIn 0.18s ease",
-      }}>
-      <div
-        onClick={e=>e.stopPropagation()}
-        style={{
-          background:"#161616",
-          width:"100%",maxWidth:520,
-          borderRadius:"18px 18px 0 0",
-          padding:"1.25rem 1.25rem 2rem",
-          animation:"slideUp 0.28s cubic-bezier(0.34,1.3,0.64,1)",
-          border:"1px solid #222",
-          borderBottom:"none",
-        }}>
-        {/* Handle */}
-        <div style={{width:36,height:3,background:"#333",borderRadius:2,margin:"0 auto 1.25rem"}}/>
+    <div onClick={onClick} style={{
+      flexShrink:0,
+      width:140,
+      cursor:"pointer",
+      WebkitTapHighlightColor:"transparent",
+    }}>
+      <div style={{width:140,height:140,background:"#111",borderRadius:10,overflow:"hidden",marginBottom:"0.5rem",position:"relative"}}>
+        {!loaded && <div style={{position:"absolute",inset:0,background:"#161616"}}/>}
+        <img src={optImg(product.img,280)} alt={product.name} loading="lazy" decoding="async"
+          onLoad={()=>setLoaded(true)}
+          style={{width:"100%",height:"100%",objectFit:"cover",opacity:loaded?1:0,transition:"opacity 0.2s ease"}}/>
+      </div>
+      <p style={{margin:"0 0 2px",fontSize:11,color:"#bbb",lineHeight:1.3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:140}}>{product.name}</p>
+      <p style={{margin:0,fontSize:13,fontWeight:800,color:C.accent}}>${product.price.toFixed(2)}</p>
+    </div>
+  );
+}
 
+// ── HorizontalCategoryRow — fila scroll horizontal para vista TODO ───────────
+function HorizontalCategoryRow({
+  cat, products, onProductClick, onViewAll, isLenteCat,
+}: {
+  cat: string;
+  products: Product[];
+  onProductClick: (p: Product) => void;
+  onViewAll: () => void;
+  isLenteCat: boolean;
+}) {
+  if (products.length === 0) return null;
+  return (
+    <div style={{marginBottom:"2.5rem"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.85rem",borderBottom:`1px solid ${C.border}`,paddingBottom:"0.65rem"}}>
+        <h2 style={{fontSize:11,fontWeight:800,letterSpacing:3,margin:0,color:"#555"}}>
+          {isLenteCat ? `LENTES · ${catLabel(cat).toUpperCase()}` : catLabel(cat).toUpperCase()}
+        </h2>
+        <button onClick={onViewAll}
+          style={{background:"none",border:"none",fontSize:10,color:"#333",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",letterSpacing:1,fontWeight:700}}>
+          VER TODOS
+        </button>
+      </div>
+      <div style={{
+        display:"flex",
+        gap:"0.75rem",
+        overflowX:"auto",
+        overflowY:"hidden",
+        paddingBottom:"0.5rem",
+        scrollbarWidth:"none",
+        WebkitOverflowScrolling:"touch",
+        touchAction:"pan-x",
+      }} className="native-tabs-strip">
+        {products.map(p => (
+          <ProductCardH key={p.id} product={p} onClick={() => onProductClick(p)} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── AddedToCartModal ─────────────────────────────────────────────────────────
+function AddedToCartModal({product,onClose,onGoCart}:{product:Product;onClose:()=>void;onGoCart:()=>void}) {
+  return (
+    <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:600,background:"rgba(0,0,0,0.72)",display:"flex",alignItems:"flex-end",justifyContent:"center",animation:"fadeIn 0.18s ease"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:"#161616",width:"100%",maxWidth:520,borderRadius:"18px 18px 0 0",padding:"1.25rem 1.25rem 2rem",animation:"slideUp 0.28s cubic-bezier(0.34,1.3,0.64,1)",border:"1px solid #222",borderBottom:"none"}}>
+        <div style={{width:36,height:3,background:"#333",borderRadius:2,margin:"0 auto 1.25rem"}}/>
         <div style={{display:"flex",gap:"0.85rem",alignItems:"center",marginBottom:"1.25rem"}}>
           <div style={{width:58,height:58,borderRadius:8,overflow:"hidden",flexShrink:0,background:"#111"}}>
             <img src={optImg(product.img,120)} alt={product.name} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
@@ -484,50 +519,19 @@ function AddedToCartModal({
             <p style={{margin:"0 0 2px",fontSize:14,color:C.text,fontWeight:600,lineHeight:1.3}}>{product.name}</p>
             <p style={{margin:0,fontSize:13,color:"#888"}}>Añadir mas <span style={{color:C.accent,fontWeight:700}}>${product.price.toFixed(2)}</span></p>
           </div>
-          {/* checkmark animado */}
-          <div style={{
-            width:32,height:32,borderRadius:"50%",
-            background:"#1a2e1a",border:"1.5px solid #2a4a2a",
-            display:"flex",alignItems:"center",justifyContent:"center",
-            flexShrink:0,animation:"scaleIn 0.3s cubic-bezier(0.34,1.4,0.64,1)",
-          }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5">
-              <polyline points="20 6 9 17 4 12"/>
-            </svg>
+          <div style={{width:32,height:32,borderRadius:"50%",background:"#1a2e1a",border:"1.5px solid #2a4a2a",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,animation:"scaleIn 0.3s cubic-bezier(0.34,1.4,0.64,1)"}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
         </div>
-
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.65rem"}}>
-          <button
-            onClick={onClose}
-            style={{
-              background:"transparent",
-              color:"#aaa",
-              border:"1px solid #2a2a2a",
-              padding:"0.85rem 1rem",
-              fontSize:12,fontWeight:700,letterSpacing:1.2,
-              cursor:"pointer",fontFamily:"inherit",
-              borderRadius:10,
-              WebkitTapHighlightColor:"transparent",
-              transition:"background 0.15s, color 0.15s",
-            }}
+          <button onClick={onClose}
+            style={{background:"transparent",color:"#aaa",border:"1px solid #2a2a2a",padding:"0.85rem 1rem",fontSize:12,fontWeight:700,letterSpacing:1.2,cursor:"pointer",fontFamily:"inherit",borderRadius:10,WebkitTapHighlightColor:"transparent",transition:"background 0.15s, color 0.15s"}}
             onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="#1e1e1e";(e.currentTarget as HTMLElement).style.color="#fff"}}
             onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";(e.currentTarget as HTMLElement).style.color="#aaa"}}>
             SEGUIR COMPRANDO
           </button>
-          <button
-            onClick={onGoCart}
-            style={{
-              background:C.accent,
-              color:"#080808",
-              border:"none",
-              padding:"0.85rem 1rem",
-              fontSize:12,fontWeight:800,letterSpacing:1.2,
-              cursor:"pointer",fontFamily:"inherit",
-              borderRadius:10,
-              WebkitTapHighlightColor:"transparent",
-              transition:"opacity 0.15s",
-            }}
+          <button onClick={onGoCart}
+            style={{background:C.accent,color:"#080808",border:"none",padding:"0.85rem 1rem",fontSize:12,fontWeight:800,letterSpacing:1.2,cursor:"pointer",fontFamily:"inherit",borderRadius:10,WebkitTapHighlightColor:"transparent",transition:"opacity 0.15s"}}
             onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.opacity="0.9"}}
             onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.opacity="1"}}>
             IR AL CARRITO →
@@ -555,16 +559,13 @@ export default function Home() {
   const [products,setProducts]         = useState<Product[]>([]);
   const [loading,setLoading]           = useState(true);
   const [fbReady,setFbReady]           = useState(false);
-  // modal post-carrito
   const [addedProduct,setAddedProduct] = useState<Product|null>(null);
 
   const navRef = useRef<HTMLElement>(null);
   const [navHeight, setNavHeight] = useState(NAV_H + TABS_H);
 
   useEffect(()=>{
-    const update = () => {
-      if (navRef.current) setNavHeight(navRef.current.offsetHeight);
-    };
+    const update = () => { if (navRef.current) setNavHeight(navRef.current.offsetHeight); };
     update();
     const ro = new ResizeObserver(update);
     if (navRef.current) ro.observe(navRef.current);
@@ -613,6 +614,7 @@ export default function Home() {
   const isLentesSubcat = useMemo(()=>(LENTES_SUBCATS as readonly string[]).includes(shopFilter),[shopFilter]);
   const isLentesActive = useMemo(()=>shopFilter==="LENTES"||isLentesSubcat,[shopFilter,isLentesSubcat]);
 
+  // Categorías visibles según filtro
   const getVisibleCats = useCallback((): string[] => {
     if (shopFilter==="TODO") return [...LENTES_SUBCATS, ...SHOP_CATS.filter(c=>c!=="LENTES")];
     if (shopFilter==="LENTES") return [...LENTES_SUBCATS];
@@ -633,7 +635,7 @@ export default function Home() {
       return ex?prev.map(i=>i.product.id===product.id?{...i,qty:i.qty+qty}:i):[...prev,{product,qty}];
     });
     setSelectedProduct(null);
-    setAddedProduct(product); // mostrar mini-modal
+    setAddedProduct(product);
   },[]);
 
   const updateQty = useCallback((id:string,delta:number)=>
@@ -708,6 +710,7 @@ export default function Home() {
   const isAdmin    = mainView==="admin";
   const isCart     = mainView==="cart";
   const catStickyTop = navHeight - 1;
+  const isInTodoView = isShopView && shopFilter === "TODO";
 
   const NAV_TABS = [
     {id:"fokus" as MainView, label:"FOKUS"},
@@ -723,6 +726,7 @@ export default function Home() {
         @keyframes slideUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
         @keyframes slideInLeft{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
         @keyframes scaleIn{from{opacity:0;transform:scale(0.88)}to{opacity:1;transform:scale(1)}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
 
         *{box-sizing:border-box;-webkit-font-smoothing:antialiased;}
         body{background:${C.bg};overscroll-behavior:none;margin:0}
@@ -758,53 +762,28 @@ export default function Home() {
       `}</style>
 
       {/* ══ NAVBAR ═════════════════════════════════════════════════════════ */}
-      <nav ref={navRef} style={{
-        position:"fixed",top:0,left:0,right:0,zIndex:200,
-        background:"rgba(8,8,8,0.96)",
-        borderBottom:"1px solid #161616",
-        backdropFilter:"blur(20px)",
-        WebkitBackdropFilter:"blur(20px)",
-      }}>
+      <nav ref={navRef} style={{position:"fixed",top:0,left:0,right:0,zIndex:200,background:"rgba(8,8,8,0.96)",borderBottom:"1px solid #161616",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 1rem",height:NAV_H,position:"relative"}}>
           <button onClick={()=>setMenuOpen(true)} style={S.iconBtn} aria-label="Menú">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
               <line x1="3" y1="7" x2="21" y2="7"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="17" x2="21" y2="17"/>
             </svg>
           </button>
-
           <button onClick={()=>setMainView("fokus")} aria-label="Inicio"
             style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:7,position:"absolute",left:"50%",transform:"translateX(-50%)",padding:"0 8px",WebkitTapHighlightColor:"transparent"}}>
             <img src="/favicon.png" alt="Fokus" width={26} height={26} style={{objectFit:"contain"}}/>
             <span style={{color:"#fff",fontSize:16,fontWeight:900,letterSpacing:5}}>FOKUS</span>
           </button>
-
           <div style={{display:"flex",gap:0,marginLeft:"auto"}}>
-            <button
-              onClick={()=>{
-                const next = !searchOpen;
-                setSearchOpen(next);
-                setSearchQuery("");
-                if(next && mainView!=="shop") { setMainView("shop"); setShopFilter("TODO"); }
-              }}
-              style={S.iconBtn} aria-label="Buscar">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
-                <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-              </svg>
+            <button onClick={()=>{const next=!searchOpen;setSearchOpen(next);setSearchQuery("");if(next&&mainView!=="shop"){setMainView("shop");setShopFilter("TODO");}}} style={S.iconBtn} aria-label="Buscar">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
             </button>
             <button onClick={()=>setMainView("cart")} style={{...S.iconBtn,position:"relative"}} aria-label="Carrito">
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
-                <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
-                <line x1="3" y1="6" x2="21" y2="6"/>
-                <path d="M16 10a4 4 0 01-8 0"/>
+                <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
               </svg>
               {totalItems>0&&(
-                <span style={{
-                  position:"absolute",top:4,right:4,
-                  background:"#fff",color:"#080808",
-                  borderRadius:"50%",width:15,height:15,fontSize:8,fontWeight:900,
-                  display:"flex",alignItems:"center",justifyContent:"center",
-                  animation:"scaleIn 0.2s ease",
-                }}>
+                <span style={{position:"absolute",top:4,right:4,background:"#fff",color:"#080808",borderRadius:"50%",width:15,height:15,fontSize:8,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",animation:"scaleIn 0.2s ease"}}>
                   {totalItems}
                 </span>
               )}
@@ -812,7 +791,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Tabs con scroll nativo */}
         {!isAdmin && (
           <NativeTabs
             items={NAV_TABS.map(t=>t.id)}
@@ -822,13 +800,9 @@ export default function Home() {
             renderItem={(id,isActive)=>{
               const label = NAV_TABS.find(t=>t.id===id)?.label ?? id;
               return (
-                <span className="nav-tab-btn" style={{
-                  display:"flex",alignItems:"center",padding:"0 1.4rem",height:"100%",
-                  borderBottom:isActive?"2px solid #fff":"2px solid transparent",
-                  fontSize:10,fontWeight:800,letterSpacing:2.5,
-                  color:isActive?"#fff":"#444",whiteSpace:"nowrap",
-                  transition:"color 0.15s, border-color 0.15s",
-                }}>{label}</span>
+                <span className="nav-tab-btn" style={{display:"flex",alignItems:"center",padding:"0 1.4rem",height:"100%",borderBottom:isActive?"2px solid #fff":"2px solid transparent",fontSize:10,fontWeight:800,letterSpacing:2.5,color:isActive?"#fff":"#444",whiteSpace:"nowrap",transition:"color 0.15s, border-color 0.15s"}}>
+                  {label}
+                </span>
               );
             }}
           />
@@ -837,8 +811,7 @@ export default function Home() {
         {searchOpen && (
           <div style={{background:"#111",borderTop:`1px solid ${C.border}`,padding:"0.55rem 1rem",animation:"fadeIn 0.15s ease"}}>
             <input autoFocus value={searchQuery} onChange={e=>setSearchQuery(e.target.value)}
-              placeholder="Buscar productos…" aria-label="Búsqueda"
-              style={{...S.input,borderRadius:8}}/>
+              placeholder="Buscar productos…" aria-label="Búsqueda" style={{...S.input,borderRadius:8}}/>
           </div>
         )}
       </nav>
@@ -846,29 +819,19 @@ export default function Home() {
       {/* ══ MENÚ LATERAL ═══════════════════════════════════════════════════ */}
       {menuOpen && (
         <div style={{position:"fixed",inset:0,zIndex:300,display:"flex"}}>
-          <div onClick={()=>setMenuOpen(false)}
-            style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.8)",animation:"fadeIn 0.2s ease"}}/>
-          <div style={{
-            position:"relative",background:"#0e0e0e",width:272,height:"100%",
-            padding:"2rem 1.5rem",overflowY:"auto",display:"flex",flexDirection:"column",
-            animation:"slideInLeft 0.22s cubic-bezier(0.25,0.46,0.45,0.94)",
-            borderRight:"1px solid #1a1a1a",
-          }}>
+          <div onClick={()=>setMenuOpen(false)} style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.8)",animation:"fadeIn 0.2s ease"}}/>
+          <div style={{position:"relative",background:"#0e0e0e",width:272,height:"100%",padding:"2rem 1.5rem",overflowY:"auto",display:"flex",flexDirection:"column",animation:"slideInLeft 0.22s cubic-bezier(0.25,0.46,0.45,0.94)",borderRight:"1px solid #1a1a1a"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"2rem"}}>
               <span style={{fontWeight:900,fontSize:11,letterSpacing:3,color:"#555"}}>CATEGORÍAS</span>
               <button onClick={()=>setMenuOpen(false)} style={{...S.iconBtn,padding:4}} aria-label="Cerrar">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2">
-                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                </svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
-
             <div>
               <button onClick={()=>setLentesOpen(o=>!o)}
                 style={{display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%",background:"none",border:"none",borderBottom:`1px solid ${C.border}`,padding:"0.85rem 0",textAlign:"left",fontSize:14,cursor:"pointer",fontFamily:"inherit",color:"#d0d0d0",WebkitTapHighlightColor:"transparent",letterSpacing:0.3}}>
                 <span>Lentes</span>
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#444" strokeWidth="2"
-                  style={{transition:"transform 0.22s",transform:lentesOpen?"rotate(180deg)":"rotate(0deg)"}}>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#444" strokeWidth="2" style={{transition:"transform 0.22s",transform:lentesOpen?"rotate(180deg)":"rotate(0deg)"}}>
                   <polyline points="6 9 12 15 18 9"/>
                 </svg>
               </button>
@@ -884,15 +847,12 @@ export default function Home() {
                 </div>
               )}
             </div>
-
             {SHOP_CATS.filter(c=>c!=="LENTES").map(cat=>(
-              <button key={cat}
-                onClick={()=>{setShopFilter(cat);setMenuOpen(false);setMainView("shop");}}
+              <button key={cat} onClick={()=>{setShopFilter(cat as ShopFilter);setMenuOpen(false);setMainView("shop");}}
                 style={{display:"block",width:"100%",background:"none",border:"none",borderBottom:`1px solid ${C.border}`,padding:"0.85rem 0",textAlign:"left",fontSize:14,cursor:"pointer",fontFamily:"inherit",color:"#d0d0d0",WebkitTapHighlightColor:"transparent",letterSpacing:0.3}}>
                 {catLabel(cat)}
               </button>
             ))}
-
             <div style={{marginTop:"auto",paddingTop:"2rem"}}>
               <p style={{fontSize:9,letterSpacing:3,color:"#333",marginBottom:"0.85rem",fontWeight:700}}>SÍGUENOS</p>
               <div style={{display:"flex",gap:"0.6rem"}}>
@@ -911,20 +871,37 @@ export default function Home() {
         <main style={{paddingTop:navHeight,background:C.bg}}>
           <div style={{maxWidth:760,margin:"0 auto",padding:"4rem 1.5rem 0",textAlign:"center",animation:"slideUp 0.5s ease"}}>
             <div style={{marginBottom:"2rem"}}>
-              <img src="/favicon.png" alt="Fokus" width={64} height={64}
-                style={{objectFit:"contain",filter:"brightness(1.1)"}}/>
+              <img src="/favicon.png" alt="Fokus" width={64} height={64} style={{objectFit:"contain",filter:"brightness(1.1)"}}/>
             </div>
             <p style={{fontSize:10,letterSpacing:6,color:"#333",fontWeight:700,marginBottom:"1rem"}}>ACCESORIOS</p>
             <h1 style={{fontSize:40,fontWeight:900,letterSpacing:8,marginBottom:"0.85rem",color:C.accent,lineHeight:1}}>FOKUS</h1>
-            <p style={{fontSize:14,color:"#444",marginBottom:"3rem",lineHeight:1.7,maxWidth:300,margin:"0 auto 3rem"}}>Cada detalle +<br/>Calidad, diseño y actitud.</p>
-            <button
-              onClick={()=>{setMainView("shop");setShopFilter("TODO");}}
-              style={{...S.darkBtn,fontSize:11,padding:"1.1rem 2.8rem",letterSpacing:3,borderRadius:3}}
-              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.opacity="0.88"}}
-              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.opacity="1"}}>
-              VER COLECCIÓN →
-            </button>
-            <div style={{display:"flex",justifyContent:"center",gap:"0.75rem",marginTop:"3rem"}}>
+            <p style={{fontSize:14,color:"#444",marginBottom:"2rem",lineHeight:1.7,maxWidth:300,margin:"0 auto 2rem"}}>Cada detalle +<br/>Calidad, diseño y actitud.</p>
+
+            {/* ── Banner Envíos a toda Venezuela ── */}
+            <div style={{
+              display:"inline-flex",alignItems:"center",gap:"0.6rem",
+              background:"rgba(255,255,255,0.04)",
+              border:"1px solid rgba(255,255,255,0.08)",
+              borderRadius:100,
+              padding:"0.5rem 1.2rem",
+              marginBottom:"2rem",
+              animation:"fadeIn 0.6s ease 0.3s both",
+            }}>
+              <span style={{fontSize:14}}>🇻🇪</span>
+              <span style={{fontSize:11,fontWeight:700,letterSpacing:2,color:"#888"}}>ENVÍOS A TODA VENEZUELA</span>
+              <span style={{width:6,height:6,borderRadius:"50%",background:"#4caf50",animation:"pulse 2s infinite",display:"inline-block"}}/>
+            </div>
+
+            <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:"0.85rem",marginBottom:"3rem"}}>
+              <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}}
+                style={{...S.darkBtn,fontSize:11,padding:"1.1rem 2.8rem",letterSpacing:3,borderRadius:3}}
+                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.opacity="0.88"}}
+                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.opacity="1"}}>
+                VER COLECCIÓN →
+              </button>
+            </div>
+
+            <div style={{display:"flex",justifyContent:"center",gap:"0.75rem",marginTop:"1rem"}}>
               <a href={SOCIAL.instagram} target="_blank" rel="noreferrer" className="social-link" style={S.socialA}><IcIG s={18}/></a>
               <a href={SOCIAL.tiktok}    target="_blank" rel="noreferrer" className="social-link" style={S.socialA}><IcTT s={18}/></a>
               <a href={SOCIAL.facebook}  target="_blank" rel="noreferrer" className="social-link" style={S.socialA}><IcFB s={18}/></a>
@@ -939,21 +916,11 @@ export default function Home() {
       {isShopView && (
         <main style={{paddingTop:navHeight,background:C.bg}}>
 
-          {/* Filtro sticky con NativeTabs */}
-          <div style={{
-            position:"sticky",top:catStickyTop,zIndex:100,
-            background:"rgba(8,8,8,0.97)",
-            borderBottom:`1px solid ${C.border}`,
-            backdropFilter:"blur(20px)",
-            WebkitBackdropFilter:"blur(20px)",
-          }}>
+          {/* Filtro sticky */}
+          <div style={{position:"sticky",top:catStickyTop,zIndex:100,background:"rgba(8,8,8,0.97)",borderBottom:`1px solid ${C.border}`,backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)"}}>
             <NativeTabs
               items={["TODO","LENTES",...(SHOP_CATS.filter(c=>c!=="LENTES") as string[])]}
-              active={
-                shopFilter==="TODO"?"TODO":
-                isLentesActive?"LENTES":
-                (SHOP_CATS.filter(c=>c!=="LENTES") as string[]).includes(shopFilter)?shopFilter:"TODO"
-              }
+              active={shopFilter==="TODO"?"TODO":isLentesActive?"LENTES":(SHOP_CATS.filter(c=>c!=="LENTES") as string[]).includes(shopFilter)?shopFilter:"TODO"}
               onSelect={(item)=>{
                 if(item==="LENTES"){
                   const next=!lentesOpen;
@@ -971,19 +938,10 @@ export default function Home() {
                   item==="LENTES" ? isLentesActive :
                   shopFilter===item;
                 return (
-                  <span className="nav-tab-btn" style={{
-                    display:"flex",alignItems:"center",gap:4,
-                    padding:"0 1rem",height:44,
-                    borderBottom:isActiveItem?"2px solid #fff":"2px solid transparent",
-                    fontSize:10,fontWeight:800,letterSpacing:2,
-                    color:isActiveItem?"#fff":"#3e3e3e",
-                    whiteSpace:"nowrap",
-                    transition:"color 0.15s, border-color 0.15s",
-                  }}>
+                  <span className="nav-tab-btn" style={{display:"flex",alignItems:"center",gap:4,padding:"0 1rem",height:44,borderBottom:isActiveItem?"2px solid #fff":"2px solid transparent",fontSize:10,fontWeight:800,letterSpacing:2,color:isActiveItem?"#fff":"#3e3e3e",whiteSpace:"nowrap",transition:"color 0.15s, border-color 0.15s"}}>
                     {item}
                     {item==="LENTES"&&(
-                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-                        style={{transition:"transform 0.2s",transform:lentesOpen?"rotate(180deg)":"rotate(0deg)"}}>
+                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{transition:"transform 0.2s",transform:lentesOpen?"rotate(180deg)":"rotate(0deg)"}}>
                         <polyline points="6 9 12 15 18 9"/>
                       </svg>
                     )}
@@ -993,24 +951,10 @@ export default function Home() {
             />
 
             {lentesOpen && (
-              <div style={{
-                background:"#0a0a0a",borderTop:"1px solid #1a1a1a",
-                padding:"0.55rem 1rem",display:"flex",gap:"0.45rem",
-                overflowX:"auto",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",
-                animation:"fadeIn 0.15s ease",
-              }} className="native-tabs-strip">
+              <div style={{background:"#0a0a0a",borderTop:"1px solid #1a1a1a",padding:"0.55rem 1rem",display:"flex",gap:"0.45rem",overflowX:"auto",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",animation:"fadeIn 0.15s ease"}} className="native-tabs-strip">
                 {LENTES_SUBCATS.map(sub=>(
-                  <button key={sub}
-                    onClick={()=>setShopFilter(sub)}
-                    style={{
-                      background:shopFilter===sub?"#fff":"transparent",
-                      color:shopFilter===sub?"#080808":"#444",
-                      border:`1px solid ${shopFilter===sub?"#fff":"#252525"}`,
-                      padding:"0.28rem 0.85rem",borderRadius:20,fontSize:9,fontWeight:800,
-                      letterSpacing:1.2,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap",
-                      flexShrink:0,WebkitTapHighlightColor:"transparent",
-                      transition:"all 0.15s ease",
-                    }}>
+                  <button key={sub} onClick={()=>setShopFilter(sub)}
+                    style={{background:shopFilter===sub?"#fff":"transparent",color:shopFilter===sub?"#080808":"#444",border:`1px solid ${shopFilter===sub?"#fff":"#252525"}`,padding:"0.28rem 0.85rem",borderRadius:20,fontSize:9,fontWeight:800,letterSpacing:1.2,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap",flexShrink:0,WebkitTapHighlightColor:"transparent",transition:"all 0.15s ease"}}>
                     {catLabel(sub).toUpperCase()}
                   </button>
                 ))}
@@ -1028,14 +972,29 @@ export default function Home() {
                 const prods = getProds(cat);
                 if(prods.length===0) return null;
                 const isLenteCat = (LENTES_SUBCATS as readonly string[]).includes(cat);
+
+                // En vista TODO → scroll horizontal por categoría
+                if (isInTodoView) {
+                  return (
+                    <HorizontalCategoryRow
+                      key={cat}
+                      cat={cat}
+                      products={prods}
+                      isLenteCat={isLenteCat}
+                      onProductClick={(p)=>{setSelectedProduct(p);setModalQty(1);}}
+                      onViewAll={()=>{setShopFilter(cat as ShopFilter);setLentesOpen(isLenteCat);}}
+                    />
+                  );
+                }
+
+                // En otras vistas → grid normal
                 return (
                   <div key={cat} style={{marginBottom:"3rem",animation:"fadeIn 0.3s ease"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1rem",borderBottom:`1px solid ${C.border}`,paddingBottom:"0.65rem"}}>
                       <h2 style={{fontSize:11,fontWeight:800,letterSpacing:3,margin:0,color:"#555"}}>
                         {isLenteCat ? `LENTES · ${catLabel(cat).toUpperCase()}` : catLabel(cat).toUpperCase()}
                       </h2>
-                      <button
-                        onClick={()=>{setShopFilter(cat as ShopFilter);setLentesOpen(isLenteCat);}}
+                      <button onClick={()=>{setShopFilter(cat as ShopFilter);setLentesOpen(isLenteCat);}}
                         style={{background:"none",border:"none",fontSize:10,color:"#333",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",letterSpacing:1,fontWeight:700}}>
                         VER TODOS
                       </button>
@@ -1077,25 +1036,18 @@ export default function Home() {
         <main style={{paddingTop:navHeight,background:C.bg}}>
           <div style={{maxWidth:680,margin:"0 auto",padding:"2rem 1rem 5rem",animation:"fadeIn 0.25s ease"}}>
             <h1 style={{fontSize:11,fontWeight:800,letterSpacing:3,marginBottom:"1.75rem",color:"#444"}}>CARRITO DE COMPRAS</h1>
-
             {cart.length===0 ? (
               <div style={{textAlign:"center",padding:"5rem 0",color:"#333",animation:"slideUp 0.4s ease"}}>
                 <p style={{marginBottom:"1.5rem",fontSize:14}}>Tu carrito está vacío</p>
-                <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}}
-                  style={{...S.darkBtn,borderRadius:4,fontSize:11}}>IR A LA TIENDA</button>
+                <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={{...S.darkBtn,borderRadius:4,fontSize:11}}>IR A LA TIENDA</button>
               </div>
             ) : (
               <>
                 {cart.map(item=>(
-                  <div key={item.product.id} style={{
-                    display:"grid",gridTemplateColumns:"1fr auto auto auto",gap:"0.75rem",
-                    padding:"1rem 0",borderBottom:`1px solid ${C.border}`,alignItems:"center",
-                  }}>
+                  <div key={item.product.id} style={{display:"grid",gridTemplateColumns:"1fr auto auto auto",gap:"0.75rem",padding:"1rem 0",borderBottom:`1px solid ${C.border}`,alignItems:"center"}}>
                     <div style={{display:"flex",alignItems:"center",gap:"0.75rem"}}>
-                      <button onClick={()=>updateQty(item.product.id,-item.qty)}
-                        style={{background:"none",border:"none",cursor:"pointer",color:"#333",fontSize:12,padding:0,WebkitTapHighlightColor:"transparent"}} aria-label="Eliminar">✕</button>
-                      <img src={optImg(item.product.img,120)} alt={item.product.name}
-                        style={{width:52,height:52,objectFit:"cover",borderRadius:6}}/>
+                      <button onClick={()=>updateQty(item.product.id,-item.qty)} style={{background:"none",border:"none",cursor:"pointer",color:"#333",fontSize:12,padding:0,WebkitTapHighlightColor:"transparent"}} aria-label="Eliminar">✕</button>
+                      <img src={optImg(item.product.img,120)} alt={item.product.name} style={{width:52,height:52,objectFit:"cover",borderRadius:6}}/>
                       <span style={{fontSize:13,color:"#bbb"}}>{item.product.name}</span>
                     </div>
                     <span style={{fontSize:13,color:"#555"}}>${item.product.price.toFixed(2)}</span>
@@ -1107,12 +1059,10 @@ export default function Home() {
                     <span style={{fontSize:14,fontWeight:800,color:C.accent}}>${(item.product.price*item.qty).toFixed(2)}</span>
                   </div>
                 ))}
-
                 <div style={{display:"flex",gap:"0.6rem",marginTop:"1.25rem",flexWrap:"wrap"}}>
                   <button onClick={()=>setMainView("shop")} style={{...S.darkBtn,borderRadius:4,fontSize:10,padding:"0.8rem 1.4rem"}}>← SEGUIR COMPRANDO</button>
                   <button onClick={()=>setCart([])} style={{...S.darkBtn,background:"transparent",color:"#444",border:`1px solid ${C.border}`,borderRadius:4,fontSize:10,padding:"0.8rem 1.2rem"}}>Vaciar</button>
                 </div>
-
                 <div style={{marginTop:"2rem",background:"#0e0e0e",padding:"1.5rem",borderRadius:12,border:`1px solid ${C.border}`}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:"0.6rem",fontSize:13,color:"#555"}}>
                     <span>Subtotal</span><span>${totalPrice.toFixed(2)}</span>
@@ -1120,22 +1070,12 @@ export default function Home() {
                   <div style={{borderTop:`1px solid ${C.border}`,paddingTop:"0.75rem",display:"flex",justifyContent:"space-between",fontSize:18,fontWeight:900,color:C.accent}}>
                     <span>Total</span><span>${totalPrice.toFixed(2)}</span>
                   </div>
-
                   <div style={{marginTop:"1.75rem"}}>
                     <p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#333",marginBottom:"0.75rem"}}>MÉTODO DE PAGO</p>
                     <div style={{display:"flex",flexDirection:"column",gap:"0.45rem"}}>
                       {PAYMENT_METHODS.map(pm=>(
-                        <button key={pm.id} className="pay-card"
-                          onClick={()=>setPayMethod(pm.id)}
-                          style={{
-                            display:"flex",alignItems:"center",gap:"0.85rem",
-                            background:payMethod===pm.id?"#fff":"#111",
-                            color:payMethod===pm.id?"#080808":C.text,
-                            border:`1px solid ${payMethod===pm.id?"#fff":"#1e1e1e"}`,
-                            borderRadius:10,padding:"0.8rem 1rem",
-                            textAlign:"left",cursor:"pointer",fontFamily:"inherit",
-                            WebkitTapHighlightColor:"transparent",
-                          }}>
+                        <button key={pm.id} className="pay-card" onClick={()=>setPayMethod(pm.id)}
+                          style={{display:"flex",alignItems:"center",gap:"0.85rem",background:payMethod===pm.id?"#fff":"#111",color:payMethod===pm.id?"#080808":C.text,border:`1px solid ${payMethod===pm.id?"#fff":"#1e1e1e"}`,borderRadius:10,padding:"0.8rem 1rem",textAlign:"left",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>
                           <span style={{fontSize:18}}>{pm.icon}</span>
                           <div>
                             <p style={{margin:0,fontSize:13,fontWeight:700}}>{pm.name}</p>
@@ -1146,35 +1086,22 @@ export default function Home() {
                       ))}
                     </div>
                   </div>
-
                   {payMethod && (()=>{
                     const pm = PAYMENT_METHODS.find(m=>m.id===payMethod)!;
                     return (
                       <div style={{marginTop:"1rem",background:"#080808",borderRadius:10,padding:"1rem",border:"1px solid #1a1a1a",animation:"fadeIn 0.2s ease"}}>
                         <p style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#333",marginBottom:"0.5rem"}}>DATOS — {pm.name.toUpperCase()}</p>
                         <p style={{fontSize:14,color:C.text,margin:0,fontWeight:600}}>{pm.detail}</p>
-                        <p style={{fontSize:11,color:"#444",marginTop:"0.4rem",lineHeight:1.6}}>
-                          Realiza el pago y notifícanos por WhatsApp adjuntando el comprobante.
-                        </p>
+                        <p style={{fontSize:11,color:"#444",marginTop:"0.4rem",lineHeight:1.6}}>Realiza el pago y notifícanos por WhatsApp adjuntando el comprobante.</p>
                       </div>
                     );
                   })()}
-
                   <a href={waMsg()} target="_blank" rel="noreferrer"
                     onClick={(e)=>{ if(!payMethod){ e.preventDefault(); alert("Por favor selecciona un método de pago primero."); } }}
-                    style={{
-                      display:"flex",alignItems:"center",justifyContent:"center",gap:"0.75rem",
-                      marginTop:"1.25rem",background:"#25D366",color:"#fff",
-                      padding:"1rem",fontWeight:900,letterSpacing:2,fontSize:11,
-                      textDecoration:"none",borderRadius:10,
-                      opacity:payMethod?1:0.35,
-                      transition:"opacity 0.2s",
-                    }}>
+                    style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.75rem",marginTop:"1.25rem",background:"#25D366",color:"#fff",padding:"1rem",fontWeight:900,letterSpacing:2,fontSize:11,textDecoration:"none",borderRadius:10,opacity:payMethod?1:0.35,transition:"opacity 0.2s"}}>
                     <IcWA s={18}/> NOTIFICAR PAGO
                   </a>
-                  {!payMethod && (
-                    <p style={{textAlign:"center",fontSize:10,color:"#333",marginTop:"0.5rem"}}>Selecciona un método de pago para continuar</p>
-                  )}
+                  {!payMethod && <p style={{textAlign:"center",fontSize:10,color:"#333",marginTop:"0.5rem"}}>Selecciona un método de pago para continuar</p>}
                 </div>
               </>
             )}
@@ -1186,7 +1113,6 @@ export default function Home() {
       {isAdmin && (
         <main style={{paddingTop:NAV_H,background:"#060606",minHeight:"100vh"}}>
           <div style={{maxWidth:720,margin:"0 auto",padding:"2rem 1rem 4rem"}}>
-
             {!adminLogged && (
               <div style={{background:"#111",borderRadius:14,padding:"2.5rem 2rem",maxWidth:380,margin:"2rem auto",border:"1px solid #1a1a1a",animation:"slideUp 0.3s ease"}}>
                 <h1 style={{color:"#fff",fontSize:20,fontWeight:900,marginBottom:"1.5rem",textAlign:"center",letterSpacing:2}}>ADMIN</h1>
@@ -1199,7 +1125,6 @@ export default function Home() {
                 </div>
               </div>
             )}
-
             {adminLogged && adminSection==="menu" && (
               <div style={{background:"#111",borderRadius:14,padding:"2.5rem 2rem",maxWidth:380,margin:"2rem auto",border:"1px solid #1a1a1a",animation:"slideUp 0.3s ease"}}>
                 <h1 style={{color:"#fff",fontSize:18,fontWeight:900,marginBottom:"0.4rem",textAlign:"center",letterSpacing:2}}>PANEL</h1>
@@ -1210,18 +1135,13 @@ export default function Home() {
                 </div>
               </div>
             )}
-
             {adminLogged && adminSection==="products" && (
               <>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem"}}>
                   <h1 style={{color:"#fff",fontSize:16,fontWeight:900,margin:0,letterSpacing:2}}>{editing?"EDITAR PRODUCTO":"PRODUCTOS"}</h1>
                   <button onClick={()=>{setAdminSection("menu");resetForm();}} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:12,fontFamily:"inherit",WebkitTapHighlightColor:"transparent",letterSpacing:1}}>← MENÚ</button>
                 </div>
-
-                <div ref={formRef} style={{
-                  background:"#111",borderRadius:12,padding:"1.5rem",marginBottom:"1.25rem",
-                  border:editing?"1px solid #2a2a2a":"1px solid #1a1a1a",
-                }}>
+                <div ref={formRef} style={{background:"#111",borderRadius:12,padding:"1.5rem",marginBottom:"1.25rem",border:editing?"1px solid #2a2a2a":"1px solid #1a1a1a"}}>
                   <p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 1.25rem"}}>
                     {editing?`EDITANDO: ${editing.name}`:"NUEVO PRODUCTO"}
                   </p>
@@ -1266,73 +1186,30 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
-
-                {/* Lista admin con scroll nativo en los pills */}
                 <div style={{background:"#111",borderRadius:12,padding:"1.5rem",border:"1px solid #1a1a1a"}}>
-                  <p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 0.85rem"}}>
-                    PRODUCTOS ({adminProds.length})
-                  </p>
-
-                  <input
-                    placeholder="Buscar…"
-                    value={adminSearch}
-                    onChange={e=>setAdminSearch(e.target.value)}
-                    style={{...S.input,marginBottom:"0.75rem"}}/>
-
-                  {/* Pills — usa scroll nativo igual que los tabs */}
-                  <div
-                    className="native-tabs-strip"
-                    style={{
-                      display:"flex",gap:"0.35rem",
-                      overflowX:"auto",
-                      paddingBottom:"0.75rem",
-                      marginBottom:"0.5rem",
-                      WebkitOverflowScrolling:"touch",
-                    }}>
+                  <p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 0.85rem"}}>PRODUCTOS ({adminProds.length})</p>
+                  <input placeholder="Buscar…" value={adminSearch} onChange={e=>setAdminSearch(e.target.value)} style={{...S.input,marginBottom:"0.75rem"}}/>
+                  <div className="native-tabs-strip" style={{display:"flex",gap:"0.35rem",overflowX:"auto",paddingBottom:"0.75rem",marginBottom:"0.5rem",WebkitOverflowScrolling:"touch"}}>
                     {["ALL",...usedCats].map(cat=>{
                       const isActive = adminCatFilter===cat;
                       const count = cat==="ALL" ? products.length : products.filter(p=>p.category===cat).length;
                       return (
-                        <button key={cat}
-                          className="admin-cat-pill"
-                          onClick={()=>setAdminCatFilter(cat)}
-                          style={{
-                            background:isActive?"#fff":"#161616",
-                            color:isActive?"#080808":"#555",
-                            border:`1px solid ${isActive?"#fff":"#222"}`,
-                            padding:"0.3rem 0.7rem",borderRadius:20,
-                            fontSize:9,fontWeight:800,letterSpacing:1,
-                            fontFamily:"inherit",flexShrink:0,
-                            WebkitTapHighlightColor:"transparent",
-                            cursor:"pointer",whiteSpace:"nowrap",
-                            transition:"all 0.12s ease",
-                          }}>
+                        <button key={cat} className="admin-cat-pill" onClick={()=>setAdminCatFilter(cat)}
+                          style={{background:isActive?"#fff":"#161616",color:isActive?"#080808":"#555",border:`1px solid ${isActive?"#fff":"#222"}`,padding:"0.3rem 0.7rem",borderRadius:20,fontSize:9,fontWeight:800,letterSpacing:1,fontFamily:"inherit",flexShrink:0,WebkitTapHighlightColor:"transparent",cursor:"pointer",whiteSpace:"nowrap",transition:"all 0.12s ease"}}>
                           {cat==="ALL"?"TODOS":catLabel(cat).toUpperCase()} · {count}
                         </button>
                       );
                     })}
                   </div>
-
                   {adminCatFilter==="ALL" ? (
                     usedCats.map(cat=>{
-                      const catProds = products.filter(p=>
-                        p.category===cat &&
-                        (adminSearch===""||p.name.toLowerCase().includes(adminSearch.toLowerCase()))
-                      );
+                      const catProds = products.filter(p=>p.category===cat&&(adminSearch===""||p.name.toLowerCase().includes(adminSearch.toLowerCase())));
                       if(catProds.length===0) return null;
                       return (
                         <div key={cat} style={{marginBottom:"1.1rem"}}>
-                          <div style={{
-                            display:"flex",alignItems:"center",gap:"0.5rem",
-                            padding:"0.4rem 0",marginBottom:"0.35rem",
-                            borderBottom:"1px solid #1a1a1a",
-                          }}>
-                            <span style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#333"}}>
-                              {catLabel(cat).toUpperCase()}
-                            </span>
-                            <span style={{fontSize:9,color:"#2a2a2a",background:"#1a1a1a",padding:"1px 6px",borderRadius:10}}>
-                              {catProds.length}
-                            </span>
+                          <div style={{display:"flex",alignItems:"center",gap:"0.5rem",padding:"0.4rem 0",marginBottom:"0.35rem",borderBottom:"1px solid #1a1a1a"}}>
+                            <span style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#333"}}>{catLabel(cat).toUpperCase()}</span>
+                            <span style={{fontSize:9,color:"#2a2a2a",background:"#1a1a1a",padding:"1px 6px",borderRadius:10}}>{catProds.length}</span>
                           </div>
                           {catProds.map(p=>(<AdminProductRow key={p.id} p={p} editing={editing} onEdit={startEdit} onDelete={deleteProduct}/>))}
                         </div>
@@ -1353,17 +1230,8 @@ export default function Home() {
 
       {/* ══ MODAL PRODUCTO ═════════════════════════════════════════════════ */}
       {selectedProduct && (
-        <div onClick={()=>setSelectedProduct(null)}
-          style={{position:"fixed",inset:0,zIndex:400,background:"rgba(0,0,0,0.88)",display:"flex",alignItems:"flex-end",justifyContent:"center",animation:"fadeIn 0.18s ease"}}>
-          <div onClick={e=>e.stopPropagation()}
-            style={{
-              background:"#111",width:"100%",maxWidth:520,
-              borderRadius:"18px 18px 0 0",padding:"1.5rem 1.5rem 2rem",
-              maxHeight:"92vh",overflowY:"auto",
-              animation:"slideUp 0.28s cubic-bezier(0.25,0.46,0.45,0.94)",
-              border:"1px solid #1e1e1e",borderBottom:"none",
-            }}>
-            {/* Handle */}
+        <div onClick={()=>setSelectedProduct(null)} style={{position:"fixed",inset:0,zIndex:400,background:"rgba(0,0,0,0.88)",display:"flex",alignItems:"flex-end",justifyContent:"center",animation:"fadeIn 0.18s ease"}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:"#111",width:"100%",maxWidth:520,borderRadius:"18px 18px 0 0",padding:"1.5rem 1.5rem 2rem",maxHeight:"92vh",overflowY:"auto",animation:"slideUp 0.28s cubic-bezier(0.25,0.46,0.45,0.94)",border:"1px solid #1e1e1e",borderBottom:"none"}}>
             <div style={{width:36,height:3,background:"#222",borderRadius:2,margin:"0 auto 1rem"}}/>
             <div style={{background:"#0a0a0a",aspectRatio:"4/3",overflow:"hidden",marginBottom:"1.1rem",borderRadius:12}}>
               <LazyImg src={selectedProduct.img} alt={selectedProduct.name}/>
@@ -1395,43 +1263,24 @@ export default function Home() {
         />
       )}
 
-      {/* ══ WA FLOTANTE ════════════════════════════════════════════════════ */}
+      {/* ══ WA FLOTANTE — Estilo iPhone AssistiveTouch ══════════════════════ */}
       {!isAdmin && <DraggableWA/>}
     </div>
   );
 }
 
 // ── AdminProductRow ──────────────────────────────────────────────────────────
-function AdminProductRow({p,editing,onEdit,onDelete}:{
-  p:Product; editing:Product|null;
-  onEdit:(p:Product)=>void;
-  onDelete:(id:string)=>void;
-}) {
+function AdminProductRow({p,editing,onEdit,onDelete}:{p:Product;editing:Product|null;onEdit:(p:Product)=>void;onDelete:(id:string)=>void}) {
   return (
-    <div className="admin-prod-row" style={{
-      display:"flex",alignItems:"center",gap:"0.75rem",
-      padding:"0.6rem 0.65rem",borderRadius:8,
-      background:editing?.id===p.id?"#1a1a1a":"transparent",
-    }}>
-      <img src={optImg(p.img,120)} alt={p.name}
-        style={{width:44,height:44,objectFit:"cover",borderRadius:6,flexShrink:0,background:"#1a1a1a"}}/>
+    <div className="admin-prod-row" style={{display:"flex",alignItems:"center",gap:"0.75rem",padding:"0.6rem 0.65rem",borderRadius:8,background:editing?.id===p.id?"#1a1a1a":"transparent"}}>
+      <img src={optImg(p.img,120)} alt={p.name} style={{width:44,height:44,objectFit:"cover",borderRadius:6,flexShrink:0,background:"#1a1a1a"}}/>
       <div style={{flex:1,minWidth:0}}>
         <p style={{color:"#ccc",fontSize:12,fontWeight:700,margin:"0 0 1px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</p>
         <p style={{color:"#333",fontSize:10,margin:0}}>${p.price.toFixed(2)}</p>
       </div>
       <div style={{display:"flex",gap:"0.35rem",flexShrink:0}}>
-        <button onClick={()=>onEdit(p)} style={{
-          background:"#1a1a1a",color:"#888",border:"1px solid #222",
-          padding:"0.3rem 0.65rem",borderRadius:6,cursor:"pointer",
-          fontSize:10,fontFamily:"inherit",fontWeight:700,
-          WebkitTapHighlightColor:"transparent",
-        }}>Editar</button>
-        <button onClick={()=>onDelete(p.id)} style={{
-          background:"none",color:"#cc3333",border:"1px solid #2a1515",
-          padding:"0.3rem 0.65rem",borderRadius:6,cursor:"pointer",
-          fontSize:10,fontFamily:"inherit",
-          WebkitTapHighlightColor:"transparent",
-        }}>✕</button>
+        <button onClick={()=>onEdit(p)} style={{background:"#1a1a1a",color:"#888",border:"1px solid #222",padding:"0.3rem 0.65rem",borderRadius:6,cursor:"pointer",fontSize:10,fontFamily:"inherit",fontWeight:700,WebkitTapHighlightColor:"transparent"}}>Editar</button>
+        <button onClick={()=>onDelete(p.id)} style={{background:"none",color:"#cc3333",border:"1px solid #2a1515",padding:"0.3rem 0.65rem",borderRadius:6,cursor:"pointer",fontSize:10,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>✕</button>
       </div>
     </div>
   );
@@ -1439,14 +1288,7 @@ function AdminProductRow({p,editing,onEdit,onDelete}:{
 
 // ── Footer ───────────────────────────────────────────────────────────────────
 function Footer({setMainView,setShopFilter}:{setMainView:(v:MainView)=>void;setShopFilter:(v:ShopFilter)=>void}) {
-  const sA: React.CSSProperties = {
-    display:"flex",alignItems:"center",justifyContent:"center",
-    width:36,height:36,borderRadius:"50%",
-    background:"rgba(255,255,255,0.04)",textDecoration:"none",
-    border:"1px solid rgba(255,255,255,0.07)",
-    flexShrink:0,
-  };
-
+  const sA: React.CSSProperties = {display:"flex",alignItems:"center",justifyContent:"center",width:36,height:36,borderRadius:"50%",background:"rgba(255,255,255,0.04)",textDecoration:"none",border:"1px solid rgba(255,255,255,0.07)",flexShrink:0};
   const catLinks = [
     {label:"Lentes",    cat:"LENTES" as ShopFilter},
     {label:"Relojes",   cat:"RELOJES" as ShopFilter},
@@ -1456,25 +1298,16 @@ function Footer({setMainView,setShopFilter}:{setMainView:(v:MainView)=>void;setS
     {label:"Aretes",    cat:"ARETES" as ShopFilter},
     {label:"Billeteras",cat:"BILLETERAS" as ShopFilter},
   ];
-
   return (
-    <footer style={{
-      background:"#060606",
-      borderTop:"1px solid #111",
-      marginTop:"2rem",
-      padding:"2.5rem 1.5rem 2rem",
-    }}>
+    <footer style={{background:"#060606",borderTop:"1px solid #111",marginTop:"2rem",padding:"2.5rem 1.5rem 2rem"}}>
       <div style={{maxWidth:1100,margin:"0 auto"}}>
         <div className="footer-grid" style={{display:"grid",gap:"2rem",marginBottom:"2rem"}}>
-
           <div>
             <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:"0.65rem"}}>
               <img src="/favicon.png" alt="Fokus" width={20} height={20} style={{objectFit:"contain"}}/>
               <span style={{fontWeight:900,fontSize:12,letterSpacing:5,color:"#fff"}}>FOKUS</span>
             </div>
-            <p style={{fontSize:11,color:"#333",lineHeight:1.7,margin:"0 0 0.85rem",maxWidth:180}}>
-              Accesorios con actitud.<br/>Cada detalle importa.
-            </p>
+            <p style={{fontSize:11,color:"#333",lineHeight:1.7,margin:"0 0 0.85rem",maxWidth:180}}>Accesorios con actitud.<br/>Cada detalle importa.</p>
             <div style={{display:"flex",gap:"0.45rem"}}>
               <a href={SOCIAL.instagram} target="_blank" rel="noreferrer" className="social-link" style={sA}><IcIG s={14}/></a>
               <a href={SOCIAL.facebook}  target="_blank" rel="noreferrer" className="social-link" style={sA}><IcFB s={14}/></a>
@@ -1482,13 +1315,11 @@ function Footer({setMainView,setShopFilter}:{setMainView:(v:MainView)=>void;setS
               <a href={SOCIAL.whatsapp}  target="_blank" rel="noreferrer" className="social-link" style={{...sA,background:"rgba(37,211,102,0.08)",borderColor:"rgba(37,211,102,0.15)"}}><IcWA s={14}/></a>
             </div>
           </div>
-
           <div>
             <p style={{fontSize:9,fontWeight:800,letterSpacing:3,color:"#2a2a2a",marginBottom:"0.75rem"}}>TIENDA</p>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.35rem 1rem"}}>
               {catLinks.map(({label,cat})=>(
-                <button key={cat}
-                  onClick={()=>{setShopFilter(cat);setMainView("shop");typeof window!=="undefined"&&window.scrollTo({top:0,behavior:"smooth"});}}
+                <button key={cat} onClick={()=>{setShopFilter(cat);setMainView("shop");typeof window!=="undefined"&&window.scrollTo({top:0,behavior:"smooth"});}}
                   style={{background:"none",border:"none",textAlign:"left",cursor:"pointer",fontFamily:"inherit",fontSize:11,color:"#333",padding:0,WebkitTapHighlightColor:"transparent",transition:"color 0.15s"}}
                   className="footer-cat-link">
                   {label}
@@ -1496,7 +1327,6 @@ function Footer({setMainView,setShopFilter}:{setMainView:(v:MainView)=>void;setS
               ))}
             </div>
           </div>
-
           <div>
             <p style={{fontSize:9,fontWeight:800,letterSpacing:3,color:"#2a2a2a",marginBottom:"0.75rem"}}>CONTACTO</p>
             <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noreferrer"
@@ -1509,7 +1339,6 @@ function Footer({setMainView,setShopFilter}:{setMainView:(v:MainView)=>void;setS
             </div>
           </div>
         </div>
-
         <div style={{borderTop:"1px solid #111",paddingTop:"1rem",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"0.4rem"}}>
           <p style={{fontSize:9,color:"#222",margin:0,letterSpacing:1}}>© {new Date().getFullYear()} FOKUS. TODOS LOS DERECHOS RESERVADOS.</p>
           <p style={{fontSize:9,color:"#1a1a1a",margin:0,letterSpacing:1}}>FOKUS ®</p>
