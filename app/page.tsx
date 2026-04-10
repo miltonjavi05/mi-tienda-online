@@ -186,25 +186,37 @@ const S = {
   adminBtn: {background:C.accent,color:"#080808",border:"none",padding:"0.8rem 1.5rem",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit",borderRadius:8,width:"100%",WebkitTapHighlightColor:"transparent"} as React.CSSProperties,
 };
 
-// ── LazyImg optimizada ──────────────────────────────────────────────────────
+// ── LazyImg ─────────────────────────────────────────────────────────────────
+// CRÍTICO: pointer-events:none + touch-action:none en img para no bloquear scroll
 const LazyImg = memo(function LazyImg({src,alt}:{src:string;alt:string}) {
   const [loaded,setLoaded] = useState(false);
   const [inView,setInView] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(()=>{
     const el=ref.current; if(!el) return;
-    const obs=new IntersectionObserver(([e])=>{ if(e.isIntersecting){setInView(true);obs.disconnect();} },{rootMargin:"400px"});
+    const obs=new IntersectionObserver(([e])=>{ if(e.isIntersecting){setInView(true);obs.disconnect();} },{rootMargin:"600px"});
     obs.observe(el); return()=>obs.disconnect();
   },[]);
   return (
-    <div ref={ref} style={{position:"relative",width:"100%",height:"100%"}}>
+    <div ref={ref} style={{position:"relative",width:"100%",height:"100%",
+      // El contenedor tampoco debe capturar eventos táctiles
+      pointerEvents:"none",touchAction:"none",userSelect:"none",WebkitUserSelect:"none"
+    }}>
       {!loaded&&<div style={{position:"absolute",inset:0,background:"#161616"}}/>}
-      {inView&&<img src={optImg(src,400)} alt={alt} loading="lazy" decoding="async" fetchPriority="low"
+      {inView&&<img src={optImg(src,400)} alt={alt} loading="lazy" decoding="async"
         onLoad={()=>setLoaded(true)}
-        style={{width:"100%",height:"100%",objectFit:"cover",display:"block",opacity:loaded?1:0,transition:"opacity 0.25s ease",
-          // CRÍTICO: pointer-events:none para que el touch no quede atrapado en <img>
-          pointerEvents:"none",userSelect:"none",WebkitUserSelect:"none",touchAction:"none"
-        }}/>}
+        style={{
+          width:"100%",height:"100%",objectFit:"cover",display:"block",
+          opacity:loaded?1:0,transition:"opacity 0.25s ease",
+          pointerEvents:"none",userSelect:"none",
+          WebkitUserSelect:"none",touchAction:"none",
+          // Previene el drag nativo de imagen en iOS/Android
+          WebkitTouchCallout:"none",
+          // Previene que iOS muestre el menú contextual de imagen
+          WebkitUserDrag:"none",
+        } as React.CSSProperties}
+        draggable={false}
+      />}
     </div>
   );
 });
@@ -227,16 +239,19 @@ function catLabel(cat:string):string {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  DraggableWA — FIXED: posición inicial fuera de pantalla evitada con
-//  visibilidad oculta hasta el primer cálculo de posición.
+//  DraggableWA — FIXED
+//  Soluciones aplicadas:
+//  1. visibility:hidden hasta calcular posición real → evita flash en centro
+//  2. onPointerUp + onPointerCancel: siempre hace snap a borde correcto
+//  3. transition solo en left/top cuando está en snap, no durante arrastre
+//  4. clamp correcto con BTN/2 para que nunca quede fuera de pantalla
 // ═══════════════════════════════════════════════════════════════════════════
 function DraggableWA() {
-  const BTN=48, MG=12;
-  // Empezamos con visibility:hidden hasta calcular posición real
+  const BTN=48, MG=14;
   const [ready,setReady]     = useState(false);
   const [pos,setPos]         = useState({x:0,y:0});
   const [pressed,setPressed] = useState(false);
-  const [snap,setSnap]       = useState(false);
+  const [snapping,setSnapping] = useState(false);
   const dragging  = useRef(false);
   const moved     = useRef(false);
   const startPtr  = useRef({x:0,y:0});
@@ -244,86 +259,119 @@ function DraggableWA() {
   const live      = useRef({x:0,y:0});
   const raf       = useRef(0);
 
+  const getInitPos = useCallback(()=>({
+    x: window.innerWidth - BTN - MG,
+    y: Math.round(window.innerHeight * 0.78 - BTN / 2),
+  }),[]);
+
   useEffect(()=>{
-    // Calculamos la posición correcta una sola vez al montar
-    const x = window.innerWidth - BTN - MG;
-    const y = Math.round(window.innerHeight * 0.78 - BTN / 2);
-    const p = {x, y};
+    const p = getInitPos();
     live.current = p;
     setPos(p);
     setReady(true);
+
+    // Reposicionar si cambia el tamaño (orientación)
+    const onResize = () => {
+      if (!dragging.current) {
+        const np = snapToEdge(live.current.x, live.current.y);
+        live.current = np;
+        setPos({...np});
+      }
+    };
+    window.addEventListener("resize", onResize, {passive:true});
+    return () => window.removeEventListener("resize", onResize);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
 
   const clamp = useCallback((x:number,y:number)=>({
-    x:Math.max(MG,Math.min(window.innerWidth-BTN-MG,x)),
-    y:Math.max(MG+80,Math.min(window.innerHeight-BTN-MG,y)),
+    x: Math.max(MG, Math.min(window.innerWidth - BTN - MG, x)),
+    y: Math.max(MG + 80, Math.min(window.innerHeight - BTN - MG*2, y)),
   }),[]);
 
-  const snapPos = useCallback((x:number,y:number)=>{
-    const sx=(x+BTN/2)<window.innerWidth/2?MG:window.innerWidth-BTN-MG;
-    return {x:sx,y:clamp(x,y).y};
+  const snapToEdge = useCallback((x:number,y:number)=>{
+    const cx = x + BTN/2;
+    const side = cx < window.innerWidth/2 ? MG : window.innerWidth - BTN - MG;
+    return { x: side, y: clamp(x,y).y };
   },[clamp]);
 
   const onDown = useCallback((e:React.PointerEvent)=>{
     e.preventDefault();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    dragging.current=true; moved.current=false;
-    startPtr.current={x:e.clientX,y:e.clientY};
-    startPos.current={...live.current};
-    setPressed(true); setSnap(false);
+    dragging.current = true;
+    moved.current = false;
+    startPtr.current = {x:e.clientX, y:e.clientY};
+    startPos.current = {...live.current};
+    setPressed(true);
+    setSnapping(false);
   },[]);
 
   const onMove = useCallback((e:React.PointerEvent)=>{
     if(!dragging.current) return;
     e.preventDefault();
-    const dx=e.clientX-startPtr.current.x, dy=e.clientY-startPtr.current.y;
-    if(Math.abs(dx)>3||Math.abs(dy)>3) moved.current=true;
-    const n=clamp(startPos.current.x+dx,startPos.current.y+dy);
-    live.current=n;
+    const dx = e.clientX - startPtr.current.x;
+    const dy = e.clientY - startPtr.current.y;
+    if(Math.abs(dx) > 4 || Math.abs(dy) > 4) moved.current = true;
+    const n = clamp(startPos.current.x + dx, startPos.current.y + dy);
+    live.current = n;
     cancelAnimationFrame(raf.current);
-    raf.current=requestAnimationFrame(()=>setPos({...n}));
+    raf.current = requestAnimationFrame(()=>setPos({...n}));
   },[clamp]);
 
-  const onUp = useCallback(()=>{
+  const finishDrag = useCallback(()=>{
     if(!dragging.current) return;
-    dragging.current=false; setPressed(false);
+    dragging.current = false;
+    setPressed(false);
     if(moved.current){
-      const s=snapPos(live.current.x,live.current.y);
-      live.current=s; setSnap(true); setPos({...s});
+      const s = snapToEdge(live.current.x, live.current.y);
+      live.current = s;
+      setSnapping(true);
+      setPos({...s});
+      // Quitar la transición después de que termine el snap
+      setTimeout(()=>setSnapping(false), 420);
     }
-  },[snapPos]);
+  },[snapToEdge]);
 
   const onClick = useCallback((e:React.MouseEvent)=>{
-    if(moved.current){e.preventDefault();return;}
+    if(moved.current){ e.preventDefault(); return; }
     window.open(SOCIAL.whatsapp,"_blank","noreferrer");
   },[]);
 
-  const isSnapping=snap&&!dragging.current;
-
   return (
     <div
-      onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
+      onPointerDown={onDown}
+      onPointerMove={onMove}
+      onPointerUp={finishDrag}
+      onPointerCancel={finishDrag}
       onClick={onClick}
       style={{
         position:"fixed",
-        left:pos.x,
-        top:pos.y,
+        left: pos.x,
+        top:  pos.y,
         zIndex:500,
-        width:BTN,height:BTN,borderRadius:"50%",
-        background:pressed?"rgba(255,255,255,0.85)":"rgba(255,255,255,0.13)",
-        backdropFilter:"blur(16px)",WebkitBackdropFilter:"blur(16px)",
-        border:"1px solid rgba(255,255,255,0.18)",
+        width:BTN, height:BTN,
+        borderRadius:"50%",
+        background: pressed
+          ? "rgba(255,255,255,0.22)"
+          : "rgba(255,255,255,0.10)",
+        backdropFilter:"blur(18px)",
+        WebkitBackdropFilter:"blur(18px)",
+        border:"1px solid rgba(255,255,255,0.20)",
         display:"flex",alignItems:"center",justifyContent:"center",
-        cursor:"grab",touchAction:"none",userSelect:"none",WebkitUserSelect:"none",
-        // Ocultamos hasta tener la posición correcta para evitar el flash en el centro
+        cursor:"grab",
+        touchAction:"none",
+        userSelect:"none",
+        WebkitUserSelect:"none",
         visibility: ready ? "visible" : "hidden",
-        transition: isSnapping
-          ? "left 0.38s cubic-bezier(0.25,0.46,0.45,0.94),background 0.2s"
+        // Transición SOLO cuando hace snap, nunca durante arrastre
+        transition: snapping
+          ? "left 0.38s cubic-bezier(0.25,0.46,0.45,0.94), top 0.38s cubic-bezier(0.25,0.46,0.45,0.94), background 0.2s"
           : "background 0.2s",
         willChange:"left,top",
-        boxShadow:pressed?"0 0 0 8px rgba(255,255,255,0.07)":"0 2px 20px rgba(0,0,0,0.5)",
+        boxShadow: pressed
+          ? "0 0 0 10px rgba(255,255,255,0.06)"
+          : "0 4px 24px rgba(0,0,0,0.6), 0 1px 4px rgba(0,0,0,0.4)",
       }}>
-      <IcWA s={BTN-12} c={pressed?"#080808":"#fff"}/>
+      <IcWA s={BTN-14} c={pressed?"#080808":"#fff"}/>
     </div>
   );
 }
@@ -341,10 +389,23 @@ const NativeTabs = memo(function NativeTabs({items,active,onSelect,renderItem,he
     if(el) el.scrollIntoView({block:"nearest",inline:"center",behavior:"smooth"});
   },[active]);
   return (
-    <div ref={ref} className="ts" style={{display:"flex",overflowX:"auto",overflowY:"hidden",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",height,touchAction:"pan-x pan-y"}}>
+    <div ref={ref} className="ts" style={{
+      display:"flex",
+      overflowX:"auto",
+      overflowY:"hidden",
+      scrollbarWidth:"none",
+      WebkitOverflowScrolling:"touch",
+      height,
+      touchAction:"pan-x",
+    }}>
       {items.map(item=>(
         <button key={item} data-active={item===active} onClick={()=>onSelect(item)}
-          style={{background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",flexShrink:0,padding:0,display:"flex",alignItems:"center",WebkitTapHighlightColor:"transparent"}}>
+          style={{
+            background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",
+            flexShrink:0,padding:0,display:"flex",alignItems:"center",
+            WebkitTapHighlightColor:"transparent",
+            touchAction:"manipulation",
+          }}>
           {renderItem(item,item===active)}
         </button>
       ))}
@@ -353,7 +414,7 @@ const NativeTabs = memo(function NativeTabs({items,active,onSelect,renderItem,he
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  ProductCard — memoizada para no re-renderizar si no cambia
+//  ProductCard
 // ═══════════════════════════════════════════════════════════════════════════
 const ProductCard = memo(function ProductCard({product,onClick,index}:{product:Product;onClick:()=>void;index:number}) {
   const [vis,setVis]=useState(false);
@@ -365,9 +426,13 @@ const ProductCard = memo(function ProductCard({product,onClick,index}:{product:P
   },[]);
   return (
     <div ref={ref} className="pc" onClick={onClick}
-      style={{cursor:"pointer",opacity:vis?1:0,transform:vis?"translateY(0)":"translateY(14px)",
+      style={{
+        cursor:"pointer",
+        opacity:vis?1:0,
+        transform:vis?"translateY(0)":"translateY(14px)",
         transition:`opacity 0.35s ease ${Math.min(index*35,160)}ms,transform 0.35s ease ${Math.min(index*35,160)}ms`,
-        willChange:"transform,opacity"}}>
+        willChange:"transform,opacity",
+      }}>
       <div style={{background:"#111",aspectRatio:"1",overflow:"hidden",marginBottom:"0.55rem",borderRadius:10,position:"relative"}}>
         <div className="iz" style={{width:"100%",height:"100%",transition:"transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94)"}}>
           <LazyImg src={product.img} alt={product.name}/>
@@ -381,11 +446,12 @@ const ProductCard = memo(function ProductCard({product,onClick,index}:{product:P
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  HCard — memoizada
+//  HCard
 // ═══════════════════════════════════════════════════════════════════════════
 const HCard = memo(function HCard({product,onClick}:{product:Product;onClick:()=>void}) {
   return (
-    <div className="hc" onClick={onClick} style={{cursor:"pointer",flexShrink:0,width:148}}>
+    <div className="hc" onClick={onClick}
+      style={{cursor:"pointer",flexShrink:0,width:148,touchAction:"manipulation"}}>
       <div style={{background:"#111",width:148,height:148,overflow:"hidden",marginBottom:"0.5rem",borderRadius:10,position:"relative"}}>
         <div className="iz" style={{width:"100%",height:"100%",transition:"transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94)"}}>
           <LazyImg src={product.img} alt={product.name}/>
@@ -399,38 +465,44 @@ const HCard = memo(function HCard({product,onClick}:{product:Product;onClick:()=
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  HRow — SOLUCIÓN DEFINITIVA iOS/Android
+//  HRow — SCROLL HORIZONTAL NATIVO OPTIMIZADO
 //
-//  La clave en iOS Safari es:
-//  1. El contenedor con scroll usa overflow-x:scroll (no auto) + -webkit-overflow-scrolling:touch
-//  2. touch-action en el contenedor debe ser "pan-x" ÚNICAMENTE (no pan-y)
-//  3. Las imágenes deben tener pointer-events:none Y touch-action:none
-//  4. El wrapper EXTERIOR no debe interceptar eventos táctiles (sin touchAction)
-//  5. NO usar onTouchStart/Move nativos de React que bloqueen el scroll
+//  Estrategia definitiva para iOS + Android:
+//  - El contenedor tiene overflow-x:scroll + -webkit-overflow-scrolling:touch
+//  - touch-action:"pan-x pan-y" permite tanto scroll horizontal (en la fila)
+//    como vertical (en la página) — el navegador elige según la dirección del gesto
+//  - Las imágenes tienen pointer-events:none + touch-action:none para no capturar
+//  - NO usamos onTouchStart/Move que bloqueen el scroll
+//  - scroll-behavior:smooth para inercia suave
 // ═══════════════════════════════════════════════════════════════════════════
 const HRow = memo(function HRow({products,onSelect}:{products:Product[];onSelect:(p:Product)=>void}) {
+  const rowRef = useRef<HTMLDivElement>(null);
+
   return (
     <div
+      ref={rowRef}
       className="hr"
       style={{
         display:"flex",
         gap:"0.75rem",
-        overflowX:"scroll",      // scroll en vez de auto es más fiable en iOS
+        overflowX:"scroll",
         overflowY:"hidden",
         paddingBottom:"0.5rem",
         paddingLeft:"0.25rem",
-        paddingRight:"0.25rem",
+        paddingRight:"1rem",
         scrollbarWidth:"none",
         WebkitOverflowScrolling:"touch",
-        // pan-x: el navegador maneja el scroll horizontal, pan-y: deja el vertical a la página
-        touchAction:"pan-x",
-        // Evita que el browser seleccione texto/imágenes al hacer swipe
+        // pan-x + pan-y: el browser determina la dirección del scroll
+        // Esto permite scroll vertical en la página Y horizontal en la fila
+        touchAction:"pan-x pan-y",
         userSelect:"none",
         WebkitUserSelect:"none",
-        // Scroll snapping suave opcional
         scrollSnapType:"x proximity",
         willChange:"scroll-position",
-      }}>
+        // Aceleración por hardware
+        transform:"translateZ(0)",
+        WebkitTransform:"translateZ(0)",
+      } as React.CSSProperties}>
       {products.map(p=>(
         <div key={p.id} style={{scrollSnapAlign:"start",flexShrink:0}}>
           <HCard product={p} onClick={()=>onSelect(p)}/>
@@ -450,7 +522,7 @@ const AddedModal = memo(function AddedModal({product,onClose,onGoCart}:{product:
         <div style={{width:36,height:3,background:"#333",borderRadius:2,margin:"0 auto 1.25rem"}}/>
         <div style={{display:"flex",gap:"0.85rem",alignItems:"center",marginBottom:"1.25rem"}}>
           <div style={{width:58,height:58,borderRadius:8,overflow:"hidden",flexShrink:0,background:"#111"}}>
-            <img src={optImg(product.img,120)} alt={product.name} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+            <img src={optImg(product.img,120)} alt={product.name} style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/>
           </div>
           <div style={{flex:1}}>
             <p style={{margin:"0 0 2px",fontSize:11,color:"#555",letterSpacing:1.5,fontWeight:700}}>AÑADIDO AL CARRITO</p>
@@ -637,13 +709,36 @@ export default function Home() {
         @keyframes slideUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
         @keyframes slideInLeft{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
         @keyframes scaleIn{from{opacity:0;transform:scale(0.88)}to{opacity:1;transform:scale(1)}}
+
         *{box-sizing:border-box;-webkit-font-smoothing:antialiased;}
-        body{background:#080808;margin:0;overscroll-behavior-y:none;}
+        html{
+          /* Permitir scroll vertical en toda la página */
+          overflow-y:scroll;
+          scroll-behavior:smooth;
+        }
+        body{
+          background:#080808;
+          margin:0;
+          overscroll-behavior-y:contain;
+          /* CRÍTICO: permitir scroll vertical nativo */
+          touch-action:pan-y;
+        }
+
         /* Ocultar scrollbars */
         .ts::-webkit-scrollbar,.hr::-webkit-scrollbar{display:none}
         .ts{-webkit-overflow-scrolling:touch;}
+
+        /* HRow — scroll horizontal fluido */
+        .hr{
+          -webkit-overflow-scrolling:touch;
+          scroll-behavior:smooth;
+          /* momentum scrolling en iOS */
+          -webkit-scroll-snap-type:x proximity;
+          scroll-snap-type:x proximity;
+        }
         .hr::-webkit-scrollbar{display:none}
-        /* Hover efectos — no interfieren con touch */
+
+        /* Hover efectos — solo en dispositivos que admiten hover real */
         @media(hover:hover){
           .pc:hover .iz,.hc:hover .iz{transform:scale(1.05)!important}
           .pc:hover .io,.hc:hover .io{background:rgba(255,255,255,0.04)!important}
@@ -656,9 +751,26 @@ export default function Home() {
         .pc:active{transform:scale(0.97)}
         .hc:active{opacity:0.85}
         .nb:active{opacity:0.6}
-        @media(max-width:480px){.pg{grid-template-columns:repeat(2,1fr)!important}.fg{grid-template-columns:1fr!important;gap:1.5rem!important}}
-        @media(min-width:481px) and (max-width:767px){.pg{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))!important}.fg{grid-template-columns:repeat(2,1fr)!important;gap:1.5rem!important}}
-        @media(min-width:768px){.pg{grid-template-columns:repeat(auto-fill,minmax(195px,1fr))!important}.fg{grid-template-columns:repeat(3,1fr)!important}}
+
+        /* Grids responsivos */
+        @media(max-width:480px){
+          .pg{grid-template-columns:repeat(2,1fr)!important}
+          .fg{grid-template-columns:1fr!important;gap:1.5rem!important}
+        }
+        @media(min-width:481px) and (max-width:767px){
+          .pg{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))!important}
+          .fg{grid-template-columns:repeat(2,1fr)!important;gap:1.5rem!important}
+        }
+        @media(min-width:768px){
+          .pg{grid-template-columns:repeat(auto-fill,minmax(195px,1fr))!important}
+          .fg{grid-template-columns:repeat(3,1fr)!important}
+        }
+
+        /* Prevenir selección de texto al hacer swipe */
+        .hr *{-webkit-user-select:none;user-select:none;}
+
+        /* Acelerar compositing */
+        .hr,.ts{contain:layout style;}
       `}</style>
 
       {/* NAVBAR */}
@@ -667,14 +779,12 @@ export default function Home() {
           <button onClick={()=>setMenuOpen(true)} style={S.iconBtn} aria-label="Menú">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><line x1="3" y1="7" x2="21" y2="7"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="17" x2="21" y2="17"/></svg>
           </button>
-          {/* Logo centrado con position absolute para no depender del flex */}
           <button onClick={()=>setMainView("fokus")}
             style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:7,
               position:"absolute",left:"50%",transform:"translateX(-50%)",
               padding:"0 8px",WebkitTapHighlightColor:"transparent",
-              // Evitar que el logo se superponga a los botones laterales
               maxWidth:"calc(100% - 120px)"}}>
-            <img src="/favicon.png" alt="Fokus" width={26} height={26} style={{objectFit:"contain",flexShrink:0}}/>
+            <img src="/favicon.png" alt="Fokus" width={26} height={26} style={{objectFit:"contain",flexShrink:0,pointerEvents:"none"}} draggable={false}/>
             <span style={{color:"#fff",fontSize:16,fontWeight:900,letterSpacing:5,whiteSpace:"nowrap"}}>FOKUS</span>
           </button>
           <div style={{display:"flex",marginLeft:"auto"}}>
@@ -749,7 +859,7 @@ export default function Home() {
       {mainView==="fokus"&&(
         <main style={{paddingTop:navH,background:C.bg}}>
           <div style={{maxWidth:760,margin:"0 auto",padding:"4rem 1.5rem 0",textAlign:"center",animation:"slideUp 0.5s ease"}}>
-            <div style={{marginBottom:"2rem"}}><img src="/favicon.png" alt="Fokus" width={64} height={64} style={{objectFit:"contain",filter:"brightness(1.1)"}}/></div>
+            <div style={{marginBottom:"2rem"}}><img src="/favicon.png" alt="Fokus" width={64} height={64} style={{objectFit:"contain",filter:"brightness(1.1)",pointerEvents:"none"}} draggable={false}/></div>
             <p style={{fontSize:10,letterSpacing:6,color:"#333",fontWeight:700,marginBottom:"1rem"}}>ACCESORIOS</p>
             <h1 style={{fontSize:40,fontWeight:900,letterSpacing:8,marginBottom:"0.85rem",color:C.accent,lineHeight:1}}>FOKUS</h1>
             <p style={{fontSize:14,color:"#444",lineHeight:1.7,maxWidth:300,margin:"0 auto 2rem"}}>Cada detalle +<br/>Calidad, diseño y actitud.</p>
@@ -893,7 +1003,7 @@ export default function Home() {
                   <div key={item.product.id} style={{display:"grid",gridTemplateColumns:"1fr auto auto auto",gap:"0.75rem",padding:"1rem 0",borderBottom:`1px solid ${C.border}`,alignItems:"center"}}>
                     <div style={{display:"flex",alignItems:"center",gap:"0.75rem"}}>
                       <button onClick={()=>updQty(item.product.id,-item.qty)} style={{background:"none",border:"none",cursor:"pointer",color:"#333",fontSize:12,padding:0}}>✕</button>
-                      <img src={optImg(item.product.img,120)} alt={item.product.name} style={{width:52,height:52,objectFit:"cover",borderRadius:6}}/>
+                      <img src={optImg(item.product.img,120)} alt={item.product.name} style={{width:52,height:52,objectFit:"cover",borderRadius:6,pointerEvents:"none"}} draggable={false}/>
                       <span style={{fontSize:13,color:"#bbb"}}>{item.product.name}</span>
                     </div>
                     <span style={{fontSize:13,color:"#555"}}>${item.product.price.toFixed(2)}</span>
@@ -998,7 +1108,7 @@ export default function Home() {
                         📷 {fFile?"Cambiar":"Elegir foto"}
                       </label>
                       {fFile&&<span style={{color:"#444",fontSize:11,marginLeft:"0.65rem"}}>{fFile.name}</span>}
-                      {fPrev&&<div style={{marginTop:"0.65rem",width:80,height:80,borderRadius:8,overflow:"hidden",border:"1px solid #222"}}><img src={fPrev} alt="preview" style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>}
+                      {fPrev&&<div style={{marginTop:"0.65rem",width:80,height:80,borderRadius:8,overflow:"hidden",border:"1px solid #222"}}><img src={fPrev} alt="preview" style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/></div>}
                     </div>
                     {fErr&&<div style={{color:"#ff5555",fontSize:12,background:"#1e0808",padding:"0.65rem 1rem",borderRadius:8}}>{fErr}</div>}
                     {fOk&&<div style={{color:"#55cc77",fontSize:12,background:"#081e0e",padding:"0.65rem 1rem",borderRadius:8}}>{fOk}</div>}
@@ -1085,7 +1195,7 @@ export default function Home() {
 const ARow = memo(function ARow({p,editing,onEdit,onDel}:{p:Product;editing:Product|null;onEdit:(p:Product)=>void;onDel:(id:string)=>void}) {
   return (
     <div className="ar" style={{display:"flex",alignItems:"center",gap:"0.75rem",padding:"0.6rem 0.65rem",borderRadius:8,background:editing?.id===p.id?"#1a1a1a":"transparent"}}>
-      <img src={optImg(p.img,120)} alt={p.name} style={{width:44,height:44,objectFit:"cover",borderRadius:6,flexShrink:0,background:"#1a1a1a"}}/>
+      <img src={optImg(p.img,120)} alt={p.name} style={{width:44,height:44,objectFit:"cover",borderRadius:6,flexShrink:0,background:"#1a1a1a",pointerEvents:"none"}} draggable={false}/>
       <div style={{flex:1,minWidth:0}}>
         <p style={{color:"#ccc",fontSize:12,fontWeight:700,margin:"0 0 1px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</p>
         <p style={{color:"#333",fontSize:10,margin:0}}>${p.price.toFixed(2)}</p>
@@ -1108,7 +1218,7 @@ const Footer = memo(function Footer({setMainView,setShopFilter}:{setMainView:(v:
         <div className="fg" style={{display:"grid",gap:"2rem",marginBottom:"2rem"}}>
           <div>
             <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:"0.65rem"}}>
-              <img src="/favicon.png" alt="Fokus" width={20} height={20} style={{objectFit:"contain"}}/>
+              <img src="/favicon.png" alt="Fokus" width={20} height={20} style={{objectFit:"contain",pointerEvents:"none"}} draggable={false}/>
               <span style={{fontWeight:900,fontSize:12,letterSpacing:5,color:"#fff"}}>FOKUS</span>
             </div>
             <p style={{fontSize:11,color:"#333",lineHeight:1.7,margin:"0 0 0.85rem",maxWidth:180}}>Accesorios con actitud.<br/>Cada detalle importa.</p>
