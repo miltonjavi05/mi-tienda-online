@@ -244,56 +244,95 @@ function catLabel(cat: string): string {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  BOTÓN WA FLOTANTE — Solo en los bordes, translúcido blanco/negro, sin errores
+//  BOTÓN WA FLOTANTE — arrastrable dentro de la pantalla, se ancla a bordes
 // ═══════════════════════════════════════════════════════════════════════════
 function DraggableWA() {
-  // side: "left" | "right", pct: porcentaje vertical 0-100
-  const [side, setSide]   = useState<"left"|"right">("right");
-  const [pct,  setPct]    = useState(75); // % desde arriba
-  const btnRef   = useRef<HTMLDivElement>(null);
-  const dragging = useRef(false);
-  const moved    = useRef(false);
-  const startY   = useRef(0);
-  const startPct = useRef(75);
-  const [pressed, setPressed] = useState(false);
-
-  const BTN = 52;
+  const BTN = 48;
   const MARGIN = 10;
 
-  const onPointerDown = useCallback((e: React.PointerEvent) => {
+  // Posición en px (no %)
+  const [pos, setPos] = useState<{x:number;y:number}>({x:-1,y:-1});
+  const [pressed, setPressed] = useState(false);
+
+  const dragging = useRef(false);
+  const moved    = useRef(false);
+  const startPtr = useRef({x:0,y:0});
+  const startPos = useRef({x:0,y:0});
+  const currentPos = useRef({x:0,y:0});
+  const rafId    = useRef<number>(0);
+  const btnRef   = useRef<HTMLDivElement>(null);
+
+  // Inicializar posición en la esquina inferior derecha
+  useEffect(()=>{
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+    const initX = W - BTN - MARGIN;
+    const initY = H * 0.75 - BTN/2;
+    setPos({x:initX, y:initY});
+    currentPos.current = {x:initX, y:initY};
+  },[]);
+
+  const clamp = useCallback((x:number,y:number)=>{
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+    return {
+      x: Math.max(MARGIN, Math.min(W - BTN - MARGIN, x)),
+      y: Math.max(MARGIN, Math.min(H - BTN - MARGIN, y)),
+    };
+  },[]);
+
+  const snapToEdge = useCallback((x:number,y:number)=>{
+    const W = window.innerWidth;
+    const cx = x + BTN/2;
+    // Snap al borde más cercano (izquierdo o derecho)
+    const snapX = cx < W/2 ? MARGIN : W - BTN - MARGIN;
+    return {x:snapX, y:clamp(x,y).y};
+  },[clamp]);
+
+  const onPointerDown = useCallback((e:React.PointerEvent)=>{
     e.currentTarget.setPointerCapture(e.pointerId);
     dragging.current = true;
     moved.current    = false;
-    startY.current   = e.clientY;
-    startPct.current = pct;
+    startPtr.current = {x:e.clientX, y:e.clientY};
+    startPos.current = {x:currentPos.current.x, y:currentPos.current.y};
     setPressed(true);
-  }, [pct]);
+    e.preventDefault();
+  },[]);
 
-  const onPointerMove = useCallback((e: React.PointerEvent) => {
+  const onPointerMove = useCallback((e:React.PointerEvent)=>{
     if (!dragging.current) return;
-    const dy = e.clientY - startY.current;
-    if (Math.abs(dy) > 4) moved.current = true;
-    const H = window.innerHeight;
-    const newY = Math.max(MARGIN, Math.min(H - BTN - MARGIN, (startPct.current / 100) * H + dy));
-    setPct((newY / H) * 100);
-    // detectar lado según posición horizontal del pointer
-    const W = window.innerWidth;
-    setSide(e.clientX < W / 2 ? "left" : "right");
-  }, []);
+    const dx = e.clientX - startPtr.current.x;
+    const dy = e.clientY - startPtr.current.y;
+    if (Math.abs(dx)>3||Math.abs(dy)>3) moved.current = true;
+    const nx = startPos.current.x + dx;
+    const ny = startPos.current.y + dy;
+    const clamped = clamp(nx, ny);
+    currentPos.current = clamped;
+    cancelAnimationFrame(rafId.current);
+    rafId.current = requestAnimationFrame(()=>{
+      setPos({...clamped});
+    });
+    e.preventDefault();
+  },[clamp]);
 
-  const onPointerUp = useCallback(() => {
+  const onPointerUp = useCallback(()=>{
+    if (!dragging.current) return;
     dragging.current = false;
     setPressed(false);
-  }, []);
+    if (moved.current) {
+      // Snap al borde más cercano
+      const snapped = snapToEdge(currentPos.current.x, currentPos.current.y);
+      currentPos.current = snapped;
+      setPos(snapped);
+    }
+  },[snapToEdge]);
 
-  const handleClick = useCallback((e: React.MouseEvent) => {
+  const handleClick = useCallback((e:React.MouseEvent)=>{
     if (moved.current) { e.preventDefault(); return; }
     window.open(SOCIAL.whatsapp, "_blank", "noreferrer");
-  }, []);
+  },[]);
 
-  const top = `${pct}%`;
-  const left  = side === "left"  ? MARGIN : undefined;
-  const right = side === "right" ? MARGIN : undefined;
+  if (pos.x < 0) return null;
 
   return (
     <div
@@ -305,10 +344,8 @@ function DraggableWA() {
       onClick={handleClick}
       style={{
         position:"fixed",
-        top,
-        left,
-        right,
-        transform:"translateY(-50%)",
+        left: pos.x,
+        top:  pos.y,
         zIndex:500,
         width: BTN,
         height: BTN,
@@ -322,23 +359,25 @@ function DraggableWA() {
         display:"flex",
         alignItems:"center",
         justifyContent:"center",
-        cursor:"grab",
+        cursor: dragging.current ? "grabbing" : "grab",
         touchAction:"none",
         userSelect:"none",
         WebkitUserSelect:"none",
-        transition:"background 0.2s, border-color 0.2s, transform 0.15s",
-        willChange:"top,transform",
+        transition: dragging.current
+          ? "background 0.2s"
+          : "background 0.2s, left 0.3s cubic-bezier(0.25,0.46,0.45,0.94), top 0.1s",
+        willChange:"left,top",
         boxShadow: pressed
           ? "0 0 0 6px rgba(255,255,255,0.08)"
           : "0 2px 16px rgba(0,0,0,0.4)",
       }}>
-      <IcWA s={24} c={pressed ? "#080808" : "#fff"}/>
+      <IcWA s={BTN - 16} c={pressed ? "#080808" : "#fff"}/>
     </div>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  TABS — scroll nativo sin JS de drag, funciona perfecto en iOS y Android
+//  TABS — scroll nativo sin JS de drag
 // ═══════════════════════════════════════════════════════════════════════════
 function NativeTabs({
   items,
@@ -355,7 +394,6 @@ function NativeTabs({
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
-  // scroll al activo
   useEffect(()=>{
     const el = ref.current?.querySelector(`[data-active="true"]`) as HTMLElement|null;
     if (el) el.scrollIntoView({block:"nearest",inline:"center",behavior:"smooth"});
@@ -371,7 +409,6 @@ function NativeTabs({
         scrollbarWidth:"none",
         WebkitOverflowScrolling:"touch",
         height,
-        // cursor normal, scroll nativo del browser
         touchAction:"pan-x",
       }}
       className="native-tabs-strip">
@@ -401,7 +438,7 @@ function NativeTabs({
   );
 }
 
-// ── ProductCard ─────────────────────────────────────────────────────────────
+// ── ProductCard (grid, modo normal) ─────────────────────────────────────────
 function ProductCard({product,onClick,index}:{product:Product;onClick:()=>void;index:number}) {
   const [visible, setVisible] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -431,7 +468,6 @@ function ProductCard({product,onClick,index}:{product:Product;onClick:()=>void;i
         <div className="prod-img-inner" style={{width:"100%",height:"100%",transition:"transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94)"}}>
           <LazyImg src={product.img} alt={product.name}/>
         </div>
-        {/* overlay sutil al hover */}
         <div className="prod-overlay" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",transition:"background 0.3s ease"}}/>
       </div>
       <p style={{margin:"0 0 3px",fontSize:12,lineHeight:1.35,color:"#bbb",letterSpacing:0.2}}>{product.name}</p>
@@ -440,8 +476,97 @@ function ProductCard({product,onClick,index}:{product:Product;onClick:()=>void;i
   );
 }
 
+// ── HorizontalProductCard — para scroll horizontal en "TODO" ─────────────────
+// Usa pointer events para drag-scroll pero delega scroll vertical al padre
+function HorizontalProductCard({product,onClick}:{product:Product;onClick:()=>void}) {
+  return (
+    <div
+      className="h-prod-card"
+      onClick={onClick}
+      style={{
+        cursor:"pointer",
+        flexShrink:0,
+        width:140,
+      }}>
+      <div style={{
+        background:"#111",
+        width:140,
+        height:140,
+        overflow:"hidden",
+        marginBottom:"0.55rem",
+        borderRadius:10,
+        position:"relative",
+      }}>
+        <div className="prod-img-inner" style={{width:"100%",height:"100%",transition:"transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94)"}}>
+          <LazyImg src={product.img} alt={product.name}/>
+        </div>
+        <div className="prod-overlay" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",transition:"background 0.3s ease"}}/>
+      </div>
+      <p style={{margin:"0 0 3px",fontSize:11,lineHeight:1.35,color:"#bbb",letterSpacing:0.2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{product.name}</p>
+      <p style={{margin:0,fontSize:13,fontWeight:800,color:C.accent,letterSpacing:0.5}}>${product.price.toFixed(2)}</p>
+    </div>
+  );
+}
+
+// ── HorizontalRow — fila scrollable horizontal con touch nativo mejorado ──────
+function HorizontalRow({products, onSelect}: {products:Product[]; onSelect:(p:Product)=>void}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  // Estado para detectar si el usuario está deslizando horizontalmente
+  // y así poder bloquear el scroll vertical del padre durante ese gesto
+  const startX = useRef(0);
+  const startY = useRef(0);
+  const isHScroll = useRef<boolean|null>(null);
+
+  const onTouchStart = useCallback((e: React.TouchEvent)=>{
+    startX.current = e.touches[0].clientX;
+    startY.current = e.touches[0].clientY;
+    isHScroll.current = null;
+  },[]);
+
+  const onTouchMove = useCallback((e: React.TouchEvent)=>{
+    if (isHScroll.current === null) {
+      const dx = Math.abs(e.touches[0].clientX - startX.current);
+      const dy = Math.abs(e.touches[0].clientY - startY.current);
+      if (dx > dy + 3) {
+        isHScroll.current = true;
+      } else if (dy > dx + 3) {
+        isHScroll.current = false;
+      }
+    }
+    // Si es scroll horizontal, prevenimos que el padre intercepte el scroll vertical
+    // pero NO llamamos preventDefault para no bloquear el scroll nativo del elemento
+  },[]);
+
+  return (
+    <div
+      ref={scrollRef}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      style={{
+        display:"flex",
+        gap:"0.75rem",
+        overflowX:"auto",
+        overflowY:"hidden",
+        paddingBottom:"0.5rem",
+        paddingLeft:"0.5rem",
+        paddingRight:"0.5rem",
+        scrollbarWidth:"none",
+        WebkitOverflowScrolling:"touch",
+        // Clave: touchAction pan-x permite al browser manejar solo scroll horizontal
+        // y delega el scroll vertical al contenedor padre
+        touchAction:"pan-x",
+        willChange:"scroll-position",
+      }}
+      className="h-scroll-row">
+      {products.map((p)=>(
+        <HorizontalProductCard key={p.id} product={p} onClick={()=>onSelect(p)}/>
+      ))}
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
-//  MODAL POST-CARRITO — aparece al añadir, ofrece ir al carrito o seguir
+//  MODAL POST-CARRITO
 // ═══════════════════════════════════════════════════════════════════════════
 function AddedToCartModal({
   product,
@@ -472,7 +597,6 @@ function AddedToCartModal({
           border:"1px solid #222",
           borderBottom:"none",
         }}>
-        {/* Handle */}
         <div style={{width:36,height:3,background:"#333",borderRadius:2,margin:"0 auto 1.25rem"}}/>
 
         <div style={{display:"flex",gap:"0.85rem",alignItems:"center",marginBottom:"1.25rem"}}>
@@ -484,7 +608,6 @@ function AddedToCartModal({
             <p style={{margin:"0 0 2px",fontSize:14,color:C.text,fontWeight:600,lineHeight:1.3}}>{product.name}</p>
             <p style={{margin:0,fontSize:13,color:"#888"}}>Añadir mas <span style={{color:C.accent,fontWeight:700}}>${product.price.toFixed(2)}</span></p>
           </div>
-          {/* checkmark animado */}
           <div style={{
             width:32,height:32,borderRadius:"50%",
             background:"#1a2e1a",border:"1.5px solid #2a4a2a",
@@ -501,8 +624,7 @@ function AddedToCartModal({
           <button
             onClick={onClose}
             style={{
-              background:"transparent",
-              color:"#aaa",
+              background:"transparent",color:"#aaa",
               border:"1px solid #2a2a2a",
               padding:"0.85rem 1rem",
               fontSize:12,fontWeight:700,letterSpacing:1.2,
@@ -518,9 +640,7 @@ function AddedToCartModal({
           <button
             onClick={onGoCart}
             style={{
-              background:C.accent,
-              color:"#080808",
-              border:"none",
+              background:C.accent,color:"#080808",border:"none",
               padding:"0.85rem 1rem",
               fontSize:12,fontWeight:800,letterSpacing:1.2,
               cursor:"pointer",fontFamily:"inherit",
@@ -533,6 +653,42 @@ function AddedToCartModal({
             IR AL CARRITO →
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  BANNER ENVÍOS VENEZUELA
+// ═══════════════════════════════════════════════════════════════════════════
+function ShippingBanner() {
+  return (
+    <div style={{
+      background:"linear-gradient(135deg,#0e1e0e 0%,#0a150a 100%)",
+      border:"1px solid #162516",
+      borderRadius:12,
+      padding:"1rem 1.25rem",
+      display:"flex",
+      alignItems:"center",
+      gap:"0.85rem",
+      margin:"1.5rem 0 0.5rem",
+    }}>
+      <div style={{
+        width:36,height:36,borderRadius:"50%",
+        background:"rgba(76,175,80,0.12)",
+        display:"flex",alignItems:"center",justifyContent:"center",
+        flexShrink:0,
+      }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2">
+          <rect x="1" y="3" width="15" height="13" rx="1"/>
+          <path d="M16 8h4l3 3v5h-7V8z"/>
+          <circle cx="5.5" cy="18.5" r="2.5"/>
+          <circle cx="18.5" cy="18.5" r="2.5"/>
+        </svg>
+      </div>
+      <div>
+        <p style={{margin:0,fontSize:12,fontWeight:800,color:"#4caf50",letterSpacing:1}}>ENVÍOS A TODA VENEZUELA</p>
+        <p style={{margin:"2px 0 0",fontSize:11,color:"#2e5e2e",lineHeight:1.4}}>Hacemos llegar tu pedido a cualquier estado del país</p>
       </div>
     </div>
   );
@@ -555,7 +711,6 @@ export default function Home() {
   const [products,setProducts]         = useState<Product[]>([]);
   const [loading,setLoading]           = useState(true);
   const [fbReady,setFbReady]           = useState(false);
-  // modal post-carrito
   const [addedProduct,setAddedProduct] = useState<Product|null>(null);
 
   const navRef = useRef<HTMLElement>(null);
@@ -633,7 +788,7 @@ export default function Home() {
       return ex?prev.map(i=>i.product.id===product.id?{...i,qty:i.qty+qty}:i):[...prev,{product,qty}];
     });
     setSelectedProduct(null);
-    setAddedProduct(product); // mostrar mini-modal
+    setAddedProduct(product);
   },[]);
 
   const updateQty = useCallback((id:string,delta:number)=>
@@ -715,6 +870,8 @@ export default function Home() {
     {id:"comunidad" as MainView, label:"COMUNIDAD"},
   ];
 
+  const openProduct = useCallback((p:Product)=>{ setSelectedProduct(p); setModalQty(1); },[]);
+
   return (
     <div style={{fontFamily:"'Helvetica Neue',Arial,sans-serif",background:C.bg,minHeight:"100vh",color:C.text}}>
       <style>{`
@@ -723,16 +880,22 @@ export default function Home() {
         @keyframes slideUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
         @keyframes slideInLeft{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
         @keyframes scaleIn{from{opacity:0;transform:scale(0.88)}to{opacity:1;transform:scale(1)}}
+        @keyframes marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
 
         *{box-sizing:border-box;-webkit-font-smoothing:antialiased;}
         body{background:${C.bg};overscroll-behavior:none;margin:0}
 
         .native-tabs-strip::-webkit-scrollbar{display:none}
         .native-tabs-strip{-webkit-overflow-scrolling:touch;scroll-behavior:smooth}
+        .h-scroll-row::-webkit-scrollbar{display:none}
 
         .prod-card:active{transform:scale(0.97)}
         .prod-card:hover .prod-img-inner{transform:scale(1.05)!important}
         .prod-card:hover .prod-overlay{background:rgba(255,255,255,0.04)!important}
+
+        .h-prod-card:active{opacity:0.8}
+        .h-prod-card:hover .prod-img-inner{transform:scale(1.05)!important}
+        .h-prod-card:hover .prod-overlay{background:rgba(255,255,255,0.04)!important}
 
         .sub-cat-btn:hover{color:#fff!important}
         .social-link:hover{border-color:#333!important;transform:translateY(-1px)}
@@ -812,7 +975,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Tabs con scroll nativo */}
         {!isAdmin && (
           <NativeTabs
             items={NAV_TABS.map(t=>t.id)}
@@ -917,6 +1079,31 @@ export default function Home() {
             <p style={{fontSize:10,letterSpacing:6,color:"#333",fontWeight:700,marginBottom:"1rem"}}>ACCESORIOS</p>
             <h1 style={{fontSize:40,fontWeight:900,letterSpacing:8,marginBottom:"0.85rem",color:C.accent,lineHeight:1}}>FOKUS</h1>
             <p style={{fontSize:14,color:"#444",marginBottom:"3rem",lineHeight:1.7,maxWidth:300,margin:"0 auto 3rem"}}>Cada detalle +<br/>Calidad, diseño y actitud.</p>
+
+            {/* Envíos Venezuela banner */}
+            <div style={{maxWidth:360,margin:"0 auto 2.5rem"}}>
+              <div style={{
+                background:"rgba(76,175,80,0.06)",
+                border:"1px solid rgba(76,175,80,0.2)",
+                borderRadius:10,
+                padding:"0.7rem 1.1rem",
+                display:"flex",
+                alignItems:"center",
+                gap:"0.7rem",
+              }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2" style={{flexShrink:0}}>
+                  <rect x="1" y="3" width="15" height="13" rx="1"/>
+                  <path d="M16 8h4l3 3v5h-7V8z"/>
+                  <circle cx="5.5" cy="18.5" r="2.5"/>
+                  <circle cx="18.5" cy="18.5" r="2.5"/>
+                </svg>
+                <div style={{textAlign:"left"}}>
+                  <p style={{margin:0,fontSize:11,fontWeight:800,color:"#4caf50",letterSpacing:0.8}}>ENVÍOS A TODA VENEZUELA</p>
+                  <p style={{margin:"1px 0 0",fontSize:10,color:"#2a5a2a"}}>Llegamos a cualquier estado del país</p>
+                </div>
+              </div>
+            </div>
+
             <button
               onClick={()=>{setMainView("shop");setShopFilter("TODO");}}
               style={{...S.darkBtn,fontSize:11,padding:"1.1rem 2.8rem",letterSpacing:3,borderRadius:3}}
@@ -939,7 +1126,7 @@ export default function Home() {
       {isShopView && (
         <main style={{paddingTop:navHeight,background:C.bg}}>
 
-          {/* Filtro sticky con NativeTabs */}
+          {/* Filtro sticky */}
           <div style={{
             position:"sticky",top:catStickyTop,zIndex:100,
             background:"rgba(8,8,8,0.97)",
@@ -1023,7 +1210,33 @@ export default function Home() {
               <div className="products-grid" style={{display:"grid",gap:"1rem"}}>
                 {Array.from({length:8}).map((_,i)=><SkeletonCard key={i}/>)}
               </div>
+            ) : shopFilter === "TODO" ? (
+              // ── VISTA "TODO": scroll horizontal por categoría ──
+              <>
+                {getVisibleCats().map(cat=>{
+                  const prods = getProds(cat);
+                  if(prods.length===0) return null;
+                  const isLenteCat = (LENTES_SUBCATS as readonly string[]).includes(cat);
+                  return (
+                    <div key={cat} style={{marginBottom:"2.5rem",animation:"fadeIn 0.3s ease"}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.85rem",borderBottom:`1px solid ${C.border}`,paddingBottom:"0.65rem"}}>
+                        <h2 style={{fontSize:11,fontWeight:800,letterSpacing:3,margin:0,color:"#555"}}>
+                          {isLenteCat ? `LENTES · ${catLabel(cat).toUpperCase()}` : catLabel(cat).toUpperCase()}
+                        </h2>
+                        <button
+                          onClick={()=>{setShopFilter(cat as ShopFilter);setLentesOpen(isLenteCat);}}
+                          style={{background:"none",border:"none",fontSize:10,color:"#333",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",letterSpacing:1,fontWeight:700}}>
+                          VER TODOS
+                        </button>
+                      </div>
+                      {/* Scroll horizontal nativo — touchAction pan-x */}
+                      <HorizontalRow products={prods} onSelect={openProduct}/>
+                    </div>
+                  );
+                })}
+              </>
             ) : (
+              // ── VISTA filtrada: grid normal ──
               getVisibleCats().map(cat=>{
                 const prods = getProds(cat);
                 if(prods.length===0) return null;
@@ -1042,8 +1255,7 @@ export default function Home() {
                     </div>
                     <div className="products-grid" style={{display:"grid",gap:"1rem"}}>
                       {prods.map((product,i)=>(
-                        <ProductCard key={product.id} product={product} index={i}
-                          onClick={()=>{setSelectedProduct(product);setModalQty(1);}}/>
+                        <ProductCard key={product.id} product={product} index={i} onClick={()=>openProduct(product)}/>
                       ))}
                     </div>
                   </div>
@@ -1267,7 +1479,6 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Lista admin con scroll nativo en los pills */}
                 <div style={{background:"#111",borderRadius:12,padding:"1.5rem",border:"1px solid #1a1a1a"}}>
                   <p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 0.85rem"}}>
                     PRODUCTOS ({adminProds.length})
@@ -1279,7 +1490,6 @@ export default function Home() {
                     onChange={e=>setAdminSearch(e.target.value)}
                     style={{...S.input,marginBottom:"0.75rem"}}/>
 
-                  {/* Pills — usa scroll nativo igual que los tabs */}
                   <div
                     className="native-tabs-strip"
                     style={{
@@ -1363,7 +1573,6 @@ export default function Home() {
               animation:"slideUp 0.28s cubic-bezier(0.25,0.46,0.45,0.94)",
               border:"1px solid #1e1e1e",borderBottom:"none",
             }}>
-            {/* Handle */}
             <div style={{width:36,height:3,background:"#222",borderRadius:2,margin:"0 auto 1rem"}}/>
             <div style={{background:"#0a0a0a",aspectRatio:"4/3",overflow:"hidden",marginBottom:"1.1rem",borderRadius:12}}>
               <LazyImg src={selectedProduct.img} alt={selectedProduct.name}/>
