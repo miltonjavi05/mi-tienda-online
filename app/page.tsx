@@ -47,9 +47,26 @@ const ALL_SHOP_CATS = [
   "RELOJES","COLLARES","PULSERAS","ANILLOS","ARETES","BILLETERAS",
 ] as const;
 
+const DELIVERY_ZONES = [
+  { id:"naguanagua", label:"Naguanagua (Gratis)", price:0 },
+  { id:"valencia",   label:"Valencia (Gratis)",   price:0 },
+  { id:"otro",       label:"Otro Estado",          price:0 },
+];
+
+const SHIPPING_AGENCIES = ["MRW","Tealca","Zoom"];
+
+interface DeliveryInfo {
+  zone: string;
+  nombre: string;
+  cedula: string;
+  telefono: string;
+  agencia: string;
+  direccion: string;
+}
+
 interface Product {
   id: string; name: string; category: string; price: number;
-  img: string; description?: string; createdAt?: number;
+  img: string; description?: string; createdAt?: number; order?: number;
 }
 interface CartItem { product: Product; qty: number; }
 type MainView = "fokus" | "shop" | "comunidad" | "cart" | "admin";
@@ -102,11 +119,12 @@ function docToProduct(doc: FsDoc): Product {
     img:         fromFs(f.img         ?? {nullValue:null}) as string || "",
     description: fromFs(f.description ?? {nullValue:null}) as string || "",
     createdAt:   fromFs(f.createdAt   ?? {nullValue:null}) as number || 0,
+    order:       fromFs(f.order       ?? {nullValue:null}) as number || 0,
   };
 }
 
 async function fsGetAll(): Promise<Product[]> {
-  const r = await fetch(`${fsBase()}/products?pageSize=200`);
+  const r = await fetch(`${fsBase()}/products?pageSize=300`);
   if (!r.ok) throw new Error(await r.text());
   const d = await r.json() as { documents?: FsDoc[] };
   return (d.documents||[]).map(docToProduct);
@@ -141,17 +159,17 @@ function optImg(url: string, w=400): string {
 }
 
 const DEMO: Product[] = [
-  {id:"d1",name:"Lentes Fotocromaticos",  category:"LENTES·FOTOCROMATICOS",  price:22,img:"https://images.unsplash.com/photo-1577803645773-f96470509666?w=400&q=80"},
-  {id:"d2",name:"Lentes Anti Luz Azul",   category:"LENTES·ANTI-LUZ-AZUL",   price:18,img:"https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=400&q=80"},
-  {id:"d3",name:"Lentes de Sol",          category:"LENTES·SOL",             price:20,img:"https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=400&q=80"},
-  {id:"d4",name:"Lentes para Motos",      category:"LENTES·MOTORIZADOS",     price:25,img:"https://images.unsplash.com/photo-1473496169904-658ba7574b0d?w=400&q=80"},
-  {id:"d5",name:"Megir NF56",             category:"RELOJES",                price:40,img:"https://images.unsplash.com/photo-1523170335258-f5ed11844a49?w=400&q=80"},
-  {id:"d6",name:"Navigorce NF65",         category:"RELOJES",                price:40,img:"https://images.unsplash.com/photo-1548171916-c8fd28f7f356?w=400&q=80"},
-  {id:"d7",name:"Collar de Cruz",         category:"COLLARES",               price:25,img:"https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400&q=80"},
-  {id:"d8",name:"Pulsera Trenzada",       category:"PULSERAS",               price:15,img:"https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=400&q=80"},
-  {id:"d9",name:"Anillo Liso",            category:"ANILLOS",                price:12,img:"https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=400&q=80"},
-  {id:"d10",name:"Aretes Argolla",        category:"ARETES",                 price:10,img:"https://images.unsplash.com/photo-1535632787350-4e68ef0ac584?w=400&q=80"},
-  {id:"d11",name:"Billetera Cuero",       category:"BILLETERAS",             price:30,img:"https://images.unsplash.com/photo-1627123424574-724758594e93?w=400&q=80"},
+  {id:"d1",name:"Lentes Fotocromaticos",  category:"LENTES·FOTOCROMATICOS",  price:22,img:"https://images.unsplash.com/photo-1577803645773-f96470509666?w=400&q=80",order:0},
+  {id:"d2",name:"Lentes Anti Luz Azul",   category:"LENTES·ANTI-LUZ-AZUL",   price:18,img:"https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=400&q=80",order:0},
+  {id:"d3",name:"Lentes de Sol",          category:"LENTES·SOL",             price:20,img:"https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=400&q=80",order:0},
+  {id:"d4",name:"Lentes para Motos",      category:"LENTES·MOTORIZADOS",     price:25,img:"https://images.unsplash.com/photo-1473496169904-658ba7574b0d?w=400&q=80",order:0},
+  {id:"d5",name:"Megir NF56",             category:"RELOJES",                price:40,img:"https://images.unsplash.com/photo-1523170335258-f5ed11844a49?w=400&q=80",order:0},
+  {id:"d6",name:"Navigorce NF65",         category:"RELOJES",                price:40,img:"https://images.unsplash.com/photo-1548171916-c8fd28f7f356?w=400&q=80",order:0},
+  {id:"d7",name:"Collar de Cruz",         category:"COLLARES",               price:25,img:"https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400&q=80",order:0},
+  {id:"d8",name:"Pulsera Trenzada",       category:"PULSERAS",               price:15,img:"https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=400&q=80",order:0},
+  {id:"d9",name:"Anillo Liso",            category:"ANILLOS",                price:12,img:"https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=400&q=80",order:0},
+  {id:"d10",name:"Aretes Argolla",        category:"ARETES",                 price:10,img:"https://images.unsplash.com/photo-1535632787350-4e68ef0ac584?w=400&q=80",order:0},
+  {id:"d11",name:"Billetera Cuero",       category:"BILLETERAS",             price:30,img:"https://images.unsplash.com/photo-1627123424574-724758594e93?w=400&q=80",order:0},
 ];
 
 const IcWA = memo(({s=22,c="#fff"}:{s?:number;c?:string}) => (
@@ -187,7 +205,6 @@ const S = {
 };
 
 // ── LazyImg ─────────────────────────────────────────────────────────────────
-// CRÍTICO: pointer-events:none + touch-action:none en img para no bloquear scroll
 const LazyImg = memo(function LazyImg({src,alt}:{src:string;alt:string}) {
   const [loaded,setLoaded] = useState(false);
   const [inView,setInView] = useState(false);
@@ -198,23 +215,11 @@ const LazyImg = memo(function LazyImg({src,alt}:{src:string;alt:string}) {
     obs.observe(el); return()=>obs.disconnect();
   },[]);
   return (
-    <div ref={ref} style={{position:"relative",width:"100%",height:"100%",
-      // El contenedor tampoco debe capturar eventos táctiles
-      pointerEvents:"none",touchAction:"none",userSelect:"none",WebkitUserSelect:"none"
-    }}>
+    <div ref={ref} style={{position:"relative",width:"100%",height:"100%",pointerEvents:"none",touchAction:"none",userSelect:"none",WebkitUserSelect:"none"}}>
       {!loaded&&<div style={{position:"absolute",inset:0,background:"#161616"}}/>}
       {inView&&<img src={optImg(src,400)} alt={alt} loading="lazy" decoding="async"
         onLoad={()=>setLoaded(true)}
-        style={{
-          width:"100%",height:"100%",objectFit:"cover",display:"block",
-          opacity:loaded?1:0,transition:"opacity 0.25s ease",
-          pointerEvents:"none",userSelect:"none",
-          WebkitUserSelect:"none",touchAction:"none",
-          // Previene el drag nativo de imagen en iOS/Android
-          WebkitTouchCallout:"none",
-          // Previene que iOS muestre el menú contextual de imagen
-          WebkitUserDrag:"none",
-        } as React.CSSProperties}
+        style={{width:"100%",height:"100%",objectFit:"cover",display:"block",opacity:loaded?1:0,transition:"opacity 0.25s ease",pointerEvents:"none",userSelect:"none",WebkitUserSelect:"none",touchAction:"none",WebkitTouchCallout:"none"} as React.CSSProperties}
         draggable={false}
       />}
     </div>
@@ -238,19 +243,12 @@ function catLabel(cat:string):string {
   return m[cat]??(cat[0]+cat.slice(1).toLowerCase());
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-//  DraggableWA — FIXED
-//  Soluciones aplicadas:
-//  1. visibility:hidden hasta calcular posición real → evita flash en centro
-//  2. onPointerUp + onPointerCancel: siempre hace snap a borde correcto
-//  3. transition solo en left/top cuando está en snap, no durante arrastre
-//  4. clamp correcto con BTN/2 para que nunca quede fuera de pantalla
-// ═══════════════════════════════════════════════════════════════════════════
+// ── DraggableWA ──────────────────────────────────────────────────────────────
 function DraggableWA() {
   const BTN=48, MG=14;
-  const [ready,setReady]     = useState(false);
-  const [pos,setPos]         = useState({x:0,y:0});
-  const [pressed,setPressed] = useState(false);
+  const [ready,setReady]       = useState(false);
+  const [pos,setPos]           = useState({x:0,y:0});
+  const [pressed,setPressed]   = useState(false);
   const [snapping,setSnapping] = useState(false);
   const dragging  = useRef(false);
   const moved     = useRef(false);
@@ -264,13 +262,22 @@ function DraggableWA() {
     y: Math.round(window.innerHeight * 0.78 - BTN / 2),
   }),[]);
 
+  const clamp = useCallback((x:number,y:number)=>({
+    x: Math.max(MG, Math.min(window.innerWidth - BTN - MG, x)),
+    y: Math.max(MG + 80, Math.min(window.innerHeight - BTN - MG*2, y)),
+  }),[]);
+
+  const snapToEdge = useCallback((x:number,y:number)=>{
+    const cx = x + BTN/2;
+    const side = cx < window.innerWidth/2 ? MG : window.innerWidth - BTN - MG;
+    return { x: side, y: clamp(x,y).y };
+  },[clamp]);
+
   useEffect(()=>{
     const p = getInitPos();
     live.current = p;
     setPos(p);
     setReady(true);
-
-    // Reposicionar si cambia el tamaño (orientación)
     const onResize = () => {
       if (!dragging.current) {
         const np = snapToEdge(live.current.x, live.current.y);
@@ -282,17 +289,6 @@ function DraggableWA() {
     return () => window.removeEventListener("resize", onResize);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
-
-  const clamp = useCallback((x:number,y:number)=>({
-    x: Math.max(MG, Math.min(window.innerWidth - BTN - MG, x)),
-    y: Math.max(MG + 80, Math.min(window.innerHeight - BTN - MG*2, y)),
-  }),[]);
-
-  const snapToEdge = useCallback((x:number,y:number)=>{
-    const cx = x + BTN/2;
-    const side = cx < window.innerWidth/2 ? MG : window.innerWidth - BTN - MG;
-    return { x: side, y: clamp(x,y).y };
-  },[clamp]);
 
   const onDown = useCallback((e:React.PointerEvent)=>{
     e.preventDefault();
@@ -326,7 +322,6 @@ function DraggableWA() {
       live.current = s;
       setSnapping(true);
       setPos({...s});
-      // Quitar la transición después de que termine el snap
       setTimeout(()=>setSnapping(false), 420);
     }
   },[snapToEdge]);
@@ -338,47 +333,32 @@ function DraggableWA() {
 
   return (
     <div
-      onPointerDown={onDown}
-      onPointerMove={onMove}
-      onPointerUp={finishDrag}
-      onPointerCancel={finishDrag}
+      onPointerDown={onDown} onPointerMove={onMove}
+      onPointerUp={finishDrag} onPointerCancel={finishDrag}
       onClick={onClick}
       style={{
-        position:"fixed",
-        left: pos.x,
-        top:  pos.y,
-        zIndex:500,
-        width:BTN, height:BTN,
-        borderRadius:"50%",
-        background: pressed
-          ? "rgba(255,255,255,0.22)"
-          : "rgba(255,255,255,0.10)",
-        backdropFilter:"blur(18px)",
-        WebkitBackdropFilter:"blur(18px)",
+        position:"fixed", left:pos.x, top:pos.y, zIndex:500,
+        width:BTN, height:BTN, borderRadius:"50%",
+        background:pressed?"rgba(255,255,255,0.22)":"rgba(255,255,255,0.10)",
+        backdropFilter:"blur(18px)", WebkitBackdropFilter:"blur(18px)",
         border:"1px solid rgba(255,255,255,0.20)",
-        display:"flex",alignItems:"center",justifyContent:"center",
-        cursor:"grab",
-        touchAction:"none",
-        userSelect:"none",
-        WebkitUserSelect:"none",
-        visibility: ready ? "visible" : "hidden",
-        // Transición SOLO cuando hace snap, nunca durante arrastre
-        transition: snapping
-          ? "left 0.38s cubic-bezier(0.25,0.46,0.45,0.94), top 0.38s cubic-bezier(0.25,0.46,0.45,0.94), background 0.2s"
-          : "background 0.2s",
+        display:"flex", alignItems:"center", justifyContent:"center",
+        cursor:"grab", touchAction:"none", userSelect:"none", WebkitUserSelect:"none",
+        visibility:ready?"visible":"hidden",
+        transition:snapping
+          ?"left 0.38s cubic-bezier(0.25,0.46,0.45,0.94), top 0.38s cubic-bezier(0.25,0.46,0.45,0.94), background 0.2s"
+          :"background 0.2s",
         willChange:"left,top",
-        boxShadow: pressed
-          ? "0 0 0 10px rgba(255,255,255,0.06)"
-          : "0 4px 24px rgba(0,0,0,0.6), 0 1px 4px rgba(0,0,0,0.4)",
+        boxShadow:pressed
+          ?"0 0 0 10px rgba(255,255,255,0.06)"
+          :"0 4px 24px rgba(0,0,0,0.6), 0 1px 4px rgba(0,0,0,0.4)",
       }}>
       <IcWA s={BTN-14} c={pressed?"#080808":"#fff"}/>
     </div>
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-//  NativeTabs
-// ═══════════════════════════════════════════════════════════════════════════
+// ── NativeTabs ───────────────────────────────────────────────────────────────
 const NativeTabs = memo(function NativeTabs({items,active,onSelect,renderItem,height=44}:{
   items:string[];active:string;onSelect:(v:string)=>void;
   renderItem:(item:string,isActive:boolean)=>React.ReactNode;height?:number;
@@ -389,23 +369,10 @@ const NativeTabs = memo(function NativeTabs({items,active,onSelect,renderItem,he
     if(el) el.scrollIntoView({block:"nearest",inline:"center",behavior:"smooth"});
   },[active]);
   return (
-    <div ref={ref} className="ts" style={{
-      display:"flex",
-      overflowX:"auto",
-      overflowY:"hidden",
-      scrollbarWidth:"none",
-      WebkitOverflowScrolling:"touch",
-      height,
-      touchAction:"pan-x",
-    }}>
+    <div ref={ref} className="ts" style={{display:"flex",overflowX:"auto",overflowY:"hidden",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",height,touchAction:"pan-x"}}>
       {items.map(item=>(
         <button key={item} data-active={item===active} onClick={()=>onSelect(item)}
-          style={{
-            background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",
-            flexShrink:0,padding:0,display:"flex",alignItems:"center",
-            WebkitTapHighlightColor:"transparent",
-            touchAction:"manipulation",
-          }}>
+          style={{background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",flexShrink:0,padding:0,display:"flex",alignItems:"center",WebkitTapHighlightColor:"transparent",touchAction:"manipulation"}}>
           {renderItem(item,item===active)}
         </button>
       ))}
@@ -413,9 +380,7 @@ const NativeTabs = memo(function NativeTabs({items,active,onSelect,renderItem,he
   );
 });
 
-// ═══════════════════════════════════════════════════════════════════════════
-//  ProductCard
-// ═══════════════════════════════════════════════════════════════════════════
+// ── ProductCard ───────────────────────────────────────────────────────────────
 const ProductCard = memo(function ProductCard({product,onClick,index}:{product:Product;onClick:()=>void;index:number}) {
   const [vis,setVis]=useState(false);
   const ref=useRef<HTMLDivElement>(null);
@@ -426,13 +391,9 @@ const ProductCard = memo(function ProductCard({product,onClick,index}:{product:P
   },[]);
   return (
     <div ref={ref} className="pc" onClick={onClick}
-      style={{
-        cursor:"pointer",
-        opacity:vis?1:0,
-        transform:vis?"translateY(0)":"translateY(14px)",
+      style={{cursor:"pointer",opacity:vis?1:0,transform:vis?"translateY(0)":"translateY(14px)",
         transition:`opacity 0.35s ease ${Math.min(index*35,160)}ms,transform 0.35s ease ${Math.min(index*35,160)}ms`,
-        willChange:"transform,opacity",
-      }}>
+        willChange:"transform,opacity"}}>
       <div style={{background:"#111",aspectRatio:"1",overflow:"hidden",marginBottom:"0.55rem",borderRadius:10,position:"relative"}}>
         <div className="iz" style={{width:"100%",height:"100%",transition:"transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94)"}}>
           <LazyImg src={product.img} alt={product.name}/>
@@ -445,13 +406,10 @@ const ProductCard = memo(function ProductCard({product,onClick,index}:{product:P
   );
 });
 
-// ═══════════════════════════════════════════════════════════════════════════
-//  HCard
-// ═══════════════════════════════════════════════════════════════════════════
+// ── HCard ─────────────────────────────────────────────────────────────────────
 const HCard = memo(function HCard({product,onClick}:{product:Product;onClick:()=>void}) {
   return (
-    <div className="hc" onClick={onClick}
-      style={{cursor:"pointer",flexShrink:0,width:148,touchAction:"manipulation"}}>
+    <div className="hc" onClick={onClick} style={{cursor:"pointer",flexShrink:0,width:148,touchAction:"manipulation"}}>
       <div style={{background:"#111",width:148,height:148,overflow:"hidden",marginBottom:"0.5rem",borderRadius:10,position:"relative"}}>
         <div className="iz" style={{width:"100%",height:"100%",transition:"transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94)"}}>
           <LazyImg src={product.img} alt={product.name}/>
@@ -464,57 +422,84 @@ const HCard = memo(function HCard({product,onClick}:{product:Product;onClick:()=
   );
 });
 
-// ═══════════════════════════════════════════════════════════════════════════
-//  HRow — SCROLL HORIZONTAL NATIVO OPTIMIZADO
-//
-//  Estrategia definitiva para iOS + Android:
-//  - El contenedor tiene overflow-x:scroll + -webkit-overflow-scrolling:touch
-//  - touch-action:"pan-x pan-y" permite tanto scroll horizontal (en la fila)
-//    como vertical (en la página) — el navegador elige según la dirección del gesto
-//  - Las imágenes tienen pointer-events:none + touch-action:none para no capturar
-//  - NO usamos onTouchStart/Move que bloqueen el scroll
-//  - scroll-behavior:smooth para inercia suave
-// ═══════════════════════════════════════════════════════════════════════════
+// ── HRow with desktop scroll arrows ──────────────────────────────────────────
 const HRow = memo(function HRow({products,onSelect}:{products:Product[];onSelect:(p:Product)=>void}) {
   const rowRef = useRef<HTMLDivElement>(null);
+  const [showLeft,setShowLeft]   = useState(false);
+  const [showRight,setShowRight] = useState(false);
+  const [hovered,setHovered]     = useState(false);
+
+  const updateArrows = useCallback(()=>{
+    const el = rowRef.current; if(!el) return;
+    setShowLeft(el.scrollLeft > 8);
+    setShowRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 8);
+  },[]);
+
+  useEffect(()=>{
+    const el = rowRef.current; if(!el) return;
+    updateArrows();
+    el.addEventListener("scroll", updateArrows, {passive:true});
+    const ro = new ResizeObserver(updateArrows);
+    ro.observe(el);
+    return()=>{ el.removeEventListener("scroll",updateArrows); ro.disconnect(); };
+  },[updateArrows, products]);
+
+  const scrollBy = useCallback((dir:number)=>{
+    rowRef.current?.scrollBy({left: dir * 320, behavior:"smooth"});
+  },[]);
+
+  const arrowStyle = (visible:boolean, side:"left"|"right"): React.CSSProperties => ({
+    position:"absolute", top:"50%", transform:"translateY(-50%)",
+    [side]: side==="left"?-4:-4,
+    zIndex:10,
+    width:34, height:34, borderRadius:"50%",
+    background:"rgba(20,20,20,0.92)",
+    border:"1px solid #2a2a2a",
+    display:"flex", alignItems:"center", justifyContent:"center",
+    cursor:"pointer",
+    opacity: (hovered && visible) ? 1 : 0,
+    pointerEvents: (hovered && visible) ? "auto" : "none",
+    transition:"opacity 0.18s ease",
+    backdropFilter:"blur(8px)",
+    boxShadow:"0 2px 12px rgba(0,0,0,0.5)",
+  });
 
   return (
     <div
-      ref={rowRef}
-      className="hr"
-      style={{
-        display:"flex",
-        gap:"0.75rem",
-        overflowX:"scroll",
-        overflowY:"hidden",
-        paddingBottom:"0.5rem",
-        paddingLeft:"0.25rem",
-        paddingRight:"1rem",
-        scrollbarWidth:"none",
-        WebkitOverflowScrolling:"touch",
-        // pan-x + pan-y: el browser determina la dirección del scroll
-        // Esto permite scroll vertical en la página Y horizontal en la fila
-        touchAction:"pan-x pan-y",
-        userSelect:"none",
-        WebkitUserSelect:"none",
-        scrollSnapType:"x proximity",
-        willChange:"scroll-position",
-        // Aceleración por hardware
-        transform:"translateZ(0)",
-        WebkitTransform:"translateZ(0)",
-      } as React.CSSProperties}>
-      {products.map(p=>(
-        <div key={p.id} style={{scrollSnapAlign:"start",flexShrink:0}}>
-          <HCard product={p} onClick={()=>onSelect(p)}/>
-        </div>
-      ))}
+      style={{position:"relative"}}
+      onMouseEnter={()=>setHovered(true)}
+      onMouseLeave={()=>setHovered(false)}>
+      {/* Left arrow */}
+      <button onClick={()=>scrollBy(-1)} style={arrowStyle(showLeft,"left")} aria-label="Anterior">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      {/* Right arrow */}
+      <button onClick={()=>scrollBy(1)} style={arrowStyle(showRight,"right")} aria-label="Siguiente">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+      <div
+        ref={rowRef}
+        className="hr"
+        style={{
+          display:"flex", gap:"0.75rem",
+          overflowX:"scroll", overflowY:"hidden",
+          paddingBottom:"0.5rem", paddingLeft:"0.25rem", paddingRight:"1rem",
+          scrollbarWidth:"none", WebkitOverflowScrolling:"touch",
+          touchAction:"pan-x pan-y", userSelect:"none", WebkitUserSelect:"none",
+          scrollSnapType:"x proximity", willChange:"scroll-position",
+          transform:"translateZ(0)", WebkitTransform:"translateZ(0)",
+        } as React.CSSProperties}>
+        {products.map(p=>(
+          <div key={p.id} style={{scrollSnapAlign:"start",flexShrink:0}}>
+            <HCard product={p} onClick={()=>onSelect(p)}/>
+          </div>
+        ))}
+      </div>
     </div>
   );
 });
 
-// ═══════════════════════════════════════════════════════════════════════════
-//  AddedModal
-// ═══════════════════════════════════════════════════════════════════════════
+// ── AddedModal ────────────────────────────────────────────────────────────────
 const AddedModal = memo(function AddedModal({product,onClose,onGoCart}:{product:Product;onClose:()=>void;onGoCart:()=>void}) {
   return (
     <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:600,background:"rgba(0,0,0,0.72)",display:"flex",alignItems:"flex-end",justifyContent:"center",animation:"fadeIn 0.18s ease"}}>
@@ -542,24 +527,191 @@ const AddedModal = memo(function AddedModal({product,onClose,onGoCart}:{product:
   );
 });
 
+// ── Draggable Admin Row ───────────────────────────────────────────────────────
+interface ARowProps {
+  p: Product;
+  editing: Product|null;
+  onEdit: (p:Product)=>void;
+  onDel: (id:string)=>void;
+  onDragStart: (id:string)=>void;
+  onDragOver: (id:string)=>void;
+  onDragEnd: ()=>void;
+  isDragging: boolean;
+  isOver: boolean;
+}
+
+const ARow = memo(function ARow({p,editing,onEdit,onDel,onDragStart,onDragOver,onDragEnd,isDragging,isOver}:ARowProps) {
+  const handleRef = useRef<HTMLDivElement>(null);
+  const rowRef = useRef<HTMLDivElement>(null);
+
+  // Touch drag state
+  const touchDragging = useRef(false);
+  const touchStartY = useRef(0);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    // Only start drag from handle
+    touchDragging.current = true;
+    touchStartY.current = e.touches[0].clientY;
+    onDragStart(p.id);
+  };
+  const onTouchEnd = () => {
+    touchDragging.current = false;
+    onDragEnd();
+  };
+
+  return (
+    <div
+      ref={rowRef}
+      draggable
+      onDragStart={()=>onDragStart(p.id)}
+      onDragOver={e=>{ e.preventDefault(); onDragOver(p.id); }}
+      onDragEnd={onDragEnd}
+      className="ar"
+      style={{
+        display:"flex", alignItems:"center", gap:"0.75rem",
+        padding:"0.6rem 0.65rem", borderRadius:8,
+        background: isOver ? "#1e1e1e" : editing?.id===p.id ? "#1a1a1a" : "transparent",
+        opacity: isDragging ? 0.4 : 1,
+        border: isOver ? "1px dashed #3a3a3a" : "1px solid transparent",
+        transition:"opacity 0.15s, background 0.15s, border 0.15s",
+        cursor:"default",
+      }}>
+      {/* Drag handle */}
+      <div
+        ref={handleRef}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+        style={{
+          cursor:"grab", flexShrink:0, padding:"4px 6px",
+          color:"#333", display:"flex", alignItems:"center", touchAction:"none",
+        }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <circle cx="8" cy="6" r="1.2" fill="currentColor"/><circle cx="16" cy="6" r="1.2" fill="currentColor"/>
+          <circle cx="8" cy="12" r="1.2" fill="currentColor"/><circle cx="16" cy="12" r="1.2" fill="currentColor"/>
+          <circle cx="8" cy="18" r="1.2" fill="currentColor"/><circle cx="16" cy="18" r="1.2" fill="currentColor"/>
+        </svg>
+      </div>
+      <img src={optImg(p.img,120)} alt={p.name} style={{width:44,height:44,objectFit:"cover",borderRadius:6,flexShrink:0,background:"#1a1a1a",pointerEvents:"none"}} draggable={false}/>
+      <div style={{flex:1,minWidth:0}}>
+        <p style={{color:"#ccc",fontSize:12,fontWeight:700,margin:"0 0 1px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</p>
+        <p style={{color:"#333",fontSize:10,margin:0}}>${p.price.toFixed(2)}</p>
+      </div>
+      <div style={{display:"flex",gap:"0.35rem",flexShrink:0}}>
+        <button onClick={()=>onEdit(p)} style={{background:"#1a1a1a",color:"#888",border:"1px solid #222",padding:"0.3rem 0.65rem",borderRadius:6,cursor:"pointer",fontSize:10,fontFamily:"inherit",fontWeight:700,WebkitTapHighlightColor:"transparent"}}>Editar</button>
+        <button onClick={()=>onDel(p.id)} style={{background:"none",color:"#cc3333",border:"1px solid #2a1515",padding:"0.3rem 0.65rem",borderRadius:6,cursor:"pointer",fontSize:10,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>✕</button>
+      </div>
+    </div>
+  );
+});
+
+// ── DeliveryForm ──────────────────────────────────────────────────────────────
+function DeliveryForm({info,onChange}:{info:DeliveryInfo;onChange:(i:DeliveryInfo)=>void}) {
+  const upd = (field:keyof DeliveryInfo,val:string) => onChange({...info,[field]:val});
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:"0.6rem"}}>
+      <p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#333",margin:"0 0 0.25rem"}}>TIPO DE ENTREGA</p>
+      {DELIVERY_ZONES.map(z=>(
+        <button key={z.id} onClick={()=>upd("zone",z.id)}
+          style={{display:"flex",alignItems:"center",gap:"0.75rem",background:info.zone===z.id?"#fff":"#111",color:info.zone===z.id?"#080808":C.text,border:`1px solid ${info.zone===z.id?"#fff":"#1e1e1e"}`,borderRadius:10,padding:"0.75rem 1rem",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",transition:"all 0.15s",textAlign:"left"}}>
+          <span style={{fontSize:16}}>{z.id==="naguanagua"?"🏙️":z.id==="valencia"?"🌆":"📦"}</span>
+          <span style={{fontSize:13,fontWeight:700}}>{z.label}</span>
+          {info.zone===z.id&&<span style={{marginLeft:"auto",fontSize:14,fontWeight:700}}>✓</span>}
+        </button>
+      ))}
+
+      {info.zone==="otro"&&(
+        <div style={{background:"#0a0a0a",borderRadius:10,padding:"1rem",border:"1px solid #1a1a1a",marginTop:"0.25rem",display:"flex",flexDirection:"column",gap:"0.65rem",animation:"slideUp 0.2s ease"}}>
+          <p style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#333",margin:"0 0 0.25rem"}}>DATOS DE ENVÍO</p>
+          <input placeholder="Nombre y Apellido *" value={info.nombre} onChange={e=>upd("nombre",e.target.value)} style={S.input}/>
+          <input placeholder="Cédula de Identidad *" value={info.cedula} onChange={e=>upd("cedula",e.target.value)} style={S.input}/>
+          <input placeholder="Número de Teléfono *" value={info.telefono} onChange={e=>upd("telefono",e.target.value)} style={S.input}/>
+          <select value={info.agencia} onChange={e=>upd("agencia",e.target.value)} style={{...S.input,appearance:"auto"}}>
+            <option value="">Agencia de Envíos *</option>
+            {SHIPPING_AGENCIES.map(a=><option key={a} value={a}>{a}</option>)}
+          </select>
+          <input placeholder="Dirección de la Agencia *" value={info.direccion} onChange={e=>upd("direccion",e.target.value)} style={S.input}/>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Footer ────────────────────────────────────────────────────────────────────
+const Footer = memo(function Footer({setMainView,setShopFilter}:{setMainView:(v:MainView)=>void;setShopFilter:(v:ShopFilter)=>void}) {
+  const sA: React.CSSProperties={display:"flex",alignItems:"center",justifyContent:"center",width:36,height:36,borderRadius:"50%",background:"rgba(255,255,255,0.04)",textDecoration:"none",border:"1px solid rgba(255,255,255,0.07)",flexShrink:0};
+  const cats=[{l:"Lentes",c:"LENTES"},{l:"Relojes",c:"RELOJES"},{l:"Collares",c:"COLLARES"},{l:"Pulseras",c:"PULSERAS"},{l:"Anillos",c:"ANILLOS"},{l:"Aretes",c:"ARETES"},{l:"Billeteras",c:"BILLETERAS"}];
+  return (
+    <footer style={{background:"#060606",borderTop:"1px solid #111",marginTop:"2rem",padding:"2.5rem 1.5rem 2rem"}}>
+      <div style={{maxWidth:1100,margin:"0 auto"}}>
+        <div className="fg" style={{display:"grid",gap:"2rem",marginBottom:"2rem"}}>
+          <div>
+            <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:"0.65rem"}}>
+              <img src="/favicon.png" alt="Fokus" width={20} height={20} style={{objectFit:"contain",pointerEvents:"none"}} draggable={false}/>
+              <span style={{fontWeight:900,fontSize:12,letterSpacing:5,color:"#fff"}}>FOKUS</span>
+            </div>
+            <p style={{fontSize:11,color:"#333",lineHeight:1.7,margin:"0 0 0.85rem",maxWidth:180}}>Accesorios con actitud.<br/>Cada detalle importa.</p>
+            <div style={{display:"flex",gap:"0.45rem"}}>
+              <a href={SOCIAL.instagram} target="_blank" rel="noreferrer" className="sl" style={sA}><IcIG s={14}/></a>
+              <a href={SOCIAL.facebook}  target="_blank" rel="noreferrer" className="sl" style={sA}><IcFB s={14}/></a>
+              <a href={SOCIAL.tiktok}    target="_blank" rel="noreferrer" className="sl" style={sA}><IcTT s={14}/></a>
+              <a href={SOCIAL.whatsapp}  target="_blank" rel="noreferrer" className="sl" style={{...sA,background:"rgba(37,211,102,0.08)",borderColor:"rgba(37,211,102,0.15)"}}><IcWA s={14}/></a>
+            </div>
+          </div>
+          <div>
+            <p style={{fontSize:9,fontWeight:800,letterSpacing:3,color:"#2a2a2a",marginBottom:"0.75rem"}}>TIENDA</p>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.35rem 1rem"}}>
+              {cats.map(({l,c})=>(
+                <button key={c} onClick={()=>{setShopFilter(c as ShopFilter);setMainView("shop");typeof window!=="undefined"&&window.scrollTo({top:0,behavior:"smooth"});}}
+                  style={{background:"none",border:"none",textAlign:"left",cursor:"pointer",fontFamily:"inherit",fontSize:11,color:"#333",padding:0,WebkitTapHighlightColor:"transparent",transition:"color 0.15s"}} className="fl">
+                  {l}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p style={{fontSize:9,fontWeight:800,letterSpacing:3,color:"#2a2a2a",marginBottom:"0.75rem"}}>CONTACTO</p>
+            <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noreferrer"
+              style={{display:"inline-flex",alignItems:"center",gap:"0.45rem",background:"#0d1e0d",color:"#4caf50",padding:"0.55rem 0.9rem",borderRadius:8,fontSize:11,fontWeight:700,textDecoration:"none",marginBottom:"0.75rem",border:"1px solid #162516"}}>
+              <IcWA s={12} c="#4caf50"/> WhatsApp
+            </a>
+            <div style={{display:"flex",flexDirection:"column",gap:"0.2rem"}}>
+              <p style={{fontSize:10,color:"#2a2a2a",margin:0}}>miltonjavi05@gmail.com</p>
+              <p style={{fontSize:10,color:"#2a2a2a",margin:0}}>+58 424-300-5733</p>
+            </div>
+          </div>
+        </div>
+        <div style={{borderTop:"1px solid #111",paddingTop:"1rem",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"0.4rem"}}>
+          <p style={{fontSize:9,color:"#222",margin:0,letterSpacing:1}}>© {new Date().getFullYear()} FOKUS. TODOS LOS DERECHOS RESERVADOS.</p>
+          <p style={{fontSize:9,color:"#1a1a1a",margin:0,letterSpacing:1}}>FOKUS ®</p>
+        </div>
+      </div>
+    </footer>
+  );
+});
+
 // ═══════════════════════════════════════════════════════════════════════════
 //  HOME
 // ═══════════════════════════════════════════════════════════════════════════
 export default function Home() {
-  const [mainView,setMainView]           = useState<MainView>("fokus");
-  const [shopFilter,setShopFilter]       = useState<ShopFilter>("TODO");
-  const [lentesOpen,setLentesOpen]       = useState(false);
-  const [cart,setCart]                   = useState<CartItem[]>([]);
-  const [selectedProduct,setSel]         = useState<Product|null>(null);
-  const [modalQty,setModalQty]           = useState(1);
-  const [menuOpen,setMenuOpen]           = useState(false);
-  const [searchOpen,setSearchOpen]       = useState(false);
-  const [searchQuery,setSearchQuery]     = useState("");
-  const [payMethod,setPayMethod]         = useState<string|null>(null);
-  const [products,setProducts]           = useState<Product[]>([]);
-  const [loading,setLoading]             = useState(true);
-  const [fbReady,setFbReady]             = useState(false);
-  const [addedProduct,setAddedProduct]   = useState<Product|null>(null);
+  const [mainView,setMainView]         = useState<MainView>("fokus");
+  const [shopFilter,setShopFilter]     = useState<ShopFilter>("TODO");
+  const [lentesOpen,setLentesOpen]     = useState(false);
+  const [cart,setCart]                 = useState<CartItem[]>([]);
+  const [selectedProduct,setSel]       = useState<Product|null>(null);
+  const [modalQty,setModalQty]         = useState(1);
+  const [menuOpen,setMenuOpen]         = useState(false);
+  const [searchOpen,setSearchOpen]     = useState(false);
+  const [searchQuery,setSearchQuery]   = useState("");
+  const [payMethod,setPayMethod]       = useState<string|null>(null);
+  const [products,setProducts]         = useState<Product[]>([]);
+  const [loading,setLoading]           = useState(true);
+  const [fbReady,setFbReady]           = useState(false);
+  const [addedProduct,setAddedProduct] = useState<Product|null>(null);
+
+  // Delivery
+  const [deliveryInfo,setDeliveryInfo] = useState<DeliveryInfo>({
+    zone:"", nombre:"", cedula:"", telefono:"", agencia:"", direccion:""
+  });
 
   const navRef=useRef<HTMLElement>(null);
   const [navH,setNavH]=useState(NAV_H+TABS_H);
@@ -592,9 +744,17 @@ export default function Home() {
   const fileRef=useRef<HTMLInputElement>(null);
   const formRef=useRef<HTMLDivElement>(null);
 
+  // Drag state for admin reorder
+  const [dragId,setDragId]   = useState<string|null>(null);
+  const [overId,setOverId]   = useState<string|null>(null);
+
   const loadProducts=useCallback(async()=>{
     setLoading(true);
-    try{const d=await fsGetAll();setProducts(d.length>0?d:DEMO);}
+    try{
+      const d=await fsGetAll();
+      const sorted = d.sort((a,b)=>(a.order??0)-(b.order??0));
+      setProducts(sorted.length>0?sorted:DEMO);
+    }
     catch{setProducts(DEMO);}
     finally{setLoading(false);}
   },[]);
@@ -605,6 +765,19 @@ export default function Home() {
     if(ok) loadProducts(); else{setProducts(DEMO);setLoading(false);}
     if(typeof window!=="undefined"&&window.location.pathname==="/admin") setMainView("admin");
   },[loadProducts]);
+
+  // Category counts for menu
+  const catCounts = useMemo(()=>{
+    const counts: Record<string,number> = {};
+    products.forEach(p=>{
+      const mainCat = p.category.startsWith("LENTES·") ? "LENTES" : p.category;
+      counts[mainCat] = (counts[mainCat]||0) + 1;
+      if(p.category.startsWith("LENTES·")) {
+        counts[p.category] = (counts[p.category]||0) + 1;
+      }
+    });
+    return counts;
+  },[products]);
 
   const isLentesSubcat=useMemo(()=>(LENTES_SUBCATS as readonly string[]).includes(shopFilter),[shopFilter]);
   const isLentesActive=useMemo(()=>shopFilter==="LENTES"||isLentesSubcat,[shopFilter,isLentesSubcat]);
@@ -634,12 +807,26 @@ export default function Home() {
     setCart(prev=>prev.map(i=>i.product.id===id?{...i,qty:i.qty+d}:i).filter(i=>i.qty>0))
   ,[]);
 
+  // Validate delivery
+  const deliveryValid = useMemo(()=>{
+    if(!deliveryInfo.zone) return false;
+    if(deliveryInfo.zone==="otro"){
+      return !!(deliveryInfo.nombre&&deliveryInfo.cedula&&deliveryInfo.telefono&&deliveryInfo.agencia&&deliveryInfo.direccion);
+    }
+    return true;
+  },[deliveryInfo]);
+
   const waMsg=useCallback(()=>{
     const lines=cart.map(i=>`• ${i.product.name} x${i.qty} — $${(i.product.price*i.qty).toFixed(2)}`);
     const pm=PAYMENT_METHODS.find(m=>m.id===payMethod);
     const pmL=pm?`\n\nMétodo de pago: ${pm.name} (${pm.detail})`:"";
-    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`Hola! Quiero hacer un pedido:\n\n${lines.join("\n")}\n\nTotal: $${totalPrice.toFixed(2)}${pmL}\n\n¡Adjunto comprobante de pago!`)}`;
-  },[cart,totalPrice,payMethod]);
+    const dz=DELIVERY_ZONES.find(z=>z.id===deliveryInfo.zone);
+    let deliveryL = dz ? `\n\nEntrega: ${dz.label}` : "";
+    if(deliveryInfo.zone==="otro"){
+      deliveryL += `\nNombre: ${deliveryInfo.nombre}\nCédula: ${deliveryInfo.cedula}\nTeléfono: ${deliveryInfo.telefono}\nAgencia: ${deliveryInfo.agencia}\nDirección: ${deliveryInfo.direccion}`;
+    }
+    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`Hola! Quiero hacer un pedido:\n\n${lines.join("\n")}\n\nTotal: $${totalPrice.toFixed(2)}${pmL}${deliveryL}\n\n¡Adjunto comprobante de pago!`)}`;
+  },[cart,totalPrice,payMethod,deliveryInfo]);
 
   const doLogin=()=>{
     if(adminEmail===ADMIN_EMAIL&&adminPwd===ADMIN_PASSWORD){setAdminLogged(true);setAdminErr("");setAdminSec("menu");}
@@ -688,6 +875,31 @@ export default function Home() {
     await fsDelete(id);await loadProducts();
   };
 
+  // Drag & Drop reorder
+  const handleDragStart = useCallback((id:string)=>{ setDragId(id); },[]);
+  const handleDragOver  = useCallback((id:string)=>{ setOverId(id); },[]);
+  const handleDragEnd   = useCallback(async()=>{
+    if(!dragId||!overId||dragId===overId){
+      setDragId(null); setOverId(null); return;
+    }
+    setProducts(prev=>{
+      const arr = [...prev];
+      const fromIdx = arr.findIndex(p=>p.id===dragId);
+      const toIdx   = arr.findIndex(p=>p.id===overId);
+      if(fromIdx<0||toIdx<0) return prev;
+      const [moved] = arr.splice(fromIdx,1);
+      arr.splice(toIdx,0,moved);
+      // Persist order async
+      arr.forEach((p,i)=>{
+        if(p.order!==i && fbReady) {
+          fsUpdate(p.id,{order:i}).catch(()=>{});
+        }
+      });
+      return arr.map((p,i)=>({...p,order:i}));
+    });
+    setDragId(null); setOverId(null);
+  },[dragId,overId,fbReady]);
+
   const adminProds=useMemo(()=>{
     let l=products;
     if(adminCat!=="ALL") l=l.filter(p=>p.category===adminCat);
@@ -711,34 +923,20 @@ export default function Home() {
         @keyframes scaleIn{from{opacity:0;transform:scale(0.88)}to{opacity:1;transform:scale(1)}}
 
         *{box-sizing:border-box;-webkit-font-smoothing:antialiased;}
-        html{
-          /* Permitir scroll vertical en toda la página */
-          overflow-y:scroll;
-          scroll-behavior:smooth;
-        }
-        body{
-          background:#080808;
-          margin:0;
-          overscroll-behavior-y:contain;
-          /* CRÍTICO: permitir scroll vertical nativo */
-          touch-action:pan-y;
-        }
+        html{overflow-y:scroll;scroll-behavior:smooth;}
+        body{background:#080808;margin:0;overscroll-behavior-y:contain;touch-action:pan-y;}
 
-        /* Ocultar scrollbars */
         .ts::-webkit-scrollbar,.hr::-webkit-scrollbar{display:none}
         .ts{-webkit-overflow-scrolling:touch;}
 
-        /* HRow — scroll horizontal fluido */
         .hr{
           -webkit-overflow-scrolling:touch;
           scroll-behavior:smooth;
-          /* momentum scrolling en iOS */
           -webkit-scroll-snap-type:x proximity;
           scroll-snap-type:x proximity;
         }
         .hr::-webkit-scrollbar{display:none}
 
-        /* Hover efectos — solo en dispositivos que admiten hover real */
         @media(hover:hover){
           .pc:hover .iz,.hc:hover .iz{transform:scale(1.05)!important}
           .pc:hover .io,.hc:hover .io{background:rgba(255,255,255,0.04)!important}
@@ -752,7 +950,6 @@ export default function Home() {
         .hc:active{opacity:0.85}
         .nb:active{opacity:0.6}
 
-        /* Grids responsivos */
         @media(max-width:480px){
           .pg{grid-template-columns:repeat(2,1fr)!important}
           .fg{grid-template-columns:1fr!important;gap:1.5rem!important}
@@ -766,11 +963,13 @@ export default function Home() {
           .fg{grid-template-columns:repeat(3,1fr)!important}
         }
 
-        /* Prevenir selección de texto al hacer swipe */
         .hr *{-webkit-user-select:none;user-select:none;}
-
-        /* Acelerar compositing */
         .hr,.ts{contain:layout style;}
+
+        /* Arrow buttons only on desktop */
+        @media(max-width:768px){
+          .hr-arrow{display:none!important}
+        }
       `}</style>
 
       {/* NAVBAR */}
@@ -822,26 +1021,34 @@ export default function Home() {
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
-            <div>
-              <button onClick={()=>setLentesOpen(o=>!o)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%",background:"none",border:"none",borderBottom:`1px solid ${C.border}`,padding:"0.85rem 0",textAlign:"left",fontSize:14,cursor:"pointer",fontFamily:"inherit",color:"#d0d0d0",WebkitTapHighlightColor:"transparent"}}>
-                <span>Lentes</span>
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#444" strokeWidth="2" style={{transition:"transform 0.22s",transform:lentesOpen?"rotate(180deg)":"rotate(0deg)"}}><polyline points="6 9 12 15 18 9"/></svg>
-              </button>
-              {lentesOpen&&<div style={{paddingLeft:"1rem",borderBottom:`1px solid ${C.border}`}}>
-                {LENTES_SUBCATS.map(sub=>(
-                  <button key={sub} onClick={()=>{setShopFilter(sub);setMenuOpen(false);setMainView("shop");}}
-                    style={{display:"block",width:"100%",background:"none",border:"none",padding:"0.6rem 0",textAlign:"left",fontSize:13,cursor:"pointer",fontFamily:"inherit",color:"#555",WebkitTapHighlightColor:"transparent"}}>
-                    {catLabel(sub)}
-                  </button>
-                ))}
-              </div>}
-            </div>
+
+            {/* Lentes with count */}
+            <button onClick={()=>setLentesOpen(o=>!o)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%",background:"none",border:"none",borderBottom:`1px solid ${C.border}`,padding:"0.85rem 0",textAlign:"left",fontSize:14,cursor:"pointer",fontFamily:"inherit",color:"#d0d0d0",WebkitTapHighlightColor:"transparent"}}>
+              <span style={{display:"flex",alignItems:"center",gap:"0.5rem"}}>
+                Lentes
+                {catCounts["LENTES"]>0&&<span style={{fontSize:9,color:"#333",background:"#1a1a1a",padding:"1px 5px",borderRadius:8,fontWeight:700}}>{catCounts["LENTES"]}</span>}
+              </span>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#444" strokeWidth="2" style={{transition:"transform 0.22s",transform:lentesOpen?"rotate(180deg)":"rotate(0deg)"}}><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            {lentesOpen&&<div style={{paddingLeft:"1rem",borderBottom:`1px solid ${C.border}`}}>
+              {LENTES_SUBCATS.map(sub=>(
+                <button key={sub} onClick={()=>{setShopFilter(sub);setMenuOpen(false);setMainView("shop");}}
+                  style={{display:"flex",justifyContent:"space-between",width:"100%",background:"none",border:"none",padding:"0.6rem 0",textAlign:"left",fontSize:13,cursor:"pointer",fontFamily:"inherit",color:"#555",WebkitTapHighlightColor:"transparent"}}>
+                  <span>{catLabel(sub)}</span>
+                  {catCounts[sub]>0&&<span style={{fontSize:9,color:"#2a2a2a",background:"#141414",padding:"1px 5px",borderRadius:8}}>{catCounts[sub]}</span>}
+                </button>
+              ))}
+            </div>}
+
+            {/* Other categories with count */}
             {SHOP_CATS.filter(c=>c!=="LENTES").map(cat=>(
               <button key={cat} onClick={()=>{setShopFilter(cat);setMenuOpen(false);setMainView("shop");}}
-                style={{display:"block",width:"100%",background:"none",border:"none",borderBottom:`1px solid ${C.border}`,padding:"0.85rem 0",textAlign:"left",fontSize:14,cursor:"pointer",fontFamily:"inherit",color:"#d0d0d0",WebkitTapHighlightColor:"transparent"}}>
-                {catLabel(cat)}
+                style={{display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%",background:"none",border:"none",borderBottom:`1px solid ${C.border}`,padding:"0.85rem 0",textAlign:"left",fontSize:14,cursor:"pointer",fontFamily:"inherit",color:"#d0d0d0",WebkitTapHighlightColor:"transparent"}}>
+                <span>{catLabel(cat)}</span>
+                {catCounts[cat]>0&&<span style={{fontSize:9,color:"#333",background:"#1a1a1a",padding:"1px 5px",borderRadius:8,fontWeight:700}}>{catCounts[cat]}</span>}
               </button>
             ))}
+
             <div style={{marginTop:"auto",paddingTop:"2rem"}}>
               <p style={{fontSize:9,letterSpacing:3,color:"#333",marginBottom:"0.85rem",fontWeight:700}}>SÍGUENOS</p>
               <div style={{display:"flex",gap:"0.6rem"}}>
@@ -1022,6 +1229,13 @@ export default function Home() {
                 <div style={{marginTop:"2rem",background:"#0e0e0e",padding:"1.5rem",borderRadius:12,border:`1px solid ${C.border}`}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:"0.6rem",fontSize:13,color:"#555"}}><span>Subtotal</span><span>${totalPrice.toFixed(2)}</span></div>
                   <div style={{borderTop:`1px solid ${C.border}`,paddingTop:"0.75rem",display:"flex",justifyContent:"space-between",fontSize:18,fontWeight:900,color:C.accent}}><span>Total</span><span>${totalPrice.toFixed(2)}</span></div>
+
+                  {/* DELIVERY SECTION */}
+                  <div style={{marginTop:"1.75rem"}}>
+                    <DeliveryForm info={deliveryInfo} onChange={setDeliveryInfo}/>
+                  </div>
+
+                  {/* PAYMENT SECTION */}
                   <div style={{marginTop:"1.75rem"}}>
                     <p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#333",marginBottom:"0.75rem"}}>MÉTODO DE PAGO</p>
                     <div style={{display:"flex",flexDirection:"column",gap:"0.45rem"}}>
@@ -1035,6 +1249,7 @@ export default function Home() {
                       ))}
                     </div>
                   </div>
+
                   {payMethod&&(()=>{
                     const pm=PAYMENT_METHODS.find(m=>m.id===payMethod)!;
                     return (
@@ -1045,12 +1260,23 @@ export default function Home() {
                       </div>
                     );
                   })()}
+
+                  {/* Validation messages */}
+                  {!deliveryInfo.zone&&<p style={{textAlign:"center",fontSize:10,color:"#555",marginTop:"0.75rem"}}>Selecciona el tipo de entrega para continuar</p>}
+                  {deliveryInfo.zone&&!payMethod&&<p style={{textAlign:"center",fontSize:10,color:"#555",marginTop:"0.5rem"}}>Selecciona un método de pago para continuar</p>}
+
                   <a href={waMsg()} target="_blank" rel="noreferrer"
-                    onClick={(e)=>{if(!payMethod){e.preventDefault();alert("Por favor selecciona un método de pago primero.");}}}
-                    style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.75rem",marginTop:"1.25rem",background:"#25D366",color:"#fff",padding:"1rem",fontWeight:900,letterSpacing:2,fontSize:11,textDecoration:"none",borderRadius:10,opacity:payMethod?1:0.35,transition:"opacity 0.2s"}}>
+                    onClick={(e)=>{
+                      if(!payMethod||!deliveryValid){
+                        e.preventDefault();
+                        if(!deliveryInfo.zone) alert("Por favor selecciona el tipo de entrega.");
+                        else if(deliveryInfo.zone==="otro"&&(!deliveryInfo.nombre||!deliveryInfo.cedula||!deliveryInfo.telefono||!deliveryInfo.agencia||!deliveryInfo.direccion)) alert("Por favor completa todos los datos de envío.");
+                        else if(!payMethod) alert("Por favor selecciona un método de pago.");
+                      }
+                    }}
+                    style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.75rem",marginTop:"1.25rem",background:"#25D366",color:"#fff",padding:"1rem",fontWeight:900,letterSpacing:2,fontSize:11,textDecoration:"none",borderRadius:10,opacity:(payMethod&&deliveryValid)?1:0.35,transition:"opacity 0.2s"}}>
                     <IcWA s={18}/> NOTIFICAR PAGO
                   </a>
-                  {!payMethod&&<p style={{textAlign:"center",fontSize:10,color:"#333",marginTop:"0.5rem"}}>Selecciona un método de pago para continuar</p>}
                 </div>
               </>
             )}
@@ -1120,8 +1346,15 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
+
+                {/* Products list with drag & drop */}
                 <div style={{background:"#111",borderRadius:12,padding:"1.5rem",border:"1px solid #1a1a1a"}}>
-                  <p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 0.85rem"}}>PRODUCTOS ({adminProds.length})</p>
+                  <div style={{display:"flex",alignItems:"center",gap:"0.5rem",marginBottom:"0.85rem"}}>
+                    <p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2,margin:0}}>PRODUCTOS ({adminProds.length})</p>
+                    <span style={{fontSize:9,color:"#2a2a2a",background:"#161616",padding:"2px 7px",borderRadius:8,border:"1px solid #1e1e1e"}}>
+                      ⠿ Arrastra para reordenar
+                    </span>
+                  </div>
                   <input placeholder="Buscar…" value={adminSearch} onChange={e=>setAdminSearch(e.target.value)} style={{...S.input,marginBottom:"0.75rem"}}/>
                   <div className="ts" style={{display:"flex",gap:"0.35rem",overflowX:"auto",paddingBottom:"0.75rem",marginBottom:"0.5rem",WebkitOverflowScrolling:"touch",touchAction:"pan-x"}}>
                     {["ALL",...usedCats].map(cat=>{
@@ -1135,6 +1368,8 @@ export default function Home() {
                       );
                     })}
                   </div>
+
+                  {/* Draggable product list */}
                   {adminCat==="ALL"?(
                     usedCats.map(cat=>{
                       const cp=products.filter(p=>p.category===cat&&(adminSearch===""||p.name.toLowerCase().includes(adminSearch.toLowerCase())));
@@ -1145,13 +1380,31 @@ export default function Home() {
                             <span style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#333"}}>{catLabel(cat).toUpperCase()}</span>
                             <span style={{fontSize:9,color:"#2a2a2a",background:"#1a1a1a",padding:"1px 6px",borderRadius:10}}>{cp.length}</span>
                           </div>
-                          {cp.map(p=><ARow key={p.id} p={p} editing={editing} onEdit={startEdit} onDel={delProd}/>)}
+                          {cp.map(p=>(
+                            <ARow key={p.id} p={p} editing={editing}
+                              onEdit={startEdit} onDel={delProd}
+                              onDragStart={handleDragStart}
+                              onDragOver={handleDragOver}
+                              onDragEnd={handleDragEnd}
+                              isDragging={dragId===p.id}
+                              isOver={overId===p.id&&dragId!==p.id}
+                            />
+                          ))}
                         </div>
                       );
                     })
                   ):(
                     <div style={{display:"flex",flexDirection:"column",gap:2}}>
-                      {adminProds.map(p=><ARow key={p.id} p={p} editing={editing} onEdit={startEdit} onDel={delProd}/>)}
+                      {adminProds.map(p=>(
+                        <ARow key={p.id} p={p} editing={editing}
+                          onEdit={startEdit} onDel={delProd}
+                          onDragStart={handleDragStart}
+                          onDragOver={handleDragOver}
+                          onDragEnd={handleDragEnd}
+                          isDragging={dragId===p.id}
+                          isOver={overId===p.id&&dragId!==p.id}
+                        />
+                      ))}
                       {!adminProds.length&&<p style={{color:"#333",textAlign:"center",padding:"1.5rem",fontSize:12}}>Sin resultados</p>}
                     </div>
                   )}
@@ -1190,73 +1443,3 @@ export default function Home() {
     </div>
   );
 }
-
-// ── ARow ────────────────────────────────────────────────────────────────────
-const ARow = memo(function ARow({p,editing,onEdit,onDel}:{p:Product;editing:Product|null;onEdit:(p:Product)=>void;onDel:(id:string)=>void}) {
-  return (
-    <div className="ar" style={{display:"flex",alignItems:"center",gap:"0.75rem",padding:"0.6rem 0.65rem",borderRadius:8,background:editing?.id===p.id?"#1a1a1a":"transparent"}}>
-      <img src={optImg(p.img,120)} alt={p.name} style={{width:44,height:44,objectFit:"cover",borderRadius:6,flexShrink:0,background:"#1a1a1a",pointerEvents:"none"}} draggable={false}/>
-      <div style={{flex:1,minWidth:0}}>
-        <p style={{color:"#ccc",fontSize:12,fontWeight:700,margin:"0 0 1px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</p>
-        <p style={{color:"#333",fontSize:10,margin:0}}>${p.price.toFixed(2)}</p>
-      </div>
-      <div style={{display:"flex",gap:"0.35rem",flexShrink:0}}>
-        <button onClick={()=>onEdit(p)} style={{background:"#1a1a1a",color:"#888",border:"1px solid #222",padding:"0.3rem 0.65rem",borderRadius:6,cursor:"pointer",fontSize:10,fontFamily:"inherit",fontWeight:700,WebkitTapHighlightColor:"transparent"}}>Editar</button>
-        <button onClick={()=>onDel(p.id)} style={{background:"none",color:"#cc3333",border:"1px solid #2a1515",padding:"0.3rem 0.65rem",borderRadius:6,cursor:"pointer",fontSize:10,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>✕</button>
-      </div>
-    </div>
-  );
-});
-
-// ── Footer ───────────────────────────────────────────────────────────────────
-const Footer = memo(function Footer({setMainView,setShopFilter}:{setMainView:(v:MainView)=>void;setShopFilter:(v:ShopFilter)=>void}) {
-  const sA: React.CSSProperties={display:"flex",alignItems:"center",justifyContent:"center",width:36,height:36,borderRadius:"50%",background:"rgba(255,255,255,0.04)",textDecoration:"none",border:"1px solid rgba(255,255,255,0.07)",flexShrink:0};
-  const cats=[{l:"Lentes",c:"LENTES"},{l:"Relojes",c:"RELOJES"},{l:"Collares",c:"COLLARES"},{l:"Pulseras",c:"PULSERAS"},{l:"Anillos",c:"ANILLOS"},{l:"Aretes",c:"ARETES"},{l:"Billeteras",c:"BILLETERAS"}];
-  return (
-    <footer style={{background:"#060606",borderTop:"1px solid #111",marginTop:"2rem",padding:"2.5rem 1.5rem 2rem"}}>
-      <div style={{maxWidth:1100,margin:"0 auto"}}>
-        <div className="fg" style={{display:"grid",gap:"2rem",marginBottom:"2rem"}}>
-          <div>
-            <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:"0.65rem"}}>
-              <img src="/favicon.png" alt="Fokus" width={20} height={20} style={{objectFit:"contain",pointerEvents:"none"}} draggable={false}/>
-              <span style={{fontWeight:900,fontSize:12,letterSpacing:5,color:"#fff"}}>FOKUS</span>
-            </div>
-            <p style={{fontSize:11,color:"#333",lineHeight:1.7,margin:"0 0 0.85rem",maxWidth:180}}>Accesorios con actitud.<br/>Cada detalle importa.</p>
-            <div style={{display:"flex",gap:"0.45rem"}}>
-              <a href={SOCIAL.instagram} target="_blank" rel="noreferrer" className="sl" style={sA}><IcIG s={14}/></a>
-              <a href={SOCIAL.facebook}  target="_blank" rel="noreferrer" className="sl" style={sA}><IcFB s={14}/></a>
-              <a href={SOCIAL.tiktok}    target="_blank" rel="noreferrer" className="sl" style={sA}><IcTT s={14}/></a>
-              <a href={SOCIAL.whatsapp}  target="_blank" rel="noreferrer" className="sl" style={{...sA,background:"rgba(37,211,102,0.08)",borderColor:"rgba(37,211,102,0.15)"}}><IcWA s={14}/></a>
-            </div>
-          </div>
-          <div>
-            <p style={{fontSize:9,fontWeight:800,letterSpacing:3,color:"#2a2a2a",marginBottom:"0.75rem"}}>TIENDA</p>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.35rem 1rem"}}>
-              {cats.map(({l,c})=>(
-                <button key={c} onClick={()=>{setShopFilter(c as ShopFilter);setMainView("shop");typeof window!=="undefined"&&window.scrollTo({top:0,behavior:"smooth"});}}
-                  style={{background:"none",border:"none",textAlign:"left",cursor:"pointer",fontFamily:"inherit",fontSize:11,color:"#333",padding:0,WebkitTapHighlightColor:"transparent",transition:"color 0.15s"}} className="fl">
-                  {l}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <p style={{fontSize:9,fontWeight:800,letterSpacing:3,color:"#2a2a2a",marginBottom:"0.75rem"}}>CONTACTO</p>
-            <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noreferrer"
-              style={{display:"inline-flex",alignItems:"center",gap:"0.45rem",background:"#0d1e0d",color:"#4caf50",padding:"0.55rem 0.9rem",borderRadius:8,fontSize:11,fontWeight:700,textDecoration:"none",marginBottom:"0.75rem",border:"1px solid #162516"}}>
-              <IcWA s={12} c="#4caf50"/> WhatsApp
-            </a>
-            <div style={{display:"flex",flexDirection:"column",gap:"0.2rem"}}>
-              <p style={{fontSize:10,color:"#2a2a2a",margin:0}}>miltonjavi05@gmail.com</p>
-              <p style={{fontSize:10,color:"#2a2a2a",margin:0}}>+58 424-300-5733</p>
-            </div>
-          </div>
-        </div>
-        <div style={{borderTop:"1px solid #111",paddingTop:"1rem",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"0.4rem"}}>
-          <p style={{fontSize:9,color:"#222",margin:0,letterSpacing:1}}>© {new Date().getFullYear()} FOKUS. TODOS LOS DERECHOS RESERVADOS.</p>
-          <p style={{fontSize:9,color:"#1a1a1a",margin:0,letterSpacing:1}}>FOKUS ®</p>
-        </div>
-      </div>
-    </footer>
-  );
-});
