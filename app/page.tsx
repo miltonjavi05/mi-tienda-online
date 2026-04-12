@@ -61,7 +61,57 @@ const DELIVERY_ZONES = [
   { id:"otro",       label:"Otro Estado",         price:0 },
 ];
 
-const SHIPPING_AGENCIES = ["MRW","Tealca","Zoom"];
+const SHIPPING_AGENCIES = ["MRW","Tealca","Zoom","Menssajero"];
+
+// Community testimonials – using the uploaded screenshots
+// In production these would be served from your CDN / public folder
+// Here we reference them as /community/photo_N.jpg (place the uploads there)
+const COMMUNITY_POSTS = [
+  {
+    id:"c1",
+    img:"/community/photo_1.jpg",
+    caption:"Variedad de aretes enviados a cliente en Caracas ✨",
+    tag:"ARETES",
+    location:"Caracas",
+  },
+  {
+    id:"c2",
+    img:"/community/photo_2.jpg",
+    caption:"Collar Enviado a Barinas 🖤",
+    tag:"COLLARES",
+    location:"Barinas",
+  },
+  {
+    id:"c3",
+    img:"/community/photo_3.jpg",
+    caption:"Collar enviado a Caracas 🖤🖤",
+    tag:"COLLARES",
+    location:"Caracas",
+  },
+  {
+    id:"c4",
+    img:"/community/photo_4.jpg",
+    caption:"Clienta Satisfecha 🖤 ya con su collar",
+    tag:"RESEÑA",
+    location:"Venezuela",
+  },
+  {
+    id:"c5",
+    img:"/community/photo_5.jpg",
+    caption:"Le encantaron sus pulseras 🖤",
+    tag:"PULSERAS",
+    location:"Venezuela",
+  },
+  {
+    id:"c6",
+    img:"/community/photo_6.jpg",
+    caption:"Satisfacción total 🖤",
+    tag:"RESEÑA",
+    location:"Venezuela",
+  },
+];
+
+const DELIVERY_ZONES_MAP = new Map(DELIVERY_ZONES.map(z=>[z.id,z]));
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 interface DeliveryInfo {
@@ -73,7 +123,10 @@ interface Product {
   img: string; description?: string; createdAt?: number; order?: number;
 }
 interface CartItem { product: Product; qty: number; }
-interface UserData { uid: string; email: string; displayName: string; createdAt: number; }
+interface UserData {
+  uid: string; email: string; displayName: string; createdAt: number;
+  photoURL?: string;
+}
 
 type MainView = "fokus" | "shop" | "comunidad" | "cart" | "admin" | "account";
 type ShopFilter = typeof ALL_SHOP_CATS[number] | "TODO" | typeof LENTES_SUBCATS[number];
@@ -152,7 +205,7 @@ async function fsDelete(id: string): Promise<void> {
 }
 
 async function fsSaveUser(uid: string, data: Omit<UserData,"uid">, idToken: string): Promise<void> {
-  const fields = Object.fromEntries(Object.entries(data).map(([k,v])=>[k,toFs(v)]));
+  const fields = Object.fromEntries(Object.entries(data).map(([k,v])=>[k,toFs(v as unknown)]));
   await fetch(`${fsBase()}/users/${uid}?${Object.keys(data).map(k=>`updateMask.fieldPaths=${k}`).join("&")}`,{
     method:"PATCH",
     headers:{"Content-Type":"application/json","Authorization":`Bearer ${idToken}`},
@@ -169,7 +222,6 @@ async function authSignUp(email: string, password: string, displayName: string):
   });
   const d = await r.json() as {idToken?:string;localId?:string;error?:{message:string}};
   if (!r.ok || d.error) throw new Error(d.error?.message || "Error al registrar");
-  // Update display name
   await fetch(`${AUTH_BASE}:update?key=${FIREBASE_CONFIG.apiKey}`,{
     method:"POST",
     headers:{"Content-Type":"application/json"},
@@ -282,6 +334,29 @@ const IcEyeOff = memo(({s=18,c="#555"}:{s?:number;c?:string}) => (
 ));
 IcEyeOff.displayName = "IcEyeOff";
 
+const IcCamera = memo(({s=16,c="#fff"}:{s?:number;c?:string}) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+    <circle cx="12" cy="13" r="4"/>
+  </svg>
+));
+IcCamera.displayName = "IcCamera";
+
+const IcEdit = memo(({s=16,c="#fff"}:{s?:number;c?:string}) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+  </svg>
+));
+IcEdit.displayName = "IcEdit";
+
+const IcCheck = memo(({s=16,c="#fff"}:{s?:number;c?:string}) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12"/>
+  </svg>
+));
+IcCheck.displayName = "IcCheck";
+
 // ─── PASSWORD INPUT ───────────────────────────────────────────────────────────
 function PwdInput({value, onChange, placeholder, onKeyDown, autoComplete}: {
   value: string; onChange: (v:string)=>void; placeholder: string;
@@ -352,8 +427,6 @@ function catLabel(cat:string):string {
 }
 
 // ─── DRAGGABLE WA BUTTON ─────────────────────────────────────────────────────
-// FIX: Uses position:fixed but coordinates are always clamped to the current
-// visual viewport so the button stays visible even when the user pinch-zooms.
 function DraggableWA() {
   const BTN=48, MG=14;
   const [ready,setReady]       = useState(false);
@@ -367,7 +440,6 @@ function DraggableWA() {
   const live      = useRef({x:0,y:0});
   const raf       = useRef(0);
 
-  // Always use window.innerWidth/Height so it works correctly under zoom
   const clamp = useCallback((x:number,y:number)=>({
     x: Math.max(MG, Math.min(window.innerWidth - BTN - MG, x)),
     y: Math.max(MG + 80, Math.min(window.innerHeight - BTN - MG*2, y)),
@@ -389,7 +461,6 @@ function DraggableWA() {
       }
     };
     window.addEventListener("resize", onResize, {passive:true});
-    // Also reposition on visual viewport resize (pinch zoom)
     if (typeof window !== "undefined" && "visualViewport" in window && window.visualViewport) {
       window.visualViewport.addEventListener("resize", onResize);
       window.visualViewport.addEventListener("scroll", onResize);
@@ -621,11 +692,9 @@ const ARow = memo(function ARow({p,editing,onEdit,onDel,onDragStart,onDragOver,o
         border: isOver ? "1px dashed #3a3a3a" : "1px solid transparent",
         transition:"opacity 0.15s, background 0.15s, border 0.15s",
         cursor:"default",
-        // FIX: prevent text selection during drag on mobile
         userSelect:"none",
         WebkitUserSelect:"none",
       }}>
-      {/* Touch + Desktop drag handle */}
       <div
         onTouchStart={e=>{
           e.stopPropagation();
@@ -642,12 +711,10 @@ const ARow = memo(function ARow({p,editing,onEdit,onDel,onDragStart,onDragOver,o
         style={{
           cursor:"grab",flexShrink:0,padding:"6px 8px",color:"#444",
           display:"flex",alignItems:"center",
-          // FIX: prevent text selection / callout on long press
           touchAction:"none",
           WebkitTapHighlightColor:"transparent",
           userSelect:"none",
           WebkitUserSelect:"none",
-          // FIX: prevent context menu / text selection on iOS long press
           WebkitTouchCallout:"none",
         } as React.CSSProperties}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -659,7 +726,6 @@ const ARow = memo(function ARow({p,editing,onEdit,onDel,onDragStart,onDragOver,o
       <img src={optImg(p.img,120)} alt={p.name}
         style={{width:44,height:44,objectFit:"cover",borderRadius:6,flexShrink:0,background:"#1a1a1a",
           pointerEvents:"none",userSelect:"none",WebkitUserSelect:"none",
-          // FIX: prevent image callout/save on long press
           WebkitTouchCallout:"none",
         } as React.CSSProperties}
         draggable={false}
@@ -776,7 +842,6 @@ function AuthModal({onClose,onSuccess}:{onClose:()=>void;onSuccess:(u:UserData)=
   const [err,setErr]       = useState("");
   const [loading,setLoading] = useState(false);
 
-  // FIX: comprehensive Firebase Auth error mapping
   const authErrMap: Record<string,string> = {
     "EMAIL_EXISTS":                                             "Este correo ya está registrado.",
     "INVALID_EMAIL":                                           "Correo inválido.",
@@ -787,11 +852,9 @@ function AuthModal({onClose,onSuccess}:{onClose:()=>void;onSuccess:(u:UserData)=
     "INVALID_PASSWORD":                                        "Contraseña incorrecta.",
     "USER_DISABLED":                                           "Esta cuenta ha sido deshabilitada.",
     "TOO_MANY_ATTEMPTS_TRY_LATER":                             "Demasiados intentos. Intenta más tarde.",
-    // FIX: CONFIGURATION_NOT_FOUND means email/password sign-in is disabled in Firebase Console
     "CONFIGURATION_NOT_FOUND":                                 "El inicio de sesión con correo no está activado. Contacta al administrador.",
-    "OPERATION_NOT_ALLOWED":                                   "Registro con email/contraseña no habilitado. Actívalo en Firebase Console.",
+    "OPERATION_NOT_ALLOWED":                                   "Registro con email/contraseña no habilitado.",
     "ADMIN_ONLY_OPERATION":                                    "Operación solo para administradores.",
-    "CORS":                                                    "Error de red. Verifica tu conexión.",
   };
 
   const handle = async() => {
@@ -808,7 +871,10 @@ function AuthModal({onClose,onSuccess}:{onClose:()=>void;onSuccess:(u:UserData)=
         onSuccess(ud);
       } else {
         const {localId,displayName} = await authSignIn(email.trim(), pwd);
-        const ud: UserData = {uid:localId,email:email.trim(),displayName:displayName||email.split("@")[0],createdAt:Date.now()};
+        const stored = localStorage.getItem("fokus_user");
+        let photoURL = "";
+        if(stored){ try{ photoURL = (JSON.parse(stored) as UserData).photoURL||""; }catch{} }
+        const ud: UserData = {uid:localId,email:email.trim(),displayName:displayName||email.split("@")[0],createdAt:Date.now(),photoURL};
         localStorage.setItem("fokus_user", JSON.stringify(ud));
         onSuccess(ud);
       }
@@ -861,9 +927,149 @@ function AuthModal({onClose,onSuccess}:{onClose:()=>void;onSuccess:(u:UserData)=
   );
 }
 
+// ─── COMMUNITY CARD ───────────────────────────────────────────────────────────
+const CommunityCard = memo(function CommunityCard({post,onClick,index}:{
+  post:typeof COMMUNITY_POSTS[0]; onClick:()=>void; index:number;
+}) {
+  const [vis,setVis]=useState(false);
+  const [loaded,setLoaded]=useState(false);
+  const ref=useRef<HTMLDivElement>(null);
+  useEffect(()=>{
+    const el=ref.current; if(!el) return;
+    const obs=new IntersectionObserver(([e])=>{if(e.isIntersecting){setVis(true);obs.disconnect();}},{rootMargin:"100px"});
+    obs.observe(el); return()=>obs.disconnect();
+  },[]);
+
+  const tagColors: Record<string,{bg:string;color:string}> = {
+    "ARETES":   {bg:"rgba(168,85,247,0.15)",  color:"#c084fc"},
+    "COLLARES": {bg:"rgba(251,191,36,0.12)",  color:"#fbbf24"},
+    "PULSERAS": {bg:"rgba(34,211,238,0.12)",  color:"#22d3ee"},
+    "RESEÑA":   {bg:"rgba(74,222,128,0.12)",  color:"#4ade80"},
+    "RELOJES":  {bg:"rgba(251,113,133,0.12)", color:"#fb7185"},
+  };
+  const tc = tagColors[post.tag] || {bg:"rgba(255,255,255,0.08)",color:"#aaa"};
+
+  return (
+    <div ref={ref} onClick={onClick}
+      style={{
+        cursor:"pointer",
+        opacity:vis?1:0,
+        transform:vis?"translateY(0) scale(1)":"translateY(20px) scale(0.97)",
+        transition:`opacity 0.45s ease ${Math.min(index*60,300)}ms, transform 0.45s ease ${Math.min(index*60,300)}ms`,
+        willChange:"transform,opacity",
+        borderRadius:16,
+        overflow:"hidden",
+        background:"#0d0d0d",
+        border:"1px solid #1a1a1a",
+        position:"relative",
+      }}
+      className="cc">
+      {/* Image */}
+      <div style={{position:"relative",aspectRatio:"9/16",overflow:"hidden",background:"#111"}}>
+        {!loaded&&(
+          <div style={{position:"absolute",inset:0,background:"linear-gradient(90deg,#141414 0%,#1e1e1e 50%,#141414 100%)",backgroundSize:"200% 100%",animation:"shimmer 1.4s infinite"}}/>
+        )}
+        {vis&&(
+          <img
+            src={post.img}
+            alt={post.caption}
+            loading="lazy"
+            decoding="async"
+            onLoad={()=>setLoaded(true)}
+            style={{width:"100%",height:"100%",objectFit:"cover",display:"block",opacity:loaded?1:0,transition:"opacity 0.3s ease",pointerEvents:"none",userSelect:"none",WebkitUserSelect:"none",WebkitTouchCallout:"none"} as React.CSSProperties}
+            draggable={false}
+          />
+        )}
+        {/* Gradient overlay */}
+        <div style={{position:"absolute",inset:0,background:"linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 50%, transparent 100%)",pointerEvents:"none"}}/>
+        {/* Tag */}
+        <div style={{position:"absolute",top:10,left:10}}>
+          <span style={{
+            background:tc.bg,
+            color:tc.color,
+            fontSize:9,
+            fontWeight:800,
+            letterSpacing:1.5,
+            padding:"3px 9px",
+            borderRadius:20,
+            backdropFilter:"blur(8px)",
+            WebkitBackdropFilter:"blur(8px)",
+            border:`1px solid ${tc.color}30`,
+          }}>{post.tag}</span>
+        </div>
+        {/* Caption */}
+        <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"0.85rem"}}>
+          <p style={{margin:"0 0 3px",fontSize:12,fontWeight:700,color:"#fff",lineHeight:1.35,textShadow:"0 1px 4px rgba(0,0,0,0.8)"}}>{post.caption}</p>
+          <div style={{display:"flex",alignItems:"center",gap:4}}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span style={{fontSize:10,color:"#888"}}>{post.location}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+// ─── COMMUNITY LIGHTBOX ───────────────────────────────────────────────────────
+function CommunityLightbox({post,onClose,onPrev,onNext,hasPrev,hasNext}:{
+  post:typeof COMMUNITY_POSTS[0];onClose:()=>void;
+  onPrev:()=>void;onNext:()=>void;hasPrev:boolean;hasNext:boolean;
+}) {
+  useEffect(()=>{
+    const h=(e:KeyboardEvent)=>{
+      if(e.key==="Escape") onClose();
+      if(e.key==="ArrowLeft"&&hasPrev) onPrev();
+      if(e.key==="ArrowRight"&&hasNext) onNext();
+    };
+    window.addEventListener("keydown",h);
+    return()=>window.removeEventListener("keydown",h);
+  },[onClose,onPrev,onNext,hasPrev,hasNext]);
+
+  return (
+    <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:800,background:"rgba(0,0,0,0.95)",display:"flex",alignItems:"center",justifyContent:"center",animation:"fadeIn 0.18s ease",padding:"1rem"}}>
+      <div onClick={e=>e.stopPropagation()} style={{position:"relative",maxWidth:420,width:"100%",maxHeight:"90vh",display:"flex",flexDirection:"column",alignItems:"center"}}>
+        {/* Close */}
+        <button onClick={onClose} style={{position:"absolute",top:-40,right:0,background:"none",border:"none",color:"#fff",cursor:"pointer",fontSize:24,WebkitTapHighlightColor:"transparent",zIndex:10}}>✕</button>
+        {/* Image */}
+        <div style={{borderRadius:16,overflow:"hidden",width:"100%",maxHeight:"80vh",position:"relative"}}>
+          <img src={post.img} alt={post.caption}
+            style={{width:"100%",height:"auto",maxHeight:"80vh",objectFit:"contain",display:"block",userSelect:"none",WebkitUserSelect:"none"} as React.CSSProperties}
+            draggable={false}
+          />
+        </div>
+        {/* Caption */}
+        <p style={{color:"#ccc",fontSize:13,textAlign:"center",marginTop:"0.75rem",lineHeight:1.5}}>{post.caption}</p>
+        {/* Nav arrows */}
+        <div style={{display:"flex",gap:"0.75rem",marginTop:"0.5rem"}}>
+          <button onClick={e=>{e.stopPropagation();onPrev();}} disabled={!hasPrev}
+            style={{background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.12)",color:hasPrev?"#fff":"#333",width:40,height:40,borderRadius:"50%",cursor:hasPrev?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",WebkitTapHighlightColor:"transparent"}}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <button onClick={e=>{e.stopPropagation();onNext();}} disabled={!hasNext}
+            style={{background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.12)",color:hasNext?"#fff":"#333",width:40,height:40,borderRadius:"50%",cursor:hasNext?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",WebkitTapHighlightColor:"transparent"}}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── SCROLL TO TOP ────────────────────────────────────────────────────────────
 function scrollTop() {
   window.scrollTo({top:0,behavior:"instant" as ScrollBehavior});
+}
+
+// ─── AVATAR ───────────────────────────────────────────────────────────────────
+function UserAvatar({user,size=26}:{user:UserData;size?:number}) {
+  if(user.photoURL) {
+    return <img src={user.photoURL} alt={user.displayName} style={{width:size,height:size,borderRadius:"50%",objectFit:"cover",flexShrink:0,border:"1.5px solid #333"}} draggable={false}/>;
+  }
+  return (
+    <div style={{width:size,height:size,borderRadius:"50%",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+      <span style={{fontSize:size*0.42,fontWeight:900,color:"#080808",letterSpacing:0,lineHeight:1}}>{user.displayName[0]?.toUpperCase()||"?"}</span>
+    </div>
+  );
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -886,6 +1092,14 @@ export default function Home() {
   const [addedProduct,setAddedProduct] = useState<Product|null>(null);
   const [showAuth,setShowAuth]         = useState(false);
   const [currentUser,setCurrentUser]   = useState<UserData|null>(null);
+  const [lightboxIdx,setLightboxIdx]   = useState<number|null>(null);
+
+  // Account editing state
+  const [editingName,setEditingName]         = useState(false);
+  const [newName,setNewName]                 = useState("");
+  const [nameLoading,setNameLoading]         = useState(false);
+  const [photoLoading,setPhotoLoading]       = useState(false);
+  const photoInputRef                        = useRef<HTMLInputElement>(null);
 
   const setMainView = useCallback((v: MainView) => {
     setMainViewRaw(v);
@@ -929,17 +1143,27 @@ export default function Home() {
   const [dragId,setDragId]   = useState<string|null>(null);
   const [overId,setOverId]   = useState<string|null>(null);
 
-  // Touch drag state for mobile admin reorder
   const touchDragId  = useRef<string|null>(null);
   const touchDragActive = useRef(false);
 
-  // Load user from localStorage
+  // ── Load user from localStorage ──
   useEffect(()=>{
     try {
       const stored = localStorage.getItem("fokus_user");
       if(stored) setCurrentUser(JSON.parse(stored) as UserData);
     } catch{}
   },[]);
+
+  // ── Persist cart in sessionStorage (per session, survives navigation) ──
+  useEffect(()=>{
+    try {
+      const saved = sessionStorage.getItem("fokus_cart");
+      if(saved) setCart(JSON.parse(saved) as CartItem[]);
+    } catch{}
+  },[]);
+  useEffect(()=>{
+    try { sessionStorage.setItem("fokus_cart", JSON.stringify(cart)); } catch{}
+  },[cart]);
 
   const loadProducts=useCallback(async()=>{
     setLoading(true);
@@ -958,6 +1182,29 @@ export default function Home() {
     if(ok) loadProducts(); else{setProducts(DEMO);setLoading(false);}
     if(typeof window!=="undefined"&&window.location.pathname==="/admin") setMainViewRaw("admin");
   },[loadProducts]);
+
+  // ── Account: upload profile photo ──
+  const handleProfilePhoto = useCallback(async(e:React.ChangeEvent<HTMLInputElement>)=>{
+    const file = e.target.files?.[0]; if(!file||!currentUser) return;
+    setPhotoLoading(true);
+    try {
+      const url = await uploadImg(file);
+      const updated: UserData = {...currentUser, photoURL: url};
+      setCurrentUser(updated);
+      localStorage.setItem("fokus_user", JSON.stringify(updated));
+    } catch{ /* silent */ }
+    finally{ setPhotoLoading(false); if(photoInputRef.current) photoInputRef.current.value=""; }
+  },[currentUser]);
+
+  // ── Account: change display name ──
+  const handleSaveName = useCallback(async()=>{
+    if(!newName.trim()||!currentUser) return;
+    setNameLoading(true);
+    const updated: UserData = {...currentUser, displayName: newName.trim()};
+    setCurrentUser(updated);
+    localStorage.setItem("fokus_user", JSON.stringify(updated));
+    setEditingName(false); setNameLoading(false);
+  },[currentUser,newName]);
 
   const catCounts = useMemo(()=>{
     const counts: Record<string,number> = {};
@@ -1009,7 +1256,7 @@ export default function Home() {
     const lines=cart.map(i=>`• ${i.product.name} x${i.qty} — $${(i.product.price*i.qty).toFixed(2)}`);
     const pm=PAYMENT_METHODS.find(m=>m.id===payMethod);
     const pmL=pm?`\n\nMétodo de pago: ${pm.name} (${pm.detail})`:"";
-    const dz=DELIVERY_ZONES.find(z=>z.id===deliveryInfo.zone);
+    const dz=DELIVERY_ZONES_MAP.get(deliveryInfo.zone);
     let deliveryL = dz ? `\n\nEnvio: ${dz.label}` : "";
     if(deliveryInfo.zone==="otro"){
       deliveryL += `\nEstado: ${deliveryInfo.estado}\nNombre: ${deliveryInfo.nombre}\nCédula: ${deliveryInfo.cedula}\nTeléfono: ${deliveryInfo.telefono}\nAgencia: ${deliveryInfo.agencia}\nDirección: ${deliveryInfo.direccion}`;
@@ -1083,7 +1330,6 @@ export default function Home() {
     setDragId(null);setOverId(null);
   },[dragId,overId,fbReady]);
 
-  // Mobile Touch Drag for admin reorder
   const handleTouchDragStart = useCallback((id: string) => {
     touchDragId.current = id;
     touchDragActive.current = true;
@@ -1142,26 +1388,13 @@ export default function Home() {
         @keyframes slideUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
         @keyframes slideInLeft{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
         @keyframes scaleIn{from{opacity:0;transform:scale(0.88)}to{opacity:1;transform:scale(1)}}
+        @keyframes pulseRing{0%{transform:scale(1);opacity:0.6}100%{transform:scale(1.5);opacity:0}}
         *{box-sizing:border-box;-webkit-font-smoothing:antialiased;}
 
-        /*
-         * FIX 1 — Pinch-to-zoom:
-         * Do NOT set touch-action:pan-y on html/body/main.
-         * Only restrict touch-action on elements that need it (tabs, scroll rows, drag handles).
-         * This allows native pinch-zoom everywhere on the page.
-         */
         html{overflow-y:scroll;scroll-behavior:smooth;}
         body{background:#080808;margin:0;overscroll-behavior-y:contain;}
 
-        /*
-         * FIX 2 — Text selection in admin drag rows:
-         * Disable selection globally in the admin product list.
-         */
-        .admin-list{
-          -webkit-user-select:none;
-          user-select:none;
-        }
-
+        .admin-list{-webkit-user-select:none;user-select:none;}
         .ts::-webkit-scrollbar,.hr::-webkit-scrollbar{display:none}
         .ts{-webkit-overflow-scrolling:touch;}
         .hr{-webkit-overflow-scrolling:touch;scroll-behavior:smooth;}
@@ -1175,34 +1408,30 @@ export default function Home() {
           .ar:hover{background:#161616!important}
           .fl:hover{color:#fff!important}
           .pl:hover{opacity:0.8}
+          .cc:hover{transform:translateY(-4px) scale(1.01)!important;border-color:#2a2a2a!important;box-shadow:0 12px 40px rgba(0,0,0,0.6)!important;}
         }
+        .cc{transition:transform 0.25s ease, border-color 0.2s ease, box-shadow 0.25s ease;}
         .pc:active{transform:scale(0.97)}
         .hc:active{opacity:0.85}
         .nb:active{opacity:0.6}
 
-        @media(max-width:480px){.pg{grid-template-columns:repeat(2,1fr)!important}.fg{grid-template-columns:1fr!important;gap:1.5rem!important}}
-        @media(min-width:481px) and (max-width:767px){.pg{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))!important}.fg{grid-template-columns:repeat(2,1fr)!important;gap:1.5rem!important}}
-        @media(min-width:768px){.pg{grid-template-columns:repeat(auto-fill,minmax(195px,1fr))!important}.fg{grid-template-columns:repeat(3,1fr)!important}}
+        @media(max-width:480px){.pg{grid-template-columns:repeat(2,1fr)!important}.fg{grid-template-columns:1fr!important;gap:1.5rem!important}.cg{grid-template-columns:repeat(2,1fr)!important}}
+        @media(min-width:481px) and (max-width:767px){.pg{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))!important}.fg{grid-template-columns:repeat(2,1fr)!important;gap:1.5rem!important}.cg{grid-template-columns:repeat(3,1fr)!important}}
+        @media(min-width:768px){.pg{grid-template-columns:repeat(auto-fill,minmax(195px,1fr))!important}.fg{grid-template-columns:repeat(3,1fr)!important}.cg{grid-template-columns:repeat(3,1fr)!important}}
 
         .hr *{-webkit-user-select:none;user-select:none;}
         .hr,.ts{contain:layout style;}
         select{-webkit-appearance:auto;appearance:auto;}
 
-        /* Admin drag states */
         .ar[data-dragging="true"]{opacity:0.4;background:#1a1a1a!important;}
         .ar[data-over="true"]{background:#1e1e1e!important;border:1px dashed #3a3a3a!important;}
 
-        /*
-         * FIX 3 — Prevent long-press text selection / callout on ALL images and
-         * draggable elements site-wide (iOS Safari).
-         */
-        img{
-          -webkit-touch-callout:none;
-          -webkit-user-select:none;
-          user-select:none;
-        }
-        /* Prevent blue tap highlight on interactive elements */
+        img{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;}
         button,a{-webkit-tap-highlight-color:transparent;}
+
+        /* Smooth photo upload ring */
+        .avatar-ring{position:relative;display:inline-flex;align-items:center;justify-content:center;}
+        .avatar-ring::after{content:'';position:absolute;inset:-3px;border-radius:50%;border:2px solid rgba(255,255,255,0.15);pointer-events:none;}
       `}</style>
 
       {/* NAVBAR */}
@@ -1222,9 +1451,7 @@ export default function Home() {
             </button>
             <button onClick={()=>currentUser?setMainView("account"):setShowAuth(true)} style={{...S.iconBtn,position:"relative"}}>
               {currentUser
-                ? <div style={{width:26,height:26,borderRadius:"50%",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                    <span style={{fontSize:11,fontWeight:900,color:"#080808",letterSpacing:0}}>{currentUser.displayName[0].toUpperCase()}</span>
-                  </div>
+                ? <UserAvatar user={currentUser} size={26}/>
                 : <IcUser s={19} c="#fff"/>}
             </button>
             <button onClick={()=>setMainView("cart")} style={{...S.iconBtn,position:"relative"}}>
@@ -1281,8 +1508,13 @@ export default function Home() {
             <div style={{marginTop:"auto",paddingTop:"2rem"}}>
               {currentUser?(
                 <div style={{marginBottom:"1rem",background:"#141414",borderRadius:10,padding:"0.85rem",border:"1px solid #1a1a1a"}}>
-                  <p style={{margin:"0 0 2px",fontSize:12,fontWeight:700,color:"#fff"}}>{currentUser.displayName}</p>
-                  <p style={{margin:"0 0 0.65rem",fontSize:10,color:"#444"}}>{currentUser.email}</p>
+                  <div style={{display:"flex",alignItems:"center",gap:"0.6rem",marginBottom:"0.5rem"}}>
+                    <UserAvatar user={currentUser} size={32}/>
+                    <div>
+                      <p style={{margin:"0 0 1px",fontSize:12,fontWeight:700,color:"#fff"}}>{currentUser.displayName}</p>
+                      <p style={{margin:0,fontSize:10,color:"#444"}}>{currentUser.email}</p>
+                    </div>
+                  </div>
                   <button onClick={()=>{localStorage.removeItem("fokus_user");setCurrentUser(null);setMenuOpen(false);}}
                     style={{background:"none",border:"1px solid #2a2a2a",color:"#555",padding:"0.35rem 0.85rem",borderRadius:6,cursor:"pointer",fontFamily:"inherit",fontSize:10,fontWeight:700,WebkitTapHighlightColor:"transparent"}}>
                     Cerrar sesión
@@ -1411,20 +1643,64 @@ export default function Home() {
         </main>
       )}
 
-      {/* COMUNIDAD */}
+      {/* ── COMUNIDAD ── */}
       {mainView==="comunidad"&&(
         <main style={{paddingTop:navH,background:C.bg}}>
-          <div style={{maxWidth:560,margin:"0 auto",padding:"5rem 1.5rem 0",textAlign:"center",animation:"slideUp 0.4s ease"}}>
-            <p style={{fontSize:36,marginBottom:"1rem"}}>🤝</p>
-            <h2 style={{fontSize:20,fontWeight:900,letterSpacing:3,marginBottom:"1rem",color:C.accent}}>COMUNIDAD</h2>
-            <p style={{color:"#444",fontSize:14,lineHeight:1.8}}>Muy pronto podrás ver contenido, reviews y mucho más de la comunidad Fokus.</p>
-            <div style={{display:"flex",justifyContent:"center",gap:"0.75rem",marginTop:"2rem"}}>
-              <a href={SOCIAL.instagram} target="_blank" rel="noreferrer" className="sl" style={S.socialA}><IcIG s={18}/></a>
-              <a href={SOCIAL.tiktok}    target="_blank" rel="noreferrer" className="sl" style={S.socialA}><IcTT s={18}/></a>
+          {/* Hero */}
+          <div style={{maxWidth:680,margin:"0 auto",padding:"3rem 1.5rem 0",textAlign:"center",animation:"slideUp 0.4s ease"}}>
+            <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:20,padding:"0.35rem 1rem",marginBottom:"1.25rem"}}>
+              <div style={{width:6,height:6,borderRadius:"50%",background:"#4caf50",flexShrink:0,boxShadow:"0 0 0 3px rgba(76,175,80,0.2)",animation:"pulseRing 2s infinite"}}/>
+              <span style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#4caf50"}}>CLIENTES REALES</span>
+            </div>
+            <h2 style={{fontSize:28,fontWeight:900,letterSpacing:4,marginBottom:"0.75rem",color:C.accent,lineHeight:1.1}}>COMUNIDAD<br/>FOKUS</h2>
+            <p style={{color:"#444",fontSize:13,lineHeight:1.8,maxWidth:360,margin:"0 auto 2rem"}}>Cada pedido es una historia real. Estos son nuestros clientes satisfechos enviando sus productos a todo Venezuela.</p>
+            {/* Stats row */}
+            <div style={{display:"flex",justifyContent:"center",gap:"2rem",marginBottom:"2.5rem",flexWrap:"wrap"}}>
+              {[{n:"100+",l:"Pedidos"},{n:"24+",l:"Estados"},{n:"★ 5.0",l:"Valoración"}].map(({n,l})=>(
+                <div key={l} style={{textAlign:"center"}}>
+                  <p style={{margin:0,fontSize:20,fontWeight:900,color:C.accent}}>{n}</p>
+                  <p style={{margin:"2px 0 0",fontSize:10,color:"#444",letterSpacing:1}}>{l}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Grid of testimonials */}
+          <div style={{maxWidth:1100,margin:"0 auto",padding:"0 1rem 5rem"}}>
+            <div className="cg" style={{display:"grid",gap:"0.85rem"}}>
+              {COMMUNITY_POSTS.map((post,i)=>(
+                <CommunityCard key={post.id} post={post} index={i} onClick={()=>setLightboxIdx(i)}/>
+              ))}
+            </div>
+
+            {/* CTA strip */}
+            <div style={{marginTop:"3rem",background:"#0d0d0d",borderRadius:16,padding:"2rem 1.5rem",border:"1px solid #1a1a1a",textAlign:"center",animation:"fadeIn 0.4s ease"}}>
+              <img src="/favicon.png" alt="Fokus" width={36} height={36} style={{objectFit:"contain",marginBottom:"0.75rem",pointerEvents:"none"}} draggable={false}/>
+              <h3 style={{fontSize:16,fontWeight:900,letterSpacing:3,color:C.accent,margin:"0 0 0.5rem"}}>¿QUIERES SER PARTE?</h3>
+              <p style={{fontSize:13,color:"#444",lineHeight:1.7,margin:"0 0 1.25rem",maxWidth:340,marginLeft:"auto",marginRight:"auto"}}>Haz tu pedido hoy y recibe tu accesorio en cualquier estado de Venezuela.</p>
+              <div style={{display:"flex",gap:"0.65rem",justifyContent:"center",flexWrap:"wrap"}}>
+                <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={{...S.darkBtn,borderRadius:8,fontSize:11}}>VER TIENDA →</button>
+                <a href={SOCIAL.instagram} target="_blank" rel="noreferrer"
+                  style={{display:"inline-flex",alignItems:"center",gap:6,background:"transparent",border:"1px solid #2a2a2a",color:"#888",padding:"0.9rem 1.4rem",borderRadius:8,fontSize:11,fontWeight:700,textDecoration:"none",letterSpacing:1}}>
+                  <IcIG s={14}/> INSTAGRAM
+                </a>
+              </div>
             </div>
           </div>
           <Footer setMainView={setMainView} setShopFilter={setShopFilter}/>
         </main>
+      )}
+
+      {/* Lightbox */}
+      {lightboxIdx!==null&&(
+        <CommunityLightbox
+          post={COMMUNITY_POSTS[lightboxIdx]}
+          onClose={()=>setLightboxIdx(null)}
+          onPrev={()=>setLightboxIdx(i=>i!==null?Math.max(0,i-1):0)}
+          onNext={()=>setLightboxIdx(i=>i!==null?Math.min(COMMUNITY_POSTS.length-1,i+1):0)}
+          hasPrev={lightboxIdx>0}
+          hasNext={lightboxIdx<COMMUNITY_POSTS.length-1}
+        />
       )}
 
       {/* ACCOUNT */}
@@ -1432,18 +1708,90 @@ export default function Home() {
         <main style={{paddingTop:navH,background:C.bg}}>
           <div style={{maxWidth:480,margin:"0 auto",padding:"2rem 1.25rem 5rem",animation:"slideUp 0.3s ease"}}>
             <h1 style={{fontSize:11,fontWeight:800,letterSpacing:3,marginBottom:"2rem",color:"#444"}}>MI CUENTA</h1>
-            <div style={{background:"#111",borderRadius:14,padding:"1.5rem",border:"1px solid #1a1a1a",marginBottom:"1rem"}}>
-              <div style={{display:"flex",alignItems:"center",gap:"1rem",marginBottom:"1rem"}}>
-                <div style={{width:52,height:52,borderRadius:"50%",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                  <span style={{fontSize:22,fontWeight:900,color:"#080808"}}>{currentUser.displayName[0].toUpperCase()}</span>
+
+            {/* Profile card */}
+            <div style={{background:"#111",borderRadius:16,padding:"1.75rem 1.5rem",border:"1px solid #1a1a1a",marginBottom:"1rem"}}>
+              {/* Avatar + upload */}
+              <div style={{display:"flex",alignItems:"flex-start",gap:"1.25rem",marginBottom:"1.5rem"}}>
+                <div className="avatar-ring" style={{position:"relative",flexShrink:0}}>
+                  {currentUser.photoURL
+                    ? <img src={currentUser.photoURL} alt={currentUser.displayName}
+                        style={{width:72,height:72,borderRadius:"50%",objectFit:"cover",border:"2px solid #222",display:"block"}}
+                        draggable={false}/>
+                    : <div style={{width:72,height:72,borderRadius:"50%",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",border:"2px solid #222"}}>
+                        <span style={{fontSize:28,fontWeight:900,color:"#080808",lineHeight:1}}>{currentUser.displayName[0]?.toUpperCase()}</span>
+                      </div>
+                  }
+                  {/* Camera overlay button */}
+                  <button
+                    onClick={()=>photoInputRef.current?.click()}
+                    disabled={photoLoading}
+                    style={{
+                      position:"absolute",bottom:0,right:0,
+                      width:26,height:26,borderRadius:"50%",
+                      background:photoLoading?"#333":"#fff",
+                      border:"2px solid #111",
+                      display:"flex",alignItems:"center",justifyContent:"center",
+                      cursor:photoLoading?"not-allowed":"pointer",
+                      WebkitTapHighlightColor:"transparent",
+                      transition:"background 0.15s",
+                    }}>
+                    {photoLoading
+                      ? <div style={{width:10,height:10,border:"1.5px solid #666",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/>
+                      : <IcCamera s={12} c="#080808"/>
+                    }
+                  </button>
+                  <input ref={photoInputRef} type="file" accept="image/*" onChange={handleProfilePhoto} style={{display:"none"}}/>
                 </div>
-                <div>
-                  <p style={{margin:"0 0 2px",fontSize:16,fontWeight:800,color:C.text}}>{currentUser.displayName}</p>
-                  <p style={{margin:0,fontSize:12,color:"#444"}}>{currentUser.email}</p>
+
+                <div style={{flex:1,minWidth:0}}>
+                  {/* Name editing */}
+                  {editingName?(
+                    <div style={{display:"flex",gap:"0.5rem",alignItems:"center",marginBottom:"0.5rem",flexWrap:"wrap"}}>
+                      <input
+                        autoFocus
+                        value={newName}
+                        onChange={e=>setNewName(e.target.value)}
+                        onKeyDown={e=>e.key==="Enter"&&handleSaveName()}
+                        placeholder="Nuevo nombre"
+                        style={{...S.input,padding:"0.5rem 0.75rem",fontSize:14,flex:1,minWidth:0}}
+                      />
+                      <button onClick={handleSaveName} disabled={nameLoading||!newName.trim()}
+                        style={{background:"#fff",color:"#080808",border:"none",borderRadius:8,padding:"0.5rem 0.85rem",cursor:nameLoading||!newName.trim()?"not-allowed":"pointer",display:"flex",alignItems:"center",gap:4,fontSize:12,fontWeight:800,WebkitTapHighlightColor:"transparent",opacity:nameLoading||!newName.trim()?0.5:1}}>
+                        <IcCheck s={14} c="#080808"/> Guardar
+                      </button>
+                      <button onClick={()=>setEditingName(false)}
+                        style={{background:"none",border:"1px solid #2a2a2a",color:"#555",borderRadius:8,padding:"0.5rem 0.85rem",cursor:"pointer",fontSize:12,WebkitTapHighlightColor:"transparent"}}>
+                        Cancelar
+                      </button>
+                    </div>
+                  ):(
+                    <div style={{display:"flex",alignItems:"center",gap:"0.5rem",marginBottom:"3px"}}>
+                      <p style={{margin:0,fontSize:18,fontWeight:800,color:C.text,wordBreak:"break-word"}}>{currentUser.displayName}</p>
+                      <button onClick={()=>{setNewName(currentUser.displayName);setEditingName(true);}}
+                        style={{background:"none",border:"none",cursor:"pointer",padding:4,WebkitTapHighlightColor:"transparent",flexShrink:0,color:"#555",display:"flex",alignItems:"center"}}
+                        title="Cambiar nombre">
+                        <IcEdit s={14} c="#555"/>
+                      </button>
+                    </div>
+                  )}
+                  <p style={{margin:"0 0 4px",fontSize:12,color:"#444",wordBreak:"break-word"}}>{currentUser.email}</p>
+                  <p style={{fontSize:10,color:"#2a2a2a",margin:0,letterSpacing:0.5}}>
+                    Miembro desde {new Date(currentUser.createdAt).toLocaleDateString("es-VE",{year:"numeric",month:"long"})}
+                  </p>
                 </div>
               </div>
-              <p style={{fontSize:10,color:"#333",margin:0,letterSpacing:1}}>Miembro desde {new Date(currentUser.createdAt).toLocaleDateString("es-VE",{year:"numeric",month:"long"})}</p>
+
+              {/* Upload photo hint */}
+              <div style={{background:"#0d0d0d",borderRadius:10,padding:"0.75rem 1rem",border:"1px solid #1a1a1a",display:"flex",alignItems:"center",gap:"0.75rem"}}>
+                <IcCamera s={18} c="#555"/>
+                <div>
+                  <p style={{margin:0,fontSize:11,fontWeight:700,color:"#666"}}>Foto de perfil</p>
+                  <p style={{margin:"1px 0 0",fontSize:10,color:"#333",lineHeight:1.5}}>Toca el ícono de cámara sobre tu foto para cambiarla</p>
+                </div>
+              </div>
             </div>
+
             <button onClick={()=>{localStorage.removeItem("fokus_user");setCurrentUser(null);setMainView("fokus");}}
               style={{...S.darkBtn,background:"transparent",color:"#cc3333",border:"1px solid #2a1515",borderRadius:8,width:"100%",justifyContent:"center",fontSize:12}}>
               Cerrar sesión
@@ -1611,7 +1959,6 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Products list */}
                 <div style={{background:"#111",borderRadius:12,padding:"1.5rem",border:"1px solid #1a1a1a"}}>
                   <div style={{display:"flex",alignItems:"center",gap:"0.5rem",marginBottom:"0.85rem"}}>
                     <p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2,margin:0}}>PRODUCTOS ({adminProds.length})</p>
@@ -1630,7 +1977,6 @@ export default function Home() {
                       );
                     })}
                   </div>
-                  {/* FIX: admin-list class disables text selection on the whole list */}
                   {adminCat==="ALL"?(
                     <div className="admin-list">
                       {usedCats.map(cat=>{
@@ -1714,6 +2060,9 @@ export default function Home() {
       {addedProduct&&<AddedModal product={addedProduct} onClose={()=>setAddedProduct(null)} onGoCart={()=>{setAddedProduct(null);setMainView("cart");}}/>}
       {showAuth&&<AuthModal onClose={()=>setShowAuth(false)} onSuccess={(u)=>{setCurrentUser(u);setShowAuth(false);}}/>}
       {!isAdmin&&<DraggableWA/>}
+
+      {/* Spinner keyframe for photo upload */}
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 }
