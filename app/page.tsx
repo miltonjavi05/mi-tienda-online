@@ -49,7 +49,7 @@ const ALL_SHOP_CATS = [
 
 const DELIVERY_ZONES = [
   { id:"naguanagua", label:"Naguanagua (Gratis)", price:0 },
-  { id:"valencia",   label:"Valencia (Gratis)",   price:0 },
+  { id:"valencia",   label:"Valencia (3$)",   price:0 },
   { id:"otro",       label:"Otro Estado",          price:0 },
 ];
 
