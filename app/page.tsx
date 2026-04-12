@@ -681,7 +681,7 @@ function DeliveryForm({info,onChange}:{info:DeliveryInfo;onChange:(i:DeliveryInf
   const upd = (field:keyof DeliveryInfo,val:string) => onChange({...info,[field]:val});
   return (
     <div style={{display:"flex",flexDirection:"column",gap:"0.6rem"}}>
-      <p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#333",margin:"0 0 0.25rem"}}>TIPO DE ENTREGA</p>
+      <p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#333",margin:"0 0 0.25rem"}}>TIPO DE ENVIO</p>
       {DELIVERY_ZONES.map(z=>(
         <button key={z.id} onClick={()=>upd("zone",z.id)}
           style={{display:"flex",alignItems:"center",gap:"0.75rem",background:info.zone===z.id?"#fff":"#111",color:info.zone===z.id?"#080808":C.text,border:`1px solid ${info.zone===z.id?"#fff":"#1e1e1e"}`,borderRadius:10,padding:"0.75rem 1rem",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",transition:"all 0.15s",textAlign:"left"}}>
@@ -1010,7 +1010,7 @@ export default function Home() {
     const pm=PAYMENT_METHODS.find(m=>m.id===payMethod);
     const pmL=pm?`\n\nMétodo de pago: ${pm.name} (${pm.detail})`:"";
     const dz=DELIVERY_ZONES.find(z=>z.id===deliveryInfo.zone);
-    let deliveryL = dz ? `\n\nEntrega: ${dz.label}` : "";
+    let deliveryL = dz ? `\n\nEnvio: ${dz.label}` : "";
     if(deliveryInfo.zone==="otro"){
       deliveryL += `\nEstado: ${deliveryInfo.estado}\nNombre: ${deliveryInfo.nombre}\nCédula: ${deliveryInfo.cedula}\nTeléfono: ${deliveryInfo.telefono}\nAgencia: ${deliveryInfo.agencia}\nDirección: ${deliveryInfo.direccion}`;
     }
@@ -1521,13 +1521,13 @@ export default function Home() {
                       </div>
                     );
                   })()}
-                  {!deliveryInfo.zone&&<p style={{textAlign:"center",fontSize:10,color:"#555",marginTop:"0.75rem"}}>Selecciona el tipo de entrega para continuar</p>}
+                  {!deliveryInfo.zone&&<p style={{textAlign:"center",fontSize:10,color:"#555",marginTop:"0.75rem"}}>Selecciona el tipo de envio para continuar</p>}
                   {deliveryInfo.zone&&!payMethod&&<p style={{textAlign:"center",fontSize:10,color:"#555",marginTop:"0.5rem"}}>Selecciona un método de pago para continuar</p>}
                   <a href={waMsg()} target="_blank" rel="noreferrer"
                     onClick={(e)=>{
                       if(!payMethod||!deliveryValid){
                         e.preventDefault();
-                        if(!deliveryInfo.zone) alert("Por favor selecciona el tipo de entrega.");
+                        if(!deliveryInfo.zone) alert("Por favor selecciona el tipo de envio.");
                         else if(deliveryInfo.zone==="otro"&&(!deliveryInfo.nombre||!deliveryInfo.cedula||!deliveryInfo.telefono||!deliveryInfo.agencia||!deliveryInfo.estado||!deliveryInfo.direccion)) alert("Por favor completa todos los datos de envío, incluyendo el estado.");
                         else if(!payMethod) alert("Por favor selecciona un método de pago.");
                       }
