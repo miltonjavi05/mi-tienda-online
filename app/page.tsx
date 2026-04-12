@@ -160,7 +160,7 @@ async function fsSaveUser(uid: string, data: Omit<UserData,"uid">, idToken: stri
   });
 }
 
-// FIX: Firebase Auth — apiKey must be in the URL query param, NOT in headers
+// ─── AUTH — Firebase Identity Toolkit REST ───────────────────────────────────
 async function authSignUp(email: string, password: string, displayName: string): Promise<{idToken:string;localId:string}> {
   const r = await fetch(`${AUTH_BASE}:signUp?key=${FIREBASE_CONFIG.apiKey}`,{
     method:"POST",
@@ -266,7 +266,6 @@ const IcUser = memo(({s=20,c="#fff"}:{s?:number;c?:string}) => (
 ));
 IcUser.displayName = "IcUser";
 
-// Eye icons for password toggle
 const IcEye = memo(({s=18,c="#555"}:{s?:number;c?:string}) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
@@ -353,6 +352,8 @@ function catLabel(cat:string):string {
 }
 
 // ─── DRAGGABLE WA BUTTON ─────────────────────────────────────────────────────
+// FIX: Uses position:fixed but coordinates are always clamped to the current
+// visual viewport so the button stays visible even when the user pinch-zooms.
 function DraggableWA() {
   const BTN=48, MG=14;
   const [ready,setReady]       = useState(false);
@@ -366,6 +367,7 @@ function DraggableWA() {
   const live      = useRef({x:0,y:0});
   const raf       = useRef(0);
 
+  // Always use window.innerWidth/Height so it works correctly under zoom
   const clamp = useCallback((x:number,y:number)=>({
     x: Math.max(MG, Math.min(window.innerWidth - BTN - MG, x)),
     y: Math.max(MG + 80, Math.min(window.innerHeight - BTN - MG*2, y)),
@@ -387,7 +389,18 @@ function DraggableWA() {
       }
     };
     window.addEventListener("resize", onResize, {passive:true});
-    return () => window.removeEventListener("resize", onResize);
+    // Also reposition on visual viewport resize (pinch zoom)
+    if (typeof window !== "undefined" && "visualViewport" in window && window.visualViewport) {
+      window.visualViewport.addEventListener("resize", onResize);
+      window.visualViewport.addEventListener("scroll", onResize);
+    }
+    return () => {
+      window.removeEventListener("resize", onResize);
+      if (typeof window !== "undefined" && "visualViewport" in window && window.visualViewport) {
+        window.visualViewport.removeEventListener("resize", onResize);
+        window.visualViewport.removeEventListener("scroll", onResize);
+      }
+    };
   },[snapToEdge]);
 
   const onDown = useCallback((e:React.PointerEvent)=>{
@@ -580,7 +593,7 @@ const AddedModal = memo(function AddedModal({product,onClose,onGoCart}:{product:
   );
 });
 
-// ─── ADMIN ROW — Full touch drag support ──────────────────────────────────────
+// ─── ADMIN ROW ────────────────────────────────────────────────────────────────
 interface ARowProps {
   p: Product; editing: Product|null;
   onEdit: (p:Product)=>void; onDel: (id:string)=>void;
@@ -592,7 +605,6 @@ interface ARowProps {
 }
 
 const ARow = memo(function ARow({p,editing,onEdit,onDel,onDragStart,onDragOver,onDragEnd,isDragging,isOver,onTouchStart,onTouchMove,onTouchEnd}:ARowProps) {
-  const handleRef = useRef<HTMLDivElement>(null);
   return (
     <div
       draggable
@@ -609,10 +621,12 @@ const ARow = memo(function ARow({p,editing,onEdit,onDel,onDragStart,onDragOver,o
         border: isOver ? "1px dashed #3a3a3a" : "1px solid transparent",
         transition:"opacity 0.15s, background 0.15s, border 0.15s",
         cursor:"default",
+        // FIX: prevent text selection during drag on mobile
+        userSelect:"none",
+        WebkitUserSelect:"none",
       }}>
       {/* Touch + Desktop drag handle */}
       <div
-        ref={handleRef}
         onTouchStart={e=>{
           e.stopPropagation();
           const t = e.touches[0];
@@ -620,19 +634,37 @@ const ARow = memo(function ARow({p,editing,onEdit,onDel,onDragStart,onDragOver,o
         }}
         onTouchMove={e=>{
           e.stopPropagation();
+          e.preventDefault();
           const t = e.touches[0];
           onTouchMove(t.clientY, t.clientX);
         }}
         onTouchEnd={e=>{ e.stopPropagation(); onTouchEnd(); }}
-        style={{cursor:"grab",flexShrink:0,padding:"6px 8px",color:"#444",display:"flex",alignItems:"center",touchAction:"none",WebkitTapHighlightColor:"transparent"}}>
+        style={{
+          cursor:"grab",flexShrink:0,padding:"6px 8px",color:"#444",
+          display:"flex",alignItems:"center",
+          // FIX: prevent text selection / callout on long press
+          touchAction:"none",
+          WebkitTapHighlightColor:"transparent",
+          userSelect:"none",
+          WebkitUserSelect:"none",
+          // FIX: prevent context menu / text selection on iOS long press
+          WebkitTouchCallout:"none",
+        } as React.CSSProperties}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <circle cx="8" cy="6" r="1.2" fill="currentColor"/><circle cx="16" cy="6" r="1.2" fill="currentColor"/>
           <circle cx="8" cy="12" r="1.2" fill="currentColor"/><circle cx="16" cy="12" r="1.2" fill="currentColor"/>
           <circle cx="8" cy="18" r="1.2" fill="currentColor"/><circle cx="16" cy="18" r="1.2" fill="currentColor"/>
         </svg>
       </div>
-      <img src={optImg(p.img,120)} alt={p.name} style={{width:44,height:44,objectFit:"cover",borderRadius:6,flexShrink:0,background:"#1a1a1a",pointerEvents:"none"}} draggable={false}/>
-      <div style={{flex:1,minWidth:0}}>
+      <img src={optImg(p.img,120)} alt={p.name}
+        style={{width:44,height:44,objectFit:"cover",borderRadius:6,flexShrink:0,background:"#1a1a1a",
+          pointerEvents:"none",userSelect:"none",WebkitUserSelect:"none",
+          // FIX: prevent image callout/save on long press
+          WebkitTouchCallout:"none",
+        } as React.CSSProperties}
+        draggable={false}
+      />
+      <div style={{flex:1,minWidth:0,userSelect:"none",WebkitUserSelect:"none"} as React.CSSProperties}>
         <p style={{color:"#ccc",fontSize:12,fontWeight:700,margin:"0 0 1px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</p>
         <p style={{color:"#333",fontSize:10,margin:0}}>${p.price.toFixed(2)}</p>
       </div>
@@ -744,18 +776,22 @@ function AuthModal({onClose,onSuccess}:{onClose:()=>void;onSuccess:(u:UserData)=
   const [err,setErr]       = useState("");
   const [loading,setLoading] = useState(false);
 
+  // FIX: comprehensive Firebase Auth error mapping
   const authErrMap: Record<string,string> = {
-    "EMAIL_EXISTS":                                                   "Este correo ya está registrado.",
-    "INVALID_EMAIL":                                                  "Correo inválido.",
-    "WEAK_PASSWORD : Password should be at least 6 characters":       "La contraseña debe tener al menos 6 caracteres.",
-    "WEAK_PASSWORD":                                                  "La contraseña debe tener al menos 6 caracteres.",
-    "INVALID_LOGIN_CREDENTIALS":                                      "Correo o contraseña incorrectos.",
-    "EMAIL_NOT_FOUND":                                                "No existe una cuenta con este correo.",
-    "INVALID_PASSWORD":                                               "Contraseña incorrecta.",
-    "USER_DISABLED":                                                  "Esta cuenta ha sido deshabilitada.",
-    "TOO_MANY_ATTEMPTS_TRY_LATER":                                    "Demasiados intentos. Intenta más tarde.",
-    "CONFIGURATION_NOT_FOUND":                                        "Error de configuración del servidor. Contacta al administrador.",
-    "OPERATION_NOT_ALLOWED":                                          "Registro con email/contraseña no habilitado.",
+    "EMAIL_EXISTS":                                             "Este correo ya está registrado.",
+    "INVALID_EMAIL":                                           "Correo inválido.",
+    "WEAK_PASSWORD : Password should be at least 6 characters":"La contraseña debe tener al menos 6 caracteres.",
+    "WEAK_PASSWORD":                                           "La contraseña debe tener al menos 6 caracteres.",
+    "INVALID_LOGIN_CREDENTIALS":                               "Correo o contraseña incorrectos.",
+    "EMAIL_NOT_FOUND":                                         "No existe una cuenta con este correo.",
+    "INVALID_PASSWORD":                                        "Contraseña incorrecta.",
+    "USER_DISABLED":                                           "Esta cuenta ha sido deshabilitada.",
+    "TOO_MANY_ATTEMPTS_TRY_LATER":                             "Demasiados intentos. Intenta más tarde.",
+    // FIX: CONFIGURATION_NOT_FOUND means email/password sign-in is disabled in Firebase Console
+    "CONFIGURATION_NOT_FOUND":                                 "El inicio de sesión con correo no está activado. Contacta al administrador.",
+    "OPERATION_NOT_ALLOWED":                                   "Registro con email/contraseña no habilitado. Actívalo en Firebase Console.",
+    "ADMIN_ONLY_OPERATION":                                    "Operación solo para administradores.",
+    "CORS":                                                    "Error de red. Verifica tu conexión.",
   };
 
   const handle = async() => {
@@ -778,7 +814,6 @@ function AuthModal({onClose,onSuccess}:{onClose:()=>void;onSuccess:(u:UserData)=
       }
     } catch(e:unknown) {
       const raw = e instanceof Error ? e.message : "Error desconocido";
-      // Try to match any key inside the error message
       const matched = Object.keys(authErrMap).find(k => raw.includes(k));
       setErr(matched ? authErrMap[matched] : raw);
     } finally { setLoading(false); }
@@ -826,7 +861,7 @@ function AuthModal({onClose,onSuccess}:{onClose:()=>void;onSuccess:(u:UserData)=
   );
 }
 
-// ─── SCROLL TO TOP HELPER ─────────────────────────────────────────────────────
+// ─── SCROLL TO TOP ────────────────────────────────────────────────────────────
 function scrollTop() {
   window.scrollTo({top:0,behavior:"instant" as ScrollBehavior});
 }
@@ -852,7 +887,6 @@ export default function Home() {
   const [showAuth,setShowAuth]         = useState(false);
   const [currentUser,setCurrentUser]   = useState<UserData|null>(null);
 
-  // FIX: always scroll to top when changing main view
   const setMainView = useCallback((v: MainView) => {
     setMainViewRaw(v);
     scrollTop();
@@ -895,7 +929,7 @@ export default function Home() {
   const [dragId,setDragId]   = useState<string|null>(null);
   const [overId,setOverId]   = useState<string|null>(null);
 
-  // ─── Touch drag state for mobile admin reorder ────────────────────────────
+  // Touch drag state for mobile admin reorder
   const touchDragId  = useRef<string|null>(null);
   const touchDragActive = useRef(false);
 
@@ -1031,7 +1065,7 @@ export default function Home() {
     await fsDelete(id);await loadProducts();
   };
 
-  // ─── Desktop Drag & Drop ─────────────────────────────────────────────────
+  // Desktop Drag & Drop
   const handleDragStart = useCallback((id:string)=>setDragId(id),[]);
   const handleDragOver  = useCallback((id:string)=>setOverId(id),[]);
   const handleDragEnd   = useCallback(async()=>{
@@ -1049,7 +1083,7 @@ export default function Home() {
     setDragId(null);setOverId(null);
   },[dragId,overId,fbReady]);
 
-  // ─── Mobile Touch Drag for admin reorder ─────────────────────────────────
+  // Mobile Touch Drag for admin reorder
   const handleTouchDragStart = useCallback((id: string) => {
     touchDragId.current = id;
     touchDragActive.current = true;
@@ -1058,7 +1092,6 @@ export default function Home() {
 
   const handleTouchDragMove = useCallback((y: number, x: number) => {
     if (!touchDragActive.current || !touchDragId.current) return;
-    // Find the element under the touch point
     const el = document.elementFromPoint(x, y);
     if (!el) return;
     const row = el.closest("[data-rowid]") as HTMLElement | null;
@@ -1110,13 +1143,30 @@ export default function Home() {
         @keyframes slideInLeft{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
         @keyframes scaleIn{from{opacity:0;transform:scale(0.88)}to{opacity:1;transform:scale(1)}}
         *{box-sizing:border-box;-webkit-font-smoothing:antialiased;}
-        /* FIX: Allow pinch-to-zoom on mobile — remove touch-action:pan-y from body */
+
+        /*
+         * FIX 1 — Pinch-to-zoom:
+         * Do NOT set touch-action:pan-y on html/body/main.
+         * Only restrict touch-action on elements that need it (tabs, scroll rows, drag handles).
+         * This allows native pinch-zoom everywhere on the page.
+         */
         html{overflow-y:scroll;scroll-behavior:smooth;}
         body{background:#080808;margin:0;overscroll-behavior-y:contain;}
+
+        /*
+         * FIX 2 — Text selection in admin drag rows:
+         * Disable selection globally in the admin product list.
+         */
+        .admin-list{
+          -webkit-user-select:none;
+          user-select:none;
+        }
+
         .ts::-webkit-scrollbar,.hr::-webkit-scrollbar{display:none}
         .ts{-webkit-overflow-scrolling:touch;}
         .hr{-webkit-overflow-scrolling:touch;scroll-behavior:smooth;}
         .hr::-webkit-scrollbar{display:none}
+
         @media(hover:hover){
           .pc:hover .iz,.hc:hover .iz{transform:scale(1.05)!important}
           .pc:hover .io,.hc:hover .io{background:rgba(255,255,255,0.04)!important}
@@ -1129,15 +1179,30 @@ export default function Home() {
         .pc:active{transform:scale(0.97)}
         .hc:active{opacity:0.85}
         .nb:active{opacity:0.6}
+
         @media(max-width:480px){.pg{grid-template-columns:repeat(2,1fr)!important}.fg{grid-template-columns:1fr!important;gap:1.5rem!important}}
         @media(min-width:481px) and (max-width:767px){.pg{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))!important}.fg{grid-template-columns:repeat(2,1fr)!important;gap:1.5rem!important}}
         @media(min-width:768px){.pg{grid-template-columns:repeat(auto-fill,minmax(195px,1fr))!important}.fg{grid-template-columns:repeat(3,1fr)!important}}
+
         .hr *{-webkit-user-select:none;user-select:none;}
         .hr,.ts{contain:layout style;}
         select{-webkit-appearance:auto;appearance:auto;}
-        /* Admin touch drag ghost */
+
+        /* Admin drag states */
         .ar[data-dragging="true"]{opacity:0.4;background:#1a1a1a!important;}
         .ar[data-over="true"]{background:#1e1e1e!important;border:1px dashed #3a3a3a!important;}
+
+        /*
+         * FIX 3 — Prevent long-press text selection / callout on ALL images and
+         * draggable elements site-wide (iOS Safari).
+         */
+        img{
+          -webkit-touch-callout:none;
+          -webkit-user-select:none;
+          user-select:none;
+        }
+        /* Prevent blue tap highlight on interactive elements */
+        button,a{-webkit-tap-highlight-color:transparent;}
       `}</style>
 
       {/* NAVBAR */}
@@ -1546,7 +1611,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Products list with full touch drag support */}
+                {/* Products list */}
                 <div style={{background:"#111",borderRadius:12,padding:"1.5rem",border:"1px solid #1a1a1a"}}>
                   <div style={{display:"flex",alignItems:"center",gap:"0.5rem",marginBottom:"0.85rem"}}>
                     <p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2,margin:0}}>PRODUCTOS ({adminProds.length})</p>
@@ -1565,36 +1630,39 @@ export default function Home() {
                       );
                     })}
                   </div>
+                  {/* FIX: admin-list class disables text selection on the whole list */}
                   {adminCat==="ALL"?(
-                    usedCats.map(cat=>{
-                      const cp=products.filter(p=>p.category===cat&&(adminSearch===""||p.name.toLowerCase().includes(adminSearch.toLowerCase())));
-                      if(!cp.length) return null;
-                      return (
-                        <div key={cat} style={{marginBottom:"1.1rem"}}>
-                          <div style={{display:"flex",alignItems:"center",gap:"0.5rem",padding:"0.4rem 0",marginBottom:"0.35rem",borderBottom:"1px solid #1a1a1a"}}>
-                            <span style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#333"}}>{catLabel(cat).toUpperCase()}</span>
-                            <span style={{fontSize:9,color:"#2a2a2a",background:"#1a1a1a",padding:"1px 6px",borderRadius:10}}>{cp.length}</span>
-                          </div>
-                          {cp.map(p=>(
-                            <div key={p.id} data-rowid={p.id}>
-                              <ARow p={p} editing={editing}
-                                onEdit={startEdit} onDel={delProd}
-                                onDragStart={handleDragStart}
-                                onDragOver={handleDragOver}
-                                onDragEnd={handleDragEnd}
-                                isDragging={dragId===p.id}
-                                isOver={overId===p.id&&dragId!==p.id}
-                                onTouchStart={handleTouchDragStart}
-                                onTouchMove={handleTouchDragMove}
-                                onTouchEnd={handleTouchDragEnd}
-                              />
+                    <div className="admin-list">
+                      {usedCats.map(cat=>{
+                        const cp=products.filter(p=>p.category===cat&&(adminSearch===""||p.name.toLowerCase().includes(adminSearch.toLowerCase())));
+                        if(!cp.length) return null;
+                        return (
+                          <div key={cat} style={{marginBottom:"1.1rem"}}>
+                            <div style={{display:"flex",alignItems:"center",gap:"0.5rem",padding:"0.4rem 0",marginBottom:"0.35rem",borderBottom:"1px solid #1a1a1a"}}>
+                              <span style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#333"}}>{catLabel(cat).toUpperCase()}</span>
+                              <span style={{fontSize:9,color:"#2a2a2a",background:"#1a1a1a",padding:"1px 6px",borderRadius:10}}>{cp.length}</span>
                             </div>
-                          ))}
-                        </div>
-                      );
-                    })
+                            {cp.map(p=>(
+                              <div key={p.id} data-rowid={p.id}>
+                                <ARow p={p} editing={editing}
+                                  onEdit={startEdit} onDel={delProd}
+                                  onDragStart={handleDragStart}
+                                  onDragOver={handleDragOver}
+                                  onDragEnd={handleDragEnd}
+                                  isDragging={dragId===p.id}
+                                  isOver={overId===p.id&&dragId!==p.id}
+                                  onTouchStart={handleTouchDragStart}
+                                  onTouchMove={handleTouchDragMove}
+                                  onTouchEnd={handleTouchDragEnd}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })}
+                    </div>
                   ):(
-                    <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                    <div className="admin-list" style={{display:"flex",flexDirection:"column",gap:2}}>
                       {adminProds.map(p=>(
                         <div key={p.id} data-rowid={p.id}>
                           <ARow p={p} editing={editing}
