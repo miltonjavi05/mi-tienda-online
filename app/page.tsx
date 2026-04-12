@@ -151,7 +151,6 @@ async function fsDelete(id: string): Promise<void> {
   await fetch(`${fsBase()}/products/${id}`,{method:"DELETE"});
 }
 
-// Save user profile to Firestore
 async function fsSaveUser(uid: string, data: Omit<UserData,"uid">, idToken: string): Promise<void> {
   const fields = Object.fromEntries(Object.entries(data).map(([k,v])=>[k,toFs(v)]));
   await fetch(`${fsBase()}/users/${uid}?${Object.keys(data).map(k=>`updateMask.fieldPaths=${k}`).join("&")}`,{
@@ -161,17 +160,19 @@ async function fsSaveUser(uid: string, data: Omit<UserData,"uid">, idToken: stri
   });
 }
 
-// Firebase Auth REST
+// FIX: Firebase Auth — apiKey must be in the URL query param, NOT in headers
 async function authSignUp(email: string, password: string, displayName: string): Promise<{idToken:string;localId:string}> {
   const r = await fetch(`${AUTH_BASE}:signUp?key=${FIREBASE_CONFIG.apiKey}`,{
-    method:"POST",headers:{"Content-Type":"application/json"},
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
     body:JSON.stringify({email,password,returnSecureToken:true}),
   });
   const d = await r.json() as {idToken?:string;localId?:string;error?:{message:string}};
   if (!r.ok || d.error) throw new Error(d.error?.message || "Error al registrar");
   // Update display name
   await fetch(`${AUTH_BASE}:update?key=${FIREBASE_CONFIG.apiKey}`,{
-    method:"POST",headers:{"Content-Type":"application/json"},
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
     body:JSON.stringify({idToken:d.idToken,displayName,returnSecureToken:false}),
   });
   return {idToken:d.idToken!,localId:d.localId!};
@@ -179,7 +180,8 @@ async function authSignUp(email: string, password: string, displayName: string):
 
 async function authSignIn(email: string, password: string): Promise<{idToken:string;localId:string;displayName:string}> {
   const r = await fetch(`${AUTH_BASE}:signInWithPassword?key=${FIREBASE_CONFIG.apiKey}`,{
-    method:"POST",headers:{"Content-Type":"application/json"},
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
     body:JSON.stringify({email,password,returnSecureToken:true}),
   });
   const d = await r.json() as {idToken?:string;localId?:string;displayName?:string;error?:{message:string}};
@@ -246,7 +248,6 @@ const IcTT = memo(({s=22,c="#fff"}:{s?:number;c?:string}) => (
 ));
 IcTT.displayName = "IcTT";
 
-// Truck SVG icon for "Otro Estado"
 const IcTruck = memo(({s=20,c="#fff"}:{s?:number;c?:string}) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="1" y="3" width="15" height="13" rx="1"/>
@@ -257,7 +258,6 @@ const IcTruck = memo(({s=20,c="#fff"}:{s?:number;c?:string}) => (
 ));
 IcTruck.displayName = "IcTruck";
 
-// User icon
 const IcUser = memo(({s=20,c="#fff"}:{s?:number;c?:string}) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
@@ -265,6 +265,52 @@ const IcUser = memo(({s=20,c="#fff"}:{s?:number;c?:string}) => (
   </svg>
 ));
 IcUser.displayName = "IcUser";
+
+// Eye icons for password toggle
+const IcEye = memo(({s=18,c="#555"}:{s?:number;c?:string}) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+    <circle cx="12" cy="12" r="3"/>
+  </svg>
+));
+IcEye.displayName = "IcEye";
+
+const IcEyeOff = memo(({s=18,c="#555"}:{s?:number;c?:string}) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
+    <line x1="1" y1="1" x2="23" y2="23"/>
+  </svg>
+));
+IcEyeOff.displayName = "IcEyeOff";
+
+// ─── PASSWORD INPUT ───────────────────────────────────────────────────────────
+function PwdInput({value, onChange, placeholder, onKeyDown, autoComplete}: {
+  value: string; onChange: (v:string)=>void; placeholder: string;
+  onKeyDown?: (e:React.KeyboardEvent)=>void; autoComplete?: string;
+}) {
+  const [show, setShow] = useState(false);
+  return (
+    <div style={{position:"relative",display:"flex",alignItems:"center"}}>
+      <input
+        type={show?"text":"password"}
+        placeholder={placeholder}
+        value={value}
+        onChange={e=>onChange(e.target.value)}
+        onKeyDown={onKeyDown}
+        autoComplete={autoComplete}
+        style={{...S.input, paddingRight:"2.8rem"}}
+      />
+      <button
+        type="button"
+        onClick={()=>setShow(s=>!s)}
+        style={{position:"absolute",right:10,background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",padding:4,WebkitTapHighlightColor:"transparent"}}
+        tabIndex={-1}
+      >
+        {show ? <IcEyeOff s={18} c="#666"/> : <IcEye s={18} c="#666"/>}
+      </button>
+    </div>
+  );
+}
 
 // ─── LAZY IMG ────────────────────────────────────────────────────────────────
 const LazyImg = memo(function LazyImg({src,alt}:{src:string;alt:string}) {
@@ -534,21 +580,26 @@ const AddedModal = memo(function AddedModal({product,onClose,onGoCart}:{product:
   );
 });
 
-// ─── ADMIN ROW (with touch drag support) ─────────────────────────────────────
+// ─── ADMIN ROW — Full touch drag support ──────────────────────────────────────
 interface ARowProps {
   p: Product; editing: Product|null;
   onEdit: (p:Product)=>void; onDel: (id:string)=>void;
   onDragStart: (id:string)=>void; onDragOver: (id:string)=>void;
   onDragEnd: ()=>void; isDragging: boolean; isOver: boolean;
+  onTouchStart: (id:string, y:number)=>void;
+  onTouchMove: (y:number, x:number)=>void;
+  onTouchEnd: ()=>void;
 }
 
-const ARow = memo(function ARow({p,editing,onEdit,onDel,onDragStart,onDragOver,onDragEnd,isDragging,isOver}:ARowProps) {
+const ARow = memo(function ARow({p,editing,onEdit,onDel,onDragStart,onDragOver,onDragEnd,isDragging,isOver,onTouchStart,onTouchMove,onTouchEnd}:ARowProps) {
+  const handleRef = useRef<HTMLDivElement>(null);
   return (
     <div
       draggable
       onDragStart={()=>onDragStart(p.id)}
       onDragOver={e=>{ e.preventDefault(); onDragOver(p.id); }}
       onDragEnd={onDragEnd}
+      data-rowid={p.id}
       className="ar"
       style={{
         display:"flex", alignItems:"center", gap:"0.75rem",
@@ -559,11 +610,21 @@ const ARow = memo(function ARow({p,editing,onEdit,onDel,onDragStart,onDragOver,o
         transition:"opacity 0.15s, background 0.15s, border 0.15s",
         cursor:"default",
       }}>
-      {/* Touch drag handle */}
+      {/* Touch + Desktop drag handle */}
       <div
-        onTouchStart={()=>onDragStart(p.id)}
-        onTouchEnd={onDragEnd}
-        style={{cursor:"grab",flexShrink:0,padding:"4px 6px",color:"#333",display:"flex",alignItems:"center",touchAction:"none"}}>
+        ref={handleRef}
+        onTouchStart={e=>{
+          e.stopPropagation();
+          const t = e.touches[0];
+          onTouchStart(p.id, t.clientY);
+        }}
+        onTouchMove={e=>{
+          e.stopPropagation();
+          const t = e.touches[0];
+          onTouchMove(t.clientY, t.clientX);
+        }}
+        onTouchEnd={e=>{ e.stopPropagation(); onTouchEnd(); }}
+        style={{cursor:"grab",flexShrink:0,padding:"6px 8px",color:"#444",display:"flex",alignItems:"center",touchAction:"none",WebkitTapHighlightColor:"transparent"}}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <circle cx="8" cy="6" r="1.2" fill="currentColor"/><circle cx="16" cy="6" r="1.2" fill="currentColor"/>
           <circle cx="8" cy="12" r="1.2" fill="currentColor"/><circle cx="16" cy="12" r="1.2" fill="currentColor"/>
@@ -606,12 +667,10 @@ function DeliveryForm({info,onChange}:{info:DeliveryInfo;onChange:(i:DeliveryInf
           <input placeholder="Nombre y Apellido *" value={info.nombre} onChange={e=>upd("nombre",e.target.value)} style={S.input}/>
           <input placeholder="Cédula de Identidad *" value={info.cedula} onChange={e=>upd("cedula",e.target.value)} style={S.input}/>
           <input placeholder="Número de Teléfono *" value={info.telefono} onChange={e=>upd("telefono",e.target.value)} style={S.input}/>
-          {/* Agency selector */}
           <select value={info.agencia} onChange={e=>upd("agencia",e.target.value)} style={{...S.input,appearance:"auto"}}>
             <option value="">Agencia de Envíos *</option>
             {SHIPPING_AGENCIES.map(a=><option key={a} value={a}>{a}</option>)}
           </select>
-          {/* Venezuela State selector */}
           <select value={info.estado} onChange={e=>upd("estado",e.target.value)} style={{...S.input,appearance:"auto"}}>
             <option value="">Estado de Venezuela *</option>
             {VENEZUELA_STATES.map(s=><option key={s} value={s}>{s}</option>)}
@@ -648,7 +707,7 @@ const Footer = memo(function Footer({setMainView,setShopFilter}:{setMainView:(v:
             <p style={{fontSize:9,fontWeight:800,letterSpacing:3,color:"#2a2a2a",marginBottom:"0.75rem"}}>TIENDA</p>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.35rem 1rem"}}>
               {cats.map(({l,c})=>(
-                <button key={c} onClick={()=>{setShopFilter(c as ShopFilter);setMainView("shop");typeof window!=="undefined"&&window.scrollTo({top:0,behavior:"smooth"});}}
+                <button key={c} onClick={()=>{setShopFilter(c as ShopFilter);setMainView("shop");window.scrollTo({top:0,behavior:"instant" as ScrollBehavior});}}
                   style={{background:"none",border:"none",textAlign:"left",cursor:"pointer",fontFamily:"inherit",fontSize:11,color:"#333",padding:0,WebkitTapHighlightColor:"transparent",transition:"color 0.15s"}} className="fl">
                   {l}
                 </button>
@@ -686,12 +745,17 @@ function AuthModal({onClose,onSuccess}:{onClose:()=>void;onSuccess:(u:UserData)=
   const [loading,setLoading] = useState(false);
 
   const authErrMap: Record<string,string> = {
-    "EMAIL_EXISTS":"Este correo ya está registrado.",
-    "INVALID_EMAIL":"Correo inválido.",
-    "WEAK_PASSWORD : Password should be at least 6 characters":"La contraseña debe tener al menos 6 caracteres.",
-    "INVALID_LOGIN_CREDENTIALS":"Correo o contraseña incorrectos.",
-    "USER_DISABLED":"Esta cuenta ha sido deshabilitada.",
-    "TOO_MANY_ATTEMPTS_TRY_LATER":"Demasiados intentos. Intenta más tarde.",
+    "EMAIL_EXISTS":                                                   "Este correo ya está registrado.",
+    "INVALID_EMAIL":                                                  "Correo inválido.",
+    "WEAK_PASSWORD : Password should be at least 6 characters":       "La contraseña debe tener al menos 6 caracteres.",
+    "WEAK_PASSWORD":                                                  "La contraseña debe tener al menos 6 caracteres.",
+    "INVALID_LOGIN_CREDENTIALS":                                      "Correo o contraseña incorrectos.",
+    "EMAIL_NOT_FOUND":                                                "No existe una cuenta con este correo.",
+    "INVALID_PASSWORD":                                               "Contraseña incorrecta.",
+    "USER_DISABLED":                                                  "Esta cuenta ha sido deshabilitada.",
+    "TOO_MANY_ATTEMPTS_TRY_LATER":                                    "Demasiados intentos. Intenta más tarde.",
+    "CONFIGURATION_NOT_FOUND":                                        "Error de configuración del servidor. Contacta al administrador.",
+    "OPERATION_NOT_ALLOWED":                                          "Registro con email/contraseña no habilitado.",
   };
 
   const handle = async() => {
@@ -699,20 +763,24 @@ function AuthModal({onClose,onSuccess}:{onClose:()=>void;onSuccess:(u:UserData)=
     try {
       if(mode==="register") {
         if(!name.trim()){setErr("Ingresa tu nombre.");setLoading(false);return;}
-        const {idToken,localId} = await authSignUp(email, pwd, name.trim());
-        const ud: UserData = {uid:localId,email,displayName:name.trim(),createdAt:Date.now()};
-        await fsSaveUser(localId,{email,displayName:name.trim(),createdAt:ud.createdAt},idToken).catch(()=>{});
+        if(!email.trim()){setErr("Ingresa tu correo.");setLoading(false);return;}
+        if(pwd.length<6){setErr("La contraseña debe tener al menos 6 caracteres.");setLoading(false);return;}
+        const {idToken,localId} = await authSignUp(email.trim(), pwd, name.trim());
+        const ud: UserData = {uid:localId,email:email.trim(),displayName:name.trim(),createdAt:Date.now()};
+        await fsSaveUser(localId,{email:email.trim(),displayName:name.trim(),createdAt:ud.createdAt},idToken).catch(()=>{});
         localStorage.setItem("fokus_user", JSON.stringify(ud));
         onSuccess(ud);
       } else {
-        const {localId,displayName} = await authSignIn(email, pwd);
-        const ud: UserData = {uid:localId,email,displayName:displayName||email.split("@")[0],createdAt:Date.now()};
+        const {localId,displayName} = await authSignIn(email.trim(), pwd);
+        const ud: UserData = {uid:localId,email:email.trim(),displayName:displayName||email.split("@")[0],createdAt:Date.now()};
         localStorage.setItem("fokus_user", JSON.stringify(ud));
         onSuccess(ud);
       }
     } catch(e:unknown) {
-      const msg = e instanceof Error ? e.message : "Error desconocido";
-      setErr(authErrMap[msg] || msg);
+      const raw = e instanceof Error ? e.message : "Error desconocido";
+      // Try to match any key inside the error message
+      const matched = Object.keys(authErrMap).find(k => raw.includes(k));
+      setErr(matched ? authErrMap[matched] : raw);
     } finally { setLoading(false); }
   };
 
@@ -734,7 +802,13 @@ function AuthModal({onClose,onSuccess}:{onClose:()=>void;onSuccess:(u:UserData)=
             <input placeholder="Nombre *" value={name} onChange={e=>setName(e.target.value)} style={S.input} autoComplete="name"/>
           )}
           <input placeholder="Correo electrónico *" type="email" value={email} onChange={e=>setEmail(e.target.value)} style={S.input} autoComplete="email"/>
-          <input placeholder="Contraseña *" type="password" value={pwd} onChange={e=>setPwd(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handle()} style={S.input} autoComplete={mode==="login"?"current-password":"new-password"}/>
+          <PwdInput
+            placeholder="Contraseña *"
+            value={pwd}
+            onChange={setPwd}
+            onKeyDown={e=>e.key==="Enter"&&handle()}
+            autoComplete={mode==="login"?"current-password":"new-password"}
+          />
           {err&&<div style={{color:"#ff5555",fontSize:12,background:"#1e0808",padding:"0.65rem 1rem",borderRadius:8,lineHeight:1.5}}>{err}</div>}
           <button onClick={handle} disabled={loading}
             style={{...S.darkBtn,width:"100%",justifyContent:"center",borderRadius:10,padding:"1rem",fontSize:12,opacity:loading?0.5:1,cursor:loading?"not-allowed":"pointer"}}>
@@ -752,11 +826,16 @@ function AuthModal({onClose,onSuccess}:{onClose:()=>void;onSuccess:(u:UserData)=
   );
 }
 
+// ─── SCROLL TO TOP HELPER ─────────────────────────────────────────────────────
+function scrollTop() {
+  window.scrollTo({top:0,behavior:"instant" as ScrollBehavior});
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 //  MAIN APP
 // ══════════════════════════════════════════════════════════════════════════════
 export default function Home() {
-  const [mainView,setMainView]         = useState<MainView>("fokus");
+  const [mainView,setMainViewRaw]      = useState<MainView>("fokus");
   const [shopFilter,setShopFilter]     = useState<ShopFilter>("TODO");
   const [lentesOpen,setLentesOpen]     = useState(false);
   const [cart,setCart]                 = useState<CartItem[]>([]);
@@ -772,6 +851,12 @@ export default function Home() {
   const [addedProduct,setAddedProduct] = useState<Product|null>(null);
   const [showAuth,setShowAuth]         = useState(false);
   const [currentUser,setCurrentUser]   = useState<UserData|null>(null);
+
+  // FIX: always scroll to top when changing main view
+  const setMainView = useCallback((v: MainView) => {
+    setMainViewRaw(v);
+    scrollTop();
+  }, []);
 
   const [deliveryInfo,setDeliveryInfo] = useState<DeliveryInfo>({
     zone:"", nombre:"", cedula:"", telefono:"", agencia:"", direccion:"", estado:""
@@ -810,9 +895,9 @@ export default function Home() {
   const [dragId,setDragId]   = useState<string|null>(null);
   const [overId,setOverId]   = useState<string|null>(null);
 
-  // Touch drag for admin list
-  const touchDragY = useRef(0);
-  const touchDragId = useRef<string|null>(null);
+  // ─── Touch drag state for mobile admin reorder ────────────────────────────
+  const touchDragId  = useRef<string|null>(null);
+  const touchDragActive = useRef(false);
 
   // Load user from localStorage
   useEffect(()=>{
@@ -837,7 +922,7 @@ export default function Home() {
     const ok=FIREBASE_CONFIG.projectId!=="TU_PROJECT_ID";
     setFbReady(ok);
     if(ok) loadProducts(); else{setProducts(DEMO);setLoading(false);}
-    if(typeof window!=="undefined"&&window.location.pathname==="/admin") setMainView("admin");
+    if(typeof window!=="undefined"&&window.location.pathname==="/admin") setMainViewRaw("admin");
   },[loadProducts]);
 
   const catCounts = useMemo(()=>{
@@ -946,7 +1031,7 @@ export default function Home() {
     await fsDelete(id);await loadProducts();
   };
 
-  // Drag & Drop (desktop + touch)
+  // ─── Desktop Drag & Drop ─────────────────────────────────────────────────
   const handleDragStart = useCallback((id:string)=>setDragId(id),[]);
   const handleDragOver  = useCallback((id:string)=>setOverId(id),[]);
   const handleDragEnd   = useCallback(async()=>{
@@ -964,35 +1049,44 @@ export default function Home() {
     setDragId(null);setOverId(null);
   },[dragId,overId,fbReady]);
 
-  // Touch drag for mobile admin
-  const handleTouchDragStart = useCallback((id:string)=>{ touchDragId.current = id; },[]);
-  const handleTouchDragEnd   = useCallback(()=>{
+  // ─── Mobile Touch Drag for admin reorder ─────────────────────────────────
+  const handleTouchDragStart = useCallback((id: string) => {
+    touchDragId.current = id;
+    touchDragActive.current = true;
+    setDragId(id);
+  }, []);
+
+  const handleTouchDragMove = useCallback((y: number, x: number) => {
+    if (!touchDragActive.current || !touchDragId.current) return;
+    // Find the element under the touch point
+    const el = document.elementFromPoint(x, y);
+    if (!el) return;
+    const row = el.closest("[data-rowid]") as HTMLElement | null;
+    if (row) {
+      const id = row.dataset.rowid;
+      if (id && id !== touchDragId.current) setOverId(id);
+    }
+  }, []);
+
+  const handleTouchDragEnd = useCallback(() => {
     const from = touchDragId.current;
-    const to   = overId;
+    const to = overId;
     touchDragId.current = null;
-    if(!from||!to||from===to){setOverId(null);return;}
-    setProducts(prev=>{
-      const arr=[...prev];
-      const fi=arr.findIndex(p=>p.id===from);
-      const ti=arr.findIndex(p=>p.id===to);
-      if(fi<0||ti<0) return prev;
-      const [moved]=arr.splice(fi,1);
-      arr.splice(ti,0,moved);
-      arr.forEach((p,i)=>{ if(p.order!==i && fbReady) fsUpdate(p.id,{order:i}).catch(()=>{}); });
-      return arr.map((p,i)=>({...p,order:i}));
+    touchDragActive.current = false;
+    setDragId(null);
+    if (!from || !to || from === to) { setOverId(null); return; }
+    setProducts(prev => {
+      const arr = [...prev];
+      const fi = arr.findIndex(p => p.id === from);
+      const ti = arr.findIndex(p => p.id === to);
+      if (fi < 0 || ti < 0) return prev;
+      const [moved] = arr.splice(fi, 1);
+      arr.splice(ti, 0, moved);
+      arr.forEach((p, i) => { if (p.order !== i && fbReady) fsUpdate(p.id, { order: i }).catch(() => {}); });
+      return arr.map((p, i) => ({ ...p, order: i }));
     });
     setOverId(null);
-  },[overId,fbReady]);
-
-  // Touch move for admin list – find item under finger
-  const handleListTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>)=>{
-    if(!touchDragId.current) return;
-    const touch = e.touches[0];
-    touchDragY.current = touch.clientY;
-    const el = document.elementFromPoint(touch.clientX, touch.clientY);
-    const row = el?.closest("[data-rowid]") as HTMLElement|null;
-    if(row) { const id = row.dataset.rowid; if(id && id!==touchDragId.current) setOverId(id); }
-  },[]);
+  }, [overId, fbReady]);
 
   const adminProds=useMemo(()=>{
     let l=products;
@@ -1016,8 +1110,9 @@ export default function Home() {
         @keyframes slideInLeft{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
         @keyframes scaleIn{from{opacity:0;transform:scale(0.88)}to{opacity:1;transform:scale(1)}}
         *{box-sizing:border-box;-webkit-font-smoothing:antialiased;}
+        /* FIX: Allow pinch-to-zoom on mobile — remove touch-action:pan-y from body */
         html{overflow-y:scroll;scroll-behavior:smooth;}
-        body{background:#080808;margin:0;overscroll-behavior-y:contain;touch-action:pan-y;}
+        body{background:#080808;margin:0;overscroll-behavior-y:contain;}
         .ts::-webkit-scrollbar,.hr::-webkit-scrollbar{display:none}
         .ts{-webkit-overflow-scrolling:touch;}
         .hr{-webkit-overflow-scrolling:touch;scroll-behavior:smooth;}
@@ -1040,6 +1135,9 @@ export default function Home() {
         .hr *{-webkit-user-select:none;user-select:none;}
         .hr,.ts{contain:layout style;}
         select{-webkit-appearance:auto;appearance:auto;}
+        /* Admin touch drag ghost */
+        .ar[data-dragging="true"]{opacity:0.4;background:#1a1a1a!important;}
+        .ar[data-over="true"]{background:#1e1e1e!important;border:1px dashed #3a3a3a!important;}
       `}</style>
 
       {/* NAVBAR */}
@@ -1054,10 +1152,9 @@ export default function Home() {
             <span style={{color:"#fff",fontSize:16,fontWeight:900,letterSpacing:5,whiteSpace:"nowrap"}}>FOKUS</span>
           </button>
           <div style={{display:"flex",marginLeft:"auto",gap:0}}>
-            <button onClick={()=>{ const n=!searchOpen;setSearchOpen(n);setSearchQuery("");if(n&&mainView!=="shop"){setMainView("shop");setShopFilter("TODO");} }} style={S.iconBtn}>
+            <button onClick={()=>{ const n=!searchOpen;setSearchOpen(n);setSearchQuery("");if(n&&mainView!=="shop"){setMainViewRaw("shop");setShopFilter("TODO");scrollTop();} }} style={S.iconBtn}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
             </button>
-            {/* User button */}
             <button onClick={()=>currentUser?setMainView("account"):setShowAuth(true)} style={{...S.iconBtn,position:"relative"}}>
               {currentUser
                 ? <div style={{width:26,height:26,borderRadius:"50%",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -1185,6 +1282,7 @@ export default function Home() {
               onSelect={(item)=>{
                 if(item==="LENTES"){const n=!lentesOpen;setLentesOpen(n);if(n)setShopFilter("LENTES");}
                 else{setShopFilter(item as ShopFilter);setLentesOpen(false);}
+                scrollTop();
               }}
               height={44}
               renderItem={(item,_)=>{
@@ -1199,7 +1297,7 @@ export default function Home() {
             {lentesOpen&&(
               <div className="ts" style={{background:"#0a0a0a",borderTop:"1px solid #1a1a1a",padding:"0.55rem 1rem",display:"flex",gap:"0.45rem",overflowX:"auto",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",touchAction:"pan-x"}}>
                 {LENTES_SUBCATS.map(sub=>(
-                  <button key={sub} onClick={()=>setShopFilter(sub)}
+                  <button key={sub} onClick={()=>{setShopFilter(sub);scrollTop();}}
                     style={{background:shopFilter===sub?"#fff":"transparent",color:shopFilter===sub?"#080808":"#444",border:`1px solid ${shopFilter===sub?"#fff":"#252525"}`,padding:"0.28rem 0.85rem",borderRadius:20,fontSize:9,fontWeight:800,letterSpacing:1.2,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap",flexShrink:0,WebkitTapHighlightColor:"transparent",transition:"all 0.15s ease"}}>
                     {catLabel(sub).toUpperCase()}
                   </button>
@@ -1220,7 +1318,7 @@ export default function Home() {
                   <div key={cat} style={{marginBottom:"2.5rem",animation:"fadeIn 0.3s ease"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.85rem",borderBottom:`1px solid ${C.border}`,paddingBottom:"0.65rem"}}>
                       <h2 style={{fontSize:11,fontWeight:800,letterSpacing:3,margin:0,color:"#555"}}>{isLC?`LENTES · ${catLabel(cat).toUpperCase()}`:catLabel(cat).toUpperCase()}</h2>
-                      <button onClick={()=>{setShopFilter(cat as ShopFilter);setLentesOpen(isLC);}} style={{background:"none",border:"none",fontSize:10,color:"#333",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",letterSpacing:1,fontWeight:700}}>VER TODOS</button>
+                      <button onClick={()=>{setShopFilter(cat as ShopFilter);setLentesOpen(isLC);scrollTop();}} style={{background:"none",border:"none",fontSize:10,color:"#333",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",letterSpacing:1,fontWeight:700}}>VER TODOS</button>
                     </div>
                     <HRow products={prods} onSelect={openProd}/>
                   </div>
@@ -1234,7 +1332,7 @@ export default function Home() {
                   <div key={cat} style={{marginBottom:"3rem",animation:"fadeIn 0.3s ease"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1rem",borderBottom:`1px solid ${C.border}`,paddingBottom:"0.65rem"}}>
                       <h2 style={{fontSize:11,fontWeight:800,letterSpacing:3,margin:0,color:"#555"}}>{isLC?`LENTES · ${catLabel(cat).toUpperCase()}`:catLabel(cat).toUpperCase()}</h2>
-                      <button onClick={()=>{setShopFilter(cat as ShopFilter);setLentesOpen(isLC);}} style={{background:"none",border:"none",fontSize:10,color:"#333",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",letterSpacing:1,fontWeight:700}}>VER TODOS</button>
+                      <button onClick={()=>{setShopFilter(cat as ShopFilter);setLentesOpen(isLC);scrollTop();}} style={{background:"none",border:"none",fontSize:10,color:"#333",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",letterSpacing:1,fontWeight:700}}>VER TODOS</button>
                     </div>
                     <div className="pg" style={{display:"grid",gap:"1rem"}}>
                       {prods.map((p,i)=><ProductCard key={p.id} product={p} index={i} onClick={()=>openProd(p)}/>)}
@@ -1325,7 +1423,6 @@ export default function Home() {
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:"0.6rem",fontSize:13,color:"#555"}}><span>Subtotal</span><span>${totalPrice.toFixed(2)}</span></div>
                   <div style={{borderTop:`1px solid ${C.border}`,paddingTop:"0.75rem",display:"flex",justifyContent:"space-between",fontSize:18,fontWeight:900,color:C.accent}}><span>Total</span><span>${totalPrice.toFixed(2)}</span></div>
 
-                  {/* User info in cart */}
                   {!currentUser&&(
                     <div style={{marginTop:"1.25rem",background:"#0a0a0a",borderRadius:10,padding:"1rem",border:"1px solid #1a1a1a",display:"flex",alignItems:"center",justifyContent:"space-between",gap:"0.75rem",flexWrap:"wrap"}}>
                       <p style={{margin:0,fontSize:12,color:"#555",lineHeight:1.5}}>¿Tienes cuenta? Inicia sesión para un pedido más rápido</p>
@@ -1389,7 +1486,13 @@ export default function Home() {
                 <h1 style={{color:"#fff",fontSize:20,fontWeight:900,marginBottom:"1.5rem",textAlign:"center",letterSpacing:2}}>ADMIN</h1>
                 <div style={{display:"flex",flexDirection:"column",gap:"0.85rem"}}>
                   <input type="email" placeholder="Correo" value={adminEmail} onChange={e=>setAdminEmail(e.target.value)} style={S.input}/>
-                  <input type="password" placeholder="Contraseña" value={adminPwd} onChange={e=>setAdminPwd(e.target.value)} onKeyDown={e=>e.key==="Enter"&&doLogin()} style={S.input}/>
+                  <PwdInput
+                    placeholder="Contraseña"
+                    value={adminPwd}
+                    onChange={setAdminPwd}
+                    onKeyDown={e=>e.key==="Enter"&&doLogin()}
+                    autoComplete="current-password"
+                  />
                   {adminErr&&<p style={{color:"#ff5555",fontSize:12,margin:0,background:"#1e0a0a",padding:"0.6rem 1rem",borderRadius:8}}>{adminErr}</p>}
                   <button onClick={doLogin} style={S.adminBtn}>Entrar</button>
                   <button onClick={doLogout} style={{...S.adminBtn,background:"transparent",color:"#333",marginTop:4}}>← Volver</button>
@@ -1443,11 +1546,8 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Products list with mobile touch drag */}
-                <div
-                  style={{background:"#111",borderRadius:12,padding:"1.5rem",border:"1px solid #1a1a1a"}}
-                  onTouchMove={handleListTouchMove}
-                >
+                {/* Products list with full touch drag support */}
+                <div style={{background:"#111",borderRadius:12,padding:"1.5rem",border:"1px solid #1a1a1a"}}>
                   <div style={{display:"flex",alignItems:"center",gap:"0.5rem",marginBottom:"0.85rem"}}>
                     <p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2,margin:0}}>PRODUCTOS ({adminProds.length})</p>
                     <span style={{fontSize:9,color:"#2a2a2a",background:"#161616",padding:"2px 7px",borderRadius:8,border:"1px solid #1e1e1e"}}>⠿ Arrastra para reordenar</span>
@@ -1483,7 +1583,10 @@ export default function Home() {
                                 onDragOver={handleDragOver}
                                 onDragEnd={handleDragEnd}
                                 isDragging={dragId===p.id}
-                                isOver={overId===p.id&&dragId!==p.id&&touchDragId.current!==p.id}
+                                isOver={overId===p.id&&dragId!==p.id}
+                                onTouchStart={handleTouchDragStart}
+                                onTouchMove={handleTouchDragMove}
+                                onTouchEnd={handleTouchDragEnd}
                               />
                             </div>
                           ))}
@@ -1496,11 +1599,14 @@ export default function Home() {
                         <div key={p.id} data-rowid={p.id}>
                           <ARow p={p} editing={editing}
                             onEdit={startEdit} onDel={delProd}
-                            onDragStart={(id)=>{ handleDragStart(id); handleTouchDragStart(id); }}
+                            onDragStart={handleDragStart}
                             onDragOver={handleDragOver}
-                            onDragEnd={()=>{ handleDragEnd(); handleTouchDragEnd(); }}
+                            onDragEnd={handleDragEnd}
                             isDragging={dragId===p.id}
-                            isOver={overId===p.id&&dragId!==p.id&&touchDragId.current!==p.id}
+                            isOver={overId===p.id&&dragId!==p.id}
+                            onTouchStart={handleTouchDragStart}
+                            onTouchMove={handleTouchDragMove}
+                            onTouchEnd={handleTouchDragEnd}
                           />
                         </div>
                       ))}
