@@ -165,7 +165,7 @@ async function fsDelete(id: string): Promise<void> {
   await fetch(`${fsBase()}/products/${id}`,{method:"DELETE"});
 }
 
-// Guardar foto de perfil en Firestore con idToken
+// Guardar datos de usuario en Firestore
 async function fsSaveUser(uid: string, data: Record<string, unknown>, idToken?: string): Promise<void> {
   const fields = Object.fromEntries(Object.entries(data).map(([k,v])=>[k,toFs(v as unknown)]));
   const mask = Object.keys(data).map(k=>`updateMask.fieldPaths=${encodeURIComponent(k)}`).join("&");
@@ -178,7 +178,7 @@ async function fsSaveUser(uid: string, data: Record<string, unknown>, idToken?: 
   }).catch(()=>{});
 }
 
-// Refrescar idToken usando refreshToken (Firebase REST)
+// Refrescar idToken
 async function refreshIdToken(refreshToken: string): Promise<{idToken:string;localId:string}|null> {
   try {
     const r = await fetch(`https://securetoken.googleapis.com/v1/token?key=${FIREBASE_CONFIG.apiKey}`, {
@@ -220,14 +220,16 @@ async function authSignIn(email: string, password: string): Promise<{idToken:str
   return {idToken:d.idToken!,localId:d.localId!,displayName:d.displayName||"",refreshToken:d.refreshToken!};
 }
 
-// Cargar foto desde Firestore al hacer login
-async function fsGetUserPhoto(uid: string): Promise<string> {
+// Cargar datos completos del usuario desde Firestore al login
+async function fsGetUser(uid: string): Promise<{photoURL:string}> {
   try {
     const r = await fetch(`${fsBase()}/users/${uid}`);
-    if (!r.ok) return "";
+    if (!r.ok) return {photoURL:""};
     const d = await r.json() as FsDoc;
-    return (fromFs(d.fields?.photoURL ?? {nullValue:null}) as string) || "";
-  } catch { return ""; }
+    return {
+      photoURL: (fromFs(d.fields?.photoURL ?? {nullValue:null}) as string) || "",
+    };
+  } catch { return {photoURL:""}; }
 }
 
 // ─── CLOUDINARY ───────────────────────────────────────────────────────────────
@@ -394,8 +396,7 @@ function DraggableWA() {
     live.current=p;setPos(p);setReady(true);
     const onResize=()=>{if(!dragging.current){const np=snapToEdge(live.current.x,live.current.y);live.current=np;setPos({...np});}};
     window.addEventListener("resize",onResize,{passive:true});
-    if(typeof window!=="undefined"&&"visualViewport"in window&&window.visualViewport){window.visualViewport.addEventListener("resize",onResize);window.visualViewport.addEventListener("scroll",onResize);}
-    return()=>{window.removeEventListener("resize",onResize);if(typeof window!=="undefined"&&"visualViewport"in window&&window.visualViewport){window.visualViewport.removeEventListener("resize",onResize);window.visualViewport.removeEventListener("scroll",onResize);}};
+    return()=>{window.removeEventListener("resize",onResize);};
   },[snapToEdge]);
   const onDown=useCallback((e:React.PointerEvent)=>{e.preventDefault();(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);dragging.current=true;moved.current=false;startPtr.current={x:e.clientX,y:e.clientY};startPos.current={...live.current};setPressed(true);setSnapping(false);},[]);
   const onMove=useCallback((e:React.PointerEvent)=>{if(!dragging.current)return;e.preventDefault();const dx=e.clientX-startPtr.current.x,dy=e.clientY-startPtr.current.y;if(Math.abs(dx)>4||Math.abs(dy)>4)moved.current=true;const n=clamp(startPos.current.x+dx,startPos.current.y+dy);live.current=n;cancelAnimationFrame(raf.current);raf.current=requestAnimationFrame(()=>setPos({...n}));},[clamp]);
@@ -434,7 +435,7 @@ const ProductCard = memo(function ProductCard({product,onClick,index}:{product:P
   useEffect(()=>{const el=ref.current;if(!el)return;const obs=new IntersectionObserver(([e])=>{if(e.isIntersecting){setVis(true);obs.disconnect();}},{rootMargin:"80px"});obs.observe(el);return()=>obs.disconnect();},[]);
   return (
     <div ref={ref} className="pc" onClick={onClick}
-      style={{cursor:"pointer",opacity:vis?1:0,transform:vis?"translateY(0)":"translateY(14px)",transition:`opacity 0.35s ease ${Math.min(index*35,160)}ms,transform 0.35s ease ${Math.min(index*35,160)}ms`,willChange:"transform,opacity"}}>
+      style={{cursor:"pointer",opacity:vis?1:0,transform:vis?"translateY(0)":"translateY(14px)",transition:`opacity 0.35s ease ${Math.min(index*35,160)}ms,transform 0.35s ease ${Math.min(index*35,160)}ms`}}>
       <div style={{background:"#111",aspectRatio:"1",overflow:"hidden",marginBottom:"0.55rem",borderRadius:10,position:"relative"}}>
         <div className="iz" style={{width:"100%",height:"100%",transition:"transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94)"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",transition:"background 0.3s ease",pointerEvents:"none"}}/>
@@ -473,7 +474,7 @@ const HRow = memo(function HRow({products,onSelect}:{products:Product[];onSelect
     <div style={{position:"relative"}} onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)}>
       <button onClick={()=>scrollBy(-1)} style={arrowStyle(showLeft,"left")} aria-label="Anterior"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
       <button onClick={()=>scrollBy(1)} style={arrowStyle(showRight,"right")} aria-label="Siguiente"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
-      <div ref={rowRef} className="hr" style={{display:"flex",gap:"0.75rem",overflowX:"scroll",overflowY:"hidden",paddingBottom:"0.5rem",paddingLeft:"0.25rem",paddingRight:"1rem",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",touchAction:"pan-x pan-y",userSelect:"none",WebkitUserSelect:"none",scrollSnapType:"x proximity",willChange:"scroll-position",transform:"translateZ(0)"} as React.CSSProperties}>
+      <div ref={rowRef} className="hr" style={{display:"flex",gap:"0.75rem",overflowX:"scroll",overflowY:"hidden",paddingBottom:"0.5rem",paddingLeft:"0.25rem",paddingRight:"1rem",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",touchAction:"pan-x pan-y",userSelect:"none",WebkitUserSelect:"none",scrollSnapType:"x proximity"} as React.CSSProperties}>
         {products.map(p=>(<div key={p.id} style={{scrollSnapAlign:"start",flexShrink:0}}><HCard product={p} onClick={()=>onSelect(p)}/></div>))}
       </div>
     </div>
@@ -581,16 +582,18 @@ function DeliveryForm({info,onChange}:{info:DeliveryInfo;onChange:(i:DeliveryInf
 }
 
 // ─── COMPROBANTE UPLOAD ───────────────────────────────────────────────────────
+// FIX iOS: usar dos inputs separados (galería y cámara) + sin capture="" en el principal
+// para que iOS muestre el menú de selección nativo
 function ComprobanteUpload({onUrl,url}:{onUrl:(u:string)=>void;url:string}) {
   const [loading,setLoading]=useState(false);
   const [err,setErr]=useState("");
   const [preview,setPreview]=useState("");
-  const inputRef=useRef<HTMLInputElement>(null);
+  const galleryRef=useRef<HTMLInputElement>(null);
+  const cameraRef=useRef<HTMLInputElement>(null);
 
-  const handleFile=useCallback(async(e:React.ChangeEvent<HTMLInputElement>)=>{
-    const file=e.target.files?.[0];if(!file)return;
+  const processFile=useCallback(async(file:File)=>{
     setErr("");setLoading(true);
-    // Show local preview immediately
+    // Mostrar preview local inmediatamente
     const reader=new FileReader();
     reader.onload=ev=>setPreview(ev.target?.result as string);
     reader.readAsDataURL(file);
@@ -600,29 +603,45 @@ function ComprobanteUpload({onUrl,url}:{onUrl:(u:string)=>void;url:string}) {
     } catch {
       setErr("Error al subir. Intenta de nuevo.");
       setPreview("");
+      onUrl("");
     } finally {
       setLoading(false);
-      if(inputRef.current) inputRef.current.value="";
+      if(galleryRef.current) galleryRef.current.value="";
+      if(cameraRef.current) cameraRef.current.value="";
     }
   },[onUrl]);
+
+  const handleGallery=useCallback((e:React.ChangeEvent<HTMLInputElement>)=>{
+    const file=e.target.files?.[0];if(file)processFile(file);
+  },[processFile]);
+
+  const handleCamera=useCallback((e:React.ChangeEvent<HTMLInputElement>)=>{
+    const file=e.target.files?.[0];if(file)processFile(file);
+  },[processFile]);
+
+  const reset=useCallback(()=>{onUrl("");setPreview("");setErr("");},[onUrl]);
 
   const displayImg=url||preview;
 
   return (
     <div style={{marginTop:"1rem"}}>
-      <p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#333",marginBottom:"0.6rem"}}>COMPROBANTE DE PAGO</p>
-      <div style={{background:"#0a0a0a",borderRadius:10,border:`1px dashed ${displayImg?"#2a5a2a":"#1e1e1e"}`,padding:"1rem",display:"flex",flexDirection:"column",gap:"0.65rem",transition:"border-color 0.2s"}}>
+      <p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#333",marginBottom:"0.6rem"}}>
+        COMPROBANTE DE PAGO <span style={{color:"#cc3333"}}>*</span>
+      </p>
+      <div style={{background:"#0a0a0a",borderRadius:10,border:`1px dashed ${displayImg&&url?"#2a5a2a":displayImg?"#2a4a2a":"#1e1e1e"}`,padding:"1rem",display:"flex",flexDirection:"column",gap:"0.65rem",transition:"border-color 0.2s"}}>
         {displayImg?(
           <div style={{position:"relative",display:"inline-block"}}>
             <img src={displayImg} alt="Comprobante" style={{width:"100%",maxHeight:200,objectFit:"contain",borderRadius:8,display:"block",background:"#111"}} draggable={false}/>
-            <div style={{position:"absolute",top:6,right:6,background:"rgba(0,0,0,0.7)",borderRadius:6,padding:"2px 8px",display:"flex",alignItems:"center",gap:4}}>
+            <div style={{position:"absolute",top:6,right:6,background:"rgba(0,0,0,0.75)",borderRadius:6,padding:"3px 10px",display:"flex",alignItems:"center",gap:4}}>
               {url
                 ? <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg><span style={{fontSize:10,color:"#4caf50",fontWeight:700}}>Listo</span></>
-                : <span style={{fontSize:10,color:"#888"}}>Subiendo…</span>
+                : loading
+                  ? <><div style={{width:10,height:10,border:"1.5px solid #555",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/><span style={{fontSize:10,color:"#888"}}>Subiendo…</span></>
+                  : <span style={{fontSize:10,color:"#888"}}>Procesando…</span>
               }
             </div>
-            <button onClick={()=>{onUrl("");setPreview("");}}
-              style={{position:"absolute",top:6,left:6,background:"rgba(0,0,0,0.7)",border:"none",color:"#888",cursor:"pointer",borderRadius:6,padding:"2px 8px",fontSize:10,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>
+            <button onClick={reset}
+              style={{position:"absolute",top:6,left:6,background:"rgba(0,0,0,0.75)",border:"none",color:"#aaa",cursor:"pointer",borderRadius:6,padding:"3px 10px",fontSize:10,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>
               Cambiar
             </button>
           </div>
@@ -631,18 +650,47 @@ function ComprobanteUpload({onUrl,url}:{onUrl:(u:string)=>void;url:string}) {
             <div style={{display:"flex",alignItems:"center",gap:"0.65rem"}}>
               <IcUpload s={20} c="#444"/>
               <div>
-                <p style={{margin:0,fontSize:12,fontWeight:700,color:"#555"}}>Sube tu comprobante</p>
-                <p style={{margin:"2px 0 0",fontSize:10,color:"#333",lineHeight:1.5}}>Se enviará junto con tu pedido por WhatsApp</p>
+                <p style={{margin:0,fontSize:12,fontWeight:700,color:"#555"}}>Sube tu comprobante de pago</p>
+                <p style={{margin:"2px 0 0",fontSize:10,color:"#333",lineHeight:1.5}}>Obligatorio para completar el pedido</p>
               </div>
             </div>
-            <input ref={inputRef} type="file" accept="image/*" capture="environment" onChange={handleFile} style={{display:"none"}} id="comp-file"/>
-            <label htmlFor="comp-file"
-              style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:"0.45rem",background:loading?"#1a1a1a":"#161616",color:loading?"#444":"#777",border:"1px solid #222",padding:"0.65rem 1.1rem",borderRadius:8,cursor:loading?"not-allowed":"pointer",fontSize:12,fontWeight:700,fontFamily:"inherit",transition:"all 0.15s",WebkitTapHighlightColor:"transparent"}}>
-              {loading
-                ? <><div style={{width:14,height:14,border:"2px solid #333",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/> Subiendo…</>
-                : <><IcCamera s={14} c="#666"/> Tomar foto o elegir</>
-              }
-            </label>
+
+            {/* Inputs separados: gallery (sin capture) + camera (con capture) */}
+            {/* iOS abre el menú nativo cuando hay múltiples botones de selección */}
+            <input
+              ref={galleryRef}
+              type="file"
+              accept="image/*"
+              onChange={handleGallery}
+              style={{display:"none"}}
+              id="comp-gallery"
+            />
+            <input
+              ref={cameraRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleCamera}
+              style={{display:"none"}}
+              id="comp-camera"
+            />
+
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.5rem"}}>
+              <label
+                htmlFor="comp-gallery"
+                style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:"0.4rem",background:loading?"#1a1a1a":"#161616",color:loading?"#444":"#888",border:"1px solid #252525",padding:"0.65rem 0.85rem",borderRadius:8,cursor:loading?"not-allowed":"pointer",fontSize:11,fontWeight:700,fontFamily:"inherit",transition:"all 0.15s",WebkitTapHighlightColor:"transparent",textAlign:"center" as const}}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                Galería
+              </label>
+              <label
+                htmlFor="comp-camera"
+                style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:"0.4rem",background:loading?"#1a1a1a":"#161616",color:loading?"#444":"#888",border:"1px solid #252525",padding:"0.65rem 0.85rem",borderRadius:8,cursor:loading?"not-allowed":"pointer",fontSize:11,fontWeight:700,fontFamily:"inherit",transition:"all 0.15s",WebkitTapHighlightColor:"transparent",textAlign:"center" as const}}
+              >
+                <IcCamera s={14} c="#666"/>
+                Cámara
+              </label>
+            </div>
           </>
         )}
         {err&&<p style={{margin:0,fontSize:11,color:"#ff5555",background:"#1e0808",borderRadius:6,padding:"0.5rem 0.75rem"}}>{err}</p>}
@@ -730,17 +778,16 @@ function AuthModal({onClose,onSuccess}:{onClose:()=>void;onSuccess:(u:UserData)=
         if(!email.trim()){setErr("Ingresa tu correo.");setLoading(false);return;}
         if(pwd.length<6){setErr("La contraseña debe tener al menos 6 caracteres.");setLoading(false);return;}
         const {idToken,localId,refreshToken}=await authSignUp(email.trim(),pwd,name.trim());
-        const ud:UserData={uid:localId,email:email.trim(),displayName:name.trim(),createdAt:Date.now(),idToken};
+        const ud:UserData={uid:localId,email:email.trim(),displayName:name.trim(),createdAt:Date.now(),photoURL:"",idToken};
         await fsSaveUser(localId,{email:email.trim(),displayName:name.trim(),createdAt:ud.createdAt,photoURL:""},idToken).catch(()=>{});
-        // Store refreshToken separately for token refresh
         localStorage.setItem("fokus_refresh",refreshToken);
         localStorage.setItem("fokus_user",JSON.stringify(ud));
         onSuccess(ud);
       } else {
         const {idToken,localId,displayName,refreshToken}=await authSignIn(email.trim(),pwd);
-        // Fetch saved photo from Firestore
-        const photoURL=await fsGetUserPhoto(localId);
-        const ud:UserData={uid:localId,email:email.trim(),displayName:displayName||email.split("@")[0],createdAt:Date.now(),photoURL,idToken};
+        // Cargar datos completos desde Firestore (incluyendo foto de perfil)
+        const fsData=await fsGetUser(localId);
+        const ud:UserData={uid:localId,email:email.trim(),displayName:displayName||email.split("@")[0],createdAt:Date.now(),photoURL:fsData.photoURL,idToken};
         localStorage.setItem("fokus_refresh",refreshToken);
         localStorage.setItem("fokus_user",JSON.stringify(ud));
         onSuccess(ud);
@@ -794,7 +841,7 @@ const CommunityCard = memo(function CommunityCard({post,onClick,index}:{post:typ
   const tagColors:Record<string,{bg:string;color:string}>={"ARETES":{bg:"rgba(168,85,247,0.15)",color:"#c084fc"},"COLLARES":{bg:"rgba(251,191,36,0.12)",color:"#fbbf24"},"PULSERAS":{bg:"rgba(34,211,238,0.12)",color:"#22d3ee"},"RESEÑA":{bg:"rgba(74,222,128,0.12)",color:"#4ade80"},"RELOJES":{bg:"rgba(251,113,133,0.12)",color:"#fb7185"}};
   const tc=tagColors[post.tag]||{bg:"rgba(255,255,255,0.08)",color:"#aaa"};
   return (
-    <div ref={ref} onClick={onClick} style={{cursor:"pointer",opacity:vis?1:0,transform:vis?"translateY(0) scale(1)":"translateY(20px) scale(0.97)",transition:`opacity 0.45s ease ${Math.min(index*60,300)}ms, transform 0.45s ease ${Math.min(index*60,300)}ms`,willChange:"transform,opacity",borderRadius:16,overflow:"hidden",background:"#0d0d0d",border:"1px solid #1a1a1a",position:"relative"}} className="cc">
+    <div ref={ref} onClick={onClick} style={{cursor:"pointer",opacity:vis?1:0,transform:vis?"translateY(0) scale(1)":"translateY(20px) scale(0.97)",transition:`opacity 0.45s ease ${Math.min(index*60,300)}ms, transform 0.45s ease ${Math.min(index*60,300)}ms`,borderRadius:16,overflow:"hidden",background:"#0d0d0d",border:"1px solid #1a1a1a",position:"relative"}} className="cc">
       <div style={{position:"relative",aspectRatio:"9/16",overflow:"hidden",background:"#111"}}>
         {!loaded&&<div style={{position:"absolute",inset:0,background:"linear-gradient(90deg,#141414 0%,#1e1e1e 50%,#141414 100%)",backgroundSize:"200% 100%",animation:"shimmer 1.4s infinite"}}/>}
         {vis&&<img src={post.img} alt={post.caption} loading="lazy" decoding="async" onLoad={()=>setLoaded(true)} style={{width:"100%",height:"100%",objectFit:"cover",display:"block",opacity:loaded?1:0,transition:"opacity 0.3s ease",pointerEvents:"none",userSelect:"none",WebkitUserSelect:"none",WebkitTouchCallout:"none"} as React.CSSProperties} draggable={false}/>}
@@ -842,7 +889,6 @@ function scrollTop(){window.scrollTo({top:0,behavior:"instant" as ScrollBehavior
 
 // ─── AVATAR ───────────────────────────────────────────────────────────────────
 function UserAvatar({user,size=26}:{user:UserData;size?:number}) {
-  // FIX MÓVIL: force re-render cuando cambia photoURL con key
   if(user.photoURL){
     return <img key={user.photoURL} src={user.photoURL} alt={user.displayName}
       style={{width:size,height:size,borderRadius:"50%",objectFit:"cover",flexShrink:0,border:"1.5px solid #333",display:"block"}}
@@ -869,13 +915,12 @@ export default function Home() {
   const [searchOpen,setSearchOpen]     = useState(false);
   const [searchQuery,setSearchQuery]   = useState("");
   const [payMethod,setPayMethod]       = useState<string|null>(null);
-  const [comprobanteUrl,setComprobanteUrl] = useState(""); // URL del comprobante subido
+  const [comprobanteUrl,setComprobanteUrl] = useState("");
   const [products,setProducts]         = useState<Product[]>([]);
   const [loading,setLoading]           = useState(true);
   const [fbReady,setFbReady]           = useState(false);
   const [addedProduct,setAddedProduct] = useState<Product|null>(null);
   const [showAuth,setShowAuth]         = useState(false);
-  // FIX MÓVIL: inicializar currentUser como undefined hasta que localStorage cargue
   const [currentUser,setCurrentUser]   = useState<UserData|null|undefined>(undefined);
   const [lightboxIdx,setLightboxIdx]   = useState<number|null>(null);
 
@@ -884,6 +929,7 @@ export default function Home() {
   const [newName,setNewName]           = useState("");
   const [nameLoading,setNameLoading]   = useState(false);
   const [photoLoading,setPhotoLoading] = useState(false);
+  // FIX iOS: usar ref en lugar de input en DOM — sin capture para abrir menú nativo
   const photoInputRef                  = useRef<HTMLInputElement>(null);
 
   const setMainView=useCallback((v:MainView)=>{setMainViewRaw(v);scrollTop();},[]);
@@ -922,19 +968,31 @@ export default function Home() {
   const touchDragId=useRef<string|null>(null);
   const touchDragActive=useRef(false);
 
-  // ── FIX MÓVIL: cargar user desde localStorage en primer render ──
+  // ── Cargar user desde localStorage en primer render ──
   useEffect(()=>{
     try {
       const stored=localStorage.getItem("fokus_user");
       if(stored){
         const parsed=JSON.parse(stored) as UserData;
         setCurrentUser(parsed);
-        // Intentar refrescar idToken con refreshToken guardado
+        // Refrescar token e intentar obtener foto actualizada desde Firestore
         const rt=localStorage.getItem("fokus_refresh");
         if(rt && parsed.uid){
-          refreshIdToken(rt).then(result=>{
+          refreshIdToken(rt).then(async result=>{
             if(result){
-              setCurrentUser(prev=>prev?{...prev,idToken:result.idToken}:prev);
+              // Obtener datos frescos incluyendo photoURL
+              const fsData=await fsGetUser(parsed.uid).catch(()=>({photoURL:""}));
+              setCurrentUser(prev=>{
+                if(!prev)return prev;
+                const updated={
+                  ...prev,
+                  idToken:result.idToken,
+                  // Usar foto de Firestore si existe, sino la que ya había
+                  photoURL: fsData.photoURL || prev.photoURL || "",
+                };
+                localStorage.setItem("fokus_user",JSON.stringify(updated));
+                return updated;
+              });
             }
           }).catch(()=>{});
         }
@@ -948,10 +1006,10 @@ export default function Home() {
   useEffect(()=>{
     if(currentUser===undefined)return;
     if(currentUser) localStorage.setItem("fokus_user",JSON.stringify(currentUser));
-    else localStorage.removeItem("fokus_user");
+    else { localStorage.removeItem("fokus_user"); localStorage.removeItem("fokus_refresh"); }
   },[currentUser]);
 
-  // ── Cart persistence ──
+  // Cart persistence
   useEffect(()=>{
     try{const saved=sessionStorage.getItem("fokus_cart");if(saved)setCart(JSON.parse(saved) as CartItem[]);}catch{}
   },[]);
@@ -973,7 +1031,7 @@ export default function Home() {
     if(typeof window!=="undefined"&&window.location.pathname==="/admin")setMainViewRaw("admin");
   },[loadProducts]);
 
-  // ── FIX FOTO PERFIL MÓVIL + PERSISTENCIA ──
+  // ── FIX iOS: foto de perfil sin capture — abre menú nativo en iOS ──
   const handleProfilePhoto=useCallback(async(e:React.ChangeEvent<HTMLInputElement>)=>{
     const file=e.target.files?.[0];if(!file||!currentUser)return;
     setPhotoLoading(true);
@@ -985,15 +1043,22 @@ export default function Home() {
         const rt=localStorage.getItem("fokus_refresh");
         if(rt){const res=await refreshIdToken(rt);if(res)idToken=res.idToken;}
       }
-      // Guardar en Firestore para que persista en futuros logins
+      // Guardar en Firestore para persistencia entre sesiones
       await fsSaveUser(currentUser.uid,{photoURL:url},idToken).catch(()=>{});
-      // Actualizar estado local — esto dispara re-render en TODOS los componentes
+      // Actualizar estado y localStorage
       setCurrentUser(prev=>{
         if(!prev)return prev;
-        return {...prev,photoURL:url,idToken};
+        const updated={...prev,photoURL:url,idToken};
+        localStorage.setItem("fokus_user",JSON.stringify(updated));
+        return updated;
       });
-    }catch{/* silent */}
-    finally{setPhotoLoading(false);if(photoInputRef.current)photoInputRef.current.value="";}
+    }catch(err){
+      console.error("Error subiendo foto:",err);
+    }
+    finally{
+      setPhotoLoading(false);
+      if(photoInputRef.current) photoInputRef.current.value="";
+    }
   },[currentUser]);
 
   const handleSaveName=useCallback(async()=>{
@@ -1029,7 +1094,9 @@ export default function Home() {
     return true;
   },[deliveryInfo]);
 
-  // WhatsApp message — incluye URL del comprobante si existe
+  // Requerimos comprobante para activar el botón de WhatsApp
+  const canSendOrder = useMemo(()=>!!(payMethod && deliveryValid && comprobanteUrl),[payMethod,deliveryValid,comprobanteUrl]);
+
   const waMsg=useCallback(()=>{
     const lines=cart.map(i=>`• ${i.product.name} x${i.qty} — $${(i.product.price*i.qty).toFixed(2)}`);
     const pm=PAYMENT_METHODS.find(m=>m.id===payMethod);
@@ -1078,7 +1145,6 @@ export default function Home() {
   const TABS=[{id:"fokus" as MainView,l:"FOKUS"},{id:"shop" as MainView,l:"TIENDA"},{id:"comunidad" as MainView,l:"COMUNIDAD"}];
   const openProd=useCallback((p:Product)=>{setSel(p);setModalQty(1);},[]);
 
-  // FIX MÓVIL: no renderizar cuenta hasta saber si hay user
   const userReady = currentUser !== undefined;
 
   return (
@@ -1108,6 +1174,7 @@ export default function Home() {
           .fl:hover{color:#fff!important}
           .pl:hover{opacity:0.8}
           .cc:hover{transform:translateY(-4px) scale(1.01)!important;border-color:#2a2a2a!important;box-shadow:0 12px 40px rgba(0,0,0,0.6)!important;}
+          label.comp-btn:hover{background:#1a1a1a!important;color:#aaa!important;border-color:#333!important;}
         }
         .cc{transition:transform 0.25s ease, border-color 0.2s ease, box-shadow 0.25s ease;}
         .pc:active{transform:scale(0.97)}
@@ -1123,6 +1190,8 @@ export default function Home() {
         button,a{-webkit-tap-highlight-color:transparent;}
         .avatar-ring{position:relative;display:inline-flex;align-items:center;justify-content:center;}
         .avatar-ring::after{content:'';position:absolute;inset:-3px;border-radius:50%;border:2px solid rgba(255,255,255,0.15);pointer-events:none;}
+        /* iOS file input fix */
+        input[type=file]{font-size:16px;}
       `}</style>
 
       {/* NAVBAR */}
@@ -1139,7 +1208,6 @@ export default function Home() {
             <button onClick={()=>{const n=!searchOpen;setSearchOpen(n);setSearchQuery("");if(n&&mainView!=="shop"){setMainViewRaw("shop");setShopFilter("TODO");scrollTop();}}} style={S.iconBtn}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
             </button>
-            {/* FIX MÓVIL: mostrar avatar sólo cuando userReady */}
             <button onClick={()=>{if(!userReady)return;currentUser?setMainView("account"):setShowAuth(true);}} style={{...S.iconBtn,position:"relative"}}>
               {userReady&&currentUser
                 ? <UserAvatar user={currentUser} size={26}/>
@@ -1204,7 +1272,7 @@ export default function Home() {
                       <p style={{margin:0,fontSize:10,color:"#444"}}>{currentUser.email}</p>
                     </div>
                   </div>
-                  <button onClick={()=>{setCurrentUser(null);localStorage.removeItem("fokus_user");localStorage.removeItem("fokus_refresh");setMenuOpen(false);}}
+                  <button onClick={()=>{setCurrentUser(null);setMenuOpen(false);}}
                     style={{background:"none",border:"1px solid #2a2a2a",color:"#555",padding:"0.35rem 0.85rem",borderRadius:6,cursor:"pointer",fontFamily:"inherit",fontSize:10,fontWeight:700,WebkitTapHighlightColor:"transparent"}}>
                     Cerrar sesión
                   </button>
@@ -1378,9 +1446,8 @@ export default function Home() {
             <h1 style={{fontSize:11,fontWeight:800,letterSpacing:3,marginBottom:"2rem",color:"#444"}}>MI CUENTA</h1>
             <div style={{background:"#111",borderRadius:16,padding:"1.75rem 1.5rem",border:"1px solid #1a1a1a",marginBottom:"1rem"}}>
               <div style={{display:"flex",alignItems:"flex-start",gap:"1.25rem",marginBottom:"1.5rem"}}>
-                {/* Avatar + upload */}
+                {/* Avatar + upload — FIX iOS: sin capture para abrir menú nativo */}
                 <div className="avatar-ring" style={{position:"relative",flexShrink:0}}>
-                  {/* FIX MÓVIL: key fuerza re-render de img cuando cambia photoURL */}
                   {currentUser.photoURL
                     ? <img key={currentUser.photoURL} src={currentUser.photoURL} alt={currentUser.displayName}
                         style={{width:72,height:72,borderRadius:"50%",objectFit:"cover",border:"2px solid #222",display:"block"}}
@@ -1389,14 +1456,27 @@ export default function Home() {
                         <span style={{fontSize:28,fontWeight:900,color:"#080808",lineHeight:1}}>{currentUser.displayName[0]?.toUpperCase()}</span>
                       </div>
                   }
-                  <button onClick={()=>photoInputRef.current?.click()} disabled={photoLoading}
+                  {/* El botón abre el input oculto */}
+                  <button
+                    onClick={()=>photoInputRef.current?.click()}
+                    disabled={photoLoading}
                     style={{position:"absolute",bottom:0,right:0,width:26,height:26,borderRadius:"50%",background:photoLoading?"#333":"#fff",border:"2px solid #111",display:"flex",alignItems:"center",justifyContent:"center",cursor:photoLoading?"not-allowed":"pointer",WebkitTapHighlightColor:"transparent",transition:"background 0.15s"}}>
                     {photoLoading
                       ? <div style={{width:10,height:10,border:"1.5px solid #666",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/>
                       : <IcCamera s={12} c="#080808"/>}
                   </button>
-                  {/* FIX MÓVIL: accept="image/*" sin capture para que funcione en todos los móviles */}
-                  <input ref={photoInputRef} type="file" accept="image/*" onChange={handleProfilePhoto} style={{display:"none"}}/>
+                  {/*
+                    FIX iOS: NO usar capture="" — sin ese atributo iOS muestra el menú
+                    nativo con opciones "Tomar foto" / "Elegir de fototeca"
+                    Con capture="environment" iOS salta directo a la cámara sin menú
+                  */}
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleProfilePhoto}
+                    style={{display:"none"}}
+                  />
                 </div>
                 <div style={{flex:1,minWidth:0}}>
                   {editingName?(
@@ -1430,7 +1510,7 @@ export default function Home() {
                 </div>
               </div>
             </div>
-            <button onClick={()=>{setCurrentUser(null);localStorage.removeItem("fokus_user");localStorage.removeItem("fokus_refresh");setMainView("fokus");}}
+            <button onClick={()=>{setCurrentUser(null);setMainView("fokus");}}
               style={{...S.darkBtn,background:"transparent",color:"#cc3333",border:"1px solid #2a1515",borderRadius:8,width:"100%",justifyContent:"center",fontSize:12}}>
               Cerrar sesión
             </button>
@@ -1517,26 +1597,47 @@ export default function Home() {
                     <ComprobanteUpload url={comprobanteUrl} onUrl={setComprobanteUrl}/>
                   )}
 
-                  {!deliveryInfo.zone&&<p style={{textAlign:"center",fontSize:10,color:"#555",marginTop:"0.75rem"}}>Selecciona el tipo de envio para continuar</p>}
-                  {deliveryInfo.zone&&!payMethod&&<p style={{textAlign:"center",fontSize:10,color:"#555",marginTop:"0.5rem"}}>Selecciona un método de pago para continuar</p>}
+                  {/* Indicadores de estado */}
+                  {!deliveryInfo.zone&&(
+                    <p style={{textAlign:"center",fontSize:10,color:"#555",marginTop:"0.75rem"}}>Selecciona el tipo de envio para continuar</p>
+                  )}
+                  {deliveryInfo.zone&&!payMethod&&(
+                    <p style={{textAlign:"center",fontSize:10,color:"#555",marginTop:"0.5rem"}}>Selecciona un método de pago para continuar</p>
+                  )}
+                  {payMethod&&deliveryValid&&!comprobanteUrl&&(
+                    <div style={{marginTop:"0.75rem",background:"rgba(255,180,0,0.06)",border:"1px solid rgba(255,180,0,0.2)",borderRadius:8,padding:"0.65rem 1rem",display:"flex",alignItems:"center",gap:"0.5rem"}}>
+                      <span style={{fontSize:14}}>📎</span>
+                      <p style={{margin:0,fontSize:11,color:"#c8a000",lineHeight:1.5,fontWeight:600}}>Sube el comprobante de pago para activar el envío del pedido</p>
+                    </div>
+                  )}
 
-                  {/* Botón WhatsApp */}
-                  <a href={waMsg()} target="_blank" rel="noreferrer"
+                  {/* Botón WhatsApp — solo activo cuando TODO está completo incluyendo comprobante */}
+                  <a
+                    href={canSendOrder ? waMsg() : undefined}
+                    target={canSendOrder ? "_blank" : undefined}
+                    rel="noreferrer"
                     onClick={e=>{
-                      if(!payMethod||!deliveryValid){
+                      if(!canSendOrder){
                         e.preventDefault();
                         if(!deliveryInfo.zone) alert("Por favor selecciona el tipo de envio.");
                         else if(deliveryInfo.zone==="otro"&&(!deliveryInfo.nombre||!deliveryInfo.cedula||!deliveryInfo.telefono||!deliveryInfo.agencia||!deliveryInfo.estado||!deliveryInfo.direccion)) alert("Por favor completa todos los datos de envío.");
                         else if(!payMethod) alert("Por favor selecciona un método de pago.");
+                        else if(!comprobanteUrl) alert("Por favor sube el comprobante de pago para continuar.");
                       }
                     }}
-                    style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.75rem",marginTop:"1.25rem",background:"#25D366",color:"#fff",padding:"1rem",fontWeight:900,letterSpacing:2,fontSize:11,textDecoration:"none",borderRadius:10,opacity:(payMethod&&deliveryValid)?1:0.35,transition:"opacity 0.2s"}}>
-                    <IcWA s={18}/>
-                    {comprobanteUrl?"ENVIAR PEDIDO + COMPROBANTE":"NOTIFICAR PAGO"}
+                    style={{
+                      display:"flex",alignItems:"center",justifyContent:"center",gap:"0.75rem",
+                      marginTop:"1.25rem",background:canSendOrder?"#25D366":"#1a1a1a",
+                      color:canSendOrder?"#fff":"#444",
+                      padding:"1rem",fontWeight:900,letterSpacing:2,fontSize:11,
+                      textDecoration:"none",borderRadius:10,
+                      border:`1px solid ${canSendOrder?"transparent":"#2a2a2a"}`,
+                      opacity:1,transition:"background 0.25s, color 0.25s, border-color 0.25s",
+                      cursor:canSendOrder?"pointer":"not-allowed",
+                    }}>
+                    <IcWA s={18} c={canSendOrder?"#fff":"#444"}/>
+                    {canSendOrder ? "ENVIAR PEDIDO + COMPROBANTE" : "NOTIFICAR PAGO"}
                   </a>
-                  {payMethod&&!comprobanteUrl&&(
-                    <p style={{textAlign:"center",fontSize:10,color:"#555",marginTop:"0.5rem",lineHeight:1.5}}>Puedes enviar sin comprobante y adjuntarlo directamente en el chat de WhatsApp.</p>
-                  )}
                 </div>
               </>
             )}
