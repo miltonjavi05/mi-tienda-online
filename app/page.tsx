@@ -165,20 +165,16 @@ async function fsDelete(id: string): Promise<void> {
   await fetch(`${fsBase()}/products/${id}`,{method:"DELETE"});
 }
 
-// Guardar datos de usuario en Firestore
 async function fsSaveUser(uid: string, data: Record<string, unknown>, idToken?: string): Promise<void> {
   const fields = Object.fromEntries(Object.entries(data).map(([k,v])=>[k,toFs(v as unknown)]));
   const mask = Object.keys(data).map(k=>`updateMask.fieldPaths=${encodeURIComponent(k)}`).join("&");
   const headers: Record<string,string> = {"Content-Type":"application/json"};
   if (idToken) headers["Authorization"] = `Bearer ${idToken}`;
   await fetch(`${fsBase()}/users/${uid}?${mask}`, {
-    method:"PATCH",
-    headers,
-    body: JSON.stringify({fields}),
+    method:"PATCH", headers, body: JSON.stringify({fields}),
   }).catch(()=>{});
 }
 
-// Refrescar idToken
 async function refreshIdToken(refreshToken: string): Promise<{idToken:string;localId:string}|null> {
   try {
     const r = await fetch(`https://securetoken.googleapis.com/v1/token?key=${FIREBASE_CONFIG.apiKey}`, {
@@ -195,15 +191,13 @@ async function refreshIdToken(refreshToken: string): Promise<{idToken:string;loc
 // ─── AUTH ─────────────────────────────────────────────────────────────────────
 async function authSignUp(email: string, password: string, displayName: string): Promise<{idToken:string;localId:string;refreshToken:string}> {
   const r = await fetch(`${AUTH_BASE}:signUp?key=${FIREBASE_CONFIG.apiKey}`,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
+    method:"POST", headers:{"Content-Type":"application/json"},
     body:JSON.stringify({email,password,returnSecureToken:true}),
   });
   const d = await r.json() as {idToken?:string;localId?:string;refreshToken?:string;error?:{message:string}};
   if (!r.ok || d.error) throw new Error(d.error?.message || "Error al registrar");
   await fetch(`${AUTH_BASE}:update?key=${FIREBASE_CONFIG.apiKey}`,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
+    method:"POST", headers:{"Content-Type":"application/json"},
     body:JSON.stringify({idToken:d.idToken,displayName,returnSecureToken:false}),
   });
   return {idToken:d.idToken!,localId:d.localId!,refreshToken:d.refreshToken!};
@@ -211,8 +205,7 @@ async function authSignUp(email: string, password: string, displayName: string):
 
 async function authSignIn(email: string, password: string): Promise<{idToken:string;localId:string;displayName:string;refreshToken:string}> {
   const r = await fetch(`${AUTH_BASE}:signInWithPassword?key=${FIREBASE_CONFIG.apiKey}`,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
+    method:"POST", headers:{"Content-Type":"application/json"},
     body:JSON.stringify({email,password,returnSecureToken:true}),
   });
   const d = await r.json() as {idToken?:string;localId?:string;displayName?:string;refreshToken?:string;error?:{message:string}};
@@ -220,15 +213,12 @@ async function authSignIn(email: string, password: string): Promise<{idToken:str
   return {idToken:d.idToken!,localId:d.localId!,displayName:d.displayName||"",refreshToken:d.refreshToken!};
 }
 
-// Cargar datos completos del usuario desde Firestore al login
 async function fsGetUser(uid: string): Promise<{photoURL:string}> {
   try {
     const r = await fetch(`${fsBase()}/users/${uid}`);
     if (!r.ok) return {photoURL:""};
     const d = await r.json() as FsDoc;
-    return {
-      photoURL: (fromFs(d.fields?.photoURL ?? {nullValue:null}) as string) || "",
-    };
+    return { photoURL: (fromFs(d.fields?.photoURL ?? {nullValue:null}) as string) || "" };
   } catch { return {photoURL:""}; }
 }
 
@@ -319,7 +309,7 @@ const IcCheck = memo(({s=16,c="#fff"}:{s?:number;c?:string}) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
 ));
 IcCheck.displayName="IcCheck";
-const IcUpload = memo(({s=20,c="#fff"}:{s?:number;c?:string}) => (
+const IcUpload = memo(({s=18,c="#fff"}:{s?:number;c?:string}) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg>
 ));
 IcUpload.displayName="IcUpload";
@@ -343,7 +333,7 @@ function PwdInput({value,onChange,placeholder,onKeyDown,autoComplete}:{
   );
 }
 
-// ─── LAZY IMG ────────────────────────────────────────────────────────────────
+// ─── LAZY IMG ─────────────────────────────────────────────────────────────────
 const LazyImg = memo(function LazyImg({src,alt}:{src:string;alt:string}) {
   const [loaded,setLoaded]=useState(false);
   const [inView,setInView]=useState(false);
@@ -363,7 +353,7 @@ const LazyImg = memo(function LazyImg({src,alt}:{src:string;alt:string}) {
   );
 });
 
-// ─── SKELETON ────────────────────────────────────────────────────────────────
+// ─── SKELETON ─────────────────────────────────────────────────────────────────
 function SkeletonCard() {
   return (
     <div>
@@ -410,7 +400,7 @@ function DraggableWA() {
   );
 }
 
-// ─── NATIVE TABS ─────────────────────────────────────────────────────────────
+// ─── NATIVE TABS ──────────────────────────────────────────────────────────────
 const NativeTabs = memo(function NativeTabs({items,active,onSelect,renderItem,height=44}:{
   items:string[];active:string;onSelect:(v:string)=>void;renderItem:(item:string,isActive:boolean)=>React.ReactNode;height?:number;
 }) {
@@ -428,7 +418,7 @@ const NativeTabs = memo(function NativeTabs({items,active,onSelect,renderItem,he
   );
 });
 
-// ─── PRODUCT CARD ────────────────────────────────────────────────────────────
+// ─── PRODUCT CARD ─────────────────────────────────────────────────────────────
 const ProductCard = memo(function ProductCard({product,onClick,index}:{product:Product;onClick:()=>void;index:number}) {
   const [vis,setVis]=useState(false);
   const ref=useRef<HTMLDivElement>(null);
@@ -446,7 +436,7 @@ const ProductCard = memo(function ProductCard({product,onClick,index}:{product:P
   );
 });
 
-// ─── H CARD ──────────────────────────────────────────────────────────────────
+// ─── H CARD ───────────────────────────────────────────────────────────────────
 const HCard = memo(function HCard({product,onClick}:{product:Product;onClick:()=>void}) {
   return (
     <div className="hc" onClick={onClick} style={{cursor:"pointer",flexShrink:0,width:148,touchAction:"manipulation"}}>
@@ -460,7 +450,7 @@ const HCard = memo(function HCard({product,onClick}:{product:Product;onClick:()=
   );
 });
 
-// ─── H ROW ───────────────────────────────────────────────────────────────────
+// ─── H ROW ────────────────────────────────────────────────────────────────────
 const HRow = memo(function HRow({products,onSelect}:{products:Product[];onSelect:(p:Product)=>void}) {
   const rowRef=useRef<HTMLDivElement>(null);
   const [showLeft,setShowLeft]=useState(false);
@@ -481,7 +471,7 @@ const HRow = memo(function HRow({products,onSelect}:{products:Product[];onSelect
   );
 });
 
-// ─── ADDED MODAL ─────────────────────────────────────────────────────────────
+// ─── ADDED MODAL ──────────────────────────────────────────────────────────────
 const AddedModal = memo(function AddedModal({product,onClose,onGoCart}:{product:Product;onClose:()=>void;onGoCart:()=>void}) {
   return (
     <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:600,background:"rgba(0,0,0,0.72)",display:"flex",alignItems:"flex-end",justifyContent:"center",animation:"fadeIn 0.18s ease"}}>
@@ -544,7 +534,7 @@ const ARow = memo(function ARow({p,editing,onEdit,onDel,onDragStart,onDragOver,o
   );
 });
 
-// ─── DELIVERY FORM ───────────────────────────────────────────────────────────
+// ─── DELIVERY FORM ────────────────────────────────────────────────────────────
 function DeliveryForm({info,onChange}:{info:DeliveryInfo;onChange:(i:DeliveryInfo)=>void}) {
   const upd=(field:keyof DeliveryInfo,val:string)=>onChange({...info,[field]:val});
   return (
@@ -582,18 +572,16 @@ function DeliveryForm({info,onChange}:{info:DeliveryInfo;onChange:(i:DeliveryInf
 }
 
 // ─── COMPROBANTE UPLOAD ───────────────────────────────────────────────────────
-// FIX iOS: usar dos inputs separados (galería y cámara) + sin capture="" en el principal
-// para que iOS muestre el menú de selección nativo
+// Un único input sin `capture` → iOS muestra menú nativo: Cámara / Fototeca / Archivos
+// Android también muestra el selector nativo con todas las opciones
 function ComprobanteUpload({onUrl,url}:{onUrl:(u:string)=>void;url:string}) {
   const [loading,setLoading]=useState(false);
   const [err,setErr]=useState("");
   const [preview,setPreview]=useState("");
-  const galleryRef=useRef<HTMLInputElement>(null);
-  const cameraRef=useRef<HTMLInputElement>(null);
+  const inputRef=useRef<HTMLInputElement>(null);
 
   const processFile=useCallback(async(file:File)=>{
     setErr("");setLoading(true);
-    // Mostrar preview local inmediatamente
     const reader=new FileReader();
     reader.onload=ev=>setPreview(ev.target?.result as string);
     reader.readAsDataURL(file);
@@ -602,104 +590,94 @@ function ComprobanteUpload({onUrl,url}:{onUrl:(u:string)=>void;url:string}) {
       onUrl(uploaded);
     } catch {
       setErr("Error al subir. Intenta de nuevo.");
-      setPreview("");
-      onUrl("");
+      setPreview("");onUrl("");
     } finally {
       setLoading(false);
-      if(galleryRef.current) galleryRef.current.value="";
-      if(cameraRef.current) cameraRef.current.value="";
+      if(inputRef.current) inputRef.current.value="";
     }
   },[onUrl]);
 
-  const handleGallery=useCallback((e:React.ChangeEvent<HTMLInputElement>)=>{
-    const file=e.target.files?.[0];if(file)processFile(file);
-  },[processFile]);
-
-  const handleCamera=useCallback((e:React.ChangeEvent<HTMLInputElement>)=>{
+  const handleChange=useCallback((e:React.ChangeEvent<HTMLInputElement>)=>{
     const file=e.target.files?.[0];if(file)processFile(file);
   },[processFile]);
 
   const reset=useCallback(()=>{onUrl("");setPreview("");setErr("");},[onUrl]);
 
   const displayImg=url||preview;
+  const isReady=!!url;
+  const isUploading=loading||(!url&&!!preview);
 
   return (
     <div style={{marginTop:"1rem"}}>
       <p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#333",marginBottom:"0.6rem"}}>
         COMPROBANTE DE PAGO <span style={{color:"#cc3333"}}>*</span>
       </p>
-      <div style={{background:"#0a0a0a",borderRadius:10,border:`1px dashed ${displayImg&&url?"#2a5a2a":displayImg?"#2a4a2a":"#1e1e1e"}`,padding:"1rem",display:"flex",flexDirection:"column",gap:"0.65rem",transition:"border-color 0.2s"}}>
-        {displayImg?(
-          <div style={{position:"relative",display:"inline-block"}}>
+
+      {/* Input único sin capture → iOS abre menú nativo completo */}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleChange}
+        disabled={loading}
+        style={{display:"none"}}
+        id="comprobante-input"
+      />
+
+      {displayImg ? (
+        /* ── Vista previa ── */
+        <div style={{background:"#0a0a0a",borderRadius:10,border:`1px solid ${isReady?"#2a5a2a":"#2a3a2a"}`,padding:"0.85rem",transition:"border-color 0.2s"}}>
+          <div style={{position:"relative",display:"inline-block",width:"100%"}}>
             <img src={displayImg} alt="Comprobante" style={{width:"100%",maxHeight:200,objectFit:"contain",borderRadius:8,display:"block",background:"#111"}} draggable={false}/>
-            <div style={{position:"absolute",top:6,right:6,background:"rgba(0,0,0,0.75)",borderRadius:6,padding:"3px 10px",display:"flex",alignItems:"center",gap:4}}>
-              {url
-                ? <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg><span style={{fontSize:10,color:"#4caf50",fontWeight:700}}>Listo</span></>
-                : loading
-                  ? <><div style={{width:10,height:10,border:"1.5px solid #555",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/><span style={{fontSize:10,color:"#888"}}>Subiendo…</span></>
-                  : <span style={{fontSize:10,color:"#888"}}>Procesando…</span>
+            {/* Badge estado */}
+            <div style={{position:"absolute",top:8,right:8,background:"rgba(0,0,0,0.82)",borderRadius:20,padding:"4px 12px",display:"flex",alignItems:"center",gap:5}}>
+              {isReady
+                ? <><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg><span style={{fontSize:10,color:"#4caf50",fontWeight:700}}>Listo</span></>
+                : <><div style={{width:10,height:10,border:"1.5px solid #444",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/><span style={{fontSize:10,color:"#888"}}>{isUploading?"Subiendo…":"Procesando…"}</span></>
               }
             </div>
+            {/* Botón cambiar */}
             <button onClick={reset}
-              style={{position:"absolute",top:6,left:6,background:"rgba(0,0,0,0.75)",border:"none",color:"#aaa",cursor:"pointer",borderRadius:6,padding:"3px 10px",fontSize:10,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>
+              style={{position:"absolute",top:8,left:8,background:"rgba(0,0,0,0.82)",border:"none",color:"#aaa",cursor:"pointer",borderRadius:20,padding:"4px 12px",fontSize:10,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>
               Cambiar
             </button>
           </div>
-        ):(
-          <>
-            <div style={{display:"flex",alignItems:"center",gap:"0.65rem"}}>
-              <IcUpload s={20} c="#444"/>
-              <div>
-                <p style={{margin:0,fontSize:12,fontWeight:700,color:"#555"}}>Sube tu comprobante de pago</p>
-                <p style={{margin:"2px 0 0",fontSize:10,color:"#333",lineHeight:1.5}}>Obligatorio para completar el pedido</p>
-              </div>
-            </div>
+        </div>
+      ) : (
+        /* ── Botón único de carga ── */
+        <label
+          htmlFor="comprobante-input"
+          style={{
+            display:"flex",alignItems:"center",justifyContent:"center",gap:"0.65rem",
+            width:"100%",padding:"0.95rem 1rem",
+            background:loading?"#161616":"#111",
+            border:`1px solid ${loading?"#252525":"#2a2a2a"}`,
+            borderRadius:10,cursor:loading?"not-allowed":"pointer",
+            fontSize:13,fontWeight:800,letterSpacing:1.5,
+            color:loading?"#444":"#ccc",
+            fontFamily:"inherit",
+            transition:"all 0.15s",
+            WebkitTapHighlightColor:"transparent",
+            boxSizing:"border-box",
+          } as React.CSSProperties}
+        >
+          {loading
+            ? <><div style={{width:14,height:14,border:"2px solid #333",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/> Subiendo…</>
+            : <><IcUpload s={18} c="#888"/> SUBIR COMPROBANTE</>
+          }
+        </label>
+      )}
 
-            {/* Inputs separados: gallery (sin capture) + camera (con capture) */}
-            {/* iOS abre el menú nativo cuando hay múltiples botones de selección */}
-            <input
-              ref={galleryRef}
-              type="file"
-              accept="image/*"
-              onChange={handleGallery}
-              style={{display:"none"}}
-              id="comp-gallery"
-            />
-            <input
-              ref={cameraRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={handleCamera}
-              style={{display:"none"}}
-              id="comp-camera"
-            />
-
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.5rem"}}>
-              <label
-                htmlFor="comp-gallery"
-                style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:"0.4rem",background:loading?"#1a1a1a":"#161616",color:loading?"#444":"#888",border:"1px solid #252525",padding:"0.65rem 0.85rem",borderRadius:8,cursor:loading?"not-allowed":"pointer",fontSize:11,fontWeight:700,fontFamily:"inherit",transition:"all 0.15s",WebkitTapHighlightColor:"transparent",textAlign:"center" as const}}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                Galería
-              </label>
-              <label
-                htmlFor="comp-camera"
-                style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:"0.4rem",background:loading?"#1a1a1a":"#161616",color:loading?"#444":"#888",border:"1px solid #252525",padding:"0.65rem 0.85rem",borderRadius:8,cursor:loading?"not-allowed":"pointer",fontSize:11,fontWeight:700,fontFamily:"inherit",transition:"all 0.15s",WebkitTapHighlightColor:"transparent",textAlign:"center" as const}}
-              >
-                <IcCamera s={14} c="#666"/>
-                Cámara
-              </label>
-            </div>
-          </>
-        )}
-        {err&&<p style={{margin:0,fontSize:11,color:"#ff5555",background:"#1e0808",borderRadius:6,padding:"0.5rem 0.75rem"}}>{err}</p>}
-      </div>
+      {err&&(
+        <p style={{margin:"0.5rem 0 0",fontSize:11,color:"#ff5555",background:"#1e0808",borderRadius:8,padding:"0.5rem 0.75rem"}}>
+          {err}
+        </p>
+      )}
     </div>
   );
 }
 
-// ─── FOOTER ──────────────────────────────────────────────────────────────────
+// ─── FOOTER ───────────────────────────────────────────────────────────────────
 const Footer = memo(function Footer({setMainView,setShopFilter}:{setMainView:(v:MainView)=>void;setShopFilter:(v:ShopFilter)=>void}) {
   const sA:React.CSSProperties={display:"flex",alignItems:"center",justifyContent:"center",width:36,height:36,borderRadius:"50%",background:"rgba(255,255,255,0.04)",textDecoration:"none",border:"1px solid rgba(255,255,255,0.07)",flexShrink:0};
   const cats=[{l:"Lentes",c:"LENTES"},{l:"Relojes",c:"RELOJES"},{l:"Collares",c:"COLLARES"},{l:"Pulseras",c:"PULSERAS"},{l:"Anillos",c:"ANILLOS"},{l:"Aretes",c:"ARETES"},{l:"Billeteras",c:"BILLETERAS"}];
@@ -752,7 +730,7 @@ const Footer = memo(function Footer({setMainView,setShopFilter}:{setMainView:(v:
   );
 });
 
-// ─── AUTH MODAL ──────────────────────────────────────────────────────────────
+// ─── AUTH MODAL ───────────────────────────────────────────────────────────────
 function AuthModal({onClose,onSuccess}:{onClose:()=>void;onSuccess:(u:UserData)=>void}) {
   const [mode,setMode]=useState<"login"|"register">("login");
   const [name,setName]=useState(""),[email,setEmail]=useState(""),[pwd,setPwd]=useState(""),
@@ -785,7 +763,6 @@ function AuthModal({onClose,onSuccess}:{onClose:()=>void;onSuccess:(u:UserData)=
         onSuccess(ud);
       } else {
         const {idToken,localId,displayName,refreshToken}=await authSignIn(email.trim(),pwd);
-        // Cargar datos completos desde Firestore (incluyendo foto de perfil)
         const fsData=await fsGetUser(localId);
         const ud:UserData={uid:localId,email:email.trim(),displayName:displayName||email.split("@")[0],createdAt:Date.now(),photoURL:fsData.photoURL,idToken};
         localStorage.setItem("fokus_refresh",refreshToken);
@@ -929,7 +906,7 @@ export default function Home() {
   const [newName,setNewName]           = useState("");
   const [nameLoading,setNameLoading]   = useState(false);
   const [photoLoading,setPhotoLoading] = useState(false);
-  // FIX iOS: usar ref en lugar de input en DOM — sin capture para abrir menú nativo
+  // Input de foto sin capture → menú nativo iOS
   const photoInputRef                  = useRef<HTMLInputElement>(null);
 
   const setMainView=useCallback((v:MainView)=>{setMainViewRaw(v);scrollTop();},[]);
@@ -968,41 +945,31 @@ export default function Home() {
   const touchDragId=useRef<string|null>(null);
   const touchDragActive=useRef(false);
 
-  // ── Cargar user desde localStorage en primer render ──
+  // ── Cargar user desde localStorage ──
   useEffect(()=>{
     try {
       const stored=localStorage.getItem("fokus_user");
       if(stored){
         const parsed=JSON.parse(stored) as UserData;
         setCurrentUser(parsed);
-        // Refrescar token e intentar obtener foto actualizada desde Firestore
         const rt=localStorage.getItem("fokus_refresh");
         if(rt && parsed.uid){
           refreshIdToken(rt).then(async result=>{
             if(result){
-              // Obtener datos frescos incluyendo photoURL
               const fsData=await fsGetUser(parsed.uid).catch(()=>({photoURL:""}));
               setCurrentUser(prev=>{
                 if(!prev)return prev;
-                const updated={
-                  ...prev,
-                  idToken:result.idToken,
-                  // Usar foto de Firestore si existe, sino la que ya había
-                  photoURL: fsData.photoURL || prev.photoURL || "",
-                };
+                const updated={...prev,idToken:result.idToken,photoURL:fsData.photoURL||prev.photoURL||""};
                 localStorage.setItem("fokus_user",JSON.stringify(updated));
                 return updated;
               });
             }
           }).catch(()=>{});
         }
-      } else {
-        setCurrentUser(null);
-      }
+      } else { setCurrentUser(null); }
     } catch { setCurrentUser(null); }
   },[]);
 
-  // Persistir user en localStorage cuando cambia
   useEffect(()=>{
     if(currentUser===undefined)return;
     if(currentUser) localStorage.setItem("fokus_user",JSON.stringify(currentUser));
@@ -1031,42 +998,30 @@ export default function Home() {
     if(typeof window!=="undefined"&&window.location.pathname==="/admin")setMainViewRaw("admin");
   },[loadProducts]);
 
-  // ── FIX iOS: foto de perfil sin capture — abre menú nativo en iOS ──
+  // Foto de perfil — sin capture → iOS muestra menú nativo
   const handleProfilePhoto=useCallback(async(e:React.ChangeEvent<HTMLInputElement>)=>{
     const file=e.target.files?.[0];if(!file||!currentUser)return;
     setPhotoLoading(true);
     try{
       const url=await uploadImg(file);
-      // Obtener idToken fresco
       let idToken=currentUser.idToken;
-      if(!idToken){
-        const rt=localStorage.getItem("fokus_refresh");
-        if(rt){const res=await refreshIdToken(rt);if(res)idToken=res.idToken;}
-      }
-      // Guardar en Firestore para persistencia entre sesiones
+      if(!idToken){const rt=localStorage.getItem("fokus_refresh");if(rt){const res=await refreshIdToken(rt);if(res)idToken=res.idToken;}}
       await fsSaveUser(currentUser.uid,{photoURL:url},idToken).catch(()=>{});
-      // Actualizar estado y localStorage
       setCurrentUser(prev=>{
         if(!prev)return prev;
         const updated={...prev,photoURL:url,idToken};
         localStorage.setItem("fokus_user",JSON.stringify(updated));
         return updated;
       });
-    }catch(err){
-      console.error("Error subiendo foto:",err);
-    }
-    finally{
-      setPhotoLoading(false);
-      if(photoInputRef.current) photoInputRef.current.value="";
-    }
+    }catch(err){console.error("Error subiendo foto:",err);}
+    finally{setPhotoLoading(false);if(photoInputRef.current)photoInputRef.current.value="";}
   },[currentUser]);
 
   const handleSaveName=useCallback(async()=>{
     if(!newName.trim()||!currentUser)return;
     setNameLoading(true);
     const updated:UserData={...currentUser,displayName:newName.trim()};
-    setCurrentUser(updated);
-    setEditingName(false);setNameLoading(false);
+    setCurrentUser(updated);setEditingName(false);setNameLoading(false);
   },[currentUser,newName]);
 
   const catCounts=useMemo(()=>{
@@ -1094,8 +1049,7 @@ export default function Home() {
     return true;
   },[deliveryInfo]);
 
-  // Requerimos comprobante para activar el botón de WhatsApp
-  const canSendOrder = useMemo(()=>!!(payMethod && deliveryValid && comprobanteUrl),[payMethod,deliveryValid,comprobanteUrl]);
+  const canSendOrder=useMemo(()=>!!(payMethod&&deliveryValid&&comprobanteUrl),[payMethod,deliveryValid,comprobanteUrl]);
 
   const waMsg=useCallback(()=>{
     const lines=cart.map(i=>`• ${i.product.name} x${i.qty} — $${(i.product.price*i.qty).toFixed(2)}`);
@@ -1144,8 +1098,7 @@ export default function Home() {
   const stickyTop=navH-1;
   const TABS=[{id:"fokus" as MainView,l:"FOKUS"},{id:"shop" as MainView,l:"TIENDA"},{id:"comunidad" as MainView,l:"COMUNIDAD"}];
   const openProd=useCallback((p:Product)=>{setSel(p);setModalQty(1);},[]);
-
-  const userReady = currentUser !== undefined;
+  const userReady=currentUser!==undefined;
 
   return (
     <div style={{fontFamily:"'Helvetica Neue',Arial,sans-serif",background:C.bg,minHeight:"100vh",color:C.text}}>
@@ -1174,7 +1127,7 @@ export default function Home() {
           .fl:hover{color:#fff!important}
           .pl:hover{opacity:0.8}
           .cc:hover{transform:translateY(-4px) scale(1.01)!important;border-color:#2a2a2a!important;box-shadow:0 12px 40px rgba(0,0,0,0.6)!important;}
-          label.comp-btn:hover{background:#1a1a1a!important;color:#aaa!important;border-color:#333!important;}
+          .comp-label:hover{background:#1a1a1a!important;color:#fff!important;border-color:#333!important;}
         }
         .cc{transition:transform 0.25s ease, border-color 0.2s ease, box-shadow 0.25s ease;}
         .pc:active{transform:scale(0.97)}
@@ -1190,7 +1143,8 @@ export default function Home() {
         button,a{-webkit-tap-highlight-color:transparent;}
         .avatar-ring{position:relative;display:inline-flex;align-items:center;justify-content:center;}
         .avatar-ring::after{content:'';position:absolute;inset:-3px;border-radius:50%;border:2px solid rgba(255,255,255,0.15);pointer-events:none;}
-        /* iOS file input fix */
+        /* iOS: font-size 16px evita zoom automático en inputs */
+        input,select,textarea{font-size:16px!important;}
         input[type=file]{font-size:16px;}
       `}</style>
 
@@ -1209,9 +1163,7 @@ export default function Home() {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
             </button>
             <button onClick={()=>{if(!userReady)return;currentUser?setMainView("account"):setShowAuth(true);}} style={{...S.iconBtn,position:"relative"}}>
-              {userReady&&currentUser
-                ? <UserAvatar user={currentUser} size={26}/>
-                : <IcUser s={19} c="#fff"/>}
+              {userReady&&currentUser?<UserAvatar user={currentUser} size={26}/>:<IcUser s={19} c="#fff"/>}
             </button>
             <button onClick={()=>setMainView("cart")} style={{...S.iconBtn,position:"relative"}}>
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
@@ -1446,7 +1398,7 @@ export default function Home() {
             <h1 style={{fontSize:11,fontWeight:800,letterSpacing:3,marginBottom:"2rem",color:"#444"}}>MI CUENTA</h1>
             <div style={{background:"#111",borderRadius:16,padding:"1.75rem 1.5rem",border:"1px solid #1a1a1a",marginBottom:"1rem"}}>
               <div style={{display:"flex",alignItems:"flex-start",gap:"1.25rem",marginBottom:"1.5rem"}}>
-                {/* Avatar + upload — FIX iOS: sin capture para abrir menú nativo */}
+                {/* Avatar — input sin capture → iOS menú nativo */}
                 <div className="avatar-ring" style={{position:"relative",flexShrink:0}}>
                   {currentUser.photoURL
                     ? <img key={currentUser.photoURL} src={currentUser.photoURL} alt={currentUser.displayName}
@@ -1456,27 +1408,14 @@ export default function Home() {
                         <span style={{fontSize:28,fontWeight:900,color:"#080808",lineHeight:1}}>{currentUser.displayName[0]?.toUpperCase()}</span>
                       </div>
                   }
-                  {/* El botón abre el input oculto */}
-                  <button
-                    onClick={()=>photoInputRef.current?.click()}
-                    disabled={photoLoading}
+                  <button onClick={()=>photoInputRef.current?.click()} disabled={photoLoading}
                     style={{position:"absolute",bottom:0,right:0,width:26,height:26,borderRadius:"50%",background:photoLoading?"#333":"#fff",border:"2px solid #111",display:"flex",alignItems:"center",justifyContent:"center",cursor:photoLoading?"not-allowed":"pointer",WebkitTapHighlightColor:"transparent",transition:"background 0.15s"}}>
                     {photoLoading
                       ? <div style={{width:10,height:10,border:"1.5px solid #666",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/>
                       : <IcCamera s={12} c="#080808"/>}
                   </button>
-                  {/*
-                    FIX iOS: NO usar capture="" — sin ese atributo iOS muestra el menú
-                    nativo con opciones "Tomar foto" / "Elegir de fototeca"
-                    Con capture="environment" iOS salta directo a la cámara sin menú
-                  */}
-                  <input
-                    ref={photoInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleProfilePhoto}
-                    style={{display:"none"}}
-                  />
+                  {/* Sin capture → iOS muestra menú nativo con Cámara / Fototeca / Archivos */}
+                  <input ref={photoInputRef} type="file" accept="image/*" onChange={handleProfilePhoto} style={{display:"none"}}/>
                 </div>
                 <div style={{flex:1,minWidth:0}}>
                   {editingName?(
@@ -1592,7 +1531,7 @@ export default function Home() {
                     );
                   })()}
 
-                  {/* COMPROBANTE — aparece cuando hay método seleccionado */}
+                  {/* COMPROBANTE — un solo botón, aparece cuando hay método seleccionado */}
                   {payMethod&&(
                     <ComprobanteUpload url={comprobanteUrl} onUrl={setComprobanteUrl}/>
                   )}
@@ -1611,7 +1550,7 @@ export default function Home() {
                     </div>
                   )}
 
-                  {/* Botón WhatsApp — solo activo cuando TODO está completo incluyendo comprobante */}
+                  {/* Botón WhatsApp */}
                   <a
                     href={canSendOrder ? waMsg() : undefined}
                     target={canSendOrder ? "_blank" : undefined}
@@ -1632,7 +1571,7 @@ export default function Home() {
                       padding:"1rem",fontWeight:900,letterSpacing:2,fontSize:11,
                       textDecoration:"none",borderRadius:10,
                       border:`1px solid ${canSendOrder?"transparent":"#2a2a2a"}`,
-                      opacity:1,transition:"background 0.25s, color 0.25s, border-color 0.25s",
+                      transition:"background 0.25s, color 0.25s, border-color 0.25s",
                       cursor:canSendOrder?"pointer":"not-allowed",
                     }}>
                     <IcWA s={18} c={canSendOrder?"#fff":"#444"}/>
