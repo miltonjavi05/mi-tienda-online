@@ -63,52 +63,13 @@ const DELIVERY_ZONES = [
 
 const SHIPPING_AGENCIES = ["MRW","Tealca","Zoom","Menssajero"];
 
-// Community testimonials – using the uploaded screenshots
-// In production these would be served from your CDN / public folder
-// Here we reference them as /community/photo_N.jpg (place the uploads there)
 const COMMUNITY_POSTS = [
-  {
-    id:"c1",
-    img:"/community/photo_1.jpg",
-    caption:"Variedad de aretes enviados a cliente en Caracas ✨",
-    tag:"ARETES",
-    location:"Caracas",
-  },
-  {
-    id:"c2",
-    img:"/community/photo_2.jpg",
-    caption:"Collar Enviado a Barinas 🖤",
-    tag:"COLLARES",
-    location:"Barinas",
-  },
-  {
-    id:"c3",
-    img:"/community/photo_3.jpg",
-    caption:"Collar enviado a Caracas 🖤🖤",
-    tag:"COLLARES",
-    location:"Caracas",
-  },
-  {
-    id:"c4",
-    img:"/community/photo_4.jpg",
-    caption:"Clienta Satisfecha 🖤 ya con su collar",
-    tag:"RESEÑA",
-    location:"Venezuela",
-  },
-  {
-    id:"c5",
-    img:"/community/photo_5.jpg",
-    caption:"Le encantaron sus pulseras 🖤",
-    tag:"PULSERAS",
-    location:"Venezuela",
-  },
-  {
-    id:"c6",
-    img:"/community/photo_6.jpg",
-    caption:"Satisfacción total 🖤",
-    tag:"RESEÑA",
-    location:"Venezuela",
-  },
+  { id:"c1", img:"/community/photo_1.jpg", caption:"Variedad de aretes enviados a cliente en Caracas ✨", tag:"ARETES",   location:"Caracas"   },
+  { id:"c2", img:"/community/photo_2.jpg", caption:"Collar Enviado a Barinas 🖤",                          tag:"COLLARES", location:"Barinas"   },
+  { id:"c3", img:"/community/photo_3.jpg", caption:"Collar enviado a Caracas 🖤🖤",                         tag:"COLLARES", location:"Caracas"   },
+  { id:"c4", img:"/community/photo_4.jpg", caption:"Clienta Satisfecha 🖤 ya con su collar",               tag:"RESEÑA",   location:"Venezuela" },
+  { id:"c5", img:"/community/photo_5.jpg", caption:"Le encantaron sus pulseras 🖤",                        tag:"PULSERAS", location:"Venezuela" },
+  { id:"c6", img:"/community/photo_6.jpg", caption:"Satisfacción total 🖤",                                tag:"RESEÑA",   location:"Venezuela" },
 ];
 
 const DELIVERY_ZONES_MAP = new Map(DELIVERY_ZONES.map(z=>[z.id,z]));
@@ -125,7 +86,7 @@ interface Product {
 interface CartItem { product: Product; qty: number; }
 interface UserData {
   uid: string; email: string; displayName: string; createdAt: number;
-  photoURL?: string;
+  photoURL?: string; idToken?: string;
 }
 
 type MainView = "fokus" | "shop" | "comunidad" | "cart" | "admin" | "account";
@@ -204,47 +165,76 @@ async function fsDelete(id: string): Promise<void> {
   await fetch(`${fsBase()}/products/${id}`,{method:"DELETE"});
 }
 
-async function fsSaveUser(uid: string, data: Omit<UserData,"uid">, idToken: string): Promise<void> {
+// Guardar foto de perfil en Firestore con idToken
+async function fsSaveUser(uid: string, data: Record<string, unknown>, idToken?: string): Promise<void> {
   const fields = Object.fromEntries(Object.entries(data).map(([k,v])=>[k,toFs(v as unknown)]));
-  await fetch(`${fsBase()}/users/${uid}?${Object.keys(data).map(k=>`updateMask.fieldPaths=${k}`).join("&")}`,{
+  const mask = Object.keys(data).map(k=>`updateMask.fieldPaths=${encodeURIComponent(k)}`).join("&");
+  const headers: Record<string,string> = {"Content-Type":"application/json"};
+  if (idToken) headers["Authorization"] = `Bearer ${idToken}`;
+  await fetch(`${fsBase()}/users/${uid}?${mask}`, {
     method:"PATCH",
-    headers:{"Content-Type":"application/json","Authorization":`Bearer ${idToken}`},
-    body:JSON.stringify({fields}),
-  });
+    headers,
+    body: JSON.stringify({fields}),
+  }).catch(()=>{});
 }
 
-// ─── AUTH — Firebase Identity Toolkit REST ───────────────────────────────────
-async function authSignUp(email: string, password: string, displayName: string): Promise<{idToken:string;localId:string}> {
+// Refrescar idToken usando refreshToken (Firebase REST)
+async function refreshIdToken(refreshToken: string): Promise<{idToken:string;localId:string}|null> {
+  try {
+    const r = await fetch(`https://securetoken.googleapis.com/v1/token?key=${FIREBASE_CONFIG.apiKey}`, {
+      method:"POST",
+      headers:{"Content-Type":"application/x-www-form-urlencoded"},
+      body:`grant_type=refresh_token&refresh_token=${encodeURIComponent(refreshToken)}`,
+    });
+    const d = await r.json() as {id_token?:string;user_id?:string};
+    if (!r.ok || !d.id_token) return null;
+    return {idToken: d.id_token, localId: d.user_id!};
+  } catch { return null; }
+}
+
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
+async function authSignUp(email: string, password: string, displayName: string): Promise<{idToken:string;localId:string;refreshToken:string}> {
   const r = await fetch(`${AUTH_BASE}:signUp?key=${FIREBASE_CONFIG.apiKey}`,{
     method:"POST",
     headers:{"Content-Type":"application/json"},
     body:JSON.stringify({email,password,returnSecureToken:true}),
   });
-  const d = await r.json() as {idToken?:string;localId?:string;error?:{message:string}};
+  const d = await r.json() as {idToken?:string;localId?:string;refreshToken?:string;error?:{message:string}};
   if (!r.ok || d.error) throw new Error(d.error?.message || "Error al registrar");
   await fetch(`${AUTH_BASE}:update?key=${FIREBASE_CONFIG.apiKey}`,{
     method:"POST",
     headers:{"Content-Type":"application/json"},
     body:JSON.stringify({idToken:d.idToken,displayName,returnSecureToken:false}),
   });
-  return {idToken:d.idToken!,localId:d.localId!};
+  return {idToken:d.idToken!,localId:d.localId!,refreshToken:d.refreshToken!};
 }
 
-async function authSignIn(email: string, password: string): Promise<{idToken:string;localId:string;displayName:string}> {
+async function authSignIn(email: string, password: string): Promise<{idToken:string;localId:string;displayName:string;refreshToken:string}> {
   const r = await fetch(`${AUTH_BASE}:signInWithPassword?key=${FIREBASE_CONFIG.apiKey}`,{
     method:"POST",
     headers:{"Content-Type":"application/json"},
     body:JSON.stringify({email,password,returnSecureToken:true}),
   });
-  const d = await r.json() as {idToken?:string;localId?:string;displayName?:string;error?:{message:string}};
+  const d = await r.json() as {idToken?:string;localId?:string;displayName?:string;refreshToken?:string;error?:{message:string}};
   if (!r.ok || d.error) throw new Error(d.error?.message || "Error al iniciar sesión");
-  return {idToken:d.idToken!,localId:d.localId!,displayName:d.displayName||""};
+  return {idToken:d.idToken!,localId:d.localId!,displayName:d.displayName||"",refreshToken:d.refreshToken!};
+}
+
+// Cargar foto desde Firestore al hacer login
+async function fsGetUserPhoto(uid: string): Promise<string> {
+  try {
+    const r = await fetch(`${fsBase()}/users/${uid}`);
+    if (!r.ok) return "";
+    const d = await r.json() as FsDoc;
+    return (fromFs(d.fields?.photoURL ?? {nullValue:null}) as string) || "";
+  } catch { return ""; }
 }
 
 // ─── CLOUDINARY ───────────────────────────────────────────────────────────────
-async function uploadImg(file: File): Promise<string> {
+async function uploadImg(file: File, preset = CLOUDINARY_PRESET): Promise<string> {
   const fd = new FormData();
-  fd.append("file", file); fd.append("upload_preset", CLOUDINARY_PRESET);
+  fd.append("file", file);
+  fd.append("upload_preset", preset);
   const r = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`,{method:"POST",body:fd});
   if (!r.ok) throw new Error("Error subiendo imagen");
   return ((await r.json()) as {secure_url:string}).secure_url;
@@ -286,101 +276,66 @@ const S = {
 const IcWA = memo(({s=22,c="#fff"}:{s?:number;c?:string}) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill={c}><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
 ));
-IcWA.displayName = "IcWA";
+IcWA.displayName="IcWA";
 const IcIG = memo(({s=22,c="#fff"}:{s?:number;c?:string}) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill={c}><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
 ));
-IcIG.displayName = "IcIG";
+IcIG.displayName="IcIG";
 const IcFB = memo(({s=22,c="#fff"}:{s?:number;c?:string}) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill={c}><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
 ));
-IcFB.displayName = "IcFB";
+IcFB.displayName="IcFB";
 const IcTT = memo(({s=22,c="#fff"}:{s?:number;c?:string}) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill={c}><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
 ));
-IcTT.displayName = "IcTT";
-
+IcTT.displayName="IcTT";
 const IcTruck = memo(({s=20,c="#fff"}:{s?:number;c?:string}) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="1" y="3" width="15" height="13" rx="1"/>
-    <path d="M16 8h4l3 3v5h-7V8z"/>
-    <circle cx="5.5" cy="18.5" r="2.5"/>
-    <circle cx="18.5" cy="18.5" r="2.5"/>
-  </svg>
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
 ));
-IcTruck.displayName = "IcTruck";
-
+IcTruck.displayName="IcTruck";
 const IcUser = memo(({s=20,c="#fff"}:{s?:number;c?:string}) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
-    <circle cx="12" cy="7" r="4"/>
-  </svg>
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
 ));
-IcUser.displayName = "IcUser";
-
+IcUser.displayName="IcUser";
 const IcEye = memo(({s=18,c="#555"}:{s?:number;c?:string}) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-    <circle cx="12" cy="12" r="3"/>
-  </svg>
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
 ));
-IcEye.displayName = "IcEye";
-
+IcEye.displayName="IcEye";
 const IcEyeOff = memo(({s=18,c="#555"}:{s?:number;c?:string}) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
-    <line x1="1" y1="1" x2="23" y2="23"/>
-  </svg>
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
 ));
-IcEyeOff.displayName = "IcEyeOff";
-
+IcEyeOff.displayName="IcEyeOff";
 const IcCamera = memo(({s=16,c="#fff"}:{s?:number;c?:string}) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
-    <circle cx="12" cy="13" r="4"/>
-  </svg>
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
 ));
-IcCamera.displayName = "IcCamera";
-
+IcCamera.displayName="IcCamera";
 const IcEdit = memo(({s=16,c="#fff"}:{s?:number;c?:string}) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-  </svg>
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
 ));
-IcEdit.displayName = "IcEdit";
-
+IcEdit.displayName="IcEdit";
 const IcCheck = memo(({s=16,c="#fff"}:{s?:number;c?:string}) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="20 6 9 17 4 12"/>
-  </svg>
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
 ));
-IcCheck.displayName = "IcCheck";
+IcCheck.displayName="IcCheck";
+const IcUpload = memo(({s=20,c="#fff"}:{s?:number;c?:string}) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg>
+));
+IcUpload.displayName="IcUpload";
 
 // ─── PASSWORD INPUT ───────────────────────────────────────────────────────────
-function PwdInput({value, onChange, placeholder, onKeyDown, autoComplete}: {
-  value: string; onChange: (v:string)=>void; placeholder: string;
-  onKeyDown?: (e:React.KeyboardEvent)=>void; autoComplete?: string;
+function PwdInput({value,onChange,placeholder,onKeyDown,autoComplete}:{
+  value:string;onChange:(v:string)=>void;placeholder:string;
+  onKeyDown?:(e:React.KeyboardEvent)=>void;autoComplete?:string;
 }) {
-  const [show, setShow] = useState(false);
+  const [show,setShow]=useState(false);
   return (
     <div style={{position:"relative",display:"flex",alignItems:"center"}}>
-      <input
-        type={show?"text":"password"}
-        placeholder={placeholder}
-        value={value}
-        onChange={e=>onChange(e.target.value)}
-        onKeyDown={onKeyDown}
-        autoComplete={autoComplete}
-        style={{...S.input, paddingRight:"2.8rem"}}
-      />
-      <button
-        type="button"
-        onClick={()=>setShow(s=>!s)}
+      <input type={show?"text":"password"} placeholder={placeholder} value={value} onChange={e=>onChange(e.target.value)}
+        onKeyDown={onKeyDown} autoComplete={autoComplete} style={{...S.input,paddingRight:"2.8rem"}}/>
+      <button type="button" onClick={()=>setShow(s=>!s)}
         style={{position:"absolute",right:10,background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",padding:4,WebkitTapHighlightColor:"transparent"}}
-        tabIndex={-1}
-      >
-        {show ? <IcEyeOff s={18} c="#666"/> : <IcEye s={18} c="#666"/>}
+        tabIndex={-1}>
+        {show?<IcEyeOff s={18} c="#666"/>:<IcEye s={18} c="#666"/>}
       </button>
     </div>
   );
@@ -388,22 +343,20 @@ function PwdInput({value, onChange, placeholder, onKeyDown, autoComplete}: {
 
 // ─── LAZY IMG ────────────────────────────────────────────────────────────────
 const LazyImg = memo(function LazyImg({src,alt}:{src:string;alt:string}) {
-  const [loaded,setLoaded] = useState(false);
-  const [inView,setInView] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [loaded,setLoaded]=useState(false);
+  const [inView,setInView]=useState(false);
+  const ref=useRef<HTMLDivElement>(null);
   useEffect(()=>{
-    const el=ref.current; if(!el) return;
-    const obs=new IntersectionObserver(([e])=>{ if(e.isIntersecting){setInView(true);obs.disconnect();} },{rootMargin:"600px"});
-    obs.observe(el); return()=>obs.disconnect();
+    const el=ref.current;if(!el)return;
+    const obs=new IntersectionObserver(([e])=>{if(e.isIntersecting){setInView(true);obs.disconnect();}},{rootMargin:"600px"});
+    obs.observe(el);return()=>obs.disconnect();
   },[]);
   return (
     <div ref={ref} style={{position:"relative",width:"100%",height:"100%",pointerEvents:"none",touchAction:"none",userSelect:"none",WebkitUserSelect:"none"}}>
       {!loaded&&<div style={{position:"absolute",inset:0,background:"#161616"}}/>}
-      {inView&&<img src={optImg(src,400)} alt={alt} loading="lazy" decoding="async"
-        onLoad={()=>setLoaded(true)}
+      {inView&&<img src={optImg(src,400)} alt={alt} loading="lazy" decoding="async" onLoad={()=>setLoaded(true)}
         style={{width:"100%",height:"100%",objectFit:"cover",display:"block",opacity:loaded?1:0,transition:"opacity 0.25s ease",pointerEvents:"none",userSelect:"none",WebkitUserSelect:"none",touchAction:"none",WebkitTouchCallout:"none"} as React.CSSProperties}
-        draggable={false}
-      />}
+        draggable={false}/>}
     </div>
   );
 });
@@ -426,102 +379,31 @@ function catLabel(cat:string):string {
   return m[cat]??(cat[0]+cat.slice(1).toLowerCase());
 }
 
-// ─── DRAGGABLE WA BUTTON ─────────────────────────────────────────────────────
+// ─── DRAGGABLE WA ─────────────────────────────────────────────────────────────
 function DraggableWA() {
-  const BTN=48, MG=14;
-  const [ready,setReady]       = useState(false);
-  const [pos,setPos]           = useState({x:0,y:0});
-  const [pressed,setPressed]   = useState(false);
-  const [snapping,setSnapping] = useState(false);
-  const dragging  = useRef(false);
-  const moved     = useRef(false);
-  const startPtr  = useRef({x:0,y:0});
-  const startPos  = useRef({x:0,y:0});
-  const live      = useRef({x:0,y:0});
-  const raf       = useRef(0);
-
-  const clamp = useCallback((x:number,y:number)=>({
-    x: Math.max(MG, Math.min(window.innerWidth - BTN - MG, x)),
-    y: Math.max(MG + 80, Math.min(window.innerHeight - BTN - MG*2, y)),
-  }),[]);
-
-  const snapToEdge = useCallback((x:number,y:number)=>{
-    const cx = x + BTN/2;
-    const side = cx < window.innerWidth/2 ? MG : window.innerWidth - BTN - MG;
-    return { x: side, y: clamp(x,y).y };
-  },[clamp]);
-
+  const BTN=48,MG=14;
+  const [ready,setReady]=useState(false);
+  const [pos,setPos]=useState({x:0,y:0});
+  const [pressed,setPressed]=useState(false);
+  const [snapping,setSnapping]=useState(false);
+  const dragging=useRef(false),moved=useRef(false),startPtr=useRef({x:0,y:0}),startPos=useRef({x:0,y:0}),live=useRef({x:0,y:0}),raf=useRef(0);
+  const clamp=useCallback((x:number,y:number)=>({x:Math.max(MG,Math.min(window.innerWidth-BTN-MG,x)),y:Math.max(MG+80,Math.min(window.innerHeight-BTN-MG*2,y))}),[]);
+  const snapToEdge=useCallback((x:number,y:number)=>{const cx=x+BTN/2;const side=cx<window.innerWidth/2?MG:window.innerWidth-BTN-MG;return{x:side,y:clamp(x,y).y};},[clamp]);
   useEffect(()=>{
-    const p = {x: window.innerWidth - BTN - MG, y: Math.round(window.innerHeight * 0.78 - BTN / 2)};
-    live.current = p; setPos(p); setReady(true);
-    const onResize = () => {
-      if (!dragging.current) {
-        const np = snapToEdge(live.current.x, live.current.y);
-        live.current = np; setPos({...np});
-      }
-    };
-    window.addEventListener("resize", onResize, {passive:true});
-    if (typeof window !== "undefined" && "visualViewport" in window && window.visualViewport) {
-      window.visualViewport.addEventListener("resize", onResize);
-      window.visualViewport.addEventListener("scroll", onResize);
-    }
-    return () => {
-      window.removeEventListener("resize", onResize);
-      if (typeof window !== "undefined" && "visualViewport" in window && window.visualViewport) {
-        window.visualViewport.removeEventListener("resize", onResize);
-        window.visualViewport.removeEventListener("scroll", onResize);
-      }
-    };
+    const p={x:window.innerWidth-BTN-MG,y:Math.round(window.innerHeight*0.78-BTN/2)};
+    live.current=p;setPos(p);setReady(true);
+    const onResize=()=>{if(!dragging.current){const np=snapToEdge(live.current.x,live.current.y);live.current=np;setPos({...np});}};
+    window.addEventListener("resize",onResize,{passive:true});
+    if(typeof window!=="undefined"&&"visualViewport"in window&&window.visualViewport){window.visualViewport.addEventListener("resize",onResize);window.visualViewport.addEventListener("scroll",onResize);}
+    return()=>{window.removeEventListener("resize",onResize);if(typeof window!=="undefined"&&"visualViewport"in window&&window.visualViewport){window.visualViewport.removeEventListener("resize",onResize);window.visualViewport.removeEventListener("scroll",onResize);}};
   },[snapToEdge]);
-
-  const onDown = useCallback((e:React.PointerEvent)=>{
-    e.preventDefault();
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    dragging.current = true; moved.current = false;
-    startPtr.current = {x:e.clientX, y:e.clientY};
-    startPos.current = {...live.current};
-    setPressed(true); setSnapping(false);
-  },[]);
-  const onMove = useCallback((e:React.PointerEvent)=>{
-    if(!dragging.current) return; e.preventDefault();
-    const dx = e.clientX - startPtr.current.x;
-    const dy = e.clientY - startPtr.current.y;
-    if(Math.abs(dx) > 4 || Math.abs(dy) > 4) moved.current = true;
-    const n = clamp(startPos.current.x + dx, startPos.current.y + dy);
-    live.current = n;
-    cancelAnimationFrame(raf.current);
-    raf.current = requestAnimationFrame(()=>setPos({...n}));
-  },[clamp]);
-  const finishDrag = useCallback(()=>{
-    if(!dragging.current) return;
-    dragging.current = false; setPressed(false);
-    if(moved.current){
-      const s = snapToEdge(live.current.x, live.current.y);
-      live.current = s; setSnapping(true); setPos({...s});
-      setTimeout(()=>setSnapping(false), 420);
-    }
-  },[snapToEdge]);
-  const onClick = useCallback((e:React.MouseEvent)=>{
-    if(moved.current){ e.preventDefault(); return; }
-    window.open(SOCIAL.whatsapp,"_blank","noreferrer");
-  },[]);
-
+  const onDown=useCallback((e:React.PointerEvent)=>{e.preventDefault();(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);dragging.current=true;moved.current=false;startPtr.current={x:e.clientX,y:e.clientY};startPos.current={...live.current};setPressed(true);setSnapping(false);},[]);
+  const onMove=useCallback((e:React.PointerEvent)=>{if(!dragging.current)return;e.preventDefault();const dx=e.clientX-startPtr.current.x,dy=e.clientY-startPtr.current.y;if(Math.abs(dx)>4||Math.abs(dy)>4)moved.current=true;const n=clamp(startPos.current.x+dx,startPos.current.y+dy);live.current=n;cancelAnimationFrame(raf.current);raf.current=requestAnimationFrame(()=>setPos({...n}));},[clamp]);
+  const finishDrag=useCallback(()=>{if(!dragging.current)return;dragging.current=false;setPressed(false);if(moved.current){const s=snapToEdge(live.current.x,live.current.y);live.current=s;setSnapping(true);setPos({...s});setTimeout(()=>setSnapping(false),420);}},[snapToEdge]);
+  const onClick=useCallback((e:React.MouseEvent)=>{if(moved.current){e.preventDefault();return;}window.open(SOCIAL.whatsapp,"_blank","noreferrer");},[]);
   return (
     <div onPointerDown={onDown} onPointerMove={onMove} onPointerUp={finishDrag} onPointerCancel={finishDrag} onClick={onClick}
-      style={{
-        position:"fixed", left:pos.x, top:pos.y, zIndex:500, width:BTN, height:BTN, borderRadius:"50%",
-        background:pressed?"rgba(255,255,255,0.22)":"rgba(255,255,255,0.10)",
-        backdropFilter:"blur(18px)", WebkitBackdropFilter:"blur(18px)",
-        border:"1px solid rgba(255,255,255,0.20)",
-        display:"flex", alignItems:"center", justifyContent:"center",
-        cursor:"grab", touchAction:"none", userSelect:"none", WebkitUserSelect:"none",
-        visibility:ready?"visible":"hidden",
-        transition:snapping
-          ?"left 0.38s cubic-bezier(0.25,0.46,0.45,0.94), top 0.38s cubic-bezier(0.25,0.46,0.45,0.94), background 0.2s"
-          :"background 0.2s",
-        willChange:"left,top",
-        boxShadow:pressed?"0 0 0 10px rgba(255,255,255,0.06)":"0 4px 24px rgba(0,0,0,0.6), 0 1px 4px rgba(0,0,0,0.4)",
-      }}>
+      style={{position:"fixed",left:pos.x,top:pos.y,zIndex:500,width:BTN,height:BTN,borderRadius:"50%",background:pressed?"rgba(255,255,255,0.22)":"rgba(255,255,255,0.10)",backdropFilter:"blur(18px)",WebkitBackdropFilter:"blur(18px)",border:"1px solid rgba(255,255,255,0.20)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"grab",touchAction:"none",userSelect:"none",WebkitUserSelect:"none",visibility:ready?"visible":"hidden",transition:snapping?"left 0.38s cubic-bezier(0.25,0.46,0.45,0.94), top 0.38s cubic-bezier(0.25,0.46,0.45,0.94), background 0.2s":"background 0.2s",willChange:"left,top",boxShadow:pressed?"0 0 0 10px rgba(255,255,255,0.06)":"0 4px 24px rgba(0,0,0,0.6), 0 1px 4px rgba(0,0,0,0.4)"}}>
       <IcWA s={BTN-14} c={pressed?"#080808":"#fff"}/>
     </div>
   );
@@ -529,14 +411,10 @@ function DraggableWA() {
 
 // ─── NATIVE TABS ─────────────────────────────────────────────────────────────
 const NativeTabs = memo(function NativeTabs({items,active,onSelect,renderItem,height=44}:{
-  items:string[];active:string;onSelect:(v:string)=>void;
-  renderItem:(item:string,isActive:boolean)=>React.ReactNode;height?:number;
+  items:string[];active:string;onSelect:(v:string)=>void;renderItem:(item:string,isActive:boolean)=>React.ReactNode;height?:number;
 }) {
   const ref=useRef<HTMLDivElement>(null);
-  useEffect(()=>{
-    const el=ref.current?.querySelector(`[data-active="true"]`) as HTMLElement|null;
-    if(el) el.scrollIntoView({block:"nearest",inline:"center",behavior:"smooth"});
-  },[active]);
+  useEffect(()=>{const el=ref.current?.querySelector(`[data-active="true"]`) as HTMLElement|null;if(el)el.scrollIntoView({block:"nearest",inline:"center",behavior:"smooth"});},[active]);
   return (
     <div ref={ref} className="ts" style={{display:"flex",overflowX:"auto",overflowY:"hidden",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",height,touchAction:"pan-x"}}>
       {items.map(item=>(
@@ -553,19 +431,12 @@ const NativeTabs = memo(function NativeTabs({items,active,onSelect,renderItem,he
 const ProductCard = memo(function ProductCard({product,onClick,index}:{product:Product;onClick:()=>void;index:number}) {
   const [vis,setVis]=useState(false);
   const ref=useRef<HTMLDivElement>(null);
-  useEffect(()=>{
-    const el=ref.current;if(!el) return;
-    const obs=new IntersectionObserver(([e])=>{if(e.isIntersecting){setVis(true);obs.disconnect();}},{rootMargin:"80px"});
-    obs.observe(el);return()=>obs.disconnect();
-  },[]);
+  useEffect(()=>{const el=ref.current;if(!el)return;const obs=new IntersectionObserver(([e])=>{if(e.isIntersecting){setVis(true);obs.disconnect();}},{rootMargin:"80px"});obs.observe(el);return()=>obs.disconnect();},[]);
   return (
     <div ref={ref} className="pc" onClick={onClick}
-      style={{cursor:"pointer",opacity:vis?1:0,transform:vis?"translateY(0)":"translateY(14px)",
-        transition:`opacity 0.35s ease ${Math.min(index*35,160)}ms,transform 0.35s ease ${Math.min(index*35,160)}ms`,willChange:"transform,opacity"}}>
+      style={{cursor:"pointer",opacity:vis?1:0,transform:vis?"translateY(0)":"translateY(14px)",transition:`opacity 0.35s ease ${Math.min(index*35,160)}ms,transform 0.35s ease ${Math.min(index*35,160)}ms`,willChange:"transform,opacity"}}>
       <div style={{background:"#111",aspectRatio:"1",overflow:"hidden",marginBottom:"0.55rem",borderRadius:10,position:"relative"}}>
-        <div className="iz" style={{width:"100%",height:"100%",transition:"transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94)"}}>
-          <LazyImg src={product.img} alt={product.name}/>
-        </div>
+        <div className="iz" style={{width:"100%",height:"100%",transition:"transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94)"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",transition:"background 0.3s ease",pointerEvents:"none"}}/>
       </div>
       <p style={{margin:"0 0 3px",fontSize:12,lineHeight:1.35,color:"#bbb",letterSpacing:0.2}}>{product.name}</p>
@@ -579,9 +450,7 @@ const HCard = memo(function HCard({product,onClick}:{product:Product;onClick:()=
   return (
     <div className="hc" onClick={onClick} style={{cursor:"pointer",flexShrink:0,width:148,touchAction:"manipulation"}}>
       <div style={{background:"#111",width:148,height:148,overflow:"hidden",marginBottom:"0.5rem",borderRadius:10,position:"relative"}}>
-        <div className="iz" style={{width:"100%",height:"100%",transition:"transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94)"}}>
-          <LazyImg src={product.img} alt={product.name}/>
-        </div>
+        <div className="iz" style={{width:"100%",height:"100%",transition:"transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94)"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",transition:"background 0.3s ease",pointerEvents:"none"}}/>
       </div>
       <p style={{margin:"0 0 2px",fontSize:11,lineHeight:1.35,color:"#bbb",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{product.name}</p>
@@ -592,45 +461,20 @@ const HCard = memo(function HCard({product,onClick}:{product:Product;onClick:()=
 
 // ─── H ROW ───────────────────────────────────────────────────────────────────
 const HRow = memo(function HRow({products,onSelect}:{products:Product[];onSelect:(p:Product)=>void}) {
-  const rowRef = useRef<HTMLDivElement>(null);
-  const [showLeft,setShowLeft]   = useState(false);
-  const [showRight,setShowRight] = useState(false);
-  const [hovered,setHovered]     = useState(false);
-  const updateArrows = useCallback(()=>{
-    const el = rowRef.current; if(!el) return;
-    setShowLeft(el.scrollLeft > 8);
-    setShowRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 8);
-  },[]);
-  useEffect(()=>{
-    const el = rowRef.current; if(!el) return;
-    updateArrows();
-    el.addEventListener("scroll", updateArrows, {passive:true});
-    const ro = new ResizeObserver(updateArrows);
-    ro.observe(el);
-    return()=>{ el.removeEventListener("scroll",updateArrows); ro.disconnect(); };
-  },[updateArrows, products]);
-  const scrollBy = useCallback((dir:number)=>{ rowRef.current?.scrollBy({left: dir * 320, behavior:"smooth"}); },[]);
-  const arrowStyle = (visible:boolean, side:"left"|"right"): React.CSSProperties => ({
-    position:"absolute", top:"50%", transform:"translateY(-50%)", [side]: side==="left"?-4:-4, zIndex:10,
-    width:34, height:34, borderRadius:"50%", background:"rgba(20,20,20,0.92)", border:"1px solid #2a2a2a",
-    display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer",
-    opacity: (hovered && visible) ? 1 : 0, pointerEvents: (hovered && visible) ? "auto" : "none",
-    transition:"opacity 0.18s ease", backdropFilter:"blur(8px)", boxShadow:"0 2px 12px rgba(0,0,0,0.5)",
-  });
+  const rowRef=useRef<HTMLDivElement>(null);
+  const [showLeft,setShowLeft]=useState(false);
+  const [showRight,setShowRight]=useState(false);
+  const [hovered,setHovered]=useState(false);
+  const updateArrows=useCallback(()=>{const el=rowRef.current;if(!el)return;setShowLeft(el.scrollLeft>8);setShowRight(el.scrollLeft<el.scrollWidth-el.clientWidth-8);},[]);
+  useEffect(()=>{const el=rowRef.current;if(!el)return;updateArrows();el.addEventListener("scroll",updateArrows,{passive:true});const ro=new ResizeObserver(updateArrows);ro.observe(el);return()=>{el.removeEventListener("scroll",updateArrows);ro.disconnect();};},[updateArrows,products]);
+  const scrollBy=useCallback((dir:number)=>{rowRef.current?.scrollBy({left:dir*320,behavior:"smooth"});},[]);
+  const arrowStyle=(visible:boolean,side:"left"|"right"):React.CSSProperties=>({position:"absolute",top:"50%",transform:"translateY(-50%)",[side]:side==="left"?-4:-4,zIndex:10,width:34,height:34,borderRadius:"50%",background:"rgba(20,20,20,0.92)",border:"1px solid #2a2a2a",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",opacity:(hovered&&visible)?1:0,pointerEvents:(hovered&&visible)?"auto":"none",transition:"opacity 0.18s ease",backdropFilter:"blur(8px)",boxShadow:"0 2px 12px rgba(0,0,0,0.5)"});
   return (
     <div style={{position:"relative"}} onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)}>
-      <button onClick={()=>scrollBy(-1)} style={arrowStyle(showLeft,"left")} aria-label="Anterior">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-      </button>
-      <button onClick={()=>scrollBy(1)} style={arrowStyle(showRight,"right")} aria-label="Siguiente">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-      </button>
+      <button onClick={()=>scrollBy(-1)} style={arrowStyle(showLeft,"left")} aria-label="Anterior"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <button onClick={()=>scrollBy(1)} style={arrowStyle(showRight,"right")} aria-label="Siguiente"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
       <div ref={rowRef} className="hr" style={{display:"flex",gap:"0.75rem",overflowX:"scroll",overflowY:"hidden",paddingBottom:"0.5rem",paddingLeft:"0.25rem",paddingRight:"1rem",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",touchAction:"pan-x pan-y",userSelect:"none",WebkitUserSelect:"none",scrollSnapType:"x proximity",willChange:"scroll-position",transform:"translateZ(0)"} as React.CSSProperties}>
-        {products.map(p=>(
-          <div key={p.id} style={{scrollSnapAlign:"start",flexShrink:0}}>
-            <HCard product={p} onClick={()=>onSelect(p)}/>
-          </div>
-        ))}
+        {products.map(p=>(<div key={p.id} style={{scrollSnapAlign:"start",flexShrink:0}}><HCard product={p} onClick={()=>onSelect(p)}/></div>))}
       </div>
     </div>
   );
@@ -666,70 +510,27 @@ const AddedModal = memo(function AddedModal({product,onClose,onGoCart}:{product:
 
 // ─── ADMIN ROW ────────────────────────────────────────────────────────────────
 interface ARowProps {
-  p: Product; editing: Product|null;
-  onEdit: (p:Product)=>void; onDel: (id:string)=>void;
-  onDragStart: (id:string)=>void; onDragOver: (id:string)=>void;
-  onDragEnd: ()=>void; isDragging: boolean; isOver: boolean;
-  onTouchStart: (id:string, y:number)=>void;
-  onTouchMove: (y:number, x:number)=>void;
-  onTouchEnd: ()=>void;
+  p:Product;editing:Product|null;onEdit:(p:Product)=>void;onDel:(id:string)=>void;
+  onDragStart:(id:string)=>void;onDragOver:(id:string)=>void;onDragEnd:()=>void;
+  isDragging:boolean;isOver:boolean;
+  onTouchStart:(id:string,y:number)=>void;onTouchMove:(y:number,x:number)=>void;onTouchEnd:()=>void;
 }
-
 const ARow = memo(function ARow({p,editing,onEdit,onDel,onDragStart,onDragOver,onDragEnd,isDragging,isOver,onTouchStart,onTouchMove,onTouchEnd}:ARowProps) {
   return (
-    <div
-      draggable
-      onDragStart={()=>onDragStart(p.id)}
-      onDragOver={e=>{ e.preventDefault(); onDragOver(p.id); }}
-      onDragEnd={onDragEnd}
-      data-rowid={p.id}
-      className="ar"
-      style={{
-        display:"flex", alignItems:"center", gap:"0.75rem",
-        padding:"0.6rem 0.65rem", borderRadius:8,
-        background: isOver ? "#1e1e1e" : editing?.id===p.id ? "#1a1a1a" : "transparent",
-        opacity: isDragging ? 0.4 : 1,
-        border: isOver ? "1px dashed #3a3a3a" : "1px solid transparent",
-        transition:"opacity 0.15s, background 0.15s, border 0.15s",
-        cursor:"default",
-        userSelect:"none",
-        WebkitUserSelect:"none",
-      }}>
-      <div
-        onTouchStart={e=>{
-          e.stopPropagation();
-          const t = e.touches[0];
-          onTouchStart(p.id, t.clientY);
-        }}
-        onTouchMove={e=>{
-          e.stopPropagation();
-          e.preventDefault();
-          const t = e.touches[0];
-          onTouchMove(t.clientY, t.clientX);
-        }}
-        onTouchEnd={e=>{ e.stopPropagation(); onTouchEnd(); }}
-        style={{
-          cursor:"grab",flexShrink:0,padding:"6px 8px",color:"#444",
-          display:"flex",alignItems:"center",
-          touchAction:"none",
-          WebkitTapHighlightColor:"transparent",
-          userSelect:"none",
-          WebkitUserSelect:"none",
-          WebkitTouchCallout:"none",
-        } as React.CSSProperties}>
+    <div draggable onDragStart={()=>onDragStart(p.id)} onDragOver={e=>{e.preventDefault();onDragOver(p.id);}} onDragEnd={onDragEnd}
+      data-rowid={p.id} className="ar"
+      style={{display:"flex",alignItems:"center",gap:"0.75rem",padding:"0.6rem 0.65rem",borderRadius:8,background:isOver?"#1e1e1e":editing?.id===p.id?"#1a1a1a":"transparent",opacity:isDragging?0.4:1,border:isOver?"1px dashed #3a3a3a":"1px solid transparent",transition:"opacity 0.15s, background 0.15s, border 0.15s",cursor:"default",userSelect:"none",WebkitUserSelect:"none"}}>
+      <div onTouchStart={e=>{e.stopPropagation();const t=e.touches[0];onTouchStart(p.id,t.clientY);}}
+        onTouchMove={e=>{e.stopPropagation();e.preventDefault();const t=e.touches[0];onTouchMove(t.clientY,t.clientX);}}
+        onTouchEnd={e=>{e.stopPropagation();onTouchEnd();}}
+        style={{cursor:"grab",flexShrink:0,padding:"6px 8px",color:"#444",display:"flex",alignItems:"center",touchAction:"none",WebkitTapHighlightColor:"transparent",userSelect:"none",WebkitUserSelect:"none",WebkitTouchCallout:"none"} as React.CSSProperties}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <circle cx="8" cy="6" r="1.2" fill="currentColor"/><circle cx="16" cy="6" r="1.2" fill="currentColor"/>
           <circle cx="8" cy="12" r="1.2" fill="currentColor"/><circle cx="16" cy="12" r="1.2" fill="currentColor"/>
           <circle cx="8" cy="18" r="1.2" fill="currentColor"/><circle cx="16" cy="18" r="1.2" fill="currentColor"/>
         </svg>
       </div>
-      <img src={optImg(p.img,120)} alt={p.name}
-        style={{width:44,height:44,objectFit:"cover",borderRadius:6,flexShrink:0,background:"#1a1a1a",
-          pointerEvents:"none",userSelect:"none",WebkitUserSelect:"none",
-          WebkitTouchCallout:"none",
-        } as React.CSSProperties}
-        draggable={false}
-      />
+      <img src={optImg(p.img,120)} alt={p.name} style={{width:44,height:44,objectFit:"cover",borderRadius:6,flexShrink:0,background:"#1a1a1a",pointerEvents:"none",userSelect:"none",WebkitUserSelect:"none",WebkitTouchCallout:"none"} as React.CSSProperties} draggable={false}/>
       <div style={{flex:1,minWidth:0,userSelect:"none",WebkitUserSelect:"none"} as React.CSSProperties}>
         <p style={{color:"#ccc",fontSize:12,fontWeight:700,margin:"0 0 1px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</p>
         <p style={{color:"#333",fontSize:10,margin:0}}>${p.price.toFixed(2)}</p>
@@ -744,21 +545,20 @@ const ARow = memo(function ARow({p,editing,onEdit,onDel,onDragStart,onDragOver,o
 
 // ─── DELIVERY FORM ───────────────────────────────────────────────────────────
 function DeliveryForm({info,onChange}:{info:DeliveryInfo;onChange:(i:DeliveryInfo)=>void}) {
-  const upd = (field:keyof DeliveryInfo,val:string) => onChange({...info,[field]:val});
+  const upd=(field:keyof DeliveryInfo,val:string)=>onChange({...info,[field]:val});
   return (
     <div style={{display:"flex",flexDirection:"column",gap:"0.6rem"}}>
       <p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#333",margin:"0 0 0.25rem"}}>TIPO DE ENVIO</p>
       {DELIVERY_ZONES.map(z=>(
         <button key={z.id} onClick={()=>upd("zone",z.id)}
           style={{display:"flex",alignItems:"center",gap:"0.75rem",background:info.zone===z.id?"#fff":"#111",color:info.zone===z.id?"#080808":C.text,border:`1px solid ${info.zone===z.id?"#fff":"#1e1e1e"}`,borderRadius:10,padding:"0.75rem 1rem",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",transition:"all 0.15s",textAlign:"left"}}>
-          {z.id==="naguanagua" && <span style={{fontSize:16}}>🏙️</span>}
-          {z.id==="valencia"   && <span style={{fontSize:16}}>🌆</span>}
-          {z.id==="otro"       && <IcTruck s={20} c={info.zone==="otro"?"#080808":"#fff"}/>}
+          {z.id==="naguanagua"&&<span style={{fontSize:16}}>🏙️</span>}
+          {z.id==="valencia"&&<span style={{fontSize:16}}>🌆</span>}
+          {z.id==="otro"&&<IcTruck s={20} c={info.zone==="otro"?"#080808":"#fff"}/>}
           <span style={{fontSize:13,fontWeight:700}}>{z.label}</span>
           {info.zone===z.id&&<span style={{marginLeft:"auto",fontSize:14,fontWeight:700}}>✓</span>}
         </button>
       ))}
-
       {info.zone==="otro"&&(
         <div style={{background:"#0a0a0a",borderRadius:10,padding:"1rem",border:"1px solid #1a1a1a",marginTop:"0.25rem",display:"flex",flexDirection:"column",gap:"0.65rem",animation:"slideUp 0.2s ease"}}>
           <p style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#333",margin:"0 0 0.25rem"}}>DATOS DE ENVÍO</p>
@@ -780,9 +580,80 @@ function DeliveryForm({info,onChange}:{info:DeliveryInfo;onChange:(i:DeliveryInf
   );
 }
 
+// ─── COMPROBANTE UPLOAD ───────────────────────────────────────────────────────
+function ComprobanteUpload({onUrl,url}:{onUrl:(u:string)=>void;url:string}) {
+  const [loading,setLoading]=useState(false);
+  const [err,setErr]=useState("");
+  const [preview,setPreview]=useState("");
+  const inputRef=useRef<HTMLInputElement>(null);
+
+  const handleFile=useCallback(async(e:React.ChangeEvent<HTMLInputElement>)=>{
+    const file=e.target.files?.[0];if(!file)return;
+    setErr("");setLoading(true);
+    // Show local preview immediately
+    const reader=new FileReader();
+    reader.onload=ev=>setPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+    try {
+      const uploaded=await uploadImg(file,"fokus_products");
+      onUrl(uploaded);
+    } catch {
+      setErr("Error al subir. Intenta de nuevo.");
+      setPreview("");
+    } finally {
+      setLoading(false);
+      if(inputRef.current) inputRef.current.value="";
+    }
+  },[onUrl]);
+
+  const displayImg=url||preview;
+
+  return (
+    <div style={{marginTop:"1rem"}}>
+      <p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#333",marginBottom:"0.6rem"}}>COMPROBANTE DE PAGO</p>
+      <div style={{background:"#0a0a0a",borderRadius:10,border:`1px dashed ${displayImg?"#2a5a2a":"#1e1e1e"}`,padding:"1rem",display:"flex",flexDirection:"column",gap:"0.65rem",transition:"border-color 0.2s"}}>
+        {displayImg?(
+          <div style={{position:"relative",display:"inline-block"}}>
+            <img src={displayImg} alt="Comprobante" style={{width:"100%",maxHeight:200,objectFit:"contain",borderRadius:8,display:"block",background:"#111"}} draggable={false}/>
+            <div style={{position:"absolute",top:6,right:6,background:"rgba(0,0,0,0.7)",borderRadius:6,padding:"2px 8px",display:"flex",alignItems:"center",gap:4}}>
+              {url
+                ? <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg><span style={{fontSize:10,color:"#4caf50",fontWeight:700}}>Listo</span></>
+                : <span style={{fontSize:10,color:"#888"}}>Subiendo…</span>
+              }
+            </div>
+            <button onClick={()=>{onUrl("");setPreview("");}}
+              style={{position:"absolute",top:6,left:6,background:"rgba(0,0,0,0.7)",border:"none",color:"#888",cursor:"pointer",borderRadius:6,padding:"2px 8px",fontSize:10,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>
+              Cambiar
+            </button>
+          </div>
+        ):(
+          <>
+            <div style={{display:"flex",alignItems:"center",gap:"0.65rem"}}>
+              <IcUpload s={20} c="#444"/>
+              <div>
+                <p style={{margin:0,fontSize:12,fontWeight:700,color:"#555"}}>Sube tu comprobante</p>
+                <p style={{margin:"2px 0 0",fontSize:10,color:"#333",lineHeight:1.5}}>Se enviará junto con tu pedido por WhatsApp</p>
+              </div>
+            </div>
+            <input ref={inputRef} type="file" accept="image/*" capture="environment" onChange={handleFile} style={{display:"none"}} id="comp-file"/>
+            <label htmlFor="comp-file"
+              style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:"0.45rem",background:loading?"#1a1a1a":"#161616",color:loading?"#444":"#777",border:"1px solid #222",padding:"0.65rem 1.1rem",borderRadius:8,cursor:loading?"not-allowed":"pointer",fontSize:12,fontWeight:700,fontFamily:"inherit",transition:"all 0.15s",WebkitTapHighlightColor:"transparent"}}>
+              {loading
+                ? <><div style={{width:14,height:14,border:"2px solid #333",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/> Subiendo…</>
+                : <><IcCamera s={14} c="#666"/> Tomar foto o elegir</>
+              }
+            </label>
+          </>
+        )}
+        {err&&<p style={{margin:0,fontSize:11,color:"#ff5555",background:"#1e0808",borderRadius:6,padding:"0.5rem 0.75rem"}}>{err}</p>}
+      </div>
+    </div>
+  );
+}
+
 // ─── FOOTER ──────────────────────────────────────────────────────────────────
 const Footer = memo(function Footer({setMainView,setShopFilter}:{setMainView:(v:MainView)=>void;setShopFilter:(v:ShopFilter)=>void}) {
-  const sA: React.CSSProperties={display:"flex",alignItems:"center",justifyContent:"center",width:36,height:36,borderRadius:"50%",background:"rgba(255,255,255,0.04)",textDecoration:"none",border:"1px solid rgba(255,255,255,0.07)",flexShrink:0};
+  const sA:React.CSSProperties={display:"flex",alignItems:"center",justifyContent:"center",width:36,height:36,borderRadius:"50%",background:"rgba(255,255,255,0.04)",textDecoration:"none",border:"1px solid rgba(255,255,255,0.07)",flexShrink:0};
   const cats=[{l:"Lentes",c:"LENTES"},{l:"Relojes",c:"RELOJES"},{l:"Collares",c:"COLLARES"},{l:"Pulseras",c:"PULSERAS"},{l:"Anillos",c:"ANILLOS"},{l:"Aretes",c:"ARETES"},{l:"Billeteras",c:"BILLETERAS"}];
   return (
     <footer style={{background:"#060606",borderTop:"1px solid #111",marginTop:"2rem",padding:"2.5rem 1.5rem 2rem"}}>
@@ -835,54 +706,50 @@ const Footer = memo(function Footer({setMainView,setShopFilter}:{setMainView:(v:
 
 // ─── AUTH MODAL ──────────────────────────────────────────────────────────────
 function AuthModal({onClose,onSuccess}:{onClose:()=>void;onSuccess:(u:UserData)=>void}) {
-  const [mode,setMode]     = useState<"login"|"register">("login");
-  const [name,setName]     = useState("");
-  const [email,setEmail]   = useState("");
-  const [pwd,setPwd]       = useState("");
-  const [err,setErr]       = useState("");
-  const [loading,setLoading] = useState(false);
+  const [mode,setMode]=useState<"login"|"register">("login");
+  const [name,setName]=useState(""),[email,setEmail]=useState(""),[pwd,setPwd]=useState(""),
+        [err,setErr]=useState(""),[loading,setLoading]=useState(false);
 
-  const authErrMap: Record<string,string> = {
-    "EMAIL_EXISTS":                                             "Este correo ya está registrado.",
-    "INVALID_EMAIL":                                           "Correo inválido.",
+  const authErrMap:Record<string,string>={
+    "EMAIL_EXISTS":"Este correo ya está registrado.","INVALID_EMAIL":"Correo inválido.",
     "WEAK_PASSWORD : Password should be at least 6 characters":"La contraseña debe tener al menos 6 caracteres.",
-    "WEAK_PASSWORD":                                           "La contraseña debe tener al menos 6 caracteres.",
-    "INVALID_LOGIN_CREDENTIALS":                               "Correo o contraseña incorrectos.",
-    "EMAIL_NOT_FOUND":                                         "No existe una cuenta con este correo.",
-    "INVALID_PASSWORD":                                        "Contraseña incorrecta.",
-    "USER_DISABLED":                                           "Esta cuenta ha sido deshabilitada.",
-    "TOO_MANY_ATTEMPTS_TRY_LATER":                             "Demasiados intentos. Intenta más tarde.",
-    "CONFIGURATION_NOT_FOUND":                                 "El inicio de sesión con correo no está activado. Contacta al administrador.",
-    "OPERATION_NOT_ALLOWED":                                   "Registro con email/contraseña no habilitado.",
-    "ADMIN_ONLY_OPERATION":                                    "Operación solo para administradores.",
+    "WEAK_PASSWORD":"La contraseña debe tener al menos 6 caracteres.",
+    "INVALID_LOGIN_CREDENTIALS":"Correo o contraseña incorrectos.",
+    "EMAIL_NOT_FOUND":"No existe una cuenta con este correo.",
+    "INVALID_PASSWORD":"Contraseña incorrecta.","USER_DISABLED":"Esta cuenta ha sido deshabilitada.",
+    "TOO_MANY_ATTEMPTS_TRY_LATER":"Demasiados intentos. Intenta más tarde.",
+    "CONFIGURATION_NOT_FOUND":"El inicio de sesión con correo no está activado.",
+    "OPERATION_NOT_ALLOWED":"Registro con email/contraseña no habilitado.",
   };
 
-  const handle = async() => {
-    setErr(""); setLoading(true);
+  const handle=async()=>{
+    setErr("");setLoading(true);
     try {
-      if(mode==="register") {
+      if(mode==="register"){
         if(!name.trim()){setErr("Ingresa tu nombre.");setLoading(false);return;}
         if(!email.trim()){setErr("Ingresa tu correo.");setLoading(false);return;}
         if(pwd.length<6){setErr("La contraseña debe tener al menos 6 caracteres.");setLoading(false);return;}
-        const {idToken,localId} = await authSignUp(email.trim(), pwd, name.trim());
-        const ud: UserData = {uid:localId,email:email.trim(),displayName:name.trim(),createdAt:Date.now()};
-        await fsSaveUser(localId,{email:email.trim(),displayName:name.trim(),createdAt:ud.createdAt},idToken).catch(()=>{});
-        localStorage.setItem("fokus_user", JSON.stringify(ud));
+        const {idToken,localId,refreshToken}=await authSignUp(email.trim(),pwd,name.trim());
+        const ud:UserData={uid:localId,email:email.trim(),displayName:name.trim(),createdAt:Date.now(),idToken};
+        await fsSaveUser(localId,{email:email.trim(),displayName:name.trim(),createdAt:ud.createdAt,photoURL:""},idToken).catch(()=>{});
+        // Store refreshToken separately for token refresh
+        localStorage.setItem("fokus_refresh",refreshToken);
+        localStorage.setItem("fokus_user",JSON.stringify(ud));
         onSuccess(ud);
       } else {
-        const {localId,displayName} = await authSignIn(email.trim(), pwd);
-        const stored = localStorage.getItem("fokus_user");
-        let photoURL = "";
-        if(stored){ try{ photoURL = (JSON.parse(stored) as UserData).photoURL||""; }catch{} }
-        const ud: UserData = {uid:localId,email:email.trim(),displayName:displayName||email.split("@")[0],createdAt:Date.now(),photoURL};
-        localStorage.setItem("fokus_user", JSON.stringify(ud));
+        const {idToken,localId,displayName,refreshToken}=await authSignIn(email.trim(),pwd);
+        // Fetch saved photo from Firestore
+        const photoURL=await fsGetUserPhoto(localId);
+        const ud:UserData={uid:localId,email:email.trim(),displayName:displayName||email.split("@")[0],createdAt:Date.now(),photoURL,idToken};
+        localStorage.setItem("fokus_refresh",refreshToken);
+        localStorage.setItem("fokus_user",JSON.stringify(ud));
         onSuccess(ud);
       }
-    } catch(e:unknown) {
-      const raw = e instanceof Error ? e.message : "Error desconocido";
-      const matched = Object.keys(authErrMap).find(k => raw.includes(k));
-      setErr(matched ? authErrMap[matched] : raw);
-    } finally { setLoading(false); }
+    } catch(e:unknown){
+      const raw=e instanceof Error?e.message:"Error desconocido";
+      const matched=Object.keys(authErrMap).find(k=>raw.includes(k));
+      setErr(matched?authErrMap[matched]:raw);
+    } finally{setLoading(false);}
   };
 
   return (
@@ -892,24 +759,15 @@ function AuthModal({onClose,onSuccess}:{onClose:()=>void;onSuccess:(u:UserData)=
         <div style={{display:"flex",gap:0,marginBottom:"1.5rem",background:"#0e0e0e",borderRadius:10,padding:3,border:"1px solid #1a1a1a"}}>
           {(["login","register"] as const).map(m=>(
             <button key={m} onClick={()=>{setMode(m);setErr("");}}
-              style={{flex:1,padding:"0.6rem",border:"none",borderRadius:8,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:800,letterSpacing:1.5,transition:"all 0.15s",WebkitTapHighlightColor:"transparent",
-                background:mode===m?"#fff":"transparent",color:mode===m?"#080808":"#444"}}>
+              style={{flex:1,padding:"0.6rem",border:"none",borderRadius:8,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:800,letterSpacing:1.5,transition:"all 0.15s",WebkitTapHighlightColor:"transparent",background:mode===m?"#fff":"transparent",color:mode===m?"#080808":"#444"}}>
               {m==="login"?"ENTRAR":"REGISTRARSE"}
             </button>
           ))}
         </div>
         <div style={{display:"flex",flexDirection:"column",gap:"0.75rem"}}>
-          {mode==="register"&&(
-            <input placeholder="Nombre *" value={name} onChange={e=>setName(e.target.value)} style={S.input} autoComplete="name"/>
-          )}
+          {mode==="register"&&<input placeholder="Nombre *" value={name} onChange={e=>setName(e.target.value)} style={S.input} autoComplete="name"/>}
           <input placeholder="Correo electrónico *" type="email" value={email} onChange={e=>setEmail(e.target.value)} style={S.input} autoComplete="email"/>
-          <PwdInput
-            placeholder="Contraseña *"
-            value={pwd}
-            onChange={setPwd}
-            onKeyDown={e=>e.key==="Enter"&&handle()}
-            autoComplete={mode==="login"?"current-password":"new-password"}
-          />
+          <PwdInput placeholder="Contraseña *" value={pwd} onChange={setPwd} onKeyDown={e=>e.key==="Enter"&&handle()} autoComplete={mode==="login"?"current-password":"new-password"}/>
           {err&&<div style={{color:"#ff5555",fontSize:12,background:"#1e0808",padding:"0.65rem 1rem",borderRadius:8,lineHeight:1.5}}>{err}</div>}
           <button onClick={handle} disabled={loading}
             style={{...S.darkBtn,width:"100%",justifyContent:"center",borderRadius:10,padding:"1rem",fontSize:12,opacity:loading?0.5:1,cursor:loading?"not-allowed":"pointer"}}>
@@ -918,7 +776,8 @@ function AuthModal({onClose,onSuccess}:{onClose:()=>void;onSuccess:(u:UserData)=
         </div>
         <p style={{textAlign:"center",fontSize:11,color:"#333",marginTop:"1rem",lineHeight:1.6}}>
           {mode==="login"?"¿No tienes cuenta?":"¿Ya tienes cuenta?"}{" "}
-          <button onClick={()=>{setMode(mode==="login"?"register":"login");setErr("");}} style={{background:"none",border:"none",color:"#888",cursor:"pointer",fontFamily:"inherit",fontSize:11,textDecoration:"underline",WebkitTapHighlightColor:"transparent"}}>
+          <button onClick={()=>{setMode(mode==="login"?"register":"login");setErr("");}}
+            style={{background:"none",border:"none",color:"#888",cursor:"pointer",fontFamily:"inherit",fontSize:11,textDecoration:"underline",WebkitTapHighlightColor:"transparent"}}>
             {mode==="login"?"Regístrate":"Inicia sesión"}
           </button>
         </p>
@@ -928,76 +787,21 @@ function AuthModal({onClose,onSuccess}:{onClose:()=>void;onSuccess:(u:UserData)=
 }
 
 // ─── COMMUNITY CARD ───────────────────────────────────────────────────────────
-const CommunityCard = memo(function CommunityCard({post,onClick,index}:{
-  post:typeof COMMUNITY_POSTS[0]; onClick:()=>void; index:number;
-}) {
-  const [vis,setVis]=useState(false);
-  const [loaded,setLoaded]=useState(false);
+const CommunityCard = memo(function CommunityCard({post,onClick,index}:{post:typeof COMMUNITY_POSTS[0];onClick:()=>void;index:number}) {
+  const [vis,setVis]=useState(false),[loaded,setLoaded]=useState(false);
   const ref=useRef<HTMLDivElement>(null);
-  useEffect(()=>{
-    const el=ref.current; if(!el) return;
-    const obs=new IntersectionObserver(([e])=>{if(e.isIntersecting){setVis(true);obs.disconnect();}},{rootMargin:"100px"});
-    obs.observe(el); return()=>obs.disconnect();
-  },[]);
-
-  const tagColors: Record<string,{bg:string;color:string}> = {
-    "ARETES":   {bg:"rgba(168,85,247,0.15)",  color:"#c084fc"},
-    "COLLARES": {bg:"rgba(251,191,36,0.12)",  color:"#fbbf24"},
-    "PULSERAS": {bg:"rgba(34,211,238,0.12)",  color:"#22d3ee"},
-    "RESEÑA":   {bg:"rgba(74,222,128,0.12)",  color:"#4ade80"},
-    "RELOJES":  {bg:"rgba(251,113,133,0.12)", color:"#fb7185"},
-  };
-  const tc = tagColors[post.tag] || {bg:"rgba(255,255,255,0.08)",color:"#aaa"};
-
+  useEffect(()=>{const el=ref.current;if(!el)return;const obs=new IntersectionObserver(([e])=>{if(e.isIntersecting){setVis(true);obs.disconnect();}},{rootMargin:"100px"});obs.observe(el);return()=>obs.disconnect();},[]);
+  const tagColors:Record<string,{bg:string;color:string}>={"ARETES":{bg:"rgba(168,85,247,0.15)",color:"#c084fc"},"COLLARES":{bg:"rgba(251,191,36,0.12)",color:"#fbbf24"},"PULSERAS":{bg:"rgba(34,211,238,0.12)",color:"#22d3ee"},"RESEÑA":{bg:"rgba(74,222,128,0.12)",color:"#4ade80"},"RELOJES":{bg:"rgba(251,113,133,0.12)",color:"#fb7185"}};
+  const tc=tagColors[post.tag]||{bg:"rgba(255,255,255,0.08)",color:"#aaa"};
   return (
-    <div ref={ref} onClick={onClick}
-      style={{
-        cursor:"pointer",
-        opacity:vis?1:0,
-        transform:vis?"translateY(0) scale(1)":"translateY(20px) scale(0.97)",
-        transition:`opacity 0.45s ease ${Math.min(index*60,300)}ms, transform 0.45s ease ${Math.min(index*60,300)}ms`,
-        willChange:"transform,opacity",
-        borderRadius:16,
-        overflow:"hidden",
-        background:"#0d0d0d",
-        border:"1px solid #1a1a1a",
-        position:"relative",
-      }}
-      className="cc">
-      {/* Image */}
+    <div ref={ref} onClick={onClick} style={{cursor:"pointer",opacity:vis?1:0,transform:vis?"translateY(0) scale(1)":"translateY(20px) scale(0.97)",transition:`opacity 0.45s ease ${Math.min(index*60,300)}ms, transform 0.45s ease ${Math.min(index*60,300)}ms`,willChange:"transform,opacity",borderRadius:16,overflow:"hidden",background:"#0d0d0d",border:"1px solid #1a1a1a",position:"relative"}} className="cc">
       <div style={{position:"relative",aspectRatio:"9/16",overflow:"hidden",background:"#111"}}>
-        {!loaded&&(
-          <div style={{position:"absolute",inset:0,background:"linear-gradient(90deg,#141414 0%,#1e1e1e 50%,#141414 100%)",backgroundSize:"200% 100%",animation:"shimmer 1.4s infinite"}}/>
-        )}
-        {vis&&(
-          <img
-            src={post.img}
-            alt={post.caption}
-            loading="lazy"
-            decoding="async"
-            onLoad={()=>setLoaded(true)}
-            style={{width:"100%",height:"100%",objectFit:"cover",display:"block",opacity:loaded?1:0,transition:"opacity 0.3s ease",pointerEvents:"none",userSelect:"none",WebkitUserSelect:"none",WebkitTouchCallout:"none"} as React.CSSProperties}
-            draggable={false}
-          />
-        )}
-        {/* Gradient overlay */}
+        {!loaded&&<div style={{position:"absolute",inset:0,background:"linear-gradient(90deg,#141414 0%,#1e1e1e 50%,#141414 100%)",backgroundSize:"200% 100%",animation:"shimmer 1.4s infinite"}}/>}
+        {vis&&<img src={post.img} alt={post.caption} loading="lazy" decoding="async" onLoad={()=>setLoaded(true)} style={{width:"100%",height:"100%",objectFit:"cover",display:"block",opacity:loaded?1:0,transition:"opacity 0.3s ease",pointerEvents:"none",userSelect:"none",WebkitUserSelect:"none",WebkitTouchCallout:"none"} as React.CSSProperties} draggable={false}/>}
         <div style={{position:"absolute",inset:0,background:"linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 50%, transparent 100%)",pointerEvents:"none"}}/>
-        {/* Tag */}
         <div style={{position:"absolute",top:10,left:10}}>
-          <span style={{
-            background:tc.bg,
-            color:tc.color,
-            fontSize:9,
-            fontWeight:800,
-            letterSpacing:1.5,
-            padding:"3px 9px",
-            borderRadius:20,
-            backdropFilter:"blur(8px)",
-            WebkitBackdropFilter:"blur(8px)",
-            border:`1px solid ${tc.color}30`,
-          }}>{post.tag}</span>
+          <span style={{background:tc.bg,color:tc.color,fontSize:9,fontWeight:800,letterSpacing:1.5,padding:"3px 9px",borderRadius:20,backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",border:`1px solid ${tc.color}30`}}>{post.tag}</span>
         </div>
-        {/* Caption */}
         <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"0.85rem"}}>
           <p style={{margin:"0 0 3px",fontSize:12,fontWeight:700,color:"#fff",lineHeight:1.35,textShadow:"0 1px 4px rgba(0,0,0,0.8)"}}>{post.caption}</p>
           <div style={{display:"flex",alignItems:"center",gap:4}}>
@@ -1011,42 +815,21 @@ const CommunityCard = memo(function CommunityCard({post,onClick,index}:{
 });
 
 // ─── COMMUNITY LIGHTBOX ───────────────────────────────────────────────────────
-function CommunityLightbox({post,onClose,onPrev,onNext,hasPrev,hasNext}:{
-  post:typeof COMMUNITY_POSTS[0];onClose:()=>void;
-  onPrev:()=>void;onNext:()=>void;hasPrev:boolean;hasNext:boolean;
-}) {
-  useEffect(()=>{
-    const h=(e:KeyboardEvent)=>{
-      if(e.key==="Escape") onClose();
-      if(e.key==="ArrowLeft"&&hasPrev) onPrev();
-      if(e.key==="ArrowRight"&&hasNext) onNext();
-    };
-    window.addEventListener("keydown",h);
-    return()=>window.removeEventListener("keydown",h);
-  },[onClose,onPrev,onNext,hasPrev,hasNext]);
-
+function CommunityLightbox({post,onClose,onPrev,onNext,hasPrev,hasNext}:{post:typeof COMMUNITY_POSTS[0];onClose:()=>void;onPrev:()=>void;onNext:()=>void;hasPrev:boolean;hasNext:boolean}) {
+  useEffect(()=>{const h=(e:KeyboardEvent)=>{if(e.key==="Escape")onClose();if(e.key==="ArrowLeft"&&hasPrev)onPrev();if(e.key==="ArrowRight"&&hasNext)onNext();};window.addEventListener("keydown",h);return()=>window.removeEventListener("keydown",h);},[onClose,onPrev,onNext,hasPrev,hasNext]);
   return (
     <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:800,background:"rgba(0,0,0,0.95)",display:"flex",alignItems:"center",justifyContent:"center",animation:"fadeIn 0.18s ease",padding:"1rem"}}>
       <div onClick={e=>e.stopPropagation()} style={{position:"relative",maxWidth:420,width:"100%",maxHeight:"90vh",display:"flex",flexDirection:"column",alignItems:"center"}}>
-        {/* Close */}
         <button onClick={onClose} style={{position:"absolute",top:-40,right:0,background:"none",border:"none",color:"#fff",cursor:"pointer",fontSize:24,WebkitTapHighlightColor:"transparent",zIndex:10}}>✕</button>
-        {/* Image */}
         <div style={{borderRadius:16,overflow:"hidden",width:"100%",maxHeight:"80vh",position:"relative"}}>
-          <img src={post.img} alt={post.caption}
-            style={{width:"100%",height:"auto",maxHeight:"80vh",objectFit:"contain",display:"block",userSelect:"none",WebkitUserSelect:"none"} as React.CSSProperties}
-            draggable={false}
-          />
+          <img src={post.img} alt={post.caption} style={{width:"100%",height:"auto",maxHeight:"80vh",objectFit:"contain",display:"block",userSelect:"none",WebkitUserSelect:"none"} as React.CSSProperties} draggable={false}/>
         </div>
-        {/* Caption */}
         <p style={{color:"#ccc",fontSize:13,textAlign:"center",marginTop:"0.75rem",lineHeight:1.5}}>{post.caption}</p>
-        {/* Nav arrows */}
         <div style={{display:"flex",gap:"0.75rem",marginTop:"0.5rem"}}>
-          <button onClick={e=>{e.stopPropagation();onPrev();}} disabled={!hasPrev}
-            style={{background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.12)",color:hasPrev?"#fff":"#333",width:40,height:40,borderRadius:"50%",cursor:hasPrev?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",WebkitTapHighlightColor:"transparent"}}>
+          <button onClick={e=>{e.stopPropagation();onPrev();}} disabled={!hasPrev} style={{background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.12)",color:hasPrev?"#fff":"#333",width:40,height:40,borderRadius:"50%",cursor:hasPrev?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",WebkitTapHighlightColor:"transparent"}}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
-          <button onClick={e=>{e.stopPropagation();onNext();}} disabled={!hasNext}
-            style={{background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.12)",color:hasNext?"#fff":"#333",width:40,height:40,borderRadius:"50%",cursor:hasNext?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",WebkitTapHighlightColor:"transparent"}}>
+          <button onClick={e=>{e.stopPropagation();onNext();}} disabled={!hasNext} style={{background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.12)",color:hasNext?"#fff":"#333",width:40,height:40,borderRadius:"50%",cursor:hasNext?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",WebkitTapHighlightColor:"transparent"}}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
           </button>
         </div>
@@ -1055,15 +838,15 @@ function CommunityLightbox({post,onClose,onPrev,onNext,hasPrev,hasNext}:{
   );
 }
 
-// ─── SCROLL TO TOP ────────────────────────────────────────────────────────────
-function scrollTop() {
-  window.scrollTo({top:0,behavior:"instant" as ScrollBehavior});
-}
+function scrollTop(){window.scrollTo({top:0,behavior:"instant" as ScrollBehavior});}
 
 // ─── AVATAR ───────────────────────────────────────────────────────────────────
 function UserAvatar({user,size=26}:{user:UserData;size?:number}) {
-  if(user.photoURL) {
-    return <img src={user.photoURL} alt={user.displayName} style={{width:size,height:size,borderRadius:"50%",objectFit:"cover",flexShrink:0,border:"1.5px solid #333"}} draggable={false}/>;
+  // FIX MÓVIL: force re-render cuando cambia photoURL con key
+  if(user.photoURL){
+    return <img key={user.photoURL} src={user.photoURL} alt={user.displayName}
+      style={{width:size,height:size,borderRadius:"50%",objectFit:"cover",flexShrink:0,border:"1.5px solid #333",display:"block"}}
+      draggable={false}/>;
   }
   return (
     <div style={{width:size,height:size,borderRadius:"50%",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
@@ -1086,41 +869,35 @@ export default function Home() {
   const [searchOpen,setSearchOpen]     = useState(false);
   const [searchQuery,setSearchQuery]   = useState("");
   const [payMethod,setPayMethod]       = useState<string|null>(null);
+  const [comprobanteUrl,setComprobanteUrl] = useState(""); // URL del comprobante subido
   const [products,setProducts]         = useState<Product[]>([]);
   const [loading,setLoading]           = useState(true);
   const [fbReady,setFbReady]           = useState(false);
   const [addedProduct,setAddedProduct] = useState<Product|null>(null);
   const [showAuth,setShowAuth]         = useState(false);
-  const [currentUser,setCurrentUser]   = useState<UserData|null>(null);
+  // FIX MÓVIL: inicializar currentUser como undefined hasta que localStorage cargue
+  const [currentUser,setCurrentUser]   = useState<UserData|null|undefined>(undefined);
   const [lightboxIdx,setLightboxIdx]   = useState<number|null>(null);
 
-  // Account editing state
-  const [editingName,setEditingName]         = useState(false);
-  const [newName,setNewName]                 = useState("");
-  const [nameLoading,setNameLoading]         = useState(false);
-  const [photoLoading,setPhotoLoading]       = useState(false);
-  const photoInputRef                        = useRef<HTMLInputElement>(null);
+  // Account
+  const [editingName,setEditingName]   = useState(false);
+  const [newName,setNewName]           = useState("");
+  const [nameLoading,setNameLoading]   = useState(false);
+  const [photoLoading,setPhotoLoading] = useState(false);
+  const photoInputRef                  = useRef<HTMLInputElement>(null);
 
-  const setMainView = useCallback((v: MainView) => {
-    setMainViewRaw(v);
-    scrollTop();
-  }, []);
+  const setMainView=useCallback((v:MainView)=>{setMainViewRaw(v);scrollTop();},[]);
 
-  const [deliveryInfo,setDeliveryInfo] = useState<DeliveryInfo>({
-    zone:"", nombre:"", cedula:"", telefono:"", agencia:"", direccion:"", estado:""
-  });
+  const [deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",cedula:"",telefono:"",agencia:"",direccion:"",estado:""});
 
   const navRef=useRef<HTMLElement>(null);
   const [navH,setNavH]=useState(NAV_H+TABS_H);
   useEffect(()=>{
-    const upd=()=>{ if(navRef.current) setNavH(navRef.current.offsetHeight); };
-    upd();
-    const ro=new ResizeObserver(upd);
-    if(navRef.current) ro.observe(navRef.current);
-    return()=>ro.disconnect();
+    const upd=()=>{if(navRef.current)setNavH(navRef.current.offsetHeight);};
+    upd();const ro=new ResizeObserver(upd);if(navRef.current)ro.observe(navRef.current);return()=>ro.disconnect();
   },[mainView,lentesOpen,searchOpen]);
 
-  // Admin state
+  // Admin
   const [adminLogged,setAdminLogged]   = useState(false);
   const [adminEmail,setAdminEmail]     = useState("");
   const [adminPwd,setAdminPwd]         = useState("");
@@ -1142,36 +919,49 @@ export default function Home() {
   const formRef=useRef<HTMLDivElement>(null);
   const [dragId,setDragId]   = useState<string|null>(null);
   const [overId,setOverId]   = useState<string|null>(null);
+  const touchDragId=useRef<string|null>(null);
+  const touchDragActive=useRef(false);
 
-  const touchDragId  = useRef<string|null>(null);
-  const touchDragActive = useRef(false);
-
-  // ── Load user from localStorage ──
+  // ── FIX MÓVIL: cargar user desde localStorage en primer render ──
   useEffect(()=>{
     try {
-      const stored = localStorage.getItem("fokus_user");
-      if(stored) setCurrentUser(JSON.parse(stored) as UserData);
-    } catch{}
+      const stored=localStorage.getItem("fokus_user");
+      if(stored){
+        const parsed=JSON.parse(stored) as UserData;
+        setCurrentUser(parsed);
+        // Intentar refrescar idToken con refreshToken guardado
+        const rt=localStorage.getItem("fokus_refresh");
+        if(rt && parsed.uid){
+          refreshIdToken(rt).then(result=>{
+            if(result){
+              setCurrentUser(prev=>prev?{...prev,idToken:result.idToken}:prev);
+            }
+          }).catch(()=>{});
+        }
+      } else {
+        setCurrentUser(null);
+      }
+    } catch { setCurrentUser(null); }
   },[]);
 
-  // ── Persist cart in sessionStorage (per session, survives navigation) ──
+  // Persistir user en localStorage cuando cambia
   useEffect(()=>{
-    try {
-      const saved = sessionStorage.getItem("fokus_cart");
-      if(saved) setCart(JSON.parse(saved) as CartItem[]);
-    } catch{}
+    if(currentUser===undefined)return;
+    if(currentUser) localStorage.setItem("fokus_user",JSON.stringify(currentUser));
+    else localStorage.removeItem("fokus_user");
+  },[currentUser]);
+
+  // ── Cart persistence ──
+  useEffect(()=>{
+    try{const saved=sessionStorage.getItem("fokus_cart");if(saved)setCart(JSON.parse(saved) as CartItem[]);}catch{}
   },[]);
   useEffect(()=>{
-    try { sessionStorage.setItem("fokus_cart", JSON.stringify(cart)); } catch{}
+    try{sessionStorage.setItem("fokus_cart",JSON.stringify(cart));}catch{}
   },[cart]);
 
   const loadProducts=useCallback(async()=>{
     setLoading(true);
-    try{
-      const d=await fsGetAll();
-      const sorted = d.sort((a,b)=>(a.order??0)-(b.order??0));
-      setProducts(sorted.length>0?sorted:DEMO);
-    }
+    try{const d=await fsGetAll();const sorted=d.sort((a,b)=>(a.order??0)-(b.order??0));setProducts(sorted.length>0?sorted:DEMO);}
     catch{setProducts(DEMO);}
     finally{setLoading(false);}
   },[]);
@@ -1179,206 +969,117 @@ export default function Home() {
   useEffect(()=>{
     const ok=FIREBASE_CONFIG.projectId!=="TU_PROJECT_ID";
     setFbReady(ok);
-    if(ok) loadProducts(); else{setProducts(DEMO);setLoading(false);}
-    if(typeof window!=="undefined"&&window.location.pathname==="/admin") setMainViewRaw("admin");
+    if(ok)loadProducts();else{setProducts(DEMO);setLoading(false);}
+    if(typeof window!=="undefined"&&window.location.pathname==="/admin")setMainViewRaw("admin");
   },[loadProducts]);
 
-  // ── Account: upload profile photo ──
-  const handleProfilePhoto = useCallback(async(e:React.ChangeEvent<HTMLInputElement>)=>{
-    const file = e.target.files?.[0]; if(!file||!currentUser) return;
+  // ── FIX FOTO PERFIL MÓVIL + PERSISTENCIA ──
+  const handleProfilePhoto=useCallback(async(e:React.ChangeEvent<HTMLInputElement>)=>{
+    const file=e.target.files?.[0];if(!file||!currentUser)return;
     setPhotoLoading(true);
-    try {
-      const url = await uploadImg(file);
-      const updated: UserData = {...currentUser, photoURL: url};
-      setCurrentUser(updated);
-      localStorage.setItem("fokus_user", JSON.stringify(updated));
-    } catch{ /* silent */ }
-    finally{ setPhotoLoading(false); if(photoInputRef.current) photoInputRef.current.value=""; }
+    try{
+      const url=await uploadImg(file);
+      // Obtener idToken fresco
+      let idToken=currentUser.idToken;
+      if(!idToken){
+        const rt=localStorage.getItem("fokus_refresh");
+        if(rt){const res=await refreshIdToken(rt);if(res)idToken=res.idToken;}
+      }
+      // Guardar en Firestore para que persista en futuros logins
+      await fsSaveUser(currentUser.uid,{photoURL:url},idToken).catch(()=>{});
+      // Actualizar estado local — esto dispara re-render en TODOS los componentes
+      setCurrentUser(prev=>{
+        if(!prev)return prev;
+        return {...prev,photoURL:url,idToken};
+      });
+    }catch{/* silent */}
+    finally{setPhotoLoading(false);if(photoInputRef.current)photoInputRef.current.value="";}
   },[currentUser]);
 
-  // ── Account: change display name ──
-  const handleSaveName = useCallback(async()=>{
-    if(!newName.trim()||!currentUser) return;
+  const handleSaveName=useCallback(async()=>{
+    if(!newName.trim()||!currentUser)return;
     setNameLoading(true);
-    const updated: UserData = {...currentUser, displayName: newName.trim()};
+    const updated:UserData={...currentUser,displayName:newName.trim()};
     setCurrentUser(updated);
-    localStorage.setItem("fokus_user", JSON.stringify(updated));
-    setEditingName(false); setNameLoading(false);
+    setEditingName(false);setNameLoading(false);
   },[currentUser,newName]);
 
-  const catCounts = useMemo(()=>{
-    const counts: Record<string,number> = {};
-    products.forEach(p=>{
-      const mainCat = p.category.startsWith("LENTES·") ? "LENTES" : p.category;
-      counts[mainCat] = (counts[mainCat]||0) + 1;
-      if(p.category.startsWith("LENTES·")) counts[p.category] = (counts[p.category]||0) + 1;
-    });
+  const catCounts=useMemo(()=>{
+    const counts:Record<string,number>={};
+    products.forEach(p=>{const mainCat=p.category.startsWith("LENTES·")?"LENTES":p.category;counts[mainCat]=(counts[mainCat]||0)+1;if(p.category.startsWith("LENTES·"))counts[p.category]=(counts[p.category]||0)+1;});
     return counts;
   },[products]);
 
   const isLentesSubcat=useMemo(()=>(LENTES_SUBCATS as readonly string[]).includes(shopFilter),[shopFilter]);
   const isLentesActive=useMemo(()=>shopFilter==="LENTES"||isLentesSubcat,[shopFilter,isLentesSubcat]);
-
-  const getVisCats=useCallback(():string[]=>{
-    if(shopFilter==="TODO") return [...LENTES_SUBCATS,...SHOP_CATS.filter(c=>c!=="LENTES")];
-    if(shopFilter==="LENTES") return [...LENTES_SUBCATS];
-    return [shopFilter];
-  },[shopFilter]);
-
-  const getProds=useCallback((cat:string)=>products.filter(p=>
-    p.category===cat&&(searchQuery===""||p.name.toLowerCase().includes(searchQuery.toLowerCase()))
-  ),[products,searchQuery]);
-
+  const getVisCats=useCallback(():string[]=>{if(shopFilter==="TODO")return[...LENTES_SUBCATS,...SHOP_CATS.filter(c=>c!=="LENTES")];if(shopFilter==="LENTES")return[...LENTES_SUBCATS];return[shopFilter];},[shopFilter]);
+  const getProds=useCallback((cat:string)=>products.filter(p=>p.category===cat&&(searchQuery===""||p.name.toLowerCase().includes(searchQuery.toLowerCase()))),[products,searchQuery]);
   const totalItems=useMemo(()=>cart.reduce((s,i)=>s+i.qty,0),[cart]);
   const totalPrice=useMemo(()=>cart.reduce((s,i)=>s+i.product.price*i.qty,0),[cart]);
 
   const addToCart=useCallback((product:Product,qty:number)=>{
-    setCart(prev=>{
-      const ex=prev.find(i=>i.product.id===product.id);
-      return ex?prev.map(i=>i.product.id===product.id?{...i,qty:i.qty+qty}:i):[...prev,{product,qty}];
-    });
-    setSel(null); setAddedProduct(product);
+    setCart(prev=>{const ex=prev.find(i=>i.product.id===product.id);return ex?prev.map(i=>i.product.id===product.id?{...i,qty:i.qty+qty}:i):[...prev,{product,qty}];});
+    setSel(null);setAddedProduct(product);
   },[]);
+  const updQty=useCallback((id:string,d:number)=>setCart(prev=>prev.map(i=>i.product.id===id?{...i,qty:i.qty+d}:i).filter(i=>i.qty>0)),[]);
 
-  const updQty=useCallback((id:string,d:number)=>
-    setCart(prev=>prev.map(i=>i.product.id===id?{...i,qty:i.qty+d}:i).filter(i=>i.qty>0))
-  ,[]);
-
-  const deliveryValid = useMemo(()=>{
-    if(!deliveryInfo.zone) return false;
-    if(deliveryInfo.zone==="otro"){
-      return !!(deliveryInfo.nombre&&deliveryInfo.cedula&&deliveryInfo.telefono&&deliveryInfo.agencia&&deliveryInfo.estado&&deliveryInfo.direccion);
-    }
+  const deliveryValid=useMemo(()=>{
+    if(!deliveryInfo.zone)return false;
+    if(deliveryInfo.zone==="otro")return!!(deliveryInfo.nombre&&deliveryInfo.cedula&&deliveryInfo.telefono&&deliveryInfo.agencia&&deliveryInfo.estado&&deliveryInfo.direccion);
     return true;
   },[deliveryInfo]);
 
+  // WhatsApp message — incluye URL del comprobante si existe
   const waMsg=useCallback(()=>{
     const lines=cart.map(i=>`• ${i.product.name} x${i.qty} — $${(i.product.price*i.qty).toFixed(2)}`);
     const pm=PAYMENT_METHODS.find(m=>m.id===payMethod);
     const pmL=pm?`\n\nMétodo de pago: ${pm.name} (${pm.detail})`:"";
     const dz=DELIVERY_ZONES_MAP.get(deliveryInfo.zone);
-    let deliveryL = dz ? `\n\nEnvio: ${dz.label}` : "";
-    if(deliveryInfo.zone==="otro"){
-      deliveryL += `\nEstado: ${deliveryInfo.estado}\nNombre: ${deliveryInfo.nombre}\nCédula: ${deliveryInfo.cedula}\nTeléfono: ${deliveryInfo.telefono}\nAgencia: ${deliveryInfo.agencia}\nDirección: ${deliveryInfo.direccion}`;
-    }
-    const userL = currentUser ? `\n\nCliente: ${currentUser.displayName} (${currentUser.email})` : "";
-    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`Hola! Quiero hacer un pedido:\n\n${lines.join("\n")}\n\nTotal: $${totalPrice.toFixed(2)}${pmL}${deliveryL}${userL}\n\n¡Adjunto comprobante de pago!`)}`;
-  },[cart,totalPrice,payMethod,deliveryInfo,currentUser]);
+    let deliveryL=dz?`\n\nEnvio: ${dz.label}`:"";
+    if(deliveryInfo.zone==="otro"){deliveryL+=`\nEstado: ${deliveryInfo.estado}\nNombre: ${deliveryInfo.nombre}\nCédula: ${deliveryInfo.cedula}\nTeléfono: ${deliveryInfo.telefono}\nAgencia: ${deliveryInfo.agencia}\nDirección: ${deliveryInfo.direccion}`;}
+    const userL=currentUser?`\n\nCliente: ${currentUser.displayName} (${currentUser.email})`:"";
+    const compL=comprobanteUrl?`\n\n📎 Comprobante: ${comprobanteUrl}`:"";
+    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`Hola! Quiero hacer un pedido:\n\n${lines.join("\n")}\n\nTotal: $${totalPrice.toFixed(2)}${pmL}${deliveryL}${userL}${compL}`)}`;
+  },[cart,totalPrice,payMethod,deliveryInfo,currentUser,comprobanteUrl]);
 
-  const doLogin=()=>{
-    if(adminEmail===ADMIN_EMAIL&&adminPwd===ADMIN_PASSWORD){setAdminLogged(true);setAdminErr("");setAdminSec("menu");}
-    else setAdminErr("Credenciales incorrectas");
-  };
-  const doLogout=()=>{
-    setAdminLogged(false);setAdminEmail("");setAdminPwd("");setMainView("fokus");
-    if(typeof window!=="undefined") window.history.pushState("","","/");
-  };
-  const resetForm=()=>{
-    setEditing(null);setFName("");setFDesc("");setFPrice("");setFCat("");
-    setFFile(null);setFPrev("");setFErr("");setFOk("");
-    if(fileRef.current) fileRef.current.value="";
-  };
-  const startEdit=(p:Product)=>{
-    setEditing(p);setFName(p.name);setFDesc(p.description||"");
-    setFPrice(String(p.price));setFCat(p.category);setFPrev(p.img);
-    setFFile(null);setFErr("");setFOk("");
-    if(fileRef.current) fileRef.current.value="";
-    setTimeout(()=>formRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),50);
-  };
-  const onFileChange=(e:React.ChangeEvent<HTMLInputElement>)=>{
-    const file=e.target.files?.[0];if(!file) return;
-    setFFile(file);
-    const r=new FileReader();r.onload=ev=>setFPrev(ev.target?.result as string);r.readAsDataURL(file);
-  };
+  const doLogin=()=>{if(adminEmail===ADMIN_EMAIL&&adminPwd===ADMIN_PASSWORD){setAdminLogged(true);setAdminErr("");setAdminSec("menu");}else setAdminErr("Credenciales incorrectas");};
+  const doLogout=()=>{setAdminLogged(false);setAdminEmail("");setAdminPwd("");setMainView("fokus");if(typeof window!=="undefined")window.history.pushState("","","/");};
+  const resetForm=()=>{setEditing(null);setFName("");setFDesc("");setFPrice("");setFCat("");setFFile(null);setFPrev("");setFErr("");setFOk("");if(fileRef.current)fileRef.current.value="";};
+  const startEdit=(p:Product)=>{setEditing(p);setFName(p.name);setFDesc(p.description||"");setFPrice(String(p.price));setFCat(p.category);setFPrev(p.img);setFFile(null);setFErr("");setFOk("");if(fileRef.current)fileRef.current.value="";setTimeout(()=>formRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),50);};
+  const onFileChange=(e:React.ChangeEvent<HTMLInputElement>)=>{const file=e.target.files?.[0];if(!file)return;setFFile(file);const r=new FileReader();r.onload=ev=>setFPrev(ev.target?.result as string);r.readAsDataURL(file);};
   const submitProduct=async()=>{
     setFErr("");setFOk("");
     if(!fName.trim()||!fPrice||!fCat){setFErr("Nombre, precio y categoría son obligatorios.");return;}
     if(!editing&&!fFile){setFErr("Selecciona una imagen.");return;}
     if(!fbReady){setFErr("Firebase no configurado.");return;}
     setFLoad(true);
-    try{
-      let imgUrl=fPrev;
-      if(fFile) imgUrl=await uploadImg(fFile);
-      const data={name:fName.trim(),description:fDesc.trim(),price:parseFloat(fPrice),category:fCat.toUpperCase(),img:imgUrl};
-      if(editing){await fsUpdate(editing.id,data);setFOk("✓ Producto actualizado");}
-      else{await fsAdd(data);setFOk("✓ Producto agregado");}
-      await loadProducts();
-      setTimeout(resetForm,1800);
-    }catch(err){setFErr("Error: "+(err instanceof Error?err.message:"desconocido"));}
+    try{let imgUrl=fPrev;if(fFile)imgUrl=await uploadImg(fFile);const data={name:fName.trim(),description:fDesc.trim(),price:parseFloat(fPrice),category:fCat.toUpperCase(),img:imgUrl};if(editing){await fsUpdate(editing.id,data);setFOk("✓ Producto actualizado");}else{await fsAdd(data);setFOk("✓ Producto agregado");}await loadProducts();setTimeout(resetForm,1800);}
+    catch(err){setFErr("Error: "+(err instanceof Error?err.message:"desconocido"));}
     finally{setFLoad(false);}
   };
-  const delProd=async(id:string)=>{
-    if(!confirm("¿Eliminar este producto?")) return;
-    await fsDelete(id);await loadProducts();
-  };
+  const delProd=async(id:string)=>{if(!confirm("¿Eliminar este producto?"))return;await fsDelete(id);await loadProducts();};
 
-  // Desktop Drag & Drop
-  const handleDragStart = useCallback((id:string)=>setDragId(id),[]);
-  const handleDragOver  = useCallback((id:string)=>setOverId(id),[]);
-  const handleDragEnd   = useCallback(async()=>{
+  const handleDragStart=useCallback((id:string)=>setDragId(id),[]);
+  const handleDragOver=useCallback((id:string)=>setOverId(id),[]);
+  const handleDragEnd=useCallback(async()=>{
     if(!dragId||!overId||dragId===overId){setDragId(null);setOverId(null);return;}
-    setProducts(prev=>{
-      const arr = [...prev];
-      const fromIdx = arr.findIndex(p=>p.id===dragId);
-      const toIdx   = arr.findIndex(p=>p.id===overId);
-      if(fromIdx<0||toIdx<0) return prev;
-      const [moved] = arr.splice(fromIdx,1);
-      arr.splice(toIdx,0,moved);
-      arr.forEach((p,i)=>{ if(p.order!==i && fbReady) fsUpdate(p.id,{order:i}).catch(()=>{}); });
-      return arr.map((p,i)=>({...p,order:i}));
-    });
+    setProducts(prev=>{const arr=[...prev];const fi=arr.findIndex(p=>p.id===dragId),ti=arr.findIndex(p=>p.id===overId);if(fi<0||ti<0)return prev;const[moved]=arr.splice(fi,1);arr.splice(ti,0,moved);arr.forEach((p,i)=>{if(p.order!==i&&fbReady)fsUpdate(p.id,{order:i}).catch(()=>{});});return arr.map((p,i)=>({...p,order:i}));});
     setDragId(null);setOverId(null);
   },[dragId,overId,fbReady]);
+  const handleTouchDragStart=useCallback((id:string)=>{touchDragId.current=id;touchDragActive.current=true;setDragId(id);},[]);
+  const handleTouchDragMove=useCallback((y:number,x:number)=>{if(!touchDragActive.current||!touchDragId.current)return;const el=document.elementFromPoint(x,y);if(!el)return;const row=el.closest("[data-rowid]") as HTMLElement|null;if(row){const id=row.dataset.rowid;if(id&&id!==touchDragId.current)setOverId(id);}},[]);
+  const handleTouchDragEnd=useCallback(()=>{const from=touchDragId.current,to=overId;touchDragId.current=null;touchDragActive.current=false;setDragId(null);if(!from||!to||from===to){setOverId(null);return;}setProducts(prev=>{const arr=[...prev];const fi=arr.findIndex(p=>p.id===from),ti=arr.findIndex(p=>p.id===to);if(fi<0||ti<0)return prev;const[moved]=arr.splice(fi,1);arr.splice(ti,0,moved);arr.forEach((p,i)=>{if(p.order!==i&&fbReady)fsUpdate(p.id,{order:i}).catch(()=>{});});return arr.map((p,i)=>({...p,order:i}));});setOverId(null);},[overId,fbReady]);
 
-  const handleTouchDragStart = useCallback((id: string) => {
-    touchDragId.current = id;
-    touchDragActive.current = true;
-    setDragId(id);
-  }, []);
-
-  const handleTouchDragMove = useCallback((y: number, x: number) => {
-    if (!touchDragActive.current || !touchDragId.current) return;
-    const el = document.elementFromPoint(x, y);
-    if (!el) return;
-    const row = el.closest("[data-rowid]") as HTMLElement | null;
-    if (row) {
-      const id = row.dataset.rowid;
-      if (id && id !== touchDragId.current) setOverId(id);
-    }
-  }, []);
-
-  const handleTouchDragEnd = useCallback(() => {
-    const from = touchDragId.current;
-    const to = overId;
-    touchDragId.current = null;
-    touchDragActive.current = false;
-    setDragId(null);
-    if (!from || !to || from === to) { setOverId(null); return; }
-    setProducts(prev => {
-      const arr = [...prev];
-      const fi = arr.findIndex(p => p.id === from);
-      const ti = arr.findIndex(p => p.id === to);
-      if (fi < 0 || ti < 0) return prev;
-      const [moved] = arr.splice(fi, 1);
-      arr.splice(ti, 0, moved);
-      arr.forEach((p, i) => { if (p.order !== i && fbReady) fsUpdate(p.id, { order: i }).catch(() => {}); });
-      return arr.map((p, i) => ({ ...p, order: i }));
-    });
-    setOverId(null);
-  }, [overId, fbReady]);
-
-  const adminProds=useMemo(()=>{
-    let l=products;
-    if(adminCat!=="ALL") l=l.filter(p=>p.category===adminCat);
-    if(adminSearch!=="") l=l.filter(p=>p.name.toLowerCase().includes(adminSearch.toLowerCase())||p.category.toLowerCase().includes(adminSearch.toLowerCase()));
-    return l;
-  },[products,adminCat,adminSearch]);
-
+  const adminProds=useMemo(()=>{let l=products;if(adminCat!=="ALL")l=l.filter(p=>p.category===adminCat);if(adminSearch!=="")l=l.filter(p=>p.name.toLowerCase().includes(adminSearch.toLowerCase())||p.category.toLowerCase().includes(adminSearch.toLowerCase()));return l;},[products,adminCat,adminSearch]);
   const usedCats=useMemo(()=>[...new Set(products.map(p=>p.category))].sort(),[products]);
+
   const isShop=mainView==="shop",isAdmin=mainView==="admin",isCart=mainView==="cart";
   const stickyTop=navH-1;
   const TABS=[{id:"fokus" as MainView,l:"FOKUS"},{id:"shop" as MainView,l:"TIENDA"},{id:"comunidad" as MainView,l:"COMUNIDAD"}];
   const openProd=useCallback((p:Product)=>{setSel(p);setModalQty(1);},[]);
+
+  // FIX MÓVIL: no renderizar cuenta hasta saber si hay user
+  const userReady = currentUser !== undefined;
 
   return (
     <div style={{fontFamily:"'Helvetica Neue',Arial,sans-serif",background:C.bg,minHeight:"100vh",color:C.text}}>
@@ -1389,17 +1090,15 @@ export default function Home() {
         @keyframes slideInLeft{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
         @keyframes scaleIn{from{opacity:0;transform:scale(0.88)}to{opacity:1;transform:scale(1)}}
         @keyframes pulseRing{0%{transform:scale(1);opacity:0.6}100%{transform:scale(1.5);opacity:0}}
+        @keyframes spin{to{transform:rotate(360deg)}}
         *{box-sizing:border-box;-webkit-font-smoothing:antialiased;}
-
         html{overflow-y:scroll;scroll-behavior:smooth;}
         body{background:#080808;margin:0;overscroll-behavior-y:contain;}
-
         .admin-list{-webkit-user-select:none;user-select:none;}
         .ts::-webkit-scrollbar,.hr::-webkit-scrollbar{display:none}
         .ts{-webkit-overflow-scrolling:touch;}
         .hr{-webkit-overflow-scrolling:touch;scroll-behavior:smooth;}
         .hr::-webkit-scrollbar{display:none}
-
         @media(hover:hover){
           .pc:hover .iz,.hc:hover .iz{transform:scale(1.05)!important}
           .pc:hover .io,.hc:hover .io{background:rgba(255,255,255,0.04)!important}
@@ -1414,22 +1113,14 @@ export default function Home() {
         .pc:active{transform:scale(0.97)}
         .hc:active{opacity:0.85}
         .nb:active{opacity:0.6}
-
         @media(max-width:480px){.pg{grid-template-columns:repeat(2,1fr)!important}.fg{grid-template-columns:1fr!important;gap:1.5rem!important}.cg{grid-template-columns:repeat(2,1fr)!important}}
         @media(min-width:481px) and (max-width:767px){.pg{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))!important}.fg{grid-template-columns:repeat(2,1fr)!important;gap:1.5rem!important}.cg{grid-template-columns:repeat(3,1fr)!important}}
         @media(min-width:768px){.pg{grid-template-columns:repeat(auto-fill,minmax(195px,1fr))!important}.fg{grid-template-columns:repeat(3,1fr)!important}.cg{grid-template-columns:repeat(3,1fr)!important}}
-
         .hr *{-webkit-user-select:none;user-select:none;}
         .hr,.ts{contain:layout style;}
         select{-webkit-appearance:auto;appearance:auto;}
-
-        .ar[data-dragging="true"]{opacity:0.4;background:#1a1a1a!important;}
-        .ar[data-over="true"]{background:#1e1e1e!important;border:1px dashed #3a3a3a!important;}
-
         img{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;}
         button,a{-webkit-tap-highlight-color:transparent;}
-
-        /* Smooth photo upload ring */
         .avatar-ring{position:relative;display:inline-flex;align-items:center;justify-content:center;}
         .avatar-ring::after{content:'';position:absolute;inset:-3px;border-radius:50%;border:2px solid rgba(255,255,255,0.15);pointer-events:none;}
       `}</style>
@@ -1440,17 +1131,17 @@ export default function Home() {
           <button onClick={()=>setMenuOpen(true)} style={S.iconBtn} aria-label="Menú">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><line x1="3" y1="7" x2="21" y2="7"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="17" x2="21" y2="17"/></svg>
           </button>
-          <button onClick={()=>setMainView("fokus")}
-            style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:7,position:"absolute",left:"50%",transform:"translateX(-50%)",padding:"0 8px",WebkitTapHighlightColor:"transparent",maxWidth:"calc(100% - 120px)"}}>
+          <button onClick={()=>setMainView("fokus")} style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:7,position:"absolute",left:"50%",transform:"translateX(-50%)",padding:"0 8px",WebkitTapHighlightColor:"transparent",maxWidth:"calc(100% - 120px)"}}>
             <img src="/favicon.png" alt="Fokus" width={26} height={26} style={{objectFit:"contain",flexShrink:0,pointerEvents:"none"}} draggable={false}/>
             <span style={{color:"#fff",fontSize:16,fontWeight:900,letterSpacing:5,whiteSpace:"nowrap"}}>FOKUS</span>
           </button>
           <div style={{display:"flex",marginLeft:"auto",gap:0}}>
-            <button onClick={()=>{ const n=!searchOpen;setSearchOpen(n);setSearchQuery("");if(n&&mainView!=="shop"){setMainViewRaw("shop");setShopFilter("TODO");scrollTop();} }} style={S.iconBtn}>
+            <button onClick={()=>{const n=!searchOpen;setSearchOpen(n);setSearchQuery("");if(n&&mainView!=="shop"){setMainViewRaw("shop");setShopFilter("TODO");scrollTop();}}} style={S.iconBtn}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
             </button>
-            <button onClick={()=>currentUser?setMainView("account"):setShowAuth(true)} style={{...S.iconBtn,position:"relative"}}>
-              {currentUser
+            {/* FIX MÓVIL: mostrar avatar sólo cuando userReady */}
+            <button onClick={()=>{if(!userReady)return;currentUser?setMainView("account"):setShowAuth(true);}} style={{...S.iconBtn,position:"relative"}}>
+              {userReady&&currentUser
                 ? <UserAvatar user={currentUser} size={26}/>
                 : <IcUser s={19} c="#fff"/>}
             </button>
@@ -1461,7 +1152,7 @@ export default function Home() {
           </div>
         </div>
         {!isAdmin&&(
-          <NativeTabs items={TABS.map(t=>t.id)} active={mainView} onSelect={(id)=>{setMainView(id as MainView);if(id==="shop")setShopFilter("TODO");}} height={TABS_H}
+          <NativeTabs items={TABS.map(t=>t.id)} active={mainView} onSelect={id=>{setMainView(id as MainView);if(id==="shop")setShopFilter("TODO");}} height={TABS_H}
             renderItem={(id,a)=>{
               const l=TABS.find(t=>t.id===id)?.l??id;
               return <span className="nb" style={{display:"flex",alignItems:"center",padding:"0 1.4rem",height:"100%",borderBottom:a?"2px solid #fff":"2px solid transparent",fontSize:10,fontWeight:800,letterSpacing:2.5,color:a?"#fff":"#444",whiteSpace:"nowrap",transition:"color 0.15s,border-color 0.15s"}}>{l}</span>;
@@ -1481,9 +1172,7 @@ export default function Home() {
           <div style={{position:"relative",background:"#0e0e0e",width:272,height:"100%",padding:"2rem 1.5rem",overflowY:"auto",display:"flex",flexDirection:"column",animation:"slideInLeft 0.22s cubic-bezier(0.25,0.46,0.45,0.94)",borderRight:"1px solid #1a1a1a"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"2rem"}}>
               <span style={{fontWeight:900,fontSize:11,letterSpacing:3,color:"#555"}}>CATEGORÍAS</span>
-              <button onClick={()=>setMenuOpen(false)} style={{...S.iconBtn,padding:4}}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              </button>
+              <button onClick={()=>setMenuOpen(false)} style={{...S.iconBtn,padding:4}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
             </div>
             <button onClick={()=>setLentesOpen(o=>!o)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%",background:"none",border:"none",borderBottom:`1px solid ${C.border}`,padding:"0.85rem 0",textAlign:"left",fontSize:14,cursor:"pointer",fontFamily:"inherit",color:"#d0d0d0",WebkitTapHighlightColor:"transparent"}}>
               <span style={{display:"flex",alignItems:"center",gap:"0.5rem"}}>Lentes{catCounts["LENTES"]>0&&<span style={{fontSize:9,color:"#333",background:"#1a1a1a",padding:"1px 5px",borderRadius:8,fontWeight:700}}>{catCounts["LENTES"]}</span>}</span>
@@ -1506,7 +1195,7 @@ export default function Home() {
               </button>
             ))}
             <div style={{marginTop:"auto",paddingTop:"2rem"}}>
-              {currentUser?(
+              {userReady&&currentUser?(
                 <div style={{marginBottom:"1rem",background:"#141414",borderRadius:10,padding:"0.85rem",border:"1px solid #1a1a1a"}}>
                   <div style={{display:"flex",alignItems:"center",gap:"0.6rem",marginBottom:"0.5rem"}}>
                     <UserAvatar user={currentUser} size={32}/>
@@ -1515,7 +1204,7 @@ export default function Home() {
                       <p style={{margin:0,fontSize:10,color:"#444"}}>{currentUser.email}</p>
                     </div>
                   </div>
-                  <button onClick={()=>{localStorage.removeItem("fokus_user");setCurrentUser(null);setMenuOpen(false);}}
+                  <button onClick={()=>{setCurrentUser(null);localStorage.removeItem("fokus_user");localStorage.removeItem("fokus_refresh");setMenuOpen(false);}}
                     style={{background:"none",border:"1px solid #2a2a2a",color:"#555",padding:"0.35rem 0.85rem",borderRadius:6,cursor:"pointer",fontFamily:"inherit",fontSize:10,fontWeight:700,WebkitTapHighlightColor:"transparent"}}>
                     Cerrar sesión
                   </button>
@@ -1555,9 +1244,7 @@ export default function Home() {
                 </div>
               </div>
             </div>
-            <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={{...S.darkBtn,fontSize:11,padding:"1.1rem 2.8rem",letterSpacing:3,borderRadius:3}}>
-              VER COLECCIÓN →
-            </button>
+            <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={{...S.darkBtn,fontSize:11,padding:"1.1rem 2.8rem",letterSpacing:3,borderRadius:3}}>VER COLECCIÓN →</button>
             <div style={{display:"flex",justifyContent:"center",gap:"0.75rem",marginTop:"3rem"}}>
               <a href={SOCIAL.instagram} target="_blank" rel="noreferrer" className="sl" style={S.socialA}><IcIG s={18}/></a>
               <a href={SOCIAL.tiktok}    target="_blank" rel="noreferrer" className="sl" style={S.socialA}><IcTT s={18}/></a>
@@ -1576,11 +1263,7 @@ export default function Home() {
             <NativeTabs
               items={["TODO","LENTES",...(SHOP_CATS.filter(c=>c!=="LENTES") as string[])]}
               active={shopFilter==="TODO"?"TODO":isLentesActive?"LENTES":(SHOP_CATS.filter(c=>c!=="LENTES") as string[]).includes(shopFilter)?shopFilter:"TODO"}
-              onSelect={(item)=>{
-                if(item==="LENTES"){const n=!lentesOpen;setLentesOpen(n);if(n)setShopFilter("LENTES");}
-                else{setShopFilter(item as ShopFilter);setLentesOpen(false);}
-                scrollTop();
-              }}
+              onSelect={item=>{if(item==="LENTES"){const n=!lentesOpen;setLentesOpen(n);if(n)setShopFilter("LENTES");}else{setShopFilter(item as ShopFilter);setLentesOpen(false);}scrollTop();}}
               height={44}
               renderItem={(item,_)=>{
                 const a=item==="TODO"?shopFilter==="TODO":item==="LENTES"?isLentesActive:shopFilter===item;
@@ -1604,12 +1287,10 @@ export default function Home() {
           </div>
           <div style={{maxWidth:1200,margin:"0 auto",padding:"1.5rem 1rem 5rem"}}>
             {loading?(
-              <div className="pg" style={{display:"grid",gap:"1rem"}}>
-                {Array.from({length:8}).map((_,i)=><SkeletonCard key={i}/>)}
-              </div>
+              <div className="pg" style={{display:"grid",gap:"1rem"}}>{Array.from({length:8}).map((_,i)=><SkeletonCard key={i}/>)}</div>
             ):shopFilter==="TODO"?(
               getVisCats().map(cat=>{
-                const prods=getProds(cat); if(!prods.length) return null;
+                const prods=getProds(cat);if(!prods.length)return null;
                 const isLC=(LENTES_SUBCATS as readonly string[]).includes(cat);
                 return (
                   <div key={cat} style={{marginBottom:"2.5rem",animation:"fadeIn 0.3s ease"}}>
@@ -1623,7 +1304,7 @@ export default function Home() {
               })
             ):(
               getVisCats().map(cat=>{
-                const prods=getProds(cat); if(!prods.length) return null;
+                const prods=getProds(cat);if(!prods.length)return null;
                 const isLC=(LENTES_SUBCATS as readonly string[]).includes(cat);
                 return (
                   <div key={cat} style={{marginBottom:"3rem",animation:"fadeIn 0.3s ease"}}>
@@ -1643,10 +1324,9 @@ export default function Home() {
         </main>
       )}
 
-      {/* ── COMUNIDAD ── */}
+      {/* COMUNIDAD */}
       {mainView==="comunidad"&&(
         <main style={{paddingTop:navH,background:C.bg}}>
-          {/* Hero */}
           <div style={{maxWidth:680,margin:"0 auto",padding:"3rem 1.5rem 0",textAlign:"center",animation:"slideUp 0.4s ease"}}>
             <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:20,padding:"0.35rem 1rem",marginBottom:"1.25rem"}}>
               <div style={{width:6,height:6,borderRadius:"50%",background:"#4caf50",flexShrink:0,boxShadow:"0 0 0 3px rgba(76,175,80,0.2)",animation:"pulseRing 2s infinite"}}/>
@@ -1654,7 +1334,6 @@ export default function Home() {
             </div>
             <h2 style={{fontSize:28,fontWeight:900,letterSpacing:4,marginBottom:"0.75rem",color:C.accent,lineHeight:1.1}}>COMUNIDAD<br/>FOKUS</h2>
             <p style={{color:"#444",fontSize:13,lineHeight:1.8,maxWidth:360,margin:"0 auto 2rem"}}>Cada pedido es una historia real. Estos son nuestros clientes satisfechos enviando sus productos a todo Venezuela.</p>
-            {/* Stats row */}
             <div style={{display:"flex",justifyContent:"center",gap:"2rem",marginBottom:"2.5rem",flexWrap:"wrap"}}>
               {[{n:"500+",l:"Pedidos"},{n:"24+",l:"Estados"},{n:"★ 5.0",l:"Valoración"}].map(({n,l})=>(
                 <div key={l} style={{textAlign:"center"}}>
@@ -1664,17 +1343,11 @@ export default function Home() {
               ))}
             </div>
           </div>
-
-          {/* Grid of testimonials */}
           <div style={{maxWidth:1100,margin:"0 auto",padding:"0 1rem 5rem"}}>
             <div className="cg" style={{display:"grid",gap:"0.85rem"}}>
-              {COMMUNITY_POSTS.map((post,i)=>(
-                <CommunityCard key={post.id} post={post} index={i} onClick={()=>setLightboxIdx(i)}/>
-              ))}
+              {COMMUNITY_POSTS.map((post,i)=><CommunityCard key={post.id} post={post} index={i} onClick={()=>setLightboxIdx(i)}/>)}
             </div>
-
-            {/* CTA strip */}
-            <div style={{marginTop:"3rem",background:"#0d0d0d",borderRadius:16,padding:"2rem 1.5rem",border:"1px solid #1a1a1a",textAlign:"center",animation:"fadeIn 0.4s ease"}}>
+            <div style={{marginTop:"3rem",background:"#0d0d0d",borderRadius:16,padding:"2rem 1.5rem",border:"1px solid #1a1a1a",textAlign:"center"}}>
               <img src="/favicon.png" alt="Fokus" width={36} height={36} style={{objectFit:"contain",marginBottom:"0.75rem",pointerEvents:"none"}} draggable={false}/>
               <h3 style={{fontSize:16,fontWeight:900,letterSpacing:3,color:C.accent,margin:"0 0 0.5rem"}}>¿QUIERES SER PARTE?</h3>
               <p style={{fontSize:13,color:"#444",lineHeight:1.7,margin:"0 0 1.25rem",maxWidth:340,marginLeft:"auto",marginRight:"auto"}}>Haz tu pedido hoy y recibe tu accesorio en cualquier estado de Venezuela.</p>
@@ -1691,98 +1364,64 @@ export default function Home() {
         </main>
       )}
 
-      {/* Lightbox */}
       {lightboxIdx!==null&&(
-        <CommunityLightbox
-          post={COMMUNITY_POSTS[lightboxIdx]}
-          onClose={()=>setLightboxIdx(null)}
+        <CommunityLightbox post={COMMUNITY_POSTS[lightboxIdx]} onClose={()=>setLightboxIdx(null)}
           onPrev={()=>setLightboxIdx(i=>i!==null?Math.max(0,i-1):0)}
           onNext={()=>setLightboxIdx(i=>i!==null?Math.min(COMMUNITY_POSTS.length-1,i+1):0)}
-          hasPrev={lightboxIdx>0}
-          hasNext={lightboxIdx<COMMUNITY_POSTS.length-1}
-        />
+          hasPrev={lightboxIdx>0} hasNext={lightboxIdx<COMMUNITY_POSTS.length-1}/>
       )}
 
       {/* ACCOUNT */}
-      {mainView==="account"&&currentUser&&(
+      {mainView==="account"&&userReady&&currentUser&&(
         <main style={{paddingTop:navH,background:C.bg}}>
           <div style={{maxWidth:480,margin:"0 auto",padding:"2rem 1.25rem 5rem",animation:"slideUp 0.3s ease"}}>
             <h1 style={{fontSize:11,fontWeight:800,letterSpacing:3,marginBottom:"2rem",color:"#444"}}>MI CUENTA</h1>
-
-            {/* Profile card */}
             <div style={{background:"#111",borderRadius:16,padding:"1.75rem 1.5rem",border:"1px solid #1a1a1a",marginBottom:"1rem"}}>
-              {/* Avatar + upload */}
               <div style={{display:"flex",alignItems:"flex-start",gap:"1.25rem",marginBottom:"1.5rem"}}>
+                {/* Avatar + upload */}
                 <div className="avatar-ring" style={{position:"relative",flexShrink:0}}>
+                  {/* FIX MÓVIL: key fuerza re-render de img cuando cambia photoURL */}
                   {currentUser.photoURL
-                    ? <img src={currentUser.photoURL} alt={currentUser.displayName}
+                    ? <img key={currentUser.photoURL} src={currentUser.photoURL} alt={currentUser.displayName}
                         style={{width:72,height:72,borderRadius:"50%",objectFit:"cover",border:"2px solid #222",display:"block"}}
                         draggable={false}/>
                     : <div style={{width:72,height:72,borderRadius:"50%",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",border:"2px solid #222"}}>
                         <span style={{fontSize:28,fontWeight:900,color:"#080808",lineHeight:1}}>{currentUser.displayName[0]?.toUpperCase()}</span>
                       </div>
                   }
-                  {/* Camera overlay button */}
-                  <button
-                    onClick={()=>photoInputRef.current?.click()}
-                    disabled={photoLoading}
-                    style={{
-                      position:"absolute",bottom:0,right:0,
-                      width:26,height:26,borderRadius:"50%",
-                      background:photoLoading?"#333":"#fff",
-                      border:"2px solid #111",
-                      display:"flex",alignItems:"center",justifyContent:"center",
-                      cursor:photoLoading?"not-allowed":"pointer",
-                      WebkitTapHighlightColor:"transparent",
-                      transition:"background 0.15s",
-                    }}>
+                  <button onClick={()=>photoInputRef.current?.click()} disabled={photoLoading}
+                    style={{position:"absolute",bottom:0,right:0,width:26,height:26,borderRadius:"50%",background:photoLoading?"#333":"#fff",border:"2px solid #111",display:"flex",alignItems:"center",justifyContent:"center",cursor:photoLoading?"not-allowed":"pointer",WebkitTapHighlightColor:"transparent",transition:"background 0.15s"}}>
                     {photoLoading
                       ? <div style={{width:10,height:10,border:"1.5px solid #666",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/>
-                      : <IcCamera s={12} c="#080808"/>
-                    }
+                      : <IcCamera s={12} c="#080808"/>}
                   </button>
+                  {/* FIX MÓVIL: accept="image/*" sin capture para que funcione en todos los móviles */}
                   <input ref={photoInputRef} type="file" accept="image/*" onChange={handleProfilePhoto} style={{display:"none"}}/>
                 </div>
-
                 <div style={{flex:1,minWidth:0}}>
-                  {/* Name editing */}
                   {editingName?(
                     <div style={{display:"flex",gap:"0.5rem",alignItems:"center",marginBottom:"0.5rem",flexWrap:"wrap"}}>
-                      <input
-                        autoFocus
-                        value={newName}
-                        onChange={e=>setNewName(e.target.value)}
-                        onKeyDown={e=>e.key==="Enter"&&handleSaveName()}
-                        placeholder="Nuevo nombre"
-                        style={{...S.input,padding:"0.5rem 0.75rem",fontSize:14,flex:1,minWidth:0}}
-                      />
+                      <input autoFocus value={newName} onChange={e=>setNewName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handleSaveName()} placeholder="Nuevo nombre"
+                        style={{...S.input,padding:"0.5rem 0.75rem",fontSize:14,flex:1,minWidth:0}}/>
                       <button onClick={handleSaveName} disabled={nameLoading||!newName.trim()}
                         style={{background:"#fff",color:"#080808",border:"none",borderRadius:8,padding:"0.5rem 0.85rem",cursor:nameLoading||!newName.trim()?"not-allowed":"pointer",display:"flex",alignItems:"center",gap:4,fontSize:12,fontWeight:800,WebkitTapHighlightColor:"transparent",opacity:nameLoading||!newName.trim()?0.5:1}}>
                         <IcCheck s={14} c="#080808"/> Guardar
                       </button>
-                      <button onClick={()=>setEditingName(false)}
-                        style={{background:"none",border:"1px solid #2a2a2a",color:"#555",borderRadius:8,padding:"0.5rem 0.85rem",cursor:"pointer",fontSize:12,WebkitTapHighlightColor:"transparent"}}>
-                        Cancelar
-                      </button>
+                      <button onClick={()=>setEditingName(false)} style={{background:"none",border:"1px solid #2a2a2a",color:"#555",borderRadius:8,padding:"0.5rem 0.85rem",cursor:"pointer",fontSize:12,WebkitTapHighlightColor:"transparent"}}>Cancelar</button>
                     </div>
                   ):(
                     <div style={{display:"flex",alignItems:"center",gap:"0.5rem",marginBottom:"3px"}}>
                       <p style={{margin:0,fontSize:18,fontWeight:800,color:C.text,wordBreak:"break-word"}}>{currentUser.displayName}</p>
                       <button onClick={()=>{setNewName(currentUser.displayName);setEditingName(true);}}
-                        style={{background:"none",border:"none",cursor:"pointer",padding:4,WebkitTapHighlightColor:"transparent",flexShrink:0,color:"#555",display:"flex",alignItems:"center"}}
-                        title="Cambiar nombre">
+                        style={{background:"none",border:"none",cursor:"pointer",padding:4,WebkitTapHighlightColor:"transparent",flexShrink:0,color:"#555",display:"flex",alignItems:"center"}}>
                         <IcEdit s={14} c="#555"/>
                       </button>
                     </div>
                   )}
                   <p style={{margin:"0 0 4px",fontSize:12,color:"#444",wordBreak:"break-word"}}>{currentUser.email}</p>
-                  <p style={{fontSize:10,color:"#2a2a2a",margin:0,letterSpacing:0.5}}>
-                    Miembro desde {new Date(currentUser.createdAt).toLocaleDateString("es-VE",{year:"numeric",month:"long"})}
-                  </p>
+                  <p style={{fontSize:10,color:"#2a2a2a",margin:0,letterSpacing:0.5}}>Miembro desde {new Date(currentUser.createdAt).toLocaleDateString("es-VE",{year:"numeric",month:"long"})}</p>
                 </div>
               </div>
-
-              {/* Upload photo hint */}
               <div style={{background:"#0d0d0d",borderRadius:10,padding:"0.75rem 1rem",border:"1px solid #1a1a1a",display:"flex",alignItems:"center",gap:"0.75rem"}}>
                 <IcCamera s={18} c="#555"/>
                 <div>
@@ -1791,8 +1430,7 @@ export default function Home() {
                 </div>
               </div>
             </div>
-
-            <button onClick={()=>{localStorage.removeItem("fokus_user");setCurrentUser(null);setMainView("fokus");}}
+            <button onClick={()=>{setCurrentUser(null);localStorage.removeItem("fokus_user");localStorage.removeItem("fokus_refresh");setMainView("fokus");}}
               style={{...S.darkBtn,background:"transparent",color:"#cc3333",border:"1px solid #2a1515",borderRadius:8,width:"100%",justifyContent:"center",fontSize:12}}>
               Cerrar sesión
             </button>
@@ -1836,7 +1474,7 @@ export default function Home() {
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:"0.6rem",fontSize:13,color:"#555"}}><span>Subtotal</span><span>${totalPrice.toFixed(2)}</span></div>
                   <div style={{borderTop:`1px solid ${C.border}`,paddingTop:"0.75rem",display:"flex",justifyContent:"space-between",fontSize:18,fontWeight:900,color:C.accent}}><span>Total</span><span>${totalPrice.toFixed(2)}</span></div>
 
-                  {!currentUser&&(
+                  {userReady&&!currentUser&&(
                     <div style={{marginTop:"1.25rem",background:"#0a0a0a",borderRadius:10,padding:"1rem",border:"1px solid #1a1a1a",display:"flex",alignItems:"center",justifyContent:"space-between",gap:"0.75rem",flexWrap:"wrap"}}>
                       <p style={{margin:0,fontSize:12,color:"#555",lineHeight:1.5}}>¿Tienes cuenta? Inicia sesión para un pedido más rápido</p>
                       <button onClick={()=>setShowAuth(true)} style={{...S.darkBtn,borderRadius:8,padding:"0.6rem 1rem",fontSize:11,flexShrink:0}}>ENTRAR</button>
@@ -1846,6 +1484,8 @@ export default function Home() {
                   <div style={{marginTop:"1.75rem"}}>
                     <DeliveryForm info={deliveryInfo} onChange={setDeliveryInfo}/>
                   </div>
+
+                  {/* MÉTODO DE PAGO */}
                   <div style={{marginTop:"1.75rem"}}>
                     <p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#333",marginBottom:"0.75rem"}}>MÉTODO DE PAGO</p>
                     <div style={{display:"flex",flexDirection:"column",gap:"0.45rem"}}>
@@ -1859,30 +1499,44 @@ export default function Home() {
                       ))}
                     </div>
                   </div>
+
+                  {/* Datos del método seleccionado */}
                   {payMethod&&(()=>{
                     const pm=PAYMENT_METHODS.find(m=>m.id===payMethod)!;
                     return (
                       <div style={{marginTop:"1rem",background:"#080808",borderRadius:10,padding:"1rem",border:"1px solid #1a1a1a"}}>
                         <p style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#333",marginBottom:"0.5rem"}}>DATOS — {pm.name.toUpperCase()}</p>
                         <p style={{fontSize:14,color:C.text,margin:0,fontWeight:600}}>{pm.detail}</p>
-                        <p style={{fontSize:11,color:"#444",marginTop:"0.4rem",lineHeight:1.6}}>Realiza el pago y notifícanos por WhatsApp adjuntando el comprobante.</p>
+                        <p style={{fontSize:11,color:"#444",marginTop:"0.4rem",lineHeight:1.6}}>Realiza el pago y sube tu comprobante abajo para enviarlo junto con tu pedido.</p>
                       </div>
                     );
                   })()}
+
+                  {/* COMPROBANTE — aparece cuando hay método seleccionado */}
+                  {payMethod&&(
+                    <ComprobanteUpload url={comprobanteUrl} onUrl={setComprobanteUrl}/>
+                  )}
+
                   {!deliveryInfo.zone&&<p style={{textAlign:"center",fontSize:10,color:"#555",marginTop:"0.75rem"}}>Selecciona el tipo de envio para continuar</p>}
                   {deliveryInfo.zone&&!payMethod&&<p style={{textAlign:"center",fontSize:10,color:"#555",marginTop:"0.5rem"}}>Selecciona un método de pago para continuar</p>}
+
+                  {/* Botón WhatsApp */}
                   <a href={waMsg()} target="_blank" rel="noreferrer"
-                    onClick={(e)=>{
+                    onClick={e=>{
                       if(!payMethod||!deliveryValid){
                         e.preventDefault();
                         if(!deliveryInfo.zone) alert("Por favor selecciona el tipo de envio.");
-                        else if(deliveryInfo.zone==="otro"&&(!deliveryInfo.nombre||!deliveryInfo.cedula||!deliveryInfo.telefono||!deliveryInfo.agencia||!deliveryInfo.estado||!deliveryInfo.direccion)) alert("Por favor completa todos los datos de envío, incluyendo el estado.");
+                        else if(deliveryInfo.zone==="otro"&&(!deliveryInfo.nombre||!deliveryInfo.cedula||!deliveryInfo.telefono||!deliveryInfo.agencia||!deliveryInfo.estado||!deliveryInfo.direccion)) alert("Por favor completa todos los datos de envío.");
                         else if(!payMethod) alert("Por favor selecciona un método de pago.");
                       }
                     }}
                     style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.75rem",marginTop:"1.25rem",background:"#25D366",color:"#fff",padding:"1rem",fontWeight:900,letterSpacing:2,fontSize:11,textDecoration:"none",borderRadius:10,opacity:(payMethod&&deliveryValid)?1:0.35,transition:"opacity 0.2s"}}>
-                    <IcWA s={18}/> NOTIFICAR PAGO
+                    <IcWA s={18}/>
+                    {comprobanteUrl?"ENVIAR PEDIDO + COMPROBANTE":"NOTIFICAR PAGO"}
                   </a>
+                  {payMethod&&!comprobanteUrl&&(
+                    <p style={{textAlign:"center",fontSize:10,color:"#555",marginTop:"0.5rem",lineHeight:1.5}}>Puedes enviar sin comprobante y adjuntarlo directamente en el chat de WhatsApp.</p>
+                  )}
                 </div>
               </>
             )}
@@ -1899,13 +1553,7 @@ export default function Home() {
                 <h1 style={{color:"#fff",fontSize:20,fontWeight:900,marginBottom:"1.5rem",textAlign:"center",letterSpacing:2}}>ADMIN</h1>
                 <div style={{display:"flex",flexDirection:"column",gap:"0.85rem"}}>
                   <input type="email" placeholder="Correo" value={adminEmail} onChange={e=>setAdminEmail(e.target.value)} style={S.input}/>
-                  <PwdInput
-                    placeholder="Contraseña"
-                    value={adminPwd}
-                    onChange={setAdminPwd}
-                    onKeyDown={e=>e.key==="Enter"&&doLogin()}
-                    autoComplete="current-password"
-                  />
+                  <PwdInput placeholder="Contraseña" value={adminPwd} onChange={setAdminPwd} onKeyDown={e=>e.key==="Enter"&&doLogin()} autoComplete="current-password"/>
                   {adminErr&&<p style={{color:"#ff5555",fontSize:12,margin:0,background:"#1e0a0a",padding:"0.6rem 1rem",borderRadius:8}}>{adminErr}</p>}
                   <button onClick={doLogin} style={S.adminBtn}>Entrar</button>
                   <button onClick={doLogout} style={{...S.adminBtn,background:"transparent",color:"#333",marginTop:4}}>← Volver</button>
@@ -1958,7 +1606,6 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
-
                 <div style={{background:"#111",borderRadius:12,padding:"1.5rem",border:"1px solid #1a1a1a"}}>
                   <div style={{display:"flex",alignItems:"center",gap:"0.5rem",marginBottom:"0.85rem"}}>
                     <p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2,margin:0}}>PRODUCTOS ({adminProds.length})</p>
@@ -1981,7 +1628,7 @@ export default function Home() {
                     <div className="admin-list">
                       {usedCats.map(cat=>{
                         const cp=products.filter(p=>p.category===cat&&(adminSearch===""||p.name.toLowerCase().includes(adminSearch.toLowerCase())));
-                        if(!cp.length) return null;
+                        if(!cp.length)return null;
                         return (
                           <div key={cat} style={{marginBottom:"1.1rem"}}>
                             <div style={{display:"flex",alignItems:"center",gap:"0.5rem",padding:"0.4rem 0",marginBottom:"0.35rem",borderBottom:"1px solid #1a1a1a"}}>
@@ -1990,17 +1637,10 @@ export default function Home() {
                             </div>
                             {cp.map(p=>(
                               <div key={p.id} data-rowid={p.id}>
-                                <ARow p={p} editing={editing}
-                                  onEdit={startEdit} onDel={delProd}
-                                  onDragStart={handleDragStart}
-                                  onDragOver={handleDragOver}
-                                  onDragEnd={handleDragEnd}
-                                  isDragging={dragId===p.id}
-                                  isOver={overId===p.id&&dragId!==p.id}
-                                  onTouchStart={handleTouchDragStart}
-                                  onTouchMove={handleTouchDragMove}
-                                  onTouchEnd={handleTouchDragEnd}
-                                />
+                                <ARow p={p} editing={editing} onEdit={startEdit} onDel={delProd}
+                                  onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}
+                                  isDragging={dragId===p.id} isOver={overId===p.id&&dragId!==p.id}
+                                  onTouchStart={handleTouchDragStart} onTouchMove={handleTouchDragMove} onTouchEnd={handleTouchDragEnd}/>
                               </div>
                             ))}
                           </div>
@@ -2011,17 +1651,10 @@ export default function Home() {
                     <div className="admin-list" style={{display:"flex",flexDirection:"column",gap:2}}>
                       {adminProds.map(p=>(
                         <div key={p.id} data-rowid={p.id}>
-                          <ARow p={p} editing={editing}
-                            onEdit={startEdit} onDel={delProd}
-                            onDragStart={handleDragStart}
-                            onDragOver={handleDragOver}
-                            onDragEnd={handleDragEnd}
-                            isDragging={dragId===p.id}
-                            isOver={overId===p.id&&dragId!==p.id}
-                            onTouchStart={handleTouchDragStart}
-                            onTouchMove={handleTouchDragMove}
-                            onTouchEnd={handleTouchDragEnd}
-                          />
+                          <ARow p={p} editing={editing} onEdit={startEdit} onDel={delProd}
+                            onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}
+                            isDragging={dragId===p.id} isOver={overId===p.id&&dragId!==p.id}
+                            onTouchStart={handleTouchDragStart} onTouchMove={handleTouchDragMove} onTouchEnd={handleTouchDragEnd}/>
                         </div>
                       ))}
                       {!adminProds.length&&<p style={{color:"#333",textAlign:"center",padding:"1.5rem",fontSize:12}}>Sin resultados</p>}
@@ -2050,19 +1683,14 @@ export default function Home() {
               <span style={{padding:"0 1rem",fontSize:16,color:C.text,fontWeight:700}}>{modalQty}</span>
               <button onClick={()=>setModalQty(modalQty+1)} style={S.qtyBtn}>+</button>
             </div>
-            <button onClick={()=>addToCart(selectedProduct,modalQty)} style={{...S.darkBtn,width:"100%",justifyContent:"center",fontSize:12,padding:"1.05rem",borderRadius:10}}>
-              AGREGAR AL CARRITO
-            </button>
+            <button onClick={()=>addToCart(selectedProduct,modalQty)} style={{...S.darkBtn,width:"100%",justifyContent:"center",fontSize:12,padding:"1.05rem",borderRadius:10}}>AGREGAR AL CARRITO</button>
           </div>
         </div>
       )}
 
       {addedProduct&&<AddedModal product={addedProduct} onClose={()=>setAddedProduct(null)} onGoCart={()=>{setAddedProduct(null);setMainView("cart");}}/>}
-      {showAuth&&<AuthModal onClose={()=>setShowAuth(false)} onSuccess={(u)=>{setCurrentUser(u);setShowAuth(false);}}/>}
+      {showAuth&&<AuthModal onClose={()=>setShowAuth(false)} onSuccess={u=>{setCurrentUser(u);setShowAuth(false);}}/>}
       {!isAdmin&&<DraggableWA/>}
-
-      {/* Spinner keyframe for photo upload */}
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 }
