@@ -1355,7 +1355,7 @@ export default function Home() {
             <h2 style={{fontSize:28,fontWeight:900,letterSpacing:4,marginBottom:"0.75rem",color:C.accent,lineHeight:1.1}}>COMUNIDAD<br/>FOKUS</h2>
             <p style={{color:"#444",fontSize:13,lineHeight:1.8,maxWidth:360,margin:"0 auto 2rem"}}>Cada pedido es una historia real. Estos son nuestros clientes satisfechos enviando sus productos a todo Venezuela.</p>
             <div style={{display:"flex",justifyContent:"center",gap:"2rem",marginBottom:"2.5rem",flexWrap:"wrap"}}>
-              {[{n:"500+",l:"Pedidos"},{n:"24+",l:"Estados"},{n:"★ 5.0",l:"Valoración"}].map(({n,l})=>(
+              {[{n:"500+",l:"Pedidos"},{n:"23+",l:"Estados"},{n:"★ 5.0",l:"Valoración"}].map(({n,l})=>(
                 <div key={l} style={{textAlign:"center"}}>
                   <p style={{margin:0,fontSize:20,fontWeight:900,color:C.accent}}>{n}</p>
                   <p style={{margin:"2px 0 0",fontSize:10,color:"#444",letterSpacing:1}}>{l}</p>
