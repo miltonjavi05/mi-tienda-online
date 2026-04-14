@@ -201,7 +201,7 @@ const S={
   adminBtn:{background:C.accent,color:"#080808",border:"none",padding:"0.8rem 1.5rem",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit",borderRadius:8,width:"100%",WebkitTapHighlightColor:"transparent"} as React.CSSProperties,
 };
 
-// ─── GLOBAL STYLES STRING (injected via <style> tag) ─────────────────────────
+// ─── GLOBAL STYLES ────────────────────────────────────────────────────────────
 const GLOBAL_CSS = `
   *, *::before, *::after { box-sizing: border-box; }
   html { overflow-y: scroll; scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
@@ -211,7 +211,7 @@ const GLOBAL_CSS = `
   img { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
   .ts::-webkit-scrollbar, .hr::-webkit-scrollbar { display: none; }
   .ts { -webkit-overflow-scrolling: touch; contain: layout style; }
-  .hr { -webkit-overflow-scrolling: touch; scroll-behavior: smooth; contain: layout style; }
+  .hr { -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
   .hr * { -webkit-user-select: none; user-select: none; }
   .admin-list { -webkit-user-select: none; user-select: none; }
   select { -webkit-appearance: auto; appearance: auto; }
@@ -225,20 +225,44 @@ const GLOBAL_CSS = `
   @keyframes pulseRing { 0%{transform:scale(1);opacity:0.6} 100%{transform:scale(1.5);opacity:0} }
   @keyframes spin { to{transform:rotate(360deg)} }
   @keyframes tyCheck { from{stroke-dashoffset:40} to{stroke-dashoffset:0} }
-  @media(hover:hover){
-    .pc:hover .iz, .hc:hover .iz { transform: scale(1.05) !important; }
-    .pc:hover .io, .hc:hover .io { background: rgba(255,255,255,0.04) !important; }
+
+  /* ── Hover effects: ONLY on true pointer devices, never on touch ── */
+  @media(hover:hover) and (pointer:fine){
+    .pc:hover .iz { transform: scale(1.05) !important; }
+    .pc:hover .io { background: rgba(255,255,255,0.04) !important; }
+    .hc:hover .iz { transform: scale(1.05) !important; }
+    .hc:hover .io { background: rgba(255,255,255,0.04) !important; }
     .sl:hover { border-color:#333 !important; transform:translateY(-1px); }
     .pc2:hover { background:#1a1a1a !important; }
     .ar:hover { background:#161616 !important; }
     .fl:hover { color:#fff !important; }
     .pl:hover { opacity:0.8; }
     .cc:hover { transform:translateY(-4px) scale(1.01) !important; border-color:#2a2a2a !important; box-shadow:0 12px 40px rgba(0,0,0,0.6) !important; }
+    /* Arrow buttons in HRow: only show on real hover devices */
+    .hr-arrow { opacity: 0 !important; pointer-events: none !important; }
+    .hr-wrap:hover .hr-arrow.hr-arrow-visible { opacity: 1 !important; pointer-events: auto !important; }
   }
+
+  /* On touch devices: NEVER show arrow buttons */
+  @media(hover:none){
+    .hr-arrow { display: none !important; }
+  }
+
   .cc { transition: transform 0.25s ease, border-color 0.2s ease, box-shadow 0.25s ease; }
   .pc:active { transform: scale(0.97); }
   .hc:active { opacity: 0.85; }
   .nb:active { opacity: 0.6; }
+
+  /* iz transition ONLY on hover devices — prevents animation on touch scroll */
+  @media(hover:hover) and (pointer:fine){
+    .iz { transition: transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94) !important; }
+    .io { transition: background 0.3s ease !important; }
+  }
+  @media(hover:none){
+    .iz { transition: none !important; }
+    .io { transition: none !important; }
+  }
+
   @media(max-width:480px){
     .pg { grid-template-columns: repeat(2,1fr) !important; }
     .fg { grid-template-columns: 1fr !important; gap: 1.5rem !important; }
@@ -279,24 +303,41 @@ function PwdInput({value,onChange,placeholder,onKeyDown,autoComplete}:{value:str
 }
 
 // ─── LAZY IMAGE ───────────────────────────────────────────────────────────────
-// FIX: pointer-events none + touch-action pan-x pan-y so scroll works through images
+// KEY FIXES:
+// 1. pointer-events: none everywhere so touch goes through to the card button
+// 2. touch-action: auto — lets the browser handle pinch-zoom natively
+// 3. No opacity animation delay — always renders immediately once in view
 const LazyImg=memo(function LazyImg({src,alt}:{src:string;alt:string}){
   const[loaded,setLoaded]=useState(false);
   const[inView,setInView]=useState(false);
   const ref=useRef<HTMLDivElement>(null);
   useEffect(()=>{
     const el=ref.current;if(!el)return;
-    const obs=new IntersectionObserver(([e])=>{if(e.isIntersecting){setInView(true);obs.disconnect();}},{rootMargin:"600px"});
+    const obs=new IntersectionObserver(([e])=>{if(e.isIntersecting){setInView(true);obs.disconnect();}},{rootMargin:"800px"});
     obs.observe(el);return()=>obs.disconnect();
   },[]);
   return(
     <div ref={ref} style={{position:"relative",width:"100%",height:"100%",pointerEvents:"none"}}>
       {!loaded&&<div style={{position:"absolute",inset:0,background:"#161616"}}/>}
-      {inView&&<img src={optImg(src,400)} alt={alt} loading="lazy" decoding="async" onLoad={()=>setLoaded(true)} style={{width:"100%",height:"100%",objectFit:"cover",display:"block",opacity:loaded?1:0,transition:"opacity 0.25s ease",pointerEvents:"none",userSelect:"none",WebkitUserSelect:"none",
-        // KEY FIX: allow pan scroll through image, no touch-action blocking
-        touchAction:"pan-x pan-y",
-        WebkitTouchCallout:"none",
-      } as React.CSSProperties} draggable={false}/>}
+      {inView&&<img
+        src={optImg(src,400)}
+        alt={alt}
+        loading="lazy"
+        decoding="async"
+        onLoad={()=>setLoaded(true)}
+        style={{
+          width:"100%",height:"100%",objectFit:"cover",display:"block",
+          opacity:loaded?1:0,
+          transition:"opacity 0.2s ease",
+          pointerEvents:"none",
+          userSelect:"none",
+          WebkitUserSelect:"none",
+          WebkitTouchCallout:"none",
+          // CRITICAL: touch-action auto = browser handles pinch-zoom + scroll natively
+          touchAction:"auto",
+        } as React.CSSProperties}
+        draggable={false}
+      />}
     </div>
   );
 });
@@ -329,8 +370,8 @@ const NativeTabs=memo(function NativeTabs({items,active,onSelect,renderItem,heig
 });
 
 // ─── PRODUCT CARD (GRID) ──────────────────────────────────────────────────────
-// FIX: Always visible (opacity:1), no IntersectionObserver delay → no double-tap needed
-// touch-action on wrapper allows pan-x pan-y (scroll) while still receiving click
+// FIX: No opacity animation, no IntersectionObserver gating — always clickable on first tap
+// touch-action: manipulation = fast tap response + pinch-zoom allowed
 const ProductCard=memo(function ProductCard({product,onClick}:{product:Product;onClick:()=>void;index:number}){
   return(
     <div
@@ -338,17 +379,16 @@ const ProductCard=memo(function ProductCard({product,onClick}:{product:Product;o
       onClick={onClick}
       style={{
         cursor:"pointer",
-        // No opacity animation — always visible, so first tap is always a real tap
         WebkitTapHighlightColor:"transparent",
-        // Allow both vertical scroll and tap — do NOT set touch-action:manipulation
-        // which blocks pinch zoom
+        // manipulation = 300ms tap delay removed, pinch-zoom still works
+        touchAction:"manipulation",
       }}
     >
       <div style={{background:"#111",aspectRatio:"1",overflow:"hidden",marginBottom:"0.55rem",borderRadius:10,position:"relative"}}>
-        <div className="iz" style={{width:"100%",height:"100%",transition:"transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94)"}}>
+        <div className="iz" style={{width:"100%",height:"100%"}}>
           <LazyImg src={product.img} alt={product.name}/>
         </div>
-        <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",transition:"background 0.3s ease",pointerEvents:"none"}}/>
+        <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
       </div>
       <p style={{margin:"0 0 3px",fontSize:12,lineHeight:1.35,color:"#bbb",letterSpacing:0.2}}>{product.name}</p>
       <p style={{margin:0,fontSize:14,fontWeight:800,color:C.accent,letterSpacing:0.5}}>${product.price.toFixed(2)}</p>
@@ -357,19 +397,25 @@ const ProductCard=memo(function ProductCard({product,onClick}:{product:Product;o
 });
 
 // ─── HORIZONTAL CARD ─────────────────────────────────────────────────────────
-// FIX: No touch-action:manipulation — allow pinch zoom + horizontal scroll through img
+// FIX: touch-action: manipulation on the card itself
 const HCard=memo(function HCard({product,onClick}:{product:Product;onClick:()=>void}){
   return(
     <div
       className="hc"
       onClick={onClick}
-      style={{cursor:"pointer",flexShrink:0,width:148,WebkitTapHighlightColor:"transparent"}}
+      style={{
+        cursor:"pointer",
+        flexShrink:0,
+        width:148,
+        WebkitTapHighlightColor:"transparent",
+        touchAction:"manipulation",
+      }}
     >
       <div style={{background:"#111",width:148,height:148,overflow:"hidden",marginBottom:"0.5rem",borderRadius:10,position:"relative"}}>
-        <div className="iz" style={{width:"100%",height:"100%",transition:"transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94)"}}>
+        <div className="iz" style={{width:"100%",height:"100%"}}>
           <LazyImg src={product.img} alt={product.name}/>
         </div>
-        <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",transition:"background 0.3s ease",pointerEvents:"none"}}/>
+        <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
       </div>
       <p style={{margin:"0 0 2px",fontSize:11,lineHeight:1.35,color:"#bbb",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{product.name}</p>
       <p style={{margin:0,fontSize:13,fontWeight:800,color:C.accent}}>${product.price.toFixed(2)}</p>
@@ -378,21 +424,38 @@ const HCard=memo(function HCard({product,onClick}:{product:Product;onClick:()=>v
 });
 
 // ─── HORIZONTAL ROW ───────────────────────────────────────────────────────────
-// FIX: touchAction:"pan-x pan-y" on the scroll container — allows both scroll and tap
-// Do NOT use "pan-x" alone as it blocks vertical scrolling of the page
+// KEY FIXES:
+// 1. Arrow buttons hidden via CSS on touch devices (hover:none media query)
+// 2. Scroll container: touch-action pan-x pan-y — allows horizontal scroll AND pinch-zoom
+// 3. No mouseEnter/mouseLeave state needed on mobile — CSS handles visibility
 const HRow=memo(function HRow({products,onSelect}:{products:Product[];onSelect:(p:Product)=>void}){
   const rowRef=useRef<HTMLDivElement>(null);
   const[showLeft,setShowLeft]=useState(false);
   const[showRight,setShowRight]=useState(false);
-  const[hovered,setHovered]=useState(false);
   const updateArrows=useCallback(()=>{const el=rowRef.current;if(!el)return;setShowLeft(el.scrollLeft>8);setShowRight(el.scrollLeft<el.scrollWidth-el.clientWidth-8);},[]);
   useEffect(()=>{const el=rowRef.current;if(!el)return;updateArrows();el.addEventListener("scroll",updateArrows,{passive:true});const ro=new ResizeObserver(updateArrows);ro.observe(el);return()=>{el.removeEventListener("scroll",updateArrows);ro.disconnect();};},[updateArrows,products]);
   const scrollBy=useCallback((dir:number)=>{rowRef.current?.scrollBy({left:dir*320,behavior:"smooth"});},[]);
-  const arrowStyle=(visible:boolean,side:"left"|"right"):React.CSSProperties=>({position:"absolute",top:"50%",transform:"translateY(-50%)",[side]:side==="left"?-4:-4,zIndex:10,width:34,height:34,borderRadius:"50%",background:"rgba(20,20,20,0.92)",border:"1px solid #2a2a2a",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",opacity:(hovered&&visible)?1:0,pointerEvents:(hovered&&visible)?"auto":"none",transition:"opacity 0.18s ease",backdropFilter:"blur(8px)",boxShadow:"0 2px 12px rgba(0,0,0,0.5)"});
+  const arrowBase:React.CSSProperties={position:"absolute",top:"50%",transform:"translateY(-50%)",zIndex:10,width:34,height:34,borderRadius:"50%",background:"rgba(20,20,20,0.92)",border:"1px solid #2a2a2a",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",backdropFilter:"blur(8px)",boxShadow:"0 2px 12px rgba(0,0,0,0.5)"};
   return(
-    <div style={{position:"relative"}} onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)}>
-      <button onClick={()=>scrollBy(-1)} style={arrowStyle(showLeft,"left")} aria-label="Anterior"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-      <button onClick={()=>scrollBy(1)} style={arrowStyle(showRight,"right")} aria-label="Siguiente"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
+    // hr-wrap class used by CSS for hover state of arrows
+    <div className="hr-wrap" style={{position:"relative"}}>
+      {/* hr-arrow class = hidden on touch, shown on hover via CSS */}
+      <button
+        onClick={()=>scrollBy(-1)}
+        className={`hr-arrow${showLeft?" hr-arrow-visible":""}`}
+        style={{...arrowBase,left:-4}}
+        aria-label="Anterior"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <button
+        onClick={()=>scrollBy(1)}
+        className={`hr-arrow${showRight?" hr-arrow-visible":""}`}
+        style={{...arrowBase,right:-4}}
+        aria-label="Siguiente"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
       <div
         ref={rowRef}
         className="hr"
@@ -402,8 +465,7 @@ const HRow=memo(function HRow({products,onSelect}:{products:Product[];onSelect:(
           paddingBottom:"0.5rem",paddingLeft:"0.25rem",paddingRight:"1rem",
           scrollbarWidth:"none",
           WebkitOverflowScrolling:"touch",
-          // KEY FIX: pan-x pan-y lets the browser handle both horizontal scroll
-          // within the row AND pass vertical scroll to the page, plus allows pinch zoom
+          // pan-x pan-y: horizontal scroll in row + vertical scroll pass-through + pinch-zoom
           touchAction:"pan-x pan-y",
           userSelect:"none",WebkitUserSelect:"none",
           scrollSnapType:"x proximity",
