@@ -226,7 +226,6 @@ const GLOBAL_CSS = `
   @keyframes spin { to{transform:rotate(360deg)} }
   @keyframes tyCheck { from{stroke-dashoffset:40} to{stroke-dashoffset:0} }
 
-  /* ── Hover effects: ONLY on true pointer devices, never on touch ── */
   @media(hover:hover) and (pointer:fine){
     .pc:hover .iz { transform: scale(1.05) !important; }
     .pc:hover .io { background: rgba(255,255,255,0.04) !important; }
@@ -238,12 +237,10 @@ const GLOBAL_CSS = `
     .fl:hover { color:#fff !important; }
     .pl:hover { opacity:0.8; }
     .cc:hover { transform:translateY(-4px) scale(1.01) !important; border-color:#2a2a2a !important; box-shadow:0 12px 40px rgba(0,0,0,0.6) !important; }
-    /* Arrow buttons in HRow: only show on real hover devices */
     .hr-arrow { opacity: 0 !important; pointer-events: none !important; }
     .hr-wrap:hover .hr-arrow.hr-arrow-visible { opacity: 1 !important; pointer-events: auto !important; }
   }
 
-  /* On touch devices: NEVER show arrow buttons */
   @media(hover:none){
     .hr-arrow { display: none !important; }
   }
@@ -253,7 +250,6 @@ const GLOBAL_CSS = `
   .hc:active { opacity: 0.85; }
   .nb:active { opacity: 0.6; }
 
-  /* iz transition ONLY on hover devices — prevents animation on touch scroll */
   @media(hover:hover) and (pointer:fine){
     .iz { transition: transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94) !important; }
     .io { transition: background 0.3s ease !important; }
@@ -303,10 +299,6 @@ function PwdInput({value,onChange,placeholder,onKeyDown,autoComplete}:{value:str
 }
 
 // ─── LAZY IMAGE ───────────────────────────────────────────────────────────────
-// KEY FIXES:
-// 1. pointer-events: none everywhere so touch goes through to the card button
-// 2. touch-action: auto — lets the browser handle pinch-zoom natively
-// 3. No opacity animation delay — always renders immediately once in view
 const LazyImg=memo(function LazyImg({src,alt}:{src:string;alt:string}){
   const[loaded,setLoaded]=useState(false);
   const[inView,setInView]=useState(false);
@@ -333,7 +325,6 @@ const LazyImg=memo(function LazyImg({src,alt}:{src:string;alt:string}){
           userSelect:"none",
           WebkitUserSelect:"none",
           WebkitTouchCallout:"none",
-          // CRITICAL: touch-action auto = browser handles pinch-zoom + scroll natively
           touchAction:"auto",
         } as React.CSSProperties}
         draggable={false}
@@ -370,24 +361,11 @@ const NativeTabs=memo(function NativeTabs({items,active,onSelect,renderItem,heig
 });
 
 // ─── PRODUCT CARD (GRID) ──────────────────────────────────────────────────────
-// FIX: No opacity animation, no IntersectionObserver gating — always clickable on first tap
-// touch-action: manipulation = fast tap response + pinch-zoom allowed
 const ProductCard=memo(function ProductCard({product,onClick}:{product:Product;onClick:()=>void;index:number}){
   return(
-    <div
-      className="pc"
-      onClick={onClick}
-      style={{
-        cursor:"pointer",
-        WebkitTapHighlightColor:"transparent",
-        // manipulation = 300ms tap delay removed, pinch-zoom still works
-        touchAction:"manipulation",
-      }}
-    >
+    <div className="pc" onClick={onClick} style={{cursor:"pointer",WebkitTapHighlightColor:"transparent",touchAction:"manipulation"}}>
       <div style={{background:"#111",aspectRatio:"1",overflow:"hidden",marginBottom:"0.55rem",borderRadius:10,position:"relative"}}>
-        <div className="iz" style={{width:"100%",height:"100%"}}>
-          <LazyImg src={product.img} alt={product.name}/>
-        </div>
+        <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
       </div>
       <p style={{margin:"0 0 3px",fontSize:12,lineHeight:1.35,color:"#bbb",letterSpacing:0.2}}>{product.name}</p>
@@ -397,24 +375,11 @@ const ProductCard=memo(function ProductCard({product,onClick}:{product:Product;o
 });
 
 // ─── HORIZONTAL CARD ─────────────────────────────────────────────────────────
-// FIX: touch-action: manipulation on the card itself
 const HCard=memo(function HCard({product,onClick}:{product:Product;onClick:()=>void}){
   return(
-    <div
-      className="hc"
-      onClick={onClick}
-      style={{
-        cursor:"pointer",
-        flexShrink:0,
-        width:148,
-        WebkitTapHighlightColor:"transparent",
-        touchAction:"manipulation",
-      }}
-    >
+    <div className="hc" onClick={onClick} style={{cursor:"pointer",flexShrink:0,width:148,WebkitTapHighlightColor:"transparent",touchAction:"manipulation"}}>
       <div style={{background:"#111",width:148,height:148,overflow:"hidden",marginBottom:"0.5rem",borderRadius:10,position:"relative"}}>
-        <div className="iz" style={{width:"100%",height:"100%"}}>
-          <LazyImg src={product.img} alt={product.name}/>
-        </div>
+        <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
       </div>
       <p style={{margin:"0 0 2px",fontSize:11,lineHeight:1.35,color:"#bbb",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{product.name}</p>
@@ -424,10 +389,6 @@ const HCard=memo(function HCard({product,onClick}:{product:Product;onClick:()=>v
 });
 
 // ─── HORIZONTAL ROW ───────────────────────────────────────────────────────────
-// KEY FIXES:
-// 1. Arrow buttons hidden via CSS on touch devices (hover:none media query)
-// 2. Scroll container: touch-action pan-x pan-y — allows horizontal scroll AND pinch-zoom
-// 3. No mouseEnter/mouseLeave state needed on mobile — CSS handles visibility
 const HRow=memo(function HRow({products,onSelect}:{products:Product[];onSelect:(p:Product)=>void}){
   const rowRef=useRef<HTMLDivElement>(null);
   const[showLeft,setShowLeft]=useState(false);
@@ -437,45 +398,11 @@ const HRow=memo(function HRow({products,onSelect}:{products:Product[];onSelect:(
   const scrollBy=useCallback((dir:number)=>{rowRef.current?.scrollBy({left:dir*320,behavior:"smooth"});},[]);
   const arrowBase:React.CSSProperties={position:"absolute",top:"50%",transform:"translateY(-50%)",zIndex:10,width:34,height:34,borderRadius:"50%",background:"rgba(20,20,20,0.92)",border:"1px solid #2a2a2a",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",backdropFilter:"blur(8px)",boxShadow:"0 2px 12px rgba(0,0,0,0.5)"};
   return(
-    // hr-wrap class used by CSS for hover state of arrows
     <div className="hr-wrap" style={{position:"relative"}}>
-      {/* hr-arrow class = hidden on touch, shown on hover via CSS */}
-      <button
-        onClick={()=>scrollBy(-1)}
-        className={`hr-arrow${showLeft?" hr-arrow-visible":""}`}
-        style={{...arrowBase,left:-4}}
-        aria-label="Anterior"
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-      </button>
-      <button
-        onClick={()=>scrollBy(1)}
-        className={`hr-arrow${showRight?" hr-arrow-visible":""}`}
-        style={{...arrowBase,right:-4}}
-        aria-label="Siguiente"
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-      </button>
-      <div
-        ref={rowRef}
-        className="hr"
-        style={{
-          display:"flex",gap:"0.75rem",
-          overflowX:"scroll",overflowY:"hidden",
-          paddingBottom:"0.5rem",paddingLeft:"0.25rem",paddingRight:"1rem",
-          scrollbarWidth:"none",
-          WebkitOverflowScrolling:"touch",
-          // pan-x pan-y: horizontal scroll in row + vertical scroll pass-through + pinch-zoom
-          touchAction:"pan-x pan-y",
-          userSelect:"none",WebkitUserSelect:"none",
-          scrollSnapType:"x proximity",
-        } as React.CSSProperties}
-      >
-        {products.map(p=>(
-          <div key={p.id} style={{scrollSnapAlign:"start",flexShrink:0}}>
-            <HCard product={p} onClick={()=>onSelect(p)}/>
-          </div>
-        ))}
+      <button onClick={()=>scrollBy(-1)} className={`hr-arrow${showLeft?" hr-arrow-visible":""}`} style={{...arrowBase,left:-4}} aria-label="Anterior"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <button onClick={()=>scrollBy(1)} className={`hr-arrow${showRight?" hr-arrow-visible":""}`} style={{...arrowBase,right:-4}} aria-label="Siguiente"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
+      <div ref={rowRef} className="hr" style={{display:"flex",gap:"0.75rem",overflowX:"scroll",overflowY:"hidden",paddingBottom:"0.5rem",paddingLeft:"0.25rem",paddingRight:"1rem",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",touchAction:"pan-x pan-y",userSelect:"none",WebkitUserSelect:"none",scrollSnapType:"x proximity"} as React.CSSProperties}>
+        {products.map(p=>(<div key={p.id} style={{scrollSnapAlign:"start",flexShrink:0}}><HCard product={p} onClick={()=>onSelect(p)}/></div>))}
       </div>
     </div>
   );
@@ -647,6 +574,163 @@ function CommunityLightbox({post,onClose,onPrev,onNext,hasPrev,hasNext}:{post:ty
   );
 }
 
+// ─── REVIEW FORM MODAL ────────────────────────────────────────────────────────
+// Handles photo upload to Cloudinary + sends review via WhatsApp
+function ReviewModal({onClose}:{onClose:()=>void}){
+  const[name,setName]=useState("");
+  const[comment,setComment]=useState("");
+  const[stars,setStars]=useState(5);
+  const[product,setProduct]=useState("");
+  const[photoUrl,setPhotoUrl]=useState("");
+  const[photoPreview,setPhotoPreview]=useState("");
+  const[uploading,setUploading]=useState(false);
+  const[uploadErr,setUploadErr]=useState("");
+  const[sending,setSending]=useState(false);
+  const[done,setDone]=useState(false);
+  const photoRef=useRef<HTMLInputElement>(null);
+
+  const handlePhotoChange=useCallback(async(e:React.ChangeEvent<HTMLInputElement>)=>{
+    const file=e.target.files?.[0];if(!file)return;
+    setUploadErr("");setUploading(true);
+    const reader=new FileReader();
+    reader.onload=ev=>setPhotoPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+    try{
+      const url=await uploadImg(file,"fokus_products");
+      setPhotoUrl(url);
+    }catch{
+      setUploadErr("Error al subir la foto. Intenta de nuevo.");
+      setPhotoPreview("");
+    }finally{
+      setUploading(false);
+      if(photoRef.current)photoRef.current.value="";
+    }
+  },[]);
+
+  const resetPhoto=useCallback(()=>{setPhotoUrl("");setPhotoPreview("");setUploadErr("");},[]);
+
+  const canSend=name.trim().length>0&&comment.trim().length>0&&!uploading;
+
+  const handleSend=useCallback(()=>{
+    if(!canSend)return;
+    setSending(true);
+    const starsStr="⭐".repeat(stars);
+    const lines=[
+      `🌟 *NUEVA RESEÑA DE CLIENTE*`,
+      ``,
+      `👤 *Nombre:* ${name.trim()}`,
+      `${starsStr} *(${stars}/5)*`,
+      product.trim()?`🛍️ *Producto:* ${product.trim()}`:"",
+      ``,
+      `💬 *Comentario:*`,
+      comment.trim(),
+      photoUrl?`\n📸 *Foto del cliente:*\n${photoUrl}`:"",
+    ].filter(l=>l!==undefined&&!(l===""&&lines?.length===0));
+
+    const msg=lines.filter(Boolean).join("\n");
+    const waUrl=`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
+    window.open(waUrl,"_blank","noreferrer");
+    setSending(false);
+    setDone(true);
+  },[canSend,name,stars,product,comment,photoUrl]);
+
+  const displayImg=photoUrl||photoPreview;
+  const isPhotoReady=!!photoUrl;
+
+  return(
+    <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:700,background:"rgba(0,0,0,0.88)",display:"flex",alignItems:"flex-end",justifyContent:"center",animation:"fadeIn 0.18s ease"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:"#111",width:"100%",maxWidth:520,borderRadius:"18px 18px 0 0",padding:"1.5rem 1.5rem 2.5rem",maxHeight:"92vh",overflowY:"auto",animation:"slideUp 0.28s cubic-bezier(0.25,0.46,0.45,0.94)",border:"1px solid #1e1e1e",borderBottom:"none"}}>
+        <div style={{width:36,height:3,background:"#222",borderRadius:2,margin:"0 auto 1.25rem"}}/>
+
+        {done?(
+          <div style={{textAlign:"center",padding:"2rem 0",animation:"slideUp 0.3s ease"}}>
+            <div style={{width:64,height:64,borderRadius:"50%",background:"#0d1e0d",border:"1.5px solid #2a4a2a",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 1rem"}}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+            <h3 style={{fontSize:16,fontWeight:900,color:C.accent,marginBottom:"0.5rem"}}>¡Gracias por tu reseña!</h3>
+            <p style={{fontSize:13,color:"#555",lineHeight:1.7,marginBottom:"1.5rem"}}>Tu opinión fue enviada. La compartiremos con la comunidad Fokus 🖤</p>
+            <button onClick={onClose} style={{...S.darkBtn,borderRadius:10,fontSize:11,width:"100%",justifyContent:"center"}}>CERRAR</button>
+          </div>
+        ):(
+          <>
+            <div style={{marginBottom:"1.5rem"}}>
+              <p style={{fontSize:9,fontWeight:800,letterSpacing:3,color:"#333",margin:"0 0 0.3rem"}}>COMPARTE TU EXPERIENCIA</p>
+              <h2 style={{fontSize:18,fontWeight:900,color:C.accent,margin:0}}>Deja tu reseña 🖤</h2>
+            </div>
+
+            {/* Stars */}
+            <div style={{marginBottom:"1.25rem"}}>
+              <p style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#333",marginBottom:"0.5rem"}}>CALIFICACIÓN</p>
+              <div style={{display:"flex",gap:"0.35rem"}}>
+                {[1,2,3,4,5].map(n=>(
+                  <button key={n} onClick={()=>setStars(n)} style={{background:"none",border:"none",cursor:"pointer",fontSize:28,padding:"2px",WebkitTapHighlightColor:"transparent",filter:n<=stars?"brightness(1)":"brightness(0.25)",transition:"filter 0.15s"}}>⭐</button>
+                ))}
+              </div>
+            </div>
+
+            {/* Name */}
+            <div style={{marginBottom:"0.75rem"}}>
+              <input placeholder="Tu nombre *" value={name} onChange={e=>setName(e.target.value)} style={S.input} autoComplete="name"/>
+            </div>
+
+            {/* Product (optional) */}
+            <div style={{marginBottom:"0.75rem"}}>
+              <input placeholder="¿Qué producto compraste? (opcional)" value={product} onChange={e=>setProduct(e.target.value)} style={S.input}/>
+            </div>
+
+            {/* Comment */}
+            <div style={{marginBottom:"1rem"}}>
+              <textarea
+                placeholder="Cuéntanos tu experiencia con Fokus... *"
+                value={comment}
+                onChange={e=>setComment(e.target.value)}
+                rows={3}
+                style={{...S.input,resize:"vertical" as const,lineHeight:1.6,minHeight:80}}
+              />
+            </div>
+
+            {/* Photo upload */}
+            <div style={{marginBottom:"1.25rem"}}>
+              <p style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#333",marginBottom:"0.5rem"}}>FOTO CON TU ACCESORIO <span style={{color:"#444",fontWeight:500,letterSpacing:0}}>(opcional)</span></p>
+              <input ref={photoRef} type="file" accept="image/*" onChange={handlePhotoChange} disabled={uploading} style={{display:"none"}} id="review-photo-input"/>
+
+              {displayImg?(
+                <div style={{background:"#0a0a0a",borderRadius:10,border:`1px solid ${isPhotoReady?"#2a5a2a":"#222"}`,padding:"0.75rem",position:"relative"}}>
+                  <img src={displayImg} alt="Tu foto" style={{width:"100%",maxHeight:220,objectFit:"cover",borderRadius:8,display:"block",background:"#111"}} draggable={false}/>
+                  <div style={{position:"absolute",top:18,right:18,background:"rgba(0,0,0,0.82)",borderRadius:20,padding:"4px 10px",display:"flex",alignItems:"center",gap:5}}>
+                    {isPhotoReady
+                      ?<><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg><span style={{fontSize:10,color:"#4caf50",fontWeight:700}}>Lista</span></>
+                      :<><div style={{width:10,height:10,border:"1.5px solid #444",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/><span style={{fontSize:10,color:"#888"}}>Subiendo…</span></>
+                    }
+                  </div>
+                  <button onClick={resetPhoto} style={{position:"absolute",top:18,left:18,background:"rgba(0,0,0,0.82)",border:"none",color:"#aaa",cursor:"pointer",borderRadius:20,padding:"4px 10px",fontSize:10,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>Cambiar</button>
+                </div>
+              ):(
+                <label htmlFor="review-photo-input" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.6rem",width:"100%",padding:"0.9rem 1rem",background:"#111",border:"1px dashed #2a2a2a",borderRadius:10,cursor:uploading?"not-allowed":"pointer",fontSize:13,fontWeight:700,letterSpacing:1,color:"#555",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",boxSizing:"border-box"} as React.CSSProperties}>
+                  {uploading
+                    ?<><div style={{width:14,height:14,border:"2px solid #333",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/> Subiendo…</>
+                    :<><IcCamera s={16} c="#555"/> Subir foto con tu accesorio</>
+                  }
+                </label>
+              )}
+              {uploadErr&&<p style={{margin:"0.5rem 0 0",fontSize:11,color:"#ff5555",background:"#1e0808",borderRadius:8,padding:"0.4rem 0.75rem"}}>{uploadErr}</p>}
+            </div>
+
+            {/* CTA */}
+            <button
+              onClick={handleSend}
+              disabled={!canSend||sending}
+              style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.65rem",width:"100%",background:canSend?"#25D366":"#1a1a1a",color:canSend?"#fff":"#444",padding:"1rem",fontWeight:900,letterSpacing:2,fontSize:11,border:`1px solid ${canSend?"transparent":"#2a2a2a"}`,borderRadius:10,cursor:canSend?"pointer":"not-allowed",fontFamily:"inherit",transition:"background 0.2s, color 0.2s"}}
+            >
+              <IcWA s={18} c={canSend?"#fff":"#444"}/>
+              {sending?"ENVIANDO…":"ENVIAR RESEÑA POR WHATSAPP"}
+            </button>
+            <p style={{textAlign:"center",fontSize:10,color:"#2e2e2e",marginTop:"0.65rem",lineHeight:1.5}}>Se abrirá WhatsApp con tu reseña lista para enviar</p>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── USER AVATAR ──────────────────────────────────────────────────────────────
 function UserAvatar({user,size=26}:{user:UserData;size?:number}){
   if(user.photoURL){return<img key={user.photoURL} src={user.photoURL} alt={user.displayName} style={{width:size,height:size,borderRadius:"50%",objectFit:"cover",flexShrink:0,border:"1.5px solid #333",display:"block"}} draggable={false}/>;}
@@ -735,6 +819,8 @@ export default function Home() {
   const[newName,setNewName]        = useState("");
   const[nameLoading,setNameLoading]= useState(false);
   const[photoLoading,setPhotoLoading]=useState(false);
+  // ── NEW: review modal state ──
+  const[showReviewModal,setShowReviewModal]=useState(false);
   const photoInputRef              = useRef<HTMLInputElement>(null);
 
   const setMainView=useCallback((v:MainView)=>{setMainViewRaw(v);scrollTop();},[]);
@@ -1019,24 +1105,63 @@ export default function Home() {
         </main>
       )}
 
-      {/* COMUNIDAD */}
+      {/* ─── COMUNIDAD ─────────────────────────────────────────────────────── */}
       {mainView==="comunidad"&&(
         <main style={{paddingTop:navH,background:C.bg}}>
+          {/* Hero */}
           <div style={{maxWidth:680,margin:"0 auto",padding:"3rem 1.5rem 0",textAlign:"center",animation:"slideUp 0.4s ease"}}>
             <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:20,padding:"0.35rem 1rem",marginBottom:"1.25rem"}}><div style={{width:6,height:6,borderRadius:"50%",background:"#4caf50",flexShrink:0,boxShadow:"0 0 0 3px rgba(76,175,80,0.2)",animation:"pulseRing 2s infinite"}}/><span style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#4caf50"}}>CLIENTES REALES</span></div>
             <h2 style={{fontSize:28,fontWeight:900,letterSpacing:4,marginBottom:"0.75rem",color:C.accent,lineHeight:1.1}}>COMUNIDAD<br/>FOKUS</h2>
             <p style={{color:"#444",fontSize:13,lineHeight:1.8,maxWidth:360,margin:"0 auto 2rem"}}>Cada pedido es una historia real. Estos son nuestros clientes satisfechos enviando sus productos a todo Venezuela.</p>
             <div style={{display:"flex",justifyContent:"center",gap:"2rem",marginBottom:"2.5rem",flexWrap:"wrap"}}>{[{n:"1000+",l:"Pedidos"},{n:"23+",l:"Estados"},{n:"★ 5.0",l:"Valoración"}].map(({n,l})=>(<div key={l} style={{textAlign:"center"}}><p style={{margin:0,fontSize:20,fontWeight:900,color:C.accent}}>{n}</p><p style={{margin:"2px 0 0",fontSize:10,color:"#444",letterSpacing:1}}>{l}</p></div>))}</div>
           </div>
+
           <div style={{maxWidth:1100,margin:"0 auto",padding:"0 1rem 5rem"}}>
-            <div className="cg" style={{display:"grid",gap:"0.85rem"}}>{COMMUNITY_POSTS.map((post,i)=><CommunityCard key={post.id} post={post} index={i} onClick={()=>setLightboxIdx(i)}/>)}</div>
-            <div style={{marginTop:"3rem",background:"#0d0d0d",borderRadius:16,padding:"2rem 1.5rem",border:"1px solid #1a1a1a",textAlign:"center"}}><img src="/favicon.png" alt="Fokus" width={36} height={36} style={{objectFit:"contain",marginBottom:"0.75rem",pointerEvents:"none"}} draggable={false}/><h3 style={{fontSize:16,fontWeight:900,letterSpacing:3,color:C.accent,margin:"0 0 0.5rem"}}>¿QUIERES SER PARTE?</h3><p style={{fontSize:13,color:"#444",lineHeight:1.7,margin:"0 0 1.25rem",maxWidth:340,marginLeft:"auto",marginRight:"auto"}}>Haz tu pedido hoy y recibe tu accesorio en cualquier estado de Venezuela.</p><div style={{display:"flex",gap:"0.65rem",justifyContent:"center",flexWrap:"wrap"}}><button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={{...S.darkBtn,borderRadius:8,fontSize:11}}>VER TIENDA →</button><a href={SOCIAL.instagram} target="_blank" rel="noreferrer" style={{display:"inline-flex",alignItems:"center",gap:6,background:"transparent",border:"1px solid #2a2a2a",color:"#888",padding:"0.9rem 1.4rem",borderRadius:8,fontSize:11,fontWeight:700,textDecoration:"none",letterSpacing:1}}><IcIG s={14}/> INSTAGRAM</a></div></div>
+
+            {/* ── REVIEW CTA BANNER ── */}
+            <div style={{marginBottom:"2rem",background:"linear-gradient(135deg,#0f0f0f 0%,#111 100%)",borderRadius:16,border:"1px solid #1e1e1e",padding:"1.5rem",display:"flex",alignItems:"center",gap:"1rem",flexWrap:"wrap",justifyContent:"space-between"}}>
+              <div style={{flex:1,minWidth:200}}>
+                <p style={{margin:"0 0 0.3rem",fontSize:9,fontWeight:800,letterSpacing:3,color:"#333"}}>¿YA TIENES TU ACCESORIO?</p>
+                <h3 style={{margin:"0 0 0.4rem",fontSize:17,fontWeight:900,color:C.accent,lineHeight:1.2}}>¡Comparte tu look con Fokus!</h3>
+                <p style={{margin:0,fontSize:12,color:"#444",lineHeight:1.6}}>Sube una foto con tu accesorio y cuéntanos tu experiencia. Tu reseña puede inspirar a otros. 🖤</p>
+              </div>
+              <button
+                onClick={()=>setShowReviewModal(true)}
+                style={{display:"inline-flex",alignItems:"center",gap:"0.6rem",background:"#fff",color:"#080808",border:"none",borderRadius:10,padding:"0.85rem 1.4rem",fontSize:12,fontWeight:900,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",flexShrink:0,whiteSpace:"nowrap"}}
+              >
+                <IcCamera s={16} c="#080808"/>
+                DEJAR RESEÑA
+              </button>
+            </div>
+
+            {/* Community grid */}
+            <div className="cg" style={{display:"grid",gap:"0.85rem"}}>
+              {COMMUNITY_POSTS.map((post,i)=><CommunityCard key={post.id} post={post} index={i} onClick={()=>setLightboxIdx(i)}/>)}
+            </div>
+
+            {/* Bottom CTA */}
+            <div style={{marginTop:"3rem",background:"#0d0d0d",borderRadius:16,padding:"2rem 1.5rem",border:"1px solid #1a1a1a",textAlign:"center"}}>
+              <img src="/favicon.png" alt="Fokus" width={36} height={36} style={{objectFit:"contain",marginBottom:"0.75rem",pointerEvents:"none"}} draggable={false}/>
+              <h3 style={{fontSize:16,fontWeight:900,letterSpacing:3,color:C.accent,margin:"0 0 0.5rem"}}>¿QUIERES SER PARTE?</h3>
+              <p style={{fontSize:13,color:"#444",lineHeight:1.7,margin:"0 0 1.25rem",maxWidth:340,marginLeft:"auto",marginRight:"auto"}}>Haz tu pedido hoy y recibe tu accesorio en cualquier estado de Venezuela.</p>
+              <div style={{display:"flex",gap:"0.65rem",justifyContent:"center",flexWrap:"wrap"}}>
+                <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={{...S.darkBtn,borderRadius:8,fontSize:11}}>VER TIENDA →</button>
+                <button onClick={()=>setShowReviewModal(true)} style={{display:"inline-flex",alignItems:"center",gap:6,background:"transparent",border:"1px solid #2a2a2a",color:"#888",padding:"0.9rem 1.4rem",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",letterSpacing:1,WebkitTapHighlightColor:"transparent"}}>
+                  ⭐ DEJAR RESEÑA
+                </button>
+                <a href={SOCIAL.instagram} target="_blank" rel="noreferrer" style={{display:"inline-flex",alignItems:"center",gap:6,background:"transparent",border:"1px solid #2a2a2a",color:"#888",padding:"0.9rem 1.4rem",borderRadius:8,fontSize:11,fontWeight:700,textDecoration:"none",letterSpacing:1}}><IcIG s={14}/> INSTAGRAM</a>
+              </div>
+            </div>
           </div>
+
           <Footer setMainView={setMainView} setShopFilter={setShopFilter}/>
         </main>
       )}
 
       {lightboxIdx!==null&&(<CommunityLightbox post={COMMUNITY_POSTS[lightboxIdx]} onClose={()=>setLightboxIdx(null)} onPrev={()=>setLightboxIdx(i=>i!==null?Math.max(0,i-1):0)} onNext={()=>setLightboxIdx(i=>i!==null?Math.min(COMMUNITY_POSTS.length-1,i+1):0)} hasPrev={lightboxIdx>0} hasNext={lightboxIdx<COMMUNITY_POSTS.length-1}/>)}
+
+      {/* ── REVIEW MODAL ── */}
+      {showReviewModal&&<ReviewModal onClose={()=>setShowReviewModal(false)}/>}
 
       {/* ACCOUNT */}
       {mainView==="account"&&userReady&&currentUser&&(
