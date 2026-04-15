@@ -490,7 +490,7 @@ const Footer=memo(function Footer({setMainView,setShopFilter}:{setMainView:(v:Ma
         <div className="fg" style={{display:"grid",gap:"2rem",marginBottom:"2rem"}}>
           <div>
             <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:"0.65rem"}}><img src="/favicon.png" alt="Fokus" width={20} height={20} style={{objectFit:"contain",pointerEvents:"none"}} draggable={false}/><span style={{fontWeight:900,fontSize:12,letterSpacing:5,color:"#fff"}}>FOKUS</span></div>
-            <p style={{fontSize:11,color:"#333",lineHeight:1.7,margin:"0 0 0.85rem",maxWidth:180}}>Accesorios con actitud.<br/>Cada detalle importa.</p>
+            <p style={{fontSize:11,color:"#333",lineHeight:1.7,margin:"0 0 0.85rem",maxWidth:180}}>Accesorios con actitud.<br/>Cada detalle +</p>
             <div style={{display:"flex",gap:"0.45rem"}}><a href={SOCIAL.instagram} target="_blank" rel="noreferrer" className="sl" style={sA}><IcIG s={14}/></a><a href={SOCIAL.facebook} target="_blank" rel="noreferrer" className="sl" style={sA}><IcFB s={14}/></a><a href={SOCIAL.tiktok} target="_blank" rel="noreferrer" className="sl" style={sA}><IcTT s={14}/></a><a href={SOCIAL.whatsapp} target="_blank" rel="noreferrer" className="sl" style={{...sA,background:"rgba(37,211,102,0.08)",borderColor:"rgba(37,211,102,0.15)"}}><IcWA s={14}/></a></div>
           </div>
           <div>
@@ -1045,7 +1045,7 @@ export default function Home() {
         <main style={{paddingTop:navH,background:C.bg}}>
           <div style={{maxWidth:760,margin:"0 auto",padding:"4rem 1.5rem 0",textAlign:"center",animation:"slideUp 0.5s ease"}}>
             <div style={{marginBottom:"2rem"}}><img src="/favicon.png" alt="Fokus" width={64} height={64} style={{objectFit:"contain",filter:"brightness(1.1)",pointerEvents:"none"}} draggable={false}/></div>
-            <p style={{fontSize:10,letterSpacing:6,color:"#333",fontWeight:700,marginBottom:"1rem"}}>ACCESORIOS</p>
+            <p style={{fontSize:10,letterSpacing:6,color:"#333",fontWeight:700,marginBottom:"1rem"}}> ACCESORIOS PARA CABALLERO</p>
             <h1 style={{fontSize:40,fontWeight:900,letterSpacing:8,marginBottom:"0.85rem",color:C.accent,lineHeight:1}}>FOKUS</h1>
             <p style={{fontSize:14,color:"#444",lineHeight:1.7,maxWidth:300,margin:"0 auto 2rem"}}>Cada detalle +<br/>Calidad, diseño y actitud.</p>
             <div style={{maxWidth:360,margin:"0 auto 2.5rem"}}><div style={{background:"rgba(76,175,80,0.06)",border:"1px solid rgba(76,175,80,0.2)",borderRadius:10,padding:"0.7rem 1.1rem",display:"flex",alignItems:"center",gap:"0.7rem"}}><IcTruck s={22} c="#4caf50"/><div style={{textAlign:"left"}}><p style={{margin:0,fontSize:11,fontWeight:800,color:"#4caf50",letterSpacing:0.8}}>ENVÍOS A TODA VENEZUELA</p><p style={{margin:"1px 0 0",fontSize:10,color:"#2a5a2a"}}>Llegamos a cualquier estado del país</p></div></div></div>
