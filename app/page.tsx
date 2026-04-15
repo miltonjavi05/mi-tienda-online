@@ -1040,7 +1040,7 @@ export default function Home() {
             <div style={{marginBottom:"2rem"}}><img src="/favicon.png" alt="Fokus" width={64} height={64} style={{objectFit:"contain",filter:"brightness(1.1)",pointerEvents:"none"}} draggable={false}/></div>
             <p style={{fontSize:10,letterSpacing:6,color:"#333",fontWeight:700,marginBottom:"1rem"}}>ACCESORIOS PARA CABALLERO</p>
             <h1 style={{fontSize:40,fontWeight:900,letterSpacing:8,marginBottom:"0.85rem",color:C.accent,lineHeight:1}}>FOKUS</h1>
-            <p style={{fontSize:14,color:"#444",lineHeight:1.7,maxWidth:300,margin:"0 auto 1.5rem"}}>Estilo masculino con actitud.<br/>Cada detalle importa.</p>
+            <p style={{fontSize:14,color:"#444",lineHeight:1.7,maxWidth:300,margin:"0 auto 1.5rem"}}>Estilo masculino con actitud.<br/>Cada detalle +</p>
 
             {/* MASCULINO BADGE */}
             <div style={{display:"inline-flex",alignItems:"center",gap:"0.6rem",background:"linear-gradient(135deg,rgba(255,255,255,0.06) 0%,rgba(255,255,255,0.02) 100%)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:12,padding:"0.65rem 1.25rem",marginBottom:"2rem",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)"}}>
