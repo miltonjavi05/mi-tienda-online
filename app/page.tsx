@@ -759,7 +759,6 @@ export default function Home() {
     if(view && view !== mainView){
       setMainViewRaw(view);
     }
-  // intentionally only on pathname change
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[pathname]);
 
@@ -825,6 +824,20 @@ export default function Home() {
 
   useEffect(()=>{try{const s=sessionStorage.getItem("fokus_cart");if(s)setCart(JSON.parse(s) as CartItem[]);}catch{}},[]);
   useEffect(()=>{try{sessionStorage.setItem("fokus_cart",JSON.stringify(cart));}catch{}},[cart]);
+
+  // ── Persist orderSnap in sessionStorage so /gracias survives a hard load ──
+  useEffect(()=>{
+    try{
+      const stored=sessionStorage.getItem("fokus_order");
+      if(stored){setOrderSnap(JSON.parse(stored) as OrderSnapshot);}
+    }catch{}
+  },[]);
+  useEffect(()=>{
+    try{
+      if(orderSnap)sessionStorage.setItem("fokus_order",JSON.stringify(orderSnap));
+      else sessionStorage.removeItem("fokus_order");
+    }catch{}
+  },[orderSnap]);
 
   const loadProducts=useCallback(async()=>{setLoading(true);try{const d=await fsGetAll();const sorted=d.sort((a,b)=>(a.order??0)-(b.order??0));setProducts(sorted.length>0?sorted:DEMO);}catch{setProducts(DEMO);}finally{setLoading(false);};},[]);
 
@@ -900,12 +913,25 @@ export default function Home() {
   const openProd=useCallback((p:Product)=>{setSel(p);setModalQty(1);trackViewContent(p,currentUser?.email);},[currentUser?.email]);
   const userReady=currentUser!==undefined;
 
-  // ── THANK YOU ──
-  if(isTY&&orderSnap){
+  // ─── THANK YOU ── now rendered INSIDE the main return ─────────────────────
+  if(isTY){
+    // If orderSnap is null (e.g. user navigated directly to /gracias without an order),
+    // redirect to home instead of showing a 404.
+    if(!orderSnap){
+      if(typeof window!=="undefined"){
+        router.replace("/");
+      }
+      return(
+        <div style={{fontFamily:"'Helvetica Neue',Arial,sans-serif",background:"#080808",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <style>{GLOBAL_CSS}</style>
+          <p style={{color:"#333",fontSize:13}}>Redirigiendo…</p>
+        </div>
+      );
+    }
     return(
       <>
         <style>{GLOBAL_CSS}</style>
-        <ThankYouView order={orderSnap} onBack={()=>{setOrderSnap(null);setMainView("shop");setShopFilter("TODO");}} currentUser={currentUser}/>
+        <ThankYouView order={orderSnap} onBack={()=>{setOrderSnap(null);sessionStorage.removeItem("fokus_order");setMainView("shop");setShopFilter("TODO");}} currentUser={currentUser}/>
       </>
     );
   }
