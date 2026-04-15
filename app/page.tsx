@@ -574,82 +574,90 @@ function CommunityLightbox({post,onClose,onPrev,onNext,hasPrev,hasNext}:{post:ty
   );
 }
 
-// ─── REVIEW FORM MODAL ────────────────────────────────────────────────────────
-// Handles photo upload to Cloudinary + sends review via WhatsApp
+// ─── REVIEW MODAL ─────────────────────────────────────────────────────────────
+// BUG FIX: removed self-referencing `lines` variable and cleaned up filter logic
 function ReviewModal({onClose}:{onClose:()=>void}){
-  const[name,setName]=useState("");
-  const[comment,setComment]=useState("");
-  const[stars,setStars]=useState(5);
-  const[product,setProduct]=useState("");
-  const[photoUrl,setPhotoUrl]=useState("");
-  const[photoPreview,setPhotoPreview]=useState("");
-  const[uploading,setUploading]=useState(false);
-  const[uploadErr,setUploadErr]=useState("");
-  const[sending,setSending]=useState(false);
-  const[done,setDone]=useState(false);
-  const photoRef=useRef<HTMLInputElement>(null);
+  const[name,setName]         = useState("");
+  const[comment,setComment]   = useState("");
+  const[stars,setStars]       = useState(5);
+  const[product,setProduct]   = useState("");
+  const[photoUrl,setPhotoUrl] = useState("");
+  const[photoPreview,setPhotoPreview] = useState("");
+  const[uploading,setUploading] = useState(false);
+  const[uploadErr,setUploadErr] = useState("");
+  const[sending,setSending]   = useState(false);
+  const[done,setDone]         = useState(false);
+  const photoRef = useRef<HTMLInputElement>(null);
 
-  const handlePhotoChange=useCallback(async(e:React.ChangeEvent<HTMLInputElement>)=>{
-    const file=e.target.files?.[0];if(!file)return;
-    setUploadErr("");setUploading(true);
-    const reader=new FileReader();
-    reader.onload=ev=>setPhotoPreview(ev.target?.result as string);
+  const handlePhotoChange = useCallback(async(e:React.ChangeEvent<HTMLInputElement>)=>{
+    const file = e.target.files?.[0];
+    if(!file) return;
+    setUploadErr("");
+    setUploading(true);
+    const reader = new FileReader();
+    reader.onload = ev => setPhotoPreview(ev.target?.result as string);
     reader.readAsDataURL(file);
-    try{
-      const url=await uploadImg(file,"fokus_products");
+    try {
+      const url = await uploadImg(file, "fokus_products");
       setPhotoUrl(url);
-    }catch{
+    } catch {
       setUploadErr("Error al subir la foto. Intenta de nuevo.");
       setPhotoPreview("");
-    }finally{
+    } finally {
       setUploading(false);
-      if(photoRef.current)photoRef.current.value="";
+      if(photoRef.current) photoRef.current.value = "";
     }
   },[]);
 
-  const resetPhoto=useCallback(()=>{setPhotoUrl("");setPhotoPreview("");setUploadErr("");},[]);
+  const resetPhoto = useCallback(()=>{
+    setPhotoUrl("");
+    setPhotoPreview("");
+    setUploadErr("");
+  },[]);
 
-  const canSend=name.trim().length>0&&comment.trim().length>0&&!uploading;
+  const canSend = name.trim().length > 0 && comment.trim().length > 0 && !uploading;
 
-  const handleSend=useCallback(()=>{
-    if(!canSend)return;
+  const handleSend = useCallback(()=>{
+    if(!canSend) return;
     setSending(true);
-    const starsStr="⭐".repeat(stars);
-    const lines=[
+
+    // ✅ FIX: build lines array without self-reference
+    const starsStr = "⭐".repeat(stars);
+    const parts: string[] = [
       `🌟 *NUEVA RESEÑA DE CLIENTE*`,
       ``,
       `👤 *Nombre:* ${name.trim()}`,
       `${starsStr} *(${stars}/5)*`,
-      product.trim()?`🛍️ *Producto:* ${product.trim()}`:"",
-      ``,
-      `💬 *Comentario:*`,
-      comment.trim(),
-      photoUrl?`\n📸 *Foto del cliente:*\n${photoUrl}`:"",
-    ].filter(l=>l!==undefined&&!(l===""&&lines?.length===0));
+    ];
+    if(product.trim()) parts.push(`🛍️ *Producto:* ${product.trim()}`);
+    parts.push(``, `💬 *Comentario:*`, comment.trim());
+    if(photoUrl) parts.push(``, `📸 *Foto del cliente:*`, photoUrl);
 
-    const msg=lines.filter(Boolean).join("\n");
-    const waUrl=`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
-    window.open(waUrl,"_blank","noreferrer");
+    const msg = parts.join("\n");
+    const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
+    window.open(waUrl, "_blank", "noreferrer");
     setSending(false);
     setDone(true);
-  },[canSend,name,stars,product,comment,photoUrl]);
+  },[canSend, name, stars, product, comment, photoUrl]);
 
-  const displayImg=photoUrl||photoPreview;
-  const isPhotoReady=!!photoUrl;
+  const displayImg   = photoUrl || photoPreview;
+  const isPhotoReady = !!photoUrl;
 
   return(
     <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:700,background:"rgba(0,0,0,0.88)",display:"flex",alignItems:"flex-end",justifyContent:"center",animation:"fadeIn 0.18s ease"}}>
       <div onClick={e=>e.stopPropagation()} style={{background:"#111",width:"100%",maxWidth:520,borderRadius:"18px 18px 0 0",padding:"1.5rem 1.5rem 2.5rem",maxHeight:"92vh",overflowY:"auto",animation:"slideUp 0.28s cubic-bezier(0.25,0.46,0.45,0.94)",border:"1px solid #1e1e1e",borderBottom:"none"}}>
         <div style={{width:36,height:3,background:"#222",borderRadius:2,margin:"0 auto 1.25rem"}}/>
 
-        {done?(
+        {done ? (
           <div style={{textAlign:"center",padding:"2rem 0",animation:"slideUp 0.3s ease"}}>
-            <div style={{width:64,height:64,borderRadius:"50%",background:"#0d1e0d",border:"1.5px solid #2a4a2a",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 1rem"}}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+            <div style={{width:64,height:64,borderRadius:"50%",background:"#0d1e0d",border:"1.5px solid #2a4a2a",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 1rem"}}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
             <h3 style={{fontSize:16,fontWeight:900,color:C.accent,marginBottom:"0.5rem"}}>¡Gracias por tu reseña!</h3>
             <p style={{fontSize:13,color:"#555",lineHeight:1.7,marginBottom:"1.5rem"}}>Tu opinión fue enviada. La compartiremos con la comunidad Fokus 🖤</p>
             <button onClick={onClose} style={{...S.darkBtn,borderRadius:10,fontSize:11,width:"100%",justifyContent:"center"}}>CERRAR</button>
           </div>
-        ):(
+        ) : (
           <>
             <div style={{marginBottom:"1.5rem"}}>
               <p style={{fontSize:9,fontWeight:800,letterSpacing:3,color:"#333",margin:"0 0 0.3rem"}}>COMPARTE TU EXPERIENCIA</p>
@@ -689,39 +697,41 @@ function ReviewModal({onClose}:{onClose:()=>void}){
 
             {/* Photo upload */}
             <div style={{marginBottom:"1.25rem"}}>
-              <p style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#333",marginBottom:"0.5rem"}}>FOTO CON TU ACCESORIO <span style={{color:"#444",fontWeight:500,letterSpacing:0}}>(opcional)</span></p>
+              <p style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#333",marginBottom:"0.5rem"}}>
+                FOTO CON TU ACCESORIO <span style={{color:"#444",fontWeight:500,letterSpacing:0}}>(opcional)</span>
+              </p>
               <input ref={photoRef} type="file" accept="image/*" onChange={handlePhotoChange} disabled={uploading} style={{display:"none"}} id="review-photo-input"/>
 
-              {displayImg?(
+              {displayImg ? (
                 <div style={{background:"#0a0a0a",borderRadius:10,border:`1px solid ${isPhotoReady?"#2a5a2a":"#222"}`,padding:"0.75rem",position:"relative"}}>
                   <img src={displayImg} alt="Tu foto" style={{width:"100%",maxHeight:220,objectFit:"cover",borderRadius:8,display:"block",background:"#111"}} draggable={false}/>
                   <div style={{position:"absolute",top:18,right:18,background:"rgba(0,0,0,0.82)",borderRadius:20,padding:"4px 10px",display:"flex",alignItems:"center",gap:5}}>
                     {isPhotoReady
-                      ?<><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg><span style={{fontSize:10,color:"#4caf50",fontWeight:700}}>Lista</span></>
-                      :<><div style={{width:10,height:10,border:"1.5px solid #444",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/><span style={{fontSize:10,color:"#888"}}>Subiendo…</span></>
+                      ? <><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg><span style={{fontSize:10,color:"#4caf50",fontWeight:700}}>Lista</span></>
+                      : <><div style={{width:10,height:10,border:"1.5px solid #444",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/><span style={{fontSize:10,color:"#888"}}>Subiendo…</span></>
                     }
                   </div>
                   <button onClick={resetPhoto} style={{position:"absolute",top:18,left:18,background:"rgba(0,0,0,0.82)",border:"none",color:"#aaa",cursor:"pointer",borderRadius:20,padding:"4px 10px",fontSize:10,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>Cambiar</button>
                 </div>
-              ):(
+              ) : (
                 <label htmlFor="review-photo-input" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.6rem",width:"100%",padding:"0.9rem 1rem",background:"#111",border:"1px dashed #2a2a2a",borderRadius:10,cursor:uploading?"not-allowed":"pointer",fontSize:13,fontWeight:700,letterSpacing:1,color:"#555",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",boxSizing:"border-box"} as React.CSSProperties}>
                   {uploading
-                    ?<><div style={{width:14,height:14,border:"2px solid #333",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/> Subiendo…</>
-                    :<><IcCamera s={16} c="#555"/> Subir foto con tu accesorio</>
+                    ? <><div style={{width:14,height:14,border:"2px solid #333",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/> Subiendo…</>
+                    : <><IcCamera s={16} c="#555"/> Subir foto con tu accesorio</>
                   }
                 </label>
               )}
-              {uploadErr&&<p style={{margin:"0.5rem 0 0",fontSize:11,color:"#ff5555",background:"#1e0808",borderRadius:8,padding:"0.4rem 0.75rem"}}>{uploadErr}</p>}
+              {uploadErr && <p style={{margin:"0.5rem 0 0",fontSize:11,color:"#ff5555",background:"#1e0808",borderRadius:8,padding:"0.4rem 0.75rem"}}>{uploadErr}</p>}
             </div>
 
             {/* CTA */}
             <button
               onClick={handleSend}
-              disabled={!canSend||sending}
+              disabled={!canSend || sending}
               style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.65rem",width:"100%",background:canSend?"#25D366":"#1a1a1a",color:canSend?"#fff":"#444",padding:"1rem",fontWeight:900,letterSpacing:2,fontSize:11,border:`1px solid ${canSend?"transparent":"#2a2a2a"}`,borderRadius:10,cursor:canSend?"pointer":"not-allowed",fontFamily:"inherit",transition:"background 0.2s, color 0.2s"}}
             >
               <IcWA s={18} c={canSend?"#fff":"#444"}/>
-              {sending?"ENVIANDO…":"ENVIAR RESEÑA POR WHATSAPP"}
+              {sending ? "ENVIANDO…" : "ENVIAR RESEÑA POR WHATSAPP"}
             </button>
             <p style={{textAlign:"center",fontSize:10,color:"#2e2e2e",marginTop:"0.65rem",lineHeight:1.5}}>Se abrirá WhatsApp con tu reseña lista para enviar</p>
           </>
@@ -819,7 +829,6 @@ export default function Home() {
   const[newName,setNewName]        = useState("");
   const[nameLoading,setNameLoading]= useState(false);
   const[photoLoading,setPhotoLoading]=useState(false);
-  // ── NEW: review modal state ──
   const[showReviewModal,setShowReviewModal]=useState(false);
   const photoInputRef              = useRef<HTMLInputElement>(null);
 
