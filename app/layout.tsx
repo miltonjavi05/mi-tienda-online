@@ -31,6 +31,8 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="theme-color" content="#080808" />
         <link rel="manifest" href="/manifest.json" />
+        <link rel="apple-touch-icon" href="/favicon.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         <meta name="facebook-domain-verification" content="d4yithl47jpogjnpv52sx14j5mtebd" />
       </head>
       <body style={{ margin: 0, padding: 0, background: "#080808" }}>
