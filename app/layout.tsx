@@ -8,7 +8,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Fokus — Accesorios de Caballero",
+  title: "Fokus",
   description: "Accesorios con actitud. Calidad, diseño y estilo para el caballero moderno. Envíos a toda Venezuela.",
   manifest: "/manifest.json",
   appleWebApp: {
