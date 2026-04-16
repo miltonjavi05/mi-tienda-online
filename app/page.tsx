@@ -61,20 +61,12 @@ const DELIVERY_ZONES_MAP = new Map(DELIVERY_ZONES.map(z=>[z.id,z]));
 const VIEW_TO_PATH: Record<string, string> = {
   fokus:     "/",
   shop:      "/tienda",
-  comunidad: "/comunidad",
-  cart:      "/carrito",
-  account:   "/cuenta",
-  admin:     "/admin",
-  thankyou:  "/gracias",
+ 
 };
 const PATH_TO_VIEW: Record<string, string> = {
   "/":           "fokus",
   "/tienda":     "shop",
-  "/comunidad":  "comunidad",
-  "/carrito":    "cart",
-  "/cuenta":     "account",
-  "/admin":      "admin",
-  "/gracias":    "thankyou",
+ 
 };
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
