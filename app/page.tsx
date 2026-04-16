@@ -24,7 +24,10 @@ const SOCIAL = {
   instagram: "https://www.instagram.com/fokus_accesorios?igsh=eGNiNHZmczUwY3Np",
   facebook:  "https://www.facebook.com/share/14d2kQuHQ3y/?mibextid=wwXIfr",
   tiktok:    "https://www.tiktok.com/@fokus_accesorios?_r=1&_t=ZS-95NNWYzuIxV",
+  // ── Link exclusivo para la pestaña TIENDA ──
+  shop:      "https://fokusaccesorios.shop/tienda",
 };
+
 const VENEZUELA_STATES = [
   "Amazonas","Anzoátegui","Apure","Aragua","Barinas","Bolívar","Carabobo",
   "Cojedes","Delta Amacuro","Distrito Capital","Falcón","Guárico","Lara",
@@ -311,24 +314,7 @@ const LazyImg=memo(function LazyImg({src,alt}:{src:string;alt:string}){
   return(
     <div ref={ref} style={{position:"relative",width:"100%",height:"100%",pointerEvents:"none"}}>
       {!loaded&&<div style={{position:"absolute",inset:0,background:"#161616"}}/>}
-      {inView&&<img
-        src={optImg(src,400)}
-        alt={alt}
-        loading="lazy"
-        decoding="async"
-        onLoad={()=>setLoaded(true)}
-        style={{
-          width:"100%",height:"100%",objectFit:"cover",display:"block",
-          opacity:loaded?1:0,
-          transition:"opacity 0.2s ease",
-          pointerEvents:"none",
-          userSelect:"none",
-          WebkitUserSelect:"none",
-          WebkitTouchCallout:"none",
-          touchAction:"auto",
-        } as React.CSSProperties}
-        draggable={false}
-      />}
+      {inView&&<img src={optImg(src,400)} alt={alt} loading="lazy" decoding="async" onLoad={()=>setLoaded(true)} style={{width:"100%",height:"100%",objectFit:"cover",display:"block",opacity:loaded?1:0,transition:"opacity 0.2s ease",pointerEvents:"none",userSelect:"none",WebkitUserSelect:"none",WebkitTouchCallout:"none",touchAction:"auto"} as React.CSSProperties} draggable={false}/>}
     </div>
   );
 });
@@ -490,7 +476,7 @@ const Footer=memo(function Footer({setMainView,setShopFilter}:{setMainView:(v:Ma
         <div className="fg" style={{display:"grid",gap:"2rem",marginBottom:"2rem"}}>
           <div>
             <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:"0.65rem"}}><img src="/favicon.png" alt="Fokus" width={20} height={20} style={{objectFit:"contain",pointerEvents:"none"}} draggable={false}/><span style={{fontWeight:900,fontSize:12,letterSpacing:5,color:"#fff"}}>FOKUS</span></div>
-            <p style={{fontSize:11,color:"#333",lineHeight:1.7,margin:"0 0 0.85rem",maxWidth:180}}>Accesorios con actitud.<br/>Cada detalle +</p>
+            <p style={{fontSize:11,color:"#333",lineHeight:1.7,margin:"0 0 0.85rem",maxWidth:180}}>Accesorios con actitud.<br/>Cada detalle importa.</p>
             <div style={{display:"flex",gap:"0.45rem"}}><a href={SOCIAL.instagram} target="_blank" rel="noreferrer" className="sl" style={sA}><IcIG s={14}/></a><a href={SOCIAL.facebook} target="_blank" rel="noreferrer" className="sl" style={sA}><IcFB s={14}/></a><a href={SOCIAL.tiktok} target="_blank" rel="noreferrer" className="sl" style={sA}><IcTT s={14}/></a><a href={SOCIAL.whatsapp} target="_blank" rel="noreferrer" className="sl" style={{...sA,background:"rgba(37,211,102,0.08)",borderColor:"rgba(37,211,102,0.15)"}}><IcWA s={14}/></a></div>
           </div>
           <div>
@@ -575,166 +561,32 @@ function CommunityLightbox({post,onClose,onPrev,onNext,hasPrev,hasNext}:{post:ty
 }
 
 // ─── REVIEW MODAL ─────────────────────────────────────────────────────────────
-// BUG FIX: removed self-referencing `lines` variable and cleaned up filter logic
 function ReviewModal({onClose}:{onClose:()=>void}){
-  const[name,setName]         = useState("");
-  const[comment,setComment]   = useState("");
-  const[stars,setStars]       = useState(5);
-  const[product,setProduct]   = useState("");
-  const[photoUrl,setPhotoUrl] = useState("");
-  const[photoPreview,setPhotoPreview] = useState("");
-  const[uploading,setUploading] = useState(false);
-  const[uploadErr,setUploadErr] = useState("");
-  const[sending,setSending]   = useState(false);
-  const[done,setDone]         = useState(false);
-  const photoRef = useRef<HTMLInputElement>(null);
-
-  const handlePhotoChange = useCallback(async(e:React.ChangeEvent<HTMLInputElement>)=>{
-    const file = e.target.files?.[0];
-    if(!file) return;
-    setUploadErr("");
-    setUploading(true);
-    const reader = new FileReader();
-    reader.onload = ev => setPhotoPreview(ev.target?.result as string);
-    reader.readAsDataURL(file);
-    try {
-      const url = await uploadImg(file, "fokus_products");
-      setPhotoUrl(url);
-    } catch {
-      setUploadErr("Error al subir la foto. Intenta de nuevo.");
-      setPhotoPreview("");
-    } finally {
-      setUploading(false);
-      if(photoRef.current) photoRef.current.value = "";
-    }
-  },[]);
-
-  const resetPhoto = useCallback(()=>{
-    setPhotoUrl("");
-    setPhotoPreview("");
-    setUploadErr("");
-  },[]);
-
-  const canSend = name.trim().length > 0 && comment.trim().length > 0 && !uploading;
-
-  const handleSend = useCallback(()=>{
-    if(!canSend) return;
-    setSending(true);
-
-    // ✅ FIX: build lines array without self-reference
-    const starsStr = "⭐".repeat(stars);
-    const parts: string[] = [
-      `🌟 *NUEVA RESEÑA DE CLIENTE*`,
-      ``,
-      `👤 *Nombre:* ${name.trim()}`,
-      `${starsStr} *(${stars}/5)*`,
-    ];
-    if(product.trim()) parts.push(`🛍️ *Producto:* ${product.trim()}`);
-    parts.push(``, `💬 *Comentario:*`, comment.trim());
-    if(photoUrl) parts.push(``, `📸 *Foto del cliente:*`, photoUrl);
-
-    const msg = parts.join("\n");
-    const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
-    window.open(waUrl, "_blank", "noreferrer");
-    setSending(false);
-    setDone(true);
-  },[canSend, name, stars, product, comment, photoUrl]);
-
-  const displayImg   = photoUrl || photoPreview;
-  const isPhotoReady = !!photoUrl;
-
+  const[name,setName]=useState("");const[comment,setComment]=useState("");const[stars,setStars]=useState(5);const[product,setProduct]=useState("");const[photoUrl,setPhotoUrl]=useState("");const[photoPreview,setPhotoPreview]=useState("");const[uploading,setUploading]=useState(false);const[uploadErr,setUploadErr]=useState("");const[sending,setSending]=useState(false);const[done,setDone]=useState(false);
+  const photoRef=useRef<HTMLInputElement>(null);
+  const handlePhotoChange=useCallback(async(e:React.ChangeEvent<HTMLInputElement>)=>{const file=e.target.files?.[0];if(!file)return;setUploadErr("");setUploading(true);const reader=new FileReader();reader.onload=ev=>setPhotoPreview(ev.target?.result as string);reader.readAsDataURL(file);try{const url=await uploadImg(file,"fokus_products");setPhotoUrl(url);}catch{setUploadErr("Error al subir la foto. Intenta de nuevo.");setPhotoPreview("");}finally{setUploading(false);if(photoRef.current)photoRef.current.value="";};},[]);
+  const resetPhoto=useCallback(()=>{setPhotoUrl("");setPhotoPreview("");setUploadErr("");},[]);
+  const canSend=name.trim().length>0&&comment.trim().length>0&&!uploading;
+  const handleSend=useCallback(()=>{if(!canSend)return;setSending(true);const starsStr="⭐".repeat(stars);const parts:string[]=[`🌟 *NUEVA RESEÑA DE CLIENTE*`,``,`👤 *Nombre:* ${name.trim()}`,`${starsStr} *(${stars}/5)*`];if(product.trim())parts.push(`🛍️ *Producto:* ${product.trim()}`);parts.push(``,`💬 *Comentario:*`,comment.trim());if(photoUrl)parts.push(``,`📸 *Foto del cliente:*`,photoUrl);const msg=parts.join("\n");const waUrl=`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;window.open(waUrl,"_blank","noreferrer");setSending(false);setDone(true);},[canSend,name,stars,product,comment,photoUrl]);
+  const displayImg=photoUrl||photoPreview;const isPhotoReady=!!photoUrl;
   return(
     <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:700,background:"rgba(0,0,0,0.88)",display:"flex",alignItems:"flex-end",justifyContent:"center",animation:"fadeIn 0.18s ease"}}>
       <div onClick={e=>e.stopPropagation()} style={{background:"#111",width:"100%",maxWidth:520,borderRadius:"18px 18px 0 0",padding:"1.5rem 1.5rem 2.5rem",maxHeight:"92vh",overflowY:"auto",animation:"slideUp 0.28s cubic-bezier(0.25,0.46,0.45,0.94)",border:"1px solid #1e1e1e",borderBottom:"none"}}>
         <div style={{width:36,height:3,background:"#222",borderRadius:2,margin:"0 auto 1.25rem"}}/>
-
-        {done ? (
-          <div style={{textAlign:"center",padding:"2rem 0",animation:"slideUp 0.3s ease"}}>
-            <div style={{width:64,height:64,borderRadius:"50%",background:"#0d1e0d",border:"1.5px solid #2a4a2a",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 1rem"}}>
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            </div>
-            <h3 style={{fontSize:16,fontWeight:900,color:C.accent,marginBottom:"0.5rem"}}>¡Gracias por tu reseña!</h3>
-            <p style={{fontSize:13,color:"#555",lineHeight:1.7,marginBottom:"1.5rem"}}>Tu opinión fue enviada. La compartiremos con la comunidad Fokus 🖤</p>
-            <button onClick={onClose} style={{...S.darkBtn,borderRadius:10,fontSize:11,width:"100%",justifyContent:"center"}}>CERRAR</button>
+        {done?(<div style={{textAlign:"center",padding:"2rem 0",animation:"slideUp 0.3s ease"}}><div style={{width:64,height:64,borderRadius:"50%",background:"#0d1e0d",border:"1.5px solid #2a4a2a",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 1rem"}}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div><h3 style={{fontSize:16,fontWeight:900,color:C.accent,marginBottom:"0.5rem"}}>¡Gracias por tu reseña!</h3><p style={{fontSize:13,color:"#555",lineHeight:1.7,marginBottom:"1.5rem"}}>Tu opinión fue enviada. La compartiremos con la comunidad Fokus 🖤</p><button onClick={onClose} style={{...S.darkBtn,borderRadius:10,fontSize:11,width:"100%",justifyContent:"center"}}>CERRAR</button></div>):(
+          <><div style={{marginBottom:"1.5rem"}}><p style={{fontSize:9,fontWeight:800,letterSpacing:3,color:"#333",margin:"0 0 0.3rem"}}>COMPARTE TU EXPERIENCIA</p><h2 style={{fontSize:18,fontWeight:900,color:C.accent,margin:0}}>Deja tu reseña 🖤</h2></div>
+          <div style={{marginBottom:"1.25rem"}}><p style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#333",marginBottom:"0.5rem"}}>CALIFICACIÓN</p><div style={{display:"flex",gap:"0.35rem"}}>{[1,2,3,4,5].map(n=>(<button key={n} onClick={()=>setStars(n)} style={{background:"none",border:"none",cursor:"pointer",fontSize:28,padding:"2px",WebkitTapHighlightColor:"transparent",filter:n<=stars?"brightness(1)":"brightness(0.25)",transition:"filter 0.15s"}}>⭐</button>))}</div></div>
+          <div style={{marginBottom:"0.75rem"}}><input placeholder="Tu nombre *" value={name} onChange={e=>setName(e.target.value)} style={S.input} autoComplete="name"/></div>
+          <div style={{marginBottom:"0.75rem"}}><input placeholder="¿Qué producto compraste? (opcional)" value={product} onChange={e=>setProduct(e.target.value)} style={S.input}/></div>
+          <div style={{marginBottom:"1rem"}}><textarea placeholder="Cuéntanos tu experiencia con Fokus... *" value={comment} onChange={e=>setComment(e.target.value)} rows={3} style={{...S.input,resize:"vertical" as const,lineHeight:1.6,minHeight:80}}/></div>
+          <div style={{marginBottom:"1.25rem"}}>
+            <p style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#333",marginBottom:"0.5rem"}}>FOTO CON TU ACCESORIO <span style={{color:"#444",fontWeight:500,letterSpacing:0}}>(opcional)</span></p>
+            <input ref={photoRef} type="file" accept="image/*" onChange={handlePhotoChange} disabled={uploading} style={{display:"none"}} id="review-photo-input"/>
+            {displayImg?(<div style={{background:"#0a0a0a",borderRadius:10,border:`1px solid ${isPhotoReady?"#2a5a2a":"#222"}`,padding:"0.75rem",position:"relative"}}><img src={displayImg} alt="Tu foto" style={{width:"100%",maxHeight:220,objectFit:"cover",borderRadius:8,display:"block",background:"#111"}} draggable={false}/><div style={{position:"absolute",top:18,right:18,background:"rgba(0,0,0,0.82)",borderRadius:20,padding:"4px 10px",display:"flex",alignItems:"center",gap:5}}>{isPhotoReady?<><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg><span style={{fontSize:10,color:"#4caf50",fontWeight:700}}>Lista</span></>:<><div style={{width:10,height:10,border:"1.5px solid #444",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/><span style={{fontSize:10,color:"#888"}}>Subiendo…</span></>}</div><button onClick={resetPhoto} style={{position:"absolute",top:18,left:18,background:"rgba(0,0,0,0.82)",border:"none",color:"#aaa",cursor:"pointer",borderRadius:20,padding:"4px 10px",fontSize:10,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>Cambiar</button></div>):(<label htmlFor="review-photo-input" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.6rem",width:"100%",padding:"0.9rem 1rem",background:"#111",border:"1px dashed #2a2a2a",borderRadius:10,cursor:uploading?"not-allowed":"pointer",fontSize:13,fontWeight:700,letterSpacing:1,color:"#555",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",boxSizing:"border-box"} as React.CSSProperties}>{uploading?<><div style={{width:14,height:14,border:"2px solid #333",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/> Subiendo…</>:<><IcCamera s={16} c="#555"/> Subir foto con tu accesorio</>}</label>)}
+            {uploadErr&&<p style={{margin:"0.5rem 0 0",fontSize:11,color:"#ff5555",background:"#1e0808",borderRadius:8,padding:"0.4rem 0.75rem"}}>{uploadErr}</p>}
           </div>
-        ) : (
-          <>
-            <div style={{marginBottom:"1.5rem"}}>
-              <p style={{fontSize:9,fontWeight:800,letterSpacing:3,color:"#333",margin:"0 0 0.3rem"}}>COMPARTE TU EXPERIENCIA</p>
-              <h2 style={{fontSize:18,fontWeight:900,color:C.accent,margin:0}}>Deja tu reseña 🖤</h2>
-            </div>
-
-            {/* Stars */}
-            <div style={{marginBottom:"1.25rem"}}>
-              <p style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#333",marginBottom:"0.5rem"}}>CALIFICACIÓN</p>
-              <div style={{display:"flex",gap:"0.35rem"}}>
-                {[1,2,3,4,5].map(n=>(
-                  <button key={n} onClick={()=>setStars(n)} style={{background:"none",border:"none",cursor:"pointer",fontSize:28,padding:"2px",WebkitTapHighlightColor:"transparent",filter:n<=stars?"brightness(1)":"brightness(0.25)",transition:"filter 0.15s"}}>⭐</button>
-                ))}
-              </div>
-            </div>
-
-            {/* Name */}
-            <div style={{marginBottom:"0.75rem"}}>
-              <input placeholder="Tu nombre *" value={name} onChange={e=>setName(e.target.value)} style={S.input} autoComplete="name"/>
-            </div>
-
-            {/* Product (optional) */}
-            <div style={{marginBottom:"0.75rem"}}>
-              <input placeholder="¿Qué producto compraste? (opcional)" value={product} onChange={e=>setProduct(e.target.value)} style={S.input}/>
-            </div>
-
-            {/* Comment */}
-            <div style={{marginBottom:"1rem"}}>
-              <textarea
-                placeholder="Cuéntanos tu experiencia con Fokus... *"
-                value={comment}
-                onChange={e=>setComment(e.target.value)}
-                rows={3}
-                style={{...S.input,resize:"vertical" as const,lineHeight:1.6,minHeight:80}}
-              />
-            </div>
-
-            {/* Photo upload */}
-            <div style={{marginBottom:"1.25rem"}}>
-              <p style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#333",marginBottom:"0.5rem"}}>
-                FOTO CON TU ACCESORIO <span style={{color:"#444",fontWeight:500,letterSpacing:0}}>(opcional)</span>
-              </p>
-              <input ref={photoRef} type="file" accept="image/*" onChange={handlePhotoChange} disabled={uploading} style={{display:"none"}} id="review-photo-input"/>
-
-              {displayImg ? (
-                <div style={{background:"#0a0a0a",borderRadius:10,border:`1px solid ${isPhotoReady?"#2a5a2a":"#222"}`,padding:"0.75rem",position:"relative"}}>
-                  <img src={displayImg} alt="Tu foto" style={{width:"100%",maxHeight:220,objectFit:"cover",borderRadius:8,display:"block",background:"#111"}} draggable={false}/>
-                  <div style={{position:"absolute",top:18,right:18,background:"rgba(0,0,0,0.82)",borderRadius:20,padding:"4px 10px",display:"flex",alignItems:"center",gap:5}}>
-                    {isPhotoReady
-                      ? <><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg><span style={{fontSize:10,color:"#4caf50",fontWeight:700}}>Lista</span></>
-                      : <><div style={{width:10,height:10,border:"1.5px solid #444",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/><span style={{fontSize:10,color:"#888"}}>Subiendo…</span></>
-                    }
-                  </div>
-                  <button onClick={resetPhoto} style={{position:"absolute",top:18,left:18,background:"rgba(0,0,0,0.82)",border:"none",color:"#aaa",cursor:"pointer",borderRadius:20,padding:"4px 10px",fontSize:10,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>Cambiar</button>
-                </div>
-              ) : (
-                <label htmlFor="review-photo-input" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.6rem",width:"100%",padding:"0.9rem 1rem",background:"#111",border:"1px dashed #2a2a2a",borderRadius:10,cursor:uploading?"not-allowed":"pointer",fontSize:13,fontWeight:700,letterSpacing:1,color:"#555",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",boxSizing:"border-box"} as React.CSSProperties}>
-                  {uploading
-                    ? <><div style={{width:14,height:14,border:"2px solid #333",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/> Subiendo…</>
-                    : <><IcCamera s={16} c="#555"/> Subir foto con tu accesorio</>
-                  }
-                </label>
-              )}
-              {uploadErr && <p style={{margin:"0.5rem 0 0",fontSize:11,color:"#ff5555",background:"#1e0808",borderRadius:8,padding:"0.4rem 0.75rem"}}>{uploadErr}</p>}
-            </div>
-
-            {/* CTA */}
-            <button
-              onClick={handleSend}
-              disabled={!canSend || sending}
-              style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.65rem",width:"100%",background:canSend?"#25D366":"#1a1a1a",color:canSend?"#fff":"#444",padding:"1rem",fontWeight:900,letterSpacing:2,fontSize:11,border:`1px solid ${canSend?"transparent":"#2a2a2a"}`,borderRadius:10,cursor:canSend?"pointer":"not-allowed",fontFamily:"inherit",transition:"background 0.2s, color 0.2s"}}
-            >
-              <IcWA s={18} c={canSend?"#fff":"#444"}/>
-              {sending ? "ENVIANDO…" : "ENVIAR RESEÑA POR WHATSAPP"}
-            </button>
-            <p style={{textAlign:"center",fontSize:10,color:"#2e2e2e",marginTop:"0.65rem",lineHeight:1.5}}>Se abrirá WhatsApp con tu reseña lista para enviar</p>
-          </>
+          <button onClick={handleSend} disabled={!canSend||sending} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.65rem",width:"100%",background:canSend?"#25D366":"#1a1a1a",color:canSend?"#fff":"#444",padding:"1rem",fontWeight:900,letterSpacing:2,fontSize:11,border:`1px solid ${canSend?"transparent":"#2a2a2a"}`,borderRadius:10,cursor:canSend?"pointer":"not-allowed",fontFamily:"inherit",transition:"background 0.2s, color 0.2s"}}><IcWA s={18} c={canSend?"#fff":"#444"}/>{sending?"ENVIANDO…":"ENVIAR RESEÑA POR WHATSAPP"}</button>
+          <p style={{textAlign:"center",fontSize:10,color:"#2e2e2e",marginTop:"0.65rem",lineHeight:1.5}}>Se abrirá WhatsApp con tu reseña lista para enviar</p></>
         )}
       </div>
     </div>
@@ -933,7 +785,6 @@ export default function Home() {
     setOrderSnap(snap);setCart([]);setComprobante("");setPayMethod(null);setDeliveryInfo({zone:"",nombre:"",cedula:"",telefono:"",agencia:"",direccion:"",estado:""});setMainView("thankyou");
   },[canSendOrder,cart,totalPrice,payMethod,deliveryInfo,comprobanteUrl,buildWaUrl,setMainView]);
 
-  // Admin helpers
   const doLogin=()=>{if(adminEmail===ADMIN_EMAIL&&adminPwd===ADMIN_PASSWORD){setAdminLogged(true);setAdminErr("");setAdminSec("menu");}else setAdminErr("Credenciales incorrectas");};
   const doLogout=()=>{setAdminLogged(false);setAdminEmail("");setAdminPwd("");setMainView("fokus");if(typeof window!=="undefined")window.history.pushState("","","/");};
   const resetForm=()=>{setEditing(null);setFName("");setFDesc("");setFPrice("");setFCat("");setFFile(null);setFPrev("");setFErr("");setFOk("");if(fileRef.current)fileRef.current.value="";};
@@ -999,8 +850,20 @@ export default function Home() {
           </div>
         </div>
         {!isAdmin&&(
-          <NativeTabs items={TABS.map(t=>t.id)} active={mainView} onSelect={id=>{setMainView(id as MainView);if(id==="shop")setShopFilter("TODO");}} height={TABS_H}
-            renderItem={(id,a)=>{const l=TABS.find(t=>t.id===id)?.l??id;return<span className="nb" style={{display:"flex",alignItems:"center",padding:"0 1.4rem",height:"100%",borderBottom:a?"2px solid #fff":"2px solid transparent",fontSize:10,fontWeight:800,letterSpacing:2.5,color:a?"#fff":"#444",whiteSpace:"nowrap",transition:"color 0.15s,border-color 0.15s"}}>{l}</span>;}}/>
+          <NativeTabs
+            items={TABS.map(t=>t.id)}
+            active={mainView}
+            onSelect={id=>{
+              if(id==="shop"){
+                // ── TIENDA tab → enlace externo en nueva pestaña ──
+                window.open(SOCIAL.shop,"_blank","noreferrer");
+              } else {
+                setMainView(id as MainView);
+              }
+            }}
+            height={TABS_H}
+            renderItem={(id,a)=>{const l=TABS.find(t=>t.id===id)?.l??id;return<span className="nb" style={{display:"flex",alignItems:"center",padding:"0 1.4rem",height:"100%",borderBottom:a?"2px solid #fff":"2px solid transparent",fontSize:10,fontWeight:800,letterSpacing:2.5,color:a?"#fff":"#444",whiteSpace:"nowrap",transition:"color 0.15s,border-color 0.15s"}}>{l}</span>;}}
+          />
         )}
         {searchOpen&&(
           <div style={{background:"#111",borderTop:`1px solid ${C.border}`,padding:"0.55rem 1rem"}}>
@@ -1040,14 +903,37 @@ export default function Home() {
         </div>
       )}
 
-      {/* HOME */}
+      {/* ─── HOME ─────────────────────────────────────────────────────────── */}
       {mainView==="fokus"&&(
         <main style={{paddingTop:navH,background:C.bg}}>
           <div style={{maxWidth:760,margin:"0 auto",padding:"4rem 1.5rem 0",textAlign:"center",animation:"slideUp 0.5s ease"}}>
             <div style={{marginBottom:"2rem"}}><img src="/favicon.png" alt="Fokus" width={64} height={64} style={{objectFit:"contain",filter:"brightness(1.1)",pointerEvents:"none"}} draggable={false}/></div>
-            <p style={{fontSize:10,letterSpacing:6,color:"#333",fontWeight:700,marginBottom:"1rem"}}> ACCESORIOS PARA CABALLERO</p>
+
+            {/* ── TEXTO HERO PREMIUM ── */}
+            <p style={{
+              fontSize:9,
+              letterSpacing:7,
+              color:"#3a3a3a",
+              fontWeight:700,
+              marginBottom:"1.1rem",
+              textTransform:"uppercase",
+            }}>
+              Accesorios de Caballero
+            </p>
             <h1 style={{fontSize:40,fontWeight:900,letterSpacing:8,marginBottom:"0.85rem",color:C.accent,lineHeight:1}}>FOKUS</h1>
-            <p style={{fontSize:14,color:"#444",lineHeight:1.7,maxWidth:300,margin:"0 auto 2rem"}}>Cada detalle +<br/>Calidad, diseño y actitud.</p>
+            <p style={{
+              fontSize:13,
+              color:"#3d3d3d",
+              lineHeight:1.9,
+              maxWidth:260,
+              margin:"0 auto 2rem",
+              letterSpacing:0.8,
+              fontWeight:400,
+            }}>
+              Estilo que habla sin decir nada.<br/>
+              <span style={{color:"#555",fontSize:11,letterSpacing:1.5}}>CALIDAD · DISEÑO · ACTITUD</span>
+            </p>
+
             <div style={{maxWidth:360,margin:"0 auto 2.5rem"}}><div style={{background:"rgba(76,175,80,0.06)",border:"1px solid rgba(76,175,80,0.2)",borderRadius:10,padding:"0.7rem 1.1rem",display:"flex",alignItems:"center",gap:"0.7rem"}}><IcTruck s={22} c="#4caf50"/><div style={{textAlign:"left"}}><p style={{margin:0,fontSize:11,fontWeight:800,color:"#4caf50",letterSpacing:0.8}}>ENVÍOS A TODA VENEZUELA</p><p style={{margin:"1px 0 0",fontSize:10,color:"#2a5a2a"}}>Llegamos a cualquier estado del país</p></div></div></div>
             <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={{...S.darkBtn,fontSize:11,padding:"1.1rem 2.8rem",letterSpacing:3,borderRadius:3}}>VER COLECCIÓN →</button>
             <div style={{display:"flex",justifyContent:"center",gap:"0.75rem",marginTop:"3rem"}}><a href={SOCIAL.instagram} target="_blank" rel="noreferrer" className="sl" style={S.socialA}><IcIG s={18}/></a><a href={SOCIAL.tiktok} target="_blank" rel="noreferrer" className="sl" style={S.socialA}><IcTT s={18}/></a><a href={SOCIAL.facebook} target="_blank" rel="noreferrer" className="sl" style={S.socialA}><IcFB s={18}/></a><a href={SOCIAL.whatsapp} target="_blank" rel="noreferrer" className="sl" style={{...S.socialA,border:"1px solid #1e2e1e",background:"#0e1e0e"}}><IcWA s={18}/></a></div>
@@ -1114,62 +1000,43 @@ export default function Home() {
         </main>
       )}
 
-      {/* ─── COMUNIDAD ─────────────────────────────────────────────────────── */}
+      {/* COMUNIDAD */}
       {mainView==="comunidad"&&(
         <main style={{paddingTop:navH,background:C.bg}}>
-          {/* Hero */}
           <div style={{maxWidth:680,margin:"0 auto",padding:"3rem 1.5rem 0",textAlign:"center",animation:"slideUp 0.4s ease"}}>
             <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:20,padding:"0.35rem 1rem",marginBottom:"1.25rem"}}><div style={{width:6,height:6,borderRadius:"50%",background:"#4caf50",flexShrink:0,boxShadow:"0 0 0 3px rgba(76,175,80,0.2)",animation:"pulseRing 2s infinite"}}/><span style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#4caf50"}}>CLIENTES REALES</span></div>
             <h2 style={{fontSize:28,fontWeight:900,letterSpacing:4,marginBottom:"0.75rem",color:C.accent,lineHeight:1.1}}>COMUNIDAD<br/>FOKUS</h2>
-            <p style={{color:"#444",fontSize:13,lineHeight:1.8,maxWidth:360,margin:"0 auto 2rem"}}>Cada pedido es una historia real. Estos son nuestros clientes satisfechos enviando sus productos a toda Venezuela.</p>
+            <p style={{color:"#444",fontSize:13,lineHeight:1.8,maxWidth:360,margin:"0 auto 2rem"}}>Cada pedido es una historia real. Estos son nuestros clientes satisfechos enviando sus productos a todo Venezuela.</p>
             <div style={{display:"flex",justifyContent:"center",gap:"2rem",marginBottom:"2.5rem",flexWrap:"wrap"}}>{[{n:"1000+",l:"Pedidos"},{n:"23+",l:"Estados"},{n:"★ 5.0",l:"Valoración"}].map(({n,l})=>(<div key={l} style={{textAlign:"center"}}><p style={{margin:0,fontSize:20,fontWeight:900,color:C.accent}}>{n}</p><p style={{margin:"2px 0 0",fontSize:10,color:"#444",letterSpacing:1}}>{l}</p></div>))}</div>
           </div>
-
           <div style={{maxWidth:1100,margin:"0 auto",padding:"0 1rem 5rem"}}>
-
-            {/* ── REVIEW CTA BANNER ── */}
             <div style={{marginBottom:"2rem",background:"linear-gradient(135deg,#0f0f0f 0%,#111 100%)",borderRadius:16,border:"1px solid #1e1e1e",padding:"1.5rem",display:"flex",alignItems:"center",gap:"1rem",flexWrap:"wrap",justifyContent:"space-between"}}>
               <div style={{flex:1,minWidth:200}}>
                 <p style={{margin:"0 0 0.3rem",fontSize:9,fontWeight:800,letterSpacing:3,color:"#333"}}>¿YA TIENES TU ACCESORIO?</p>
                 <h3 style={{margin:"0 0 0.4rem",fontSize:17,fontWeight:900,color:C.accent,lineHeight:1.2}}>¡Comparte tu look con Fokus!</h3>
                 <p style={{margin:0,fontSize:12,color:"#444",lineHeight:1.6}}>Sube una foto con tu accesorio y cuéntanos tu experiencia. Tu reseña puede inspirar a otros. 🖤</p>
               </div>
-              <button
-                onClick={()=>setShowReviewModal(true)}
-                style={{display:"inline-flex",alignItems:"center",gap:"0.6rem",background:"#fff",color:"#080808",border:"none",borderRadius:10,padding:"0.85rem 1.4rem",fontSize:12,fontWeight:900,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",flexShrink:0,whiteSpace:"nowrap"}}
-              >
-                <IcCamera s={16} c="#080808"/>
-                DEJAR RESEÑA
-              </button>
+              <button onClick={()=>setShowReviewModal(true)} style={{display:"inline-flex",alignItems:"center",gap:"0.6rem",background:"#fff",color:"#080808",border:"none",borderRadius:10,padding:"0.85rem 1.4rem",fontSize:12,fontWeight:900,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",flexShrink:0,whiteSpace:"nowrap"}}><IcCamera s={16} c="#080808"/>DEJAR RESEÑA</button>
             </div>
-
-            {/* Community grid */}
             <div className="cg" style={{display:"grid",gap:"0.85rem"}}>
               {COMMUNITY_POSTS.map((post,i)=><CommunityCard key={post.id} post={post} index={i} onClick={()=>setLightboxIdx(i)}/>)}
             </div>
-
-            {/* Bottom CTA */}
             <div style={{marginTop:"3rem",background:"#0d0d0d",borderRadius:16,padding:"2rem 1.5rem",border:"1px solid #1a1a1a",textAlign:"center"}}>
               <img src="/favicon.png" alt="Fokus" width={36} height={36} style={{objectFit:"contain",marginBottom:"0.75rem",pointerEvents:"none"}} draggable={false}/>
               <h3 style={{fontSize:16,fontWeight:900,letterSpacing:3,color:C.accent,margin:"0 0 0.5rem"}}>¿QUIERES SER PARTE?</h3>
               <p style={{fontSize:13,color:"#444",lineHeight:1.7,margin:"0 0 1.25rem",maxWidth:340,marginLeft:"auto",marginRight:"auto"}}>Haz tu pedido hoy y recibe tu accesorio en cualquier estado de Venezuela.</p>
               <div style={{display:"flex",gap:"0.65rem",justifyContent:"center",flexWrap:"wrap"}}>
                 <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={{...S.darkBtn,borderRadius:8,fontSize:11}}>VER TIENDA →</button>
-                <button onClick={()=>setShowReviewModal(true)} style={{display:"inline-flex",alignItems:"center",gap:6,background:"transparent",border:"1px solid #2a2a2a",color:"#888",padding:"0.9rem 1.4rem",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",letterSpacing:1,WebkitTapHighlightColor:"transparent"}}>
-                  ⭐ DEJAR RESEÑA
-                </button>
+                <button onClick={()=>setShowReviewModal(true)} style={{display:"inline-flex",alignItems:"center",gap:6,background:"transparent",border:"1px solid #2a2a2a",color:"#888",padding:"0.9rem 1.4rem",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",letterSpacing:1,WebkitTapHighlightColor:"transparent"}}>⭐ DEJAR RESEÑA</button>
                 <a href={SOCIAL.instagram} target="_blank" rel="noreferrer" style={{display:"inline-flex",alignItems:"center",gap:6,background:"transparent",border:"1px solid #2a2a2a",color:"#888",padding:"0.9rem 1.4rem",borderRadius:8,fontSize:11,fontWeight:700,textDecoration:"none",letterSpacing:1}}><IcIG s={14}/> INSTAGRAM</a>
               </div>
             </div>
           </div>
-
           <Footer setMainView={setMainView} setShopFilter={setShopFilter}/>
         </main>
       )}
 
       {lightboxIdx!==null&&(<CommunityLightbox post={COMMUNITY_POSTS[lightboxIdx]} onClose={()=>setLightboxIdx(null)} onPrev={()=>setLightboxIdx(i=>i!==null?Math.max(0,i-1):0)} onNext={()=>setLightboxIdx(i=>i!==null?Math.min(COMMUNITY_POSTS.length-1,i+1):0)} hasPrev={lightboxIdx>0} hasNext={lightboxIdx<COMMUNITY_POSTS.length-1}/>)}
-
-      {/* ── REVIEW MODAL ── */}
       {showReviewModal&&<ReviewModal onClose={()=>setShowReviewModal(false)}/>}
 
       {/* ACCOUNT */}
