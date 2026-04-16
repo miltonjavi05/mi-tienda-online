@@ -61,12 +61,20 @@ const DELIVERY_ZONES_MAP = new Map(DELIVERY_ZONES.map(z=>[z.id,z]));
 const VIEW_TO_PATH: Record<string, string> = {
   fokus:     "/",
   shop:      "/tienda",
- 
+  comunidad: "/comunidad",
+  cart:      "/carrito",
+  account:   "/cuenta",
+  admin:     "/admin",
+  thankyou:  "/gracias",
 };
 const PATH_TO_VIEW: Record<string, string> = {
   "/":           "fokus",
   "/tienda":     "shop",
- 
+  "/comunidad":  "comunidad",
+  "/carrito":    "cart",
+  "/cuenta":     "account",
+  "/admin":      "admin",
+  "/gracias":    "thankyou",
 };
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
@@ -745,17 +753,16 @@ export default function Home() {
   const[showReviewModal,setShowReviewModal]=useState(false);
   const photoInputRef              = useRef<HTMLInputElement>(null);
 
-  // ── URL → VIEW: sync on first load and browser back/forward ──────────────
+  // ── URL → VIEW ────────────────────────────────────────────────────────────
   useEffect(()=>{
     const view = PATH_TO_VIEW[pathname] as MainView | undefined;
     if(view && view !== mainView){
       setMainViewRaw(view);
     }
-  // intentionally only on pathname change
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[pathname]);
 
-  // ── VIEW → URL: push to history when internal navigation happens ─────────
+  // ── VIEW → URL ────────────────────────────────────────────────────────────
   const setMainView = useCallback((v: MainView) => {
     setMainViewRaw(v);
     scrollTop();
