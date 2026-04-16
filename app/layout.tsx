@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     shortcut: "/favicon.png",
   },
   openGraph: {
-    title: "Fokus — Accesorios de Caballero",
+    title: "Fokus",
     description: "Calidad, diseño y actitud. Envíos a toda Venezuela.",
     siteName: "Fokus",
     locale: "es_VE",
