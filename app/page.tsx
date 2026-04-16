@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
 
-// ─── CONFIG ───────────────────────────────────────────────────────────────────
+// ─── CONFIG  ───────────────────────────────────────────────────────────────────
 const FIREBASE_CONFIG = {
   apiKey:            "AIzaSyAyZI3aj5JBfRaIT875ydXeFiaHmtECoXI",
   authDomain:        "fokus-16a0c.firebaseapp.com",
