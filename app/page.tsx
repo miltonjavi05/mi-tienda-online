@@ -20,16 +20,17 @@ const WHATSAPP_NUMBER = "584243005733";
 const META_PIXEL_ID = "840893159040582";
 
 // ─── CACHE CONFIG ─────────────────────────────────────────────────────────────
-// Products cache: 15 minutes in sessionStorage (per-tab, cleared on tab close)
-// This drastically reduces Firestore reads without any UX degradation.
-const PRODUCTS_CACHE_KEY  = "fokus_products_v2";
-const PRODUCTS_CACHE_TIME = "fokus_products_time_v2";
-const CACHE_TTL_MS        = 15 * 60 * 1000; // 15 minutes
+// Usa localStorage (persiste entre pestañas y sesiones) con TTL de 2 horas.
+// Esto reduce las lecturas de Firestore drásticamente.
+// v3 = nueva versión para limpiar caché viejo automáticamente.
+const PRODUCTS_CACHE_KEY  = "fokus_products_v3";
+const PRODUCTS_CACHE_TIME = "fokus_products_time_v3";
+const CACHE_TTL_MS        = 2 * 60 * 60 * 1000; // 2 horas
 
 function getCachedProducts(): Product[] | null {
   try {
-    const raw  = sessionStorage.getItem(PRODUCTS_CACHE_KEY);
-    const time = sessionStorage.getItem(PRODUCTS_CACHE_TIME);
+    const raw  = localStorage.getItem(PRODUCTS_CACHE_KEY);
+    const time = localStorage.getItem(PRODUCTS_CACHE_TIME);
     if (!raw || !time) return null;
     if (Date.now() - Number(time) > CACHE_TTL_MS) return null;
     return JSON.parse(raw) as Product[];
@@ -38,15 +39,18 @@ function getCachedProducts(): Product[] | null {
 
 function setCachedProducts(products: Product[]): void {
   try {
-    sessionStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(products));
-    sessionStorage.setItem(PRODUCTS_CACHE_TIME, String(Date.now()));
+    localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(products));
+    localStorage.setItem(PRODUCTS_CACHE_TIME, String(Date.now()));
   } catch { /* storage full — silent */ }
 }
 
 function invalidateProductsCache(): void {
   try {
-    sessionStorage.removeItem(PRODUCTS_CACHE_KEY);
-    sessionStorage.removeItem(PRODUCTS_CACHE_TIME);
+    localStorage.removeItem(PRODUCTS_CACHE_KEY);
+    localStorage.removeItem(PRODUCTS_CACHE_TIME);
+    // Limpiar versiones viejas de sessionStorage
+    sessionStorage.removeItem("fokus_products_v2");
+    sessionStorage.removeItem("fokus_products_time_v2");
   } catch { /* silent */ }
 }
 
@@ -707,7 +711,7 @@ function ReviewModal({onClose}:{onClose:()=>void}){
                   <div style={{position:"absolute",top:18,right:18,background:"rgba(0,0,0,0.82)",borderRadius:20,padding:"4px 10px",display:"flex",alignItems:"center",gap:5}}>
                     {isPhotoReady?<><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg><span style={{fontSize:10,color:"#4caf50",fontWeight:700}}>Lista</span></>:<><div style={{width:10,height:10,border:"1.5px solid #444",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/><span style={{fontSize:10,color:"#888"}}>Subiendo…</span></>}
                   </div>
-                  <button onClick={resetPhoto} style={{position:"absolute",top:18,left:18,background:"rgba(0,0,0,0.82)",border:"none",color:"#aaa",cursor:"pointer",borderRadius:20,padding:"4px 10px",fontSize:10,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>Cambiar</button>
+                  <button onClick={resetPhoto} style={{position:"absolute",top:18,left:8,background:"rgba(0,0,0,0.82)",border:"none",color:"#aaa",cursor:"pointer",borderRadius:20,padding:"4px 10px",fontSize:10,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>Cambiar</button>
                 </div>
               ) : (
                 <label htmlFor="review-photo-input" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.6rem",width:"100%",padding:"0.9rem 1rem",background:"#111",border:"1px dashed #2a2a2a",borderRadius:10,cursor:uploading?"not-allowed":"pointer",fontSize:13,fontWeight:700,letterSpacing:1,color:"#555",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",boxSizing:"border-box"} as React.CSSProperties}>
@@ -873,41 +877,52 @@ export default function Home() {
   useEffect(()=>{try{const s=sessionStorage.getItem("fokus_cart");if(s)setCart(JSON.parse(s) as CartItem[]);}catch{}},[]);
   useEffect(()=>{try{sessionStorage.setItem("fokus_cart",JSON.stringify(cart));}catch{}},[cart]);
 
-  // ─── LOAD PRODUCTS WITH CACHE ───────────────────────────────────────────────
-  // Each unique user/tab only hits Firestore once every 15 minutes.
-  // Admin operations invalidate the cache so changes are visible immediately.
-  const loadProducts=useCallback(async(forceRefresh=false)=>{
+  // ─── LOAD PRODUCTS WITH AGGRESSIVE CACHE ────────────────────────────────────
+  // Flag de módulo: evita múltiples llamadas a Firestore en el mismo ciclo de vida
+  // aunque el componente se desmonte y remonte (ej: Hot Module Replacement en dev).
+  const productsAlreadyLoaded = useRef(false);
+
+  const loadProducts = useCallback(async (forceRefresh = false) => {
+    // Si ya cargamos y no es refresh forzado (admin), salir sin tocar Firestore
+    if (productsAlreadyLoaded.current && !forceRefresh) return;
+
     setLoading(true);
-    try{
-      // 1. Try cache first (skip if admin forced refresh)
-      if(!forceRefresh){
-        const cached=getCachedProducts();
-        if(cached&&cached.length>0){
+    try {
+      // 1. Intentar caché en localStorage (TTL 2 horas, persiste entre sesiones)
+      if (!forceRefresh) {
+        const cached = getCachedProducts();
+        if (cached && cached.length > 0) {
           setProducts(cached);
+          productsAlreadyLoaded.current = true;
           setLoading(false);
           return;
         }
       }
-      // 2. Fetch from Firestore
-      const d=await fsGetAll();
-      const sorted=d.sort((a,b)=>(a.order??0)-(b.order??0));
-      const final=sorted.length>0?sorted:DEMO;
-      setCachedProducts(final);
+      // 2. Solo si no hay caché válido → leer Firestore (1 lectura por colección)
+      const d = await fsGetAll();
+      const sorted = d.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      const final = sorted.length > 0 ? sorted : DEMO;
+      setCachedProducts(final); // Guardar en localStorage para próximas 2 horas
       setProducts(final);
-    }catch{
-      // On error try stale cache, then DEMO
-      const stale=getCachedProducts();
-      setProducts(stale&&stale.length>0?stale:DEMO);
-    }finally{
+      productsAlreadyLoaded.current = true;
+    } catch {
+      // Si falla Firestore, usar caché aunque esté vencido antes de caer a DEMO
+      const stale = getCachedProducts();
+      setProducts(stale && stale.length > 0 ? stale : DEMO);
+      productsAlreadyLoaded.current = true;
+    } finally {
       setLoading(false);
     }
-  },[]);
+  }, []); // Sin dependencias: función completamente estable
 
-  useEffect(()=>{
-    const ok=FIREBASE_CONFIG.projectId!=="TU_PROJECT_ID";setFbReady(ok);
-    if(ok)loadProducts();else{setProducts(DEMO);setLoading(false);}
-    if(typeof window!=="undefined"&&window.location.pathname==="/admin")setMainViewRaw("admin");
-  },[loadProducts]);
+  useEffect(() => {
+    const ok = FIREBASE_CONFIG.projectId !== "TU_PROJECT_ID";
+    setFbReady(ok);
+    if (ok) loadProducts();
+    else { setProducts(DEMO); setLoading(false); }
+    if (typeof window !== "undefined" && window.location.pathname === "/admin")
+      setMainViewRaw("admin");
+  }, []); // Solo se ejecuta una vez al montar — loadProducts es estable
 
   const handleProfilePhoto=useCallback(async(e:React.ChangeEvent<HTMLInputElement>)=>{const file=e.target.files?.[0];if(!file||!currentUser)return;setPhotoLoading(true);try{const url=await uploadImg(file);let idToken=currentUser.idToken;if(!idToken){const rt=localStorage.getItem("fokus_refresh");if(rt){const res=await refreshIdToken(rt);if(res)idToken=res.idToken;}}await fsSaveUser(currentUser.uid,{photoURL:url},idToken).catch(()=>{});setCurrentUser(prev=>{if(!prev)return prev;const u={...prev,photoURL:url,idToken};localStorage.setItem("fokus_user",JSON.stringify(u));return u;});}catch(err){console.error("Error subiendo foto:",err);}finally{setPhotoLoading(false);if(photoInputRef.current)photoInputRef.current.value="";};},[currentUser]);
 
@@ -967,8 +982,9 @@ export default function Home() {
       const data={name:fName.trim(),description:fDesc.trim(),price:parseFloat(fPrice),category:fCat.toUpperCase(),img:imgUrl};
       if(editing){await fsUpdate(editing.id,data);setFOk("✓ Producto actualizado");}
       else{await fsAdd(data);setFOk("✓ Producto agregado");}
-      // Invalidate cache so admin sees fresh data immediately
+      // Invalidar caché para que admin vea cambios al instante
       invalidateProductsCache();
+      productsAlreadyLoaded.current = false; // Forzar re-fetch en próxima carga
       await loadProducts(true);
       fetch(`/api/catalog/revalidate?secret=fokus-revalidate-2024`,{method:"POST"}).catch(()=>{});
       setTimeout(resetForm,1800);
@@ -980,6 +996,7 @@ export default function Home() {
     if(!confirm("¿Eliminar este producto?"))return;
     await fsDelete(id);
     invalidateProductsCache();
+    productsAlreadyLoaded.current = false;
     await loadProducts(true);
   };
 
@@ -994,7 +1011,6 @@ export default function Home() {
       const[moved]=arr.splice(fi,1);arr.splice(ti,0,moved);
       arr.forEach((p,i)=>{if(p.order!==i&&fbReady)fsUpdate(p.id,{order:i}).catch(()=>{});});
       const reordered=arr.map((p,i)=>({...p,order:i}));
-      // Update cache with new order
       setCachedProducts(reordered);
       return reordered;
     });

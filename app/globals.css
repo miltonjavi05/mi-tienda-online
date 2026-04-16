@@ -1,3 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+.admin-cats::-webkit-scrollbar { height: 4px; }
+  .admin-cats::-webkit-scrollbar-track { background: transparent; }
+  .admin-cats::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 2px; }
+  .admin-cats::-webkit-scrollbar-thumb:hover { background: #3a3a3a; }
