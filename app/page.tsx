@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
 
-// ─── CONFIG  ───────────────────────────────────────────────────────────────────
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
 const FIREBASE_CONFIG = {
   apiKey:            "AIzaSyAyZI3aj5JBfRaIT875ydXeFiaHmtECoXI",
   authDomain:        "fokus-16a0c.firebaseapp.com",
@@ -18,6 +18,37 @@ const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "2844242900";
 const WHATSAPP_NUMBER = "584243005733";
 
 const META_PIXEL_ID = "840893159040582";
+
+// ─── CACHE CONFIG ─────────────────────────────────────────────────────────────
+// Products cache: 15 minutes in sessionStorage (per-tab, cleared on tab close)
+// This drastically reduces Firestore reads without any UX degradation.
+const PRODUCTS_CACHE_KEY  = "fokus_products_v2";
+const PRODUCTS_CACHE_TIME = "fokus_products_time_v2";
+const CACHE_TTL_MS        = 15 * 60 * 1000; // 15 minutes
+
+function getCachedProducts(): Product[] | null {
+  try {
+    const raw  = sessionStorage.getItem(PRODUCTS_CACHE_KEY);
+    const time = sessionStorage.getItem(PRODUCTS_CACHE_TIME);
+    if (!raw || !time) return null;
+    if (Date.now() - Number(time) > CACHE_TTL_MS) return null;
+    return JSON.parse(raw) as Product[];
+  } catch { return null; }
+}
+
+function setCachedProducts(products: Product[]): void {
+  try {
+    sessionStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(products));
+    sessionStorage.setItem(PRODUCTS_CACHE_TIME, String(Date.now()));
+  } catch { /* storage full — silent */ }
+}
+
+function invalidateProductsCache(): void {
+  try {
+    sessionStorage.removeItem(PRODUCTS_CACHE_KEY);
+    sessionStorage.removeItem(PRODUCTS_CACHE_TIME);
+  } catch { /* silent */ }
+}
 
 const SOCIAL = {
   whatsapp:  `https://wa.me/${WHATSAPP_NUMBER}`,
@@ -575,7 +606,6 @@ function CommunityLightbox({post,onClose,onPrev,onNext,hasPrev,hasNext}:{post:ty
 }
 
 // ─── REVIEW MODAL ─────────────────────────────────────────────────────────────
-// BUG FIX: removed self-referencing `lines` variable and cleaned up filter logic
 function ReviewModal({onClose}:{onClose:()=>void}){
   const[name,setName]         = useState("");
   const[comment,setComment]   = useState("");
@@ -620,8 +650,6 @@ function ReviewModal({onClose}:{onClose:()=>void}){
   const handleSend = useCallback(()=>{
     if(!canSend) return;
     setSending(true);
-
-    // ✅ FIX: build lines array without self-reference
     const starsStr = "⭐".repeat(stars);
     const parts: string[] = [
       `🌟 *NUEVA RESEÑA DE CLIENTE*`,
@@ -632,7 +660,6 @@ function ReviewModal({onClose}:{onClose:()=>void}){
     if(product.trim()) parts.push(`🛍️ *Producto:* ${product.trim()}`);
     parts.push(``, `💬 *Comentario:*`, comment.trim());
     if(photoUrl) parts.push(``, `📸 *Foto del cliente:*`, photoUrl);
-
     const msg = parts.join("\n");
     const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
     window.open(waUrl, "_blank", "noreferrer");
@@ -647,7 +674,6 @@ function ReviewModal({onClose}:{onClose:()=>void}){
     <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:700,background:"rgba(0,0,0,0.88)",display:"flex",alignItems:"flex-end",justifyContent:"center",animation:"fadeIn 0.18s ease"}}>
       <div onClick={e=>e.stopPropagation()} style={{background:"#111",width:"100%",maxWidth:520,borderRadius:"18px 18px 0 0",padding:"1.5rem 1.5rem 2.5rem",maxHeight:"92vh",overflowY:"auto",animation:"slideUp 0.28s cubic-bezier(0.25,0.46,0.45,0.94)",border:"1px solid #1e1e1e",borderBottom:"none"}}>
         <div style={{width:36,height:3,background:"#222",borderRadius:2,margin:"0 auto 1.25rem"}}/>
-
         {done ? (
           <div style={{textAlign:"center",padding:"2rem 0",animation:"slideUp 0.3s ease"}}>
             <div style={{width:64,height:64,borderRadius:"50%",background:"#0d1e0d",border:"1.5px solid #2a4a2a",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 1rem"}}>
@@ -663,73 +689,34 @@ function ReviewModal({onClose}:{onClose:()=>void}){
               <p style={{fontSize:9,fontWeight:800,letterSpacing:3,color:"#333",margin:"0 0 0.3rem"}}>COMPARTE TU EXPERIENCIA</p>
               <h2 style={{fontSize:18,fontWeight:900,color:C.accent,margin:0}}>Deja tu reseña 🖤</h2>
             </div>
-
-            {/* Stars */}
             <div style={{marginBottom:"1.25rem"}}>
               <p style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#333",marginBottom:"0.5rem"}}>CALIFICACIÓN</p>
               <div style={{display:"flex",gap:"0.35rem"}}>
-                {[1,2,3,4,5].map(n=>(
-                  <button key={n} onClick={()=>setStars(n)} style={{background:"none",border:"none",cursor:"pointer",fontSize:28,padding:"2px",WebkitTapHighlightColor:"transparent",filter:n<=stars?"brightness(1)":"brightness(0.25)",transition:"filter 0.15s"}}>⭐</button>
-                ))}
+                {[1,2,3,4,5].map(n=>(<button key={n} onClick={()=>setStars(n)} style={{background:"none",border:"none",cursor:"pointer",fontSize:28,padding:"2px",WebkitTapHighlightColor:"transparent",filter:n<=stars?"brightness(1)":"brightness(0.25)",transition:"filter 0.15s"}}>⭐</button>))}
               </div>
             </div>
-
-            {/* Name */}
-            <div style={{marginBottom:"0.75rem"}}>
-              <input placeholder="Tu nombre *" value={name} onChange={e=>setName(e.target.value)} style={S.input} autoComplete="name"/>
-            </div>
-
-            {/* Product (optional) */}
-            <div style={{marginBottom:"0.75rem"}}>
-              <input placeholder="¿Qué producto compraste? (opcional)" value={product} onChange={e=>setProduct(e.target.value)} style={S.input}/>
-            </div>
-
-            {/* Comment */}
-            <div style={{marginBottom:"1rem"}}>
-              <textarea
-                placeholder="Cuéntanos tu experiencia con Fokus... *"
-                value={comment}
-                onChange={e=>setComment(e.target.value)}
-                rows={3}
-                style={{...S.input,resize:"vertical" as const,lineHeight:1.6,minHeight:80}}
-              />
-            </div>
-
-            {/* Photo upload */}
+            <div style={{marginBottom:"0.75rem"}}><input placeholder="Tu nombre *" value={name} onChange={e=>setName(e.target.value)} style={S.input} autoComplete="name"/></div>
+            <div style={{marginBottom:"0.75rem"}}><input placeholder="¿Qué producto compraste? (opcional)" value={product} onChange={e=>setProduct(e.target.value)} style={S.input}/></div>
+            <div style={{marginBottom:"1rem"}}><textarea placeholder="Cuéntanos tu experiencia con Fokus... *" value={comment} onChange={e=>setComment(e.target.value)} rows={3} style={{...S.input,resize:"vertical" as const,lineHeight:1.6,minHeight:80}}/></div>
             <div style={{marginBottom:"1.25rem"}}>
-              <p style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#333",marginBottom:"0.5rem"}}>
-                FOTO CON TU ACCESORIO <span style={{color:"#444",fontWeight:500,letterSpacing:0}}>(opcional)</span>
-              </p>
+              <p style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#333",marginBottom:"0.5rem"}}>FOTO CON TU ACCESORIO <span style={{color:"#444",fontWeight:500,letterSpacing:0}}>(opcional)</span></p>
               <input ref={photoRef} type="file" accept="image/*" onChange={handlePhotoChange} disabled={uploading} style={{display:"none"}} id="review-photo-input"/>
-
               {displayImg ? (
                 <div style={{background:"#0a0a0a",borderRadius:10,border:`1px solid ${isPhotoReady?"#2a5a2a":"#222"}`,padding:"0.75rem",position:"relative"}}>
                   <img src={displayImg} alt="Tu foto" style={{width:"100%",maxHeight:220,objectFit:"cover",borderRadius:8,display:"block",background:"#111"}} draggable={false}/>
                   <div style={{position:"absolute",top:18,right:18,background:"rgba(0,0,0,0.82)",borderRadius:20,padding:"4px 10px",display:"flex",alignItems:"center",gap:5}}>
-                    {isPhotoReady
-                      ? <><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg><span style={{fontSize:10,color:"#4caf50",fontWeight:700}}>Lista</span></>
-                      : <><div style={{width:10,height:10,border:"1.5px solid #444",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/><span style={{fontSize:10,color:"#888"}}>Subiendo…</span></>
-                    }
+                    {isPhotoReady?<><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg><span style={{fontSize:10,color:"#4caf50",fontWeight:700}}>Lista</span></>:<><div style={{width:10,height:10,border:"1.5px solid #444",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/><span style={{fontSize:10,color:"#888"}}>Subiendo…</span></>}
                   </div>
                   <button onClick={resetPhoto} style={{position:"absolute",top:18,left:18,background:"rgba(0,0,0,0.82)",border:"none",color:"#aaa",cursor:"pointer",borderRadius:20,padding:"4px 10px",fontSize:10,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>Cambiar</button>
                 </div>
               ) : (
                 <label htmlFor="review-photo-input" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.6rem",width:"100%",padding:"0.9rem 1rem",background:"#111",border:"1px dashed #2a2a2a",borderRadius:10,cursor:uploading?"not-allowed":"pointer",fontSize:13,fontWeight:700,letterSpacing:1,color:"#555",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",boxSizing:"border-box"} as React.CSSProperties}>
-                  {uploading
-                    ? <><div style={{width:14,height:14,border:"2px solid #333",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/> Subiendo…</>
-                    : <><IcCamera s={16} c="#555"/> Subir foto con tu accesorio</>
-                  }
+                  {uploading?<><div style={{width:14,height:14,border:"2px solid #333",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/> Subiendo…</>:<><IcCamera s={16} c="#555"/> Subir foto con tu accesorio</>}
                 </label>
               )}
               {uploadErr && <p style={{margin:"0.5rem 0 0",fontSize:11,color:"#ff5555",background:"#1e0808",borderRadius:8,padding:"0.4rem 0.75rem"}}>{uploadErr}</p>}
             </div>
-
-            {/* CTA */}
-            <button
-              onClick={handleSend}
-              disabled={!canSend || sending}
-              style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.65rem",width:"100%",background:canSend?"#25D366":"#1a1a1a",color:canSend?"#fff":"#444",padding:"1rem",fontWeight:900,letterSpacing:2,fontSize:11,border:`1px solid ${canSend?"transparent":"#2a2a2a"}`,borderRadius:10,cursor:canSend?"pointer":"not-allowed",fontFamily:"inherit",transition:"background 0.2s, color 0.2s"}}
-            >
+            <button onClick={handleSend} disabled={!canSend || sending} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.65rem",width:"100%",background:canSend?"#25D366":"#1a1a1a",color:canSend?"#fff":"#444",padding:"1rem",fontWeight:900,letterSpacing:2,fontSize:11,border:`1px solid ${canSend?"transparent":"#2a2a2a"}`,borderRadius:10,cursor:canSend?"pointer":"not-allowed",fontFamily:"inherit",transition:"background 0.2s, color 0.2s"}}>
               <IcWA s={18} c={canSend?"#fff":"#444"}/>
               {sending ? "ENVIANDO…" : "ENVIAR RESEÑA POR WHATSAPP"}
             </button>
@@ -886,7 +873,35 @@ export default function Home() {
   useEffect(()=>{try{const s=sessionStorage.getItem("fokus_cart");if(s)setCart(JSON.parse(s) as CartItem[]);}catch{}},[]);
   useEffect(()=>{try{sessionStorage.setItem("fokus_cart",JSON.stringify(cart));}catch{}},[cart]);
 
-  const loadProducts=useCallback(async()=>{setLoading(true);try{const d=await fsGetAll();const sorted=d.sort((a,b)=>(a.order??0)-(b.order??0));setProducts(sorted.length>0?sorted:DEMO);}catch{setProducts(DEMO);}finally{setLoading(false);};},[]);
+  // ─── LOAD PRODUCTS WITH CACHE ───────────────────────────────────────────────
+  // Each unique user/tab only hits Firestore once every 15 minutes.
+  // Admin operations invalidate the cache so changes are visible immediately.
+  const loadProducts=useCallback(async(forceRefresh=false)=>{
+    setLoading(true);
+    try{
+      // 1. Try cache first (skip if admin forced refresh)
+      if(!forceRefresh){
+        const cached=getCachedProducts();
+        if(cached&&cached.length>0){
+          setProducts(cached);
+          setLoading(false);
+          return;
+        }
+      }
+      // 2. Fetch from Firestore
+      const d=await fsGetAll();
+      const sorted=d.sort((a,b)=>(a.order??0)-(b.order??0));
+      const final=sorted.length>0?sorted:DEMO;
+      setCachedProducts(final);
+      setProducts(final);
+    }catch{
+      // On error try stale cache, then DEMO
+      const stale=getCachedProducts();
+      setProducts(stale&&stale.length>0?stale:DEMO);
+    }finally{
+      setLoading(false);
+    }
+  },[]);
 
   useEffect(()=>{
     const ok=FIREBASE_CONFIG.projectId!=="TU_PROJECT_ID";setFbReady(ok);
@@ -939,14 +954,71 @@ export default function Home() {
   const resetForm=()=>{setEditing(null);setFName("");setFDesc("");setFPrice("");setFCat("");setFFile(null);setFPrev("");setFErr("");setFOk("");if(fileRef.current)fileRef.current.value="";};
   const startEdit=(p:Product)=>{setEditing(p);setFName(p.name);setFDesc(p.description||"");setFPrice(String(p.price));setFCat(p.category);setFPrev(p.img);setFFile(null);setFErr("");setFOk("");if(fileRef.current)fileRef.current.value="";setTimeout(()=>formRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),50);};
   const onFileChange=(e:React.ChangeEvent<HTMLInputElement>)=>{const file=e.target.files?.[0];if(!file)return;setFFile(file);const r=new FileReader();r.onload=ev=>setFPrev(ev.target?.result as string);r.readAsDataURL(file);};
-  const submitProduct=async()=>{setFErr("");setFOk("");if(!fName.trim()||!fPrice||!fCat){setFErr("Nombre, precio y categoría son obligatorios.");return;}if(!editing&&!fFile){setFErr("Selecciona una imagen.");return;}if(!fbReady){setFErr("Firebase no configurado.");return;}setFLoad(true);try{let imgUrl=fPrev;if(fFile)imgUrl=await uploadImg(fFile);const data={name:fName.trim(),description:fDesc.trim(),price:parseFloat(fPrice),category:fCat.toUpperCase(),img:imgUrl};if(editing){await fsUpdate(editing.id,data);setFOk("✓ Producto actualizado");}else{await fsAdd(data);setFOk("✓ Producto agregado");}await loadProducts();fetch(`/api/catalog/revalidate?secret=fokus-revalidate-2024`,{method:"POST"}).catch(()=>{});setTimeout(resetForm,1800);}catch(err){setFErr("Error: "+(err instanceof Error?err.message:"desconocido"));}finally{setFLoad(false);};};
-  const delProd=async(id:string)=>{if(!confirm("¿Eliminar este producto?"))return;await fsDelete(id);await loadProducts();};
+
+  const submitProduct=async()=>{
+    setFErr("");setFOk("");
+    if(!fName.trim()||!fPrice||!fCat){setFErr("Nombre, precio y categoría son obligatorios.");return;}
+    if(!editing&&!fFile){setFErr("Selecciona una imagen.");return;}
+    if(!fbReady){setFErr("Firebase no configurado.");return;}
+    setFLoad(true);
+    try{
+      let imgUrl=fPrev;
+      if(fFile)imgUrl=await uploadImg(fFile);
+      const data={name:fName.trim(),description:fDesc.trim(),price:parseFloat(fPrice),category:fCat.toUpperCase(),img:imgUrl};
+      if(editing){await fsUpdate(editing.id,data);setFOk("✓ Producto actualizado");}
+      else{await fsAdd(data);setFOk("✓ Producto agregado");}
+      // Invalidate cache so admin sees fresh data immediately
+      invalidateProductsCache();
+      await loadProducts(true);
+      fetch(`/api/catalog/revalidate?secret=fokus-revalidate-2024`,{method:"POST"}).catch(()=>{});
+      setTimeout(resetForm,1800);
+    }catch(err){setFErr("Error: "+(err instanceof Error?err.message:"desconocido"));}
+    finally{setFLoad(false);}
+  };
+
+  const delProd=async(id:string)=>{
+    if(!confirm("¿Eliminar este producto?"))return;
+    await fsDelete(id);
+    invalidateProductsCache();
+    await loadProducts(true);
+  };
+
   const handleDragStart=useCallback((id:string)=>setDragId(id),[]);
   const handleDragOver=useCallback((id:string)=>setOverId(id),[]);
-  const handleDragEnd=useCallback(async()=>{if(!dragId||!overId||dragId===overId){setDragId(null);setOverId(null);return;}setProducts(prev=>{const arr=[...prev];const fi=arr.findIndex(p=>p.id===dragId),ti=arr.findIndex(p=>p.id===overId);if(fi<0||ti<0)return prev;const[moved]=arr.splice(fi,1);arr.splice(ti,0,moved);arr.forEach((p,i)=>{if(p.order!==i&&fbReady)fsUpdate(p.id,{order:i}).catch(()=>{});});return arr.map((p,i)=>({...p,order:i}));});setDragId(null);setOverId(null);},[dragId,overId,fbReady]);
+  const handleDragEnd=useCallback(async()=>{
+    if(!dragId||!overId||dragId===overId){setDragId(null);setOverId(null);return;}
+    setProducts(prev=>{
+      const arr=[...prev];
+      const fi=arr.findIndex(p=>p.id===dragId),ti=arr.findIndex(p=>p.id===overId);
+      if(fi<0||ti<0)return prev;
+      const[moved]=arr.splice(fi,1);arr.splice(ti,0,moved);
+      arr.forEach((p,i)=>{if(p.order!==i&&fbReady)fsUpdate(p.id,{order:i}).catch(()=>{});});
+      const reordered=arr.map((p,i)=>({...p,order:i}));
+      // Update cache with new order
+      setCachedProducts(reordered);
+      return reordered;
+    });
+    setDragId(null);setOverId(null);
+  },[dragId,overId,fbReady]);
+
   const handleTouchDragStart=useCallback((id:string)=>{touchDragId.current=id;touchDragActive.current=true;setDragId(id);},[]);
   const handleTouchDragMove=useCallback((y:number,x:number)=>{if(!touchDragActive.current||!touchDragId.current)return;const el=document.elementFromPoint(x,y);if(!el)return;const row=el.closest("[data-rowid]") as HTMLElement|null;if(row){const id=row.dataset.rowid;if(id&&id!==touchDragId.current)setOverId(id);}},[]);
-  const handleTouchDragEnd=useCallback(()=>{const from=touchDragId.current,to=overId;touchDragId.current=null;touchDragActive.current=false;setDragId(null);if(!from||!to||from===to){setOverId(null);return;}setProducts(prev=>{const arr=[...prev];const fi=arr.findIndex(p=>p.id===from),ti=arr.findIndex(p=>p.id===to);if(fi<0||ti<0)return prev;const[moved]=arr.splice(fi,1);arr.splice(ti,0,moved);arr.forEach((p,i)=>{if(p.order!==i&&fbReady)fsUpdate(p.id,{order:i}).catch(()=>{});});return arr.map((p,i)=>({...p,order:i}));});setOverId(null);},[overId,fbReady]);
+  const handleTouchDragEnd=useCallback(()=>{
+    const from=touchDragId.current,to=overId;
+    touchDragId.current=null;touchDragActive.current=false;setDragId(null);
+    if(!from||!to||from===to){setOverId(null);return;}
+    setProducts(prev=>{
+      const arr=[...prev];
+      const fi=arr.findIndex(p=>p.id===from),ti=arr.findIndex(p=>p.id===to);
+      if(fi<0||ti<0)return prev;
+      const[moved]=arr.splice(fi,1);arr.splice(ti,0,moved);
+      arr.forEach((p,i)=>{if(p.order!==i&&fbReady)fsUpdate(p.id,{order:i}).catch(()=>{});});
+      const reordered=arr.map((p,i)=>({...p,order:i}));
+      setCachedProducts(reordered);
+      return reordered;
+    });
+    setOverId(null);
+  },[overId,fbReady]);
 
   const adminProds=useMemo(()=>{let l=products;if(adminCat!=="ALL")l=l.filter(p=>p.category===adminCat);if(adminSearch!=="")l=l.filter(p=>p.name.toLowerCase().includes(adminSearch.toLowerCase())||p.category.toLowerCase().includes(adminSearch.toLowerCase()));return l;},[products,adminCat,adminSearch]);
   const usedCats=useMemo(()=>[...new Set(products.map(p=>p.category))].sort(),[products]);
@@ -1114,62 +1186,43 @@ export default function Home() {
         </main>
       )}
 
-      {/* ─── COMUNIDAD ─────────────────────────────────────────────────────── */}
+      {/* COMUNIDAD */}
       {mainView==="comunidad"&&(
         <main style={{paddingTop:navH,background:C.bg}}>
-          {/* Hero */}
           <div style={{maxWidth:680,margin:"0 auto",padding:"3rem 1.5rem 0",textAlign:"center",animation:"slideUp 0.4s ease"}}>
             <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:20,padding:"0.35rem 1rem",marginBottom:"1.25rem"}}><div style={{width:6,height:6,borderRadius:"50%",background:"#4caf50",flexShrink:0,boxShadow:"0 0 0 3px rgba(76,175,80,0.2)",animation:"pulseRing 2s infinite"}}/><span style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#4caf50"}}>CLIENTES REALES</span></div>
             <h2 style={{fontSize:28,fontWeight:900,letterSpacing:4,marginBottom:"0.75rem",color:C.accent,lineHeight:1.1}}>COMUNIDAD<br/>FOKUS</h2>
             <p style={{color:"#444",fontSize:13,lineHeight:1.8,maxWidth:360,margin:"0 auto 2rem"}}>Cada pedido es una historia real. Estos son nuestros clientes satisfechos enviando sus productos a toda Venezuela.</p>
             <div style={{display:"flex",justifyContent:"center",gap:"2rem",marginBottom:"2.5rem",flexWrap:"wrap"}}>{[{n:"1000+",l:"Pedidos"},{n:"23+",l:"Estados"},{n:"★ 5.0",l:"Valoración"}].map(({n,l})=>(<div key={l} style={{textAlign:"center"}}><p style={{margin:0,fontSize:20,fontWeight:900,color:C.accent}}>{n}</p><p style={{margin:"2px 0 0",fontSize:10,color:"#444",letterSpacing:1}}>{l}</p></div>))}</div>
           </div>
-
           <div style={{maxWidth:1100,margin:"0 auto",padding:"0 1rem 5rem"}}>
-
-            {/* ── REVIEW CTA BANNER ── */}
             <div style={{marginBottom:"2rem",background:"linear-gradient(135deg,#0f0f0f 0%,#111 100%)",borderRadius:16,border:"1px solid #1e1e1e",padding:"1.5rem",display:"flex",alignItems:"center",gap:"1rem",flexWrap:"wrap",justifyContent:"space-between"}}>
               <div style={{flex:1,minWidth:200}}>
                 <p style={{margin:"0 0 0.3rem",fontSize:9,fontWeight:800,letterSpacing:3,color:"#333"}}>¿YA TIENES TU ACCESORIO?</p>
                 <h3 style={{margin:"0 0 0.4rem",fontSize:17,fontWeight:900,color:C.accent,lineHeight:1.2}}>¡Comparte tu look con Fokus!</h3>
                 <p style={{margin:0,fontSize:12,color:"#444",lineHeight:1.6}}>Sube una foto con tu accesorio y cuéntanos tu experiencia. Tu reseña puede inspirar a otros. 🖤</p>
               </div>
-              <button
-                onClick={()=>setShowReviewModal(true)}
-                style={{display:"inline-flex",alignItems:"center",gap:"0.6rem",background:"#fff",color:"#080808",border:"none",borderRadius:10,padding:"0.85rem 1.4rem",fontSize:12,fontWeight:900,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",flexShrink:0,whiteSpace:"nowrap"}}
-              >
-                <IcCamera s={16} c="#080808"/>
-                DEJAR RESEÑA
-              </button>
+              <button onClick={()=>setShowReviewModal(true)} style={{display:"inline-flex",alignItems:"center",gap:"0.6rem",background:"#fff",color:"#080808",border:"none",borderRadius:10,padding:"0.85rem 1.4rem",fontSize:12,fontWeight:900,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",flexShrink:0,whiteSpace:"nowrap"}}><IcCamera s={16} c="#080808"/>DEJAR RESEÑA</button>
             </div>
-
-            {/* Community grid */}
             <div className="cg" style={{display:"grid",gap:"0.85rem"}}>
               {COMMUNITY_POSTS.map((post,i)=><CommunityCard key={post.id} post={post} index={i} onClick={()=>setLightboxIdx(i)}/>)}
             </div>
-
-            {/* Bottom CTA */}
             <div style={{marginTop:"3rem",background:"#0d0d0d",borderRadius:16,padding:"2rem 1.5rem",border:"1px solid #1a1a1a",textAlign:"center"}}>
               <img src="/favicon.png" alt="Fokus" width={36} height={36} style={{objectFit:"contain",marginBottom:"0.75rem",pointerEvents:"none"}} draggable={false}/>
               <h3 style={{fontSize:16,fontWeight:900,letterSpacing:3,color:C.accent,margin:"0 0 0.5rem"}}>¿QUIERES SER PARTE?</h3>
               <p style={{fontSize:13,color:"#444",lineHeight:1.7,margin:"0 0 1.25rem",maxWidth:340,marginLeft:"auto",marginRight:"auto"}}>Haz tu pedido hoy y recibe tu accesorio en cualquier estado de Venezuela.</p>
               <div style={{display:"flex",gap:"0.65rem",justifyContent:"center",flexWrap:"wrap"}}>
                 <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={{...S.darkBtn,borderRadius:8,fontSize:11}}>VER TIENDA →</button>
-                <button onClick={()=>setShowReviewModal(true)} style={{display:"inline-flex",alignItems:"center",gap:6,background:"transparent",border:"1px solid #2a2a2a",color:"#888",padding:"0.9rem 1.4rem",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",letterSpacing:1,WebkitTapHighlightColor:"transparent"}}>
-                  ⭐ DEJAR RESEÑA
-                </button>
+                <button onClick={()=>setShowReviewModal(true)} style={{display:"inline-flex",alignItems:"center",gap:6,background:"transparent",border:"1px solid #2a2a2a",color:"#888",padding:"0.9rem 1.4rem",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",letterSpacing:1,WebkitTapHighlightColor:"transparent"}}>⭐ DEJAR RESEÑA</button>
                 <a href={SOCIAL.instagram} target="_blank" rel="noreferrer" style={{display:"inline-flex",alignItems:"center",gap:6,background:"transparent",border:"1px solid #2a2a2a",color:"#888",padding:"0.9rem 1.4rem",borderRadius:8,fontSize:11,fontWeight:700,textDecoration:"none",letterSpacing:1}}><IcIG s={14}/> INSTAGRAM</a>
               </div>
             </div>
           </div>
-
           <Footer setMainView={setMainView} setShopFilter={setShopFilter}/>
         </main>
       )}
 
       {lightboxIdx!==null&&(<CommunityLightbox post={COMMUNITY_POSTS[lightboxIdx]} onClose={()=>setLightboxIdx(null)} onPrev={()=>setLightboxIdx(i=>i!==null?Math.max(0,i-1):0)} onNext={()=>setLightboxIdx(i=>i!==null?Math.min(COMMUNITY_POSTS.length-1,i+1):0)} hasPrev={lightboxIdx>0} hasNext={lightboxIdx<COMMUNITY_POSTS.length-1}/>)}
-
-      {/* ── REVIEW MODAL ── */}
       {showReviewModal&&<ReviewModal onClose={()=>setShowReviewModal(false)}/>}
 
       {/* ACCOUNT */}
