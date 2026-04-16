@@ -1,10 +1,38 @@
+// app/api/catalog/route.ts  (o pages/api/catalog.ts si usas Pages Router)
+// ─────────────────────────────────────────────────────────────────────────────
+// Feed XML de productos para Meta (Facebook/Instagram) Catalog.
+//
+// SOLUCIÓN AL PROBLEMA DE VARIANTES:
+//   • Cada producto recibe su propio `g:item_group_id` = product.id
+//   • Esto hace que Meta trate CADA producto como artículo independiente,
+//     no como variante de otro.
+//   • Se añade g:product_type con la categoría exacta del producto para
+//     que los filtros del catálogo (tipo de producto) funcionen correctamente.
+//
+// Cómo conectar en Meta Business Manager:
+//   1. Catálogos → tu catálogo → Fuentes de datos → Agregar artículos
+//   2. Selecciona "Feed de datos" → "URL programada"
+//   3. URL: https://tu-dominio.com/api/catalog
+//   4. Formato: XML  |  Actualizar: Diaria
+// ─────────────────────────────────────────────────────────────────────────────
+
 import { NextResponse } from "next/server";
 
-const PROJECT_ID = "fokus-16a0c";
-const SITE_URL   = process.env.NEXT_PUBLIC_SITE_URL || "https://tu-dominio.com";
+// ── Config reutilizada del proyecto ──────────────────────────────────────────
+const FIREBASE_PROJECT = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "fokus-16a0c";
+const SITE_URL         = process.env.NEXT_PUBLIC_SITE_URL || "https://fokus-accesorios.vercel.app";
+const CURRENCY         = "USD";
+const BRAND            = "Fokus";
+const CONDITION        = "new";
+const AVAILABILITY     = "in stock";
 
-export const revalidate = 3600;
+// Cloudinary helper (igual que en el frontend)
+function optImg(url: string, w = 800): string {
+  if (!url || !url.includes("cloudinary.com")) return url;
+  return url.replace("/upload/", `/upload/w_${w},q_auto,f_jpg,dpr_1/`);
+}
 
+// ── Tipos ────────────────────────────────────────────────────────────────────
 interface FsVal {
   stringValue?: string;
   doubleValue?: number;
@@ -22,10 +50,12 @@ interface Product {
   category: string;
   price: number;
   img: string;
-  description: string;
+  description?: string;
+  order?: number;
 }
 
-function fromFs(f: FsVal): unknown {
+// ── Firestore REST helper ─────────────────────────────────────────────────────
+function fromFsVal(f: FsVal): unknown {
   if ("stringValue"  in f) return f.stringValue;
   if ("doubleValue"  in f) return f.doubleValue;
   if ("integerValue" in f) return Number(f.integerValue);
@@ -37,45 +67,49 @@ function docToProduct(doc: FsDoc): Product {
   const f = doc.fields || {};
   return {
     id:          doc.name.split("/").pop() as string,
-    name:        (fromFs(f.name        ?? {}) as string) || "",
-    category:    ((fromFs(f.category   ?? {}) as string) || "").toUpperCase(),
-    price:       (fromFs(f.price       ?? {}) as number) || 0,
-    img:         (fromFs(f.img         ?? {}) as string) || "",
-    description: (fromFs(f.description ?? {}) as string) || "",
+    name:        (fromFsVal(f.name        ?? { nullValue: null }) as string) || "",
+    category:    ((fromFsVal(f.category   ?? { nullValue: null }) as string) || "").toUpperCase(),
+    price:       (fromFsVal(f.price       ?? { nullValue: null }) as number) || 0,
+    img:         (fromFsVal(f.img         ?? { nullValue: null }) as string) || "",
+    description: (fromFsVal(f.description ?? { nullValue: null }) as string) || "",
+    order:       (fromFsVal(f.order       ?? { nullValue: null }) as number) || 0,
   };
 }
 
-function optImg(url: string): string {
-  if (!url || !url.includes("cloudinary.com")) return url;
-  return url.replace("/upload/", "/upload/w_800,h_800,c_pad,q_auto,f_jpg/");
+async function fetchAllProducts(): Promise<Product[]> {
+  const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents/products?pageSize=300`;
+  const res = await fetch(url, { next: { revalidate: 3600 } }); // cache 1h en servidor
+  if (!res.ok) throw new Error(`Firestore error: ${res.status}`);
+  const data = await res.json() as { documents?: FsDoc[] };
+  return (data.documents || [])
+    .map(docToProduct)
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 }
 
-function esc(s: string): string {
-  return (s || "")
-    .replace(/&/g,  "&amp;")
-    .replace(/</g,  "&lt;")
-    .replace(/>/g,  "&gt;")
-    .replace(/"/g,  "&quot;")
-    .replace(/'/g,  "&apos;");
-}
+// ── Mapeo de categorías internas → Google Product Category ───────────────────
+// Referencia: https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.txt
+const GOOGLE_CATEGORY: Record<string, string> = {
+  "LENTES":                "Apparel & Accessories > Clothing Accessories > Sunglasses",
+  "LENTES·SOL":            "Apparel & Accessories > Clothing Accessories > Sunglasses",
+  "LENTES·FOTOCROMATICOS": "Apparel & Accessories > Clothing Accessories > Sunglasses",
+  "LENTES·ANTI-LUZ-AZUL":  "Apparel & Accessories > Clothing Accessories > Sunglasses",
+  "LENTES·MOTORIZADOS":    "Apparel & Accessories > Clothing Accessories > Sunglasses",
+  "RELOJES":               "Apparel & Accessories > Jewelry > Watches",
+  "COLLARES":              "Apparel & Accessories > Jewelry > Necklaces",
+  "PULSERAS":              "Apparel & Accessories > Jewelry > Bracelets",
+  "ANILLOS":               "Apparel & Accessories > Jewelry > Rings",
+  "ARETES":                "Apparel & Accessories > Jewelry > Earrings",
+  "BILLETERAS":            "Apparel & Accessories > Handbags, Wallets & Cases > Wallets & Money Clips",
+};
 
-// ─── CATEGORÍAS META ──────────────────────────────────────────────────────────
-// item_group_id = clave para crear conjuntos en Meta Ads Manager
-// Todos los productos con el mismo item_group_id aparecen juntos como "variantes"
-function getGroupId(cat: string): string {
-  // Todos los tipos de lentes van al grupo "lentes"
-  if (cat.startsWith("LENTES")) return "lentes";
-  // El resto, en minúscula limpia
-  return cat.toLowerCase().replace(/[^a-z]/g, "");
-}
-
-function getCategoryLabel(cat: string): string {
+// product_type legible para humanos (aparece en los filtros de Meta)
+function productType(cat: string): string {
   const map: Record<string, string> = {
     "LENTES":                "Lentes",
-    "LENTES·SOL":            "Lentes de Sol",
-    "LENTES·FOTOCROMATICOS": "Lentes Fotocromaticos",
-    "LENTES·ANTI-LUZ-AZUL":  "Lentes Anti Luz Azul",
-    "LENTES·MOTORIZADOS":    "Lentes para Motos",
+    "LENTES·SOL":            "lentes de sol",
+    "LENTES·FOTOCROMATICOS": "lentes fotocromaticos",
+    "LENTES·ANTI-LUZ-AZUL":  "lentes anti luz azul",
+    "LENTES·MOTORIZADOS":    "lentes motorizados",
     "RELOJES":               "Relojes",
     "COLLARES":              "Collares",
     "PULSERAS":              "Pulseras",
@@ -83,73 +117,80 @@ function getCategoryLabel(cat: string): string {
     "ARETES":                "Aretes",
     "BILLETERAS":            "Billeteras",
   };
-  return map[cat] ?? cat;
+  return map[cat] ?? cat.charAt(0).toUpperCase() + cat.slice(1).toLowerCase();
 }
 
-function metaCategory(cat: string): string {
-  const map: Record<string, string> = {
-    "LENTES":                "Apparel & Accessories > Clothing Accessories > Sunglasses",
-    "LENTES·SOL":            "Apparel & Accessories > Clothing Accessories > Sunglasses",
-    "LENTES·FOTOCROMATICOS": "Apparel & Accessories > Clothing Accessories > Sunglasses",
-    "LENTES·ANTI-LUZ-AZUL":  "Apparel & Accessories > Clothing Accessories > Sunglasses",
-    "LENTES·MOTORIZADOS":    "Apparel & Accessories > Clothing Accessories > Sunglasses",
-    "RELOJES":               "Apparel & Accessories > Jewelry > Watches",
-    "COLLARES":              "Apparel & Accessories > Jewelry > Necklaces",
-    "PULSERAS":              "Apparel & Accessories > Jewelry > Bracelets",
-    "ANILLOS":               "Apparel & Accessories > Jewelry > Rings",
-    "ARETES":                "Apparel & Accessories > Jewelry > Earrings",
-    "BILLETERAS":            "Apparel & Accessories > Handbags, Wallets & Cases > Wallets",
-  };
-  return map[cat] ?? "Apparel & Accessories > Jewelry";
+// ── Escapa caracteres XML ─────────────────────────────────────────────────────
+function esc(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
 }
 
-export async function GET() {
+// ── Genera un <item> por producto ─────────────────────────────────────────────
+function productToItem(p: Product): string {
+  const googleCat  = GOOGLE_CATEGORY[p.category] ?? "Apparel & Accessories > Jewelry";
+  const pType      = productType(p.category);
+  const imgUrl     = optImg(p.img, 800);
+  const productUrl = `${SITE_URL}/?product=${encodeURIComponent(p.id)}`;
+  const desc       = p.description?.trim()
+    ? esc(p.description.trim())
+    : esc(`${p.name} - ${pType} de alta calidad. Marca Fokus Venezuela.`);
+
+  // ┌─────────────────────────────────────────────────────────────────────────┐
+  // │  CLAVE: g:item_group_id = p.id (único por producto)                    │
+  // │  Esto evita que Meta agrupe productos del mismo tipo como variantes.    │
+  // │  Si dos productos comparten item_group_id, Meta los muestra como        │
+  // │  variantes del mismo artículo.  Con IDs únicos = artículos separados.  │
+  // └─────────────────────────────────────────────────────────────────────────┘
+  return `
+  <item>
+    <g:id>${esc(p.id)}</g:id>
+    <g:title>${esc(p.name)}</g:title>
+    <g:description>${desc}</g:description>
+    <g:link>${esc(productUrl)}</g:link>
+    <g:image_link>${esc(imgUrl)}</g:image_link>
+    <g:availability>${AVAILABILITY}</g:availability>
+    <g:price>${p.price.toFixed(2)} ${CURRENCY}</g:price>
+    <g:brand>${BRAND}</g:brand>
+    <g:condition>${CONDITION}</g:condition>
+    <g:google_product_category>${esc(googleCat)}</g:google_product_category>
+    <g:product_type>${esc(pType)}</g:product_type>
+    <g:item_group_id>${esc(p.id)}</g:item_group_id>
+  </item>`;
+}
+
+// ── Handler principal ─────────────────────────────────────────────────────────
+export async function GET(request: Request) {
+  // Revalidación manual desde el admin (POST a /api/catalog/revalidate)
+  const { searchParams } = new URL(request.url);
+  const cat = searchParams.get("category"); // filtro opcional: /api/catalog?category=RELOJES
+
   try {
-    const res = await fetch(
-      `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/products?pageSize=300`,
-      { next: { revalidate: 3600 } }
-    );
+    let products = await fetchAllProducts();
 
-    if (!res.ok) throw new Error(`Firestore ${res.status}: ${await res.text()}`);
+    if (cat) {
+      products = products.filter(p =>
+        p.category === cat.toUpperCase() ||
+        p.category.startsWith(cat.toUpperCase() + "·")
+      );
+    }
 
-    const data = await res.json() as { documents?: FsDoc[] };
-    const products: Product[] = (data.documents || [])
-      .map(docToProduct)
-      .filter(p => p.name && p.price > 0 && p.img);
-
-    const items = products.map(p => {
-      const groupId     = getGroupId(p.category);
-      const label       = getCategoryLabel(p.category);
-      const productUrl  = `${SITE_URL}/?shop=1&product=${p.id}`;
-      const imageUrl    = optImg(p.img);
-      const googleCat   = metaCategory(p.category);
-      const description = p.description || `${p.name} - ${label} - Fokus Accesorios Venezuela`;
-
-      return `    <item>
-      <g:id>${esc(p.id)}</g:id>
-      <g:title>${esc(p.name)}</g:title>
-      <g:description>${esc(description)}</g:description>
-      <g:link>${esc(productUrl)}</g:link>
-      <g:image_link>${esc(imageUrl)}</g:image_link>
-      <g:price>${p.price.toFixed(2)} USD</g:price>
-      <g:availability>in stock</g:availability>
-      <g:condition>new</g:condition>
-      <g:brand>Fokus</g:brand>
-      <g:google_product_category>${esc(googleCat)}</g:google_product_category>
-      <g:product_type>${esc(label)}</g:product_type>
-      <g:item_group_id>${esc(groupId)}</g:item_group_id>
-      <g:custom_label_0>${esc(label)}</g:custom_label_0>
-      <g:custom_label_1>Fokus Venezuela</g:custom_label_1>
-    </item>`;
-    }).join("\n");
+    const items = products
+      .filter(p => p.img && p.name && p.price > 0) // solo productos válidos
+      .map(productToItem)
+      .join("");
 
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
   <channel>
-    <title>Fokus Accesorios</title>
-    <link>${SITE_URL}</link>
-    <description>Catálogo Fokus — Accesorios Venezuela</description>
-${items}
+    <title>${esc(BRAND)} – Accesorios Venezuela</title>
+    <link>${esc(SITE_URL)}</link>
+    <description>Catálogo de accesorios Fokus. Lentes, relojes, collares, pulseras, anillos, aretes y billeteras.</description>
+    ${items}
   </channel>
 </rss>`;
 
@@ -157,26 +198,12 @@ ${items}
       status: 200,
       headers: {
         "Content-Type":  "application/xml; charset=utf-8",
+        // Cache 1 hora en CDN, revalidable desde el servidor
         "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
-        "Access-Control-Allow-Origin": "*",
       },
     });
-
   } catch (err) {
-    console.error("[catalog] Error:", err);
-    // Devuelve XML vacío válido en vez de error 500
-    // así Meta no marca el feed como roto
-    const fallback = `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
-  <channel>
-    <title>Fokus Accesorios</title>
-    <link>${SITE_URL}</link>
-    <description>Catálogo Fokus</description>
-  </channel>
-</rss>`;
-    return new NextResponse(fallback, {
-      status: 200,
-      headers: { "Content-Type": "application/xml; charset=utf-8" },
-    });
+    console.error("[catalog feed]", err);
+    return new NextResponse("Error generating catalog feed", { status: 500 });
   }
 }
