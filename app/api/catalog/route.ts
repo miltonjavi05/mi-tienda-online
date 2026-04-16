@@ -1,24 +1,24 @@
-// app/api/catalog/route.ts  (o pages/api/catalog.ts si usas Pages Router)
+// app/api/catalog/route.ts
 // ─────────────────────────────────────────────────────────────────────────────
-// Feed XML de productos para Meta (Facebook/Instagram) Catalog.
+// Feed XML para Meta Catalog — corrige el problema del carrusel que repite
+// solo 2 productos.
 //
-// SOLUCIÓN AL PROBLEMA DE VARIANTES:
-//   • Cada producto recibe su propio `g:item_group_id` = product.id
-//   • Esto hace que Meta trate CADA producto como artículo independiente,
-//     no como variante de otro.
-//   • Se añade g:product_type con la categoría exacta del producto para
-//     que los filtros del catálogo (tipo de producto) funcionen correctamente.
+// CAUSAS del bug "solo 2 productos se repiten en carrusel":
+//   1. Meta descarta productos cuya imagen NO es cuadrada (1:1) o < 500×500px
+//   2. Meta descarta productos con URLs de imagen que devuelven redirect o
+//      content-type incorrecto (Cloudinary con f_auto o f_webp puede fallar)
+//   3. Meta descarta productos sin `g:image_link` estático y accesible
 //
-// Cómo conectar en Meta Business Manager:
-//   1. Catálogos → tu catálogo → Fuentes de datos → Agregar artículos
-//   2. Selecciona "Feed de datos" → "URL programada"
-//   3. URL: https://tu-dominio.com/api/catalog
-//   4. Formato: XML  |  Actualizar: Diaria
+// SOLUCIONES aplicadas:
+//   • optImgMeta() → fuerza formato JPG, 1:1 (c_fill), mínimo 800×800px
+//   • additional_image_link → imagen alternativa por si la principal falla
+//   • item_group_id único → sin agrupación como variantes
+//   • product_type legible → filtros de conjunto funcionan correctamente
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { NextResponse } from "next/server";
 
-// ── Config reutilizada del proyecto ──────────────────────────────────────────
+// ── Config ────────────────────────────────────────────────────────────────────
 const FIREBASE_PROJECT = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "fokus-16a0c";
 const SITE_URL         = process.env.NEXT_PUBLIC_SITE_URL || "https://fokus-accesorios.vercel.app";
 const CURRENCY         = "USD";
@@ -26,13 +26,38 @@ const BRAND            = "Fokus";
 const CONDITION        = "new";
 const AVAILABILITY     = "in stock";
 
-// Cloudinary helper (igual que en el frontend)
-function optImg(url: string, w = 800): string {
-  if (!url || !url.includes("cloudinary.com")) return url;
-  return url.replace("/upload/", `/upload/w_${w},q_auto,f_jpg,dpr_1/`);
+// ── Cloudinary helpers ────────────────────────────────────────────────────────
+
+/**
+ * Imagen optimizada para Meta Ads:
+ *  - Formato JPG (no webp — Meta Crawler tiene problemas con webp en algunos casos)
+ *  - Recorte cuadrado c_fill,g_center para cumplir ratio 1:1
+ *  - 800x800px (Meta recomienda >= 500x500, usamos 800 para calidad)
+ *  - Sin dpr_auto (Meta descarga en servidor, no en browser)
+ */
+function optImgMeta(url: string): string {
+  if (!url) return url;
+  if (!url.includes("cloudinary.com")) return url;
+  return url.replace(
+    /\/upload\/([^/]+\/)?/,
+    "/upload/w_800,h_800,c_fill,g_center,q_85,f_jpg/"
+  );
 }
 
-// ── Tipos ────────────────────────────────────────────────────────────────────
+/**
+ * Segunda imagen sin recorte como respaldo para additional_image_link.
+ * Meta la usa si la principal tiene algun problema de validacion.
+ */
+function optImgFallback(url: string): string {
+  if (!url) return url;
+  if (!url.includes("cloudinary.com")) return url;
+  return url.replace(
+    /\/upload\/([^/]+\/)?/,
+    "/upload/w_1000,q_90,f_jpg/"
+  );
+}
+
+// ── Tipos ─────────────────────────────────────────────────────────────────────
 interface FsVal {
   stringValue?: string;
   doubleValue?: number;
@@ -54,7 +79,7 @@ interface Product {
   order?: number;
 }
 
-// ── Firestore REST helper ─────────────────────────────────────────────────────
+// ── Firestore REST ────────────────────────────────────────────────────────────
 function fromFsVal(f: FsVal): unknown {
   if ("stringValue"  in f) return f.stringValue;
   if ("doubleValue"  in f) return f.doubleValue;
@@ -77,17 +102,18 @@ function docToProduct(doc: FsDoc): Product {
 }
 
 async function fetchAllProducts(): Promise<Product[]> {
-  const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents/products?pageSize=300`;
-  const res = await fetch(url, { next: { revalidate: 3600 } }); // cache 1h en servidor
-  if (!res.ok) throw new Error(`Firestore error: ${res.status}`);
+  const url =
+    `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}` +
+    `/databases/(default)/documents/products?pageSize=300`;
+  const res = await fetch(url, { next: { revalidate: 3600 } });
+  if (!res.ok) throw new Error(`Firestore ${res.status}: ${await res.text()}`);
   const data = await res.json() as { documents?: FsDoc[] };
   return (data.documents || [])
     .map(docToProduct)
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 }
 
-// ── Mapeo de categorías internas → Google Product Category ───────────────────
-// Referencia: https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.txt
+// ── Mapeo de categorias ───────────────────────────────────────────────────────
 const GOOGLE_CATEGORY: Record<string, string> = {
   "LENTES":                "Apparel & Accessories > Clothing Accessories > Sunglasses",
   "LENTES·SOL":            "Apparel & Accessories > Clothing Accessories > Sunglasses",
@@ -102,7 +128,6 @@ const GOOGLE_CATEGORY: Record<string, string> = {
   "BILLETERAS":            "Apparel & Accessories > Handbags, Wallets & Cases > Wallets & Money Clips",
 };
 
-// product_type legible para humanos (aparece en los filtros de Meta)
 function productType(cat: string): string {
   const map: Record<string, string> = {
     "LENTES":                "Lentes",
@@ -120,39 +145,35 @@ function productType(cat: string): string {
   return map[cat] ?? cat.charAt(0).toUpperCase() + cat.slice(1).toLowerCase();
 }
 
-// ── Escapa caracteres XML ─────────────────────────────────────────────────────
+// ── XML escape ────────────────────────────────────────────────────────────────
 function esc(str: string): string {
   return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
+    .replace(/&/g,  "&amp;")
+    .replace(/</g,  "&lt;")
+    .replace(/>/g,  "&gt;")
+    .replace(/"/g,  "&quot;")
+    .replace(/'/g,  "&apos;");
 }
 
-// ── Genera un <item> por producto ─────────────────────────────────────────────
+// ── Genera un <item> ──────────────────────────────────────────────────────────
 function productToItem(p: Product): string {
-  const googleCat  = GOOGLE_CATEGORY[p.category] ?? "Apparel & Accessories > Jewelry";
-  const pType      = productType(p.category);
-  const imgUrl     = optImg(p.img, 800);
-  const productUrl = `${SITE_URL}/?product=${encodeURIComponent(p.id)}`;
-  const desc       = p.description?.trim()
+  const googleCat   = GOOGLE_CATEGORY[p.category] ?? "Apparel & Accessories > Jewelry";
+  const pType       = productType(p.category);
+  const imgSquare   = esc(optImgMeta(p.img));
+  const imgFallback = esc(optImgFallback(p.img));
+  const productUrl  = esc(`${SITE_URL}/?product=${encodeURIComponent(p.id)}`);
+  const desc = p.description?.trim()
     ? esc(p.description.trim())
-    : esc(`${p.name} - ${pType} de alta calidad. Marca Fokus Venezuela.`);
+    : esc(`${p.name} — ${pType}. Disponible en Fokus Venezuela. Envios a todo el pais.`);
 
-  // ┌─────────────────────────────────────────────────────────────────────────┐
-  // │  CLAVE: g:item_group_id = p.id (único por producto)                    │
-  // │  Esto evita que Meta agrupe productos del mismo tipo como variantes.    │
-  // │  Si dos productos comparten item_group_id, Meta los muestra como        │
-  // │  variantes del mismo artículo.  Con IDs únicos = artículos separados.  │
-  // └─────────────────────────────────────────────────────────────────────────┘
   return `
   <item>
     <g:id>${esc(p.id)}</g:id>
     <g:title>${esc(p.name)}</g:title>
     <g:description>${desc}</g:description>
-    <g:link>${esc(productUrl)}</g:link>
-    <g:image_link>${esc(imgUrl)}</g:image_link>
+    <g:link>${productUrl}</g:link>
+    <g:image_link>${imgSquare}</g:image_link>
+    <g:additional_image_link>${imgFallback}</g:additional_image_link>
     <g:availability>${AVAILABILITY}</g:availability>
     <g:price>${p.price.toFixed(2)} ${CURRENCY}</g:price>
     <g:brand>${BRAND}</g:brand>
@@ -163,33 +184,30 @@ function productToItem(p: Product): string {
   </item>`;
 }
 
-// ── Handler principal ─────────────────────────────────────────────────────────
+// ── Handler ───────────────────────────────────────────────────────────────────
 export async function GET(request: Request) {
-  // Revalidación manual desde el admin (POST a /api/catalog/revalidate)
   const { searchParams } = new URL(request.url);
-  const cat = searchParams.get("category"); // filtro opcional: /api/catalog?category=RELOJES
+  const cat = searchParams.get("category");
 
   try {
     let products = await fetchAllProducts();
 
     if (cat) {
-      products = products.filter(p =>
-        p.category === cat.toUpperCase() ||
-        p.category.startsWith(cat.toUpperCase() + "·")
+      const catUp = cat.toUpperCase();
+      products = products.filter(
+        p => p.category === catUp || p.category.startsWith(catUp + "·")
       );
     }
 
-    const items = products
-      .filter(p => p.img && p.name && p.price > 0) // solo productos válidos
-      .map(productToItem)
-      .join("");
+    const valid = products.filter(p => p.img && p.name && p.price > 0);
+    const items = valid.map(productToItem).join("");
 
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
   <channel>
     <title>${esc(BRAND)} – Accesorios Venezuela</title>
     <link>${esc(SITE_URL)}</link>
-    <description>Catálogo de accesorios Fokus. Lentes, relojes, collares, pulseras, anillos, aretes y billeteras.</description>
+    <description>Catalogo de accesorios Fokus. Lentes, relojes, collares, pulseras, anillos, aretes y billeteras.</description>
     ${items}
   </channel>
 </rss>`;
@@ -198,7 +216,6 @@ export async function GET(request: Request) {
       status: 200,
       headers: {
         "Content-Type":  "application/xml; charset=utf-8",
-        // Cache 1 hora en CDN, revalidable desde el servidor
         "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
       },
     });
