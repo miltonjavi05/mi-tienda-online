@@ -753,16 +753,17 @@ export default function Home() {
   const[showReviewModal,setShowReviewModal]=useState(false);
   const photoInputRef              = useRef<HTMLInputElement>(null);
 
-  // ── URL → VIEW ────────────────────────────────────────────────────────────
+  // ── URL → VIEW: sync on first load and browser back/forward ──────────────
   useEffect(()=>{
     const view = PATH_TO_VIEW[pathname] as MainView | undefined;
     if(view && view !== mainView){
       setMainViewRaw(view);
     }
+  // intentionally only on pathname change
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[pathname]);
 
-  // ── VIEW → URL ────────────────────────────────────────────────────────────
+  // ── VIEW → URL: push to history when internal navigation happens ─────────
   const setMainView = useCallback((v: MainView) => {
     setMainViewRaw(v);
     scrollTop();
