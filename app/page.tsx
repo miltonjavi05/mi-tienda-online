@@ -20,12 +20,9 @@ const WHATSAPP_NUMBER = "584243005733";
 const META_PIXEL_ID = "840893159040582";
 
 // ─── CACHE CONFIG ─────────────────────────────────────────────────────────────
-// Usa localStorage (persiste entre pestañas y sesiones) con TTL de 2 horas.
-// Esto reduce las lecturas de Firestore drásticamente.
-// v3 = nueva versión para limpiar caché viejo automáticamente.
 const PRODUCTS_CACHE_KEY  = "fokus_products_v3";
 const PRODUCTS_CACHE_TIME = "fokus_products_time_v3";
-const CACHE_TTL_MS        = 2 * 60 * 60 * 1000; // 2 horas
+const CACHE_TTL_MS        = 2 * 60 * 60 * 1000;
 
 function getCachedProducts(): Product[] | null {
   try {
@@ -48,7 +45,6 @@ function invalidateProductsCache(): void {
   try {
     localStorage.removeItem(PRODUCTS_CACHE_KEY);
     localStorage.removeItem(PRODUCTS_CACHE_TIME);
-    // Limpiar versiones viejas de sessionStorage
     sessionStorage.removeItem("fokus_products_v2");
     sessionStorage.removeItem("fokus_products_time_v2");
   } catch { /* silent */ }
@@ -260,6 +256,20 @@ const GLOBAL_CSS = `
   @keyframes pulseRing { 0%{transform:scale(1);opacity:0.6} 100%{transform:scale(1.5);opacity:0} }
   @keyframes spin { to{transform:rotate(360deg)} }
   @keyframes tyCheck { from{stroke-dashoffset:40} to{stroke-dashoffset:0} }
+  @keyframes badgeShimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+  /* ── ADMIN CAT SCROLL — rueda de mouse en desktop ── */
+  .admin-cat-scroll {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+  .admin-cat-scroll::-webkit-scrollbar { height: 3px; }
+  .admin-cat-scroll::-webkit-scrollbar-track { background: transparent; }
+  .admin-cat-scroll::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 2px; }
+  @media(hover:hover) and (pointer:fine){
+    .admin-cat-scroll::-webkit-scrollbar { height: 4px; }
+    .admin-cat-scroll::-webkit-scrollbar-thumb { background: #333; }
+  }
 
   @media(hover:hover) and (pointer:fine){
     .pc:hover .iz { transform: scale(1.05) !important; }
@@ -864,6 +874,20 @@ export default function Home() {
   const touchDragId    =useRef<string|null>(null);
   const touchDragActive=useRef(false);
 
+  // ── Ref para el scroll horizontal del filtro de admin ──
+  const adminCatRef = useRef<HTMLDivElement>(null);
+  useEffect(()=>{
+    const el = adminCatRef.current;
+    if(!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if(Math.abs(e.deltaX) > Math.abs(e.deltaY)) return; // ya es scroll horizontal nativo
+      e.preventDefault();
+      el.scrollLeft += e.deltaY * 1.2;
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
+
   useEffect(()=>{
     try{const stored=localStorage.getItem("fokus_user");if(stored){const parsed=JSON.parse(stored) as UserData;setCurrentUser(parsed);const rt=localStorage.getItem("fokus_refresh");if(rt&&parsed.uid){refreshIdToken(rt).then(async result=>{if(result){const fsData=await fsGetUser(parsed.uid).catch(()=>({photoURL:""}));setCurrentUser(prev=>{if(!prev)return prev;const updated={...prev,idToken:result.idToken,photoURL:fsData.photoURL||prev.photoURL||""};localStorage.setItem("fokus_user",JSON.stringify(updated));return updated;});}}).catch(()=>{});}}else{setCurrentUser(null);}}catch{setCurrentUser(null);}
   },[]);
@@ -877,18 +901,12 @@ export default function Home() {
   useEffect(()=>{try{const s=sessionStorage.getItem("fokus_cart");if(s)setCart(JSON.parse(s) as CartItem[]);}catch{}},[]);
   useEffect(()=>{try{sessionStorage.setItem("fokus_cart",JSON.stringify(cart));}catch{}},[cart]);
 
-  // ─── LOAD PRODUCTS WITH AGGRESSIVE CACHE ────────────────────────────────────
-  // Flag de módulo: evita múltiples llamadas a Firestore en el mismo ciclo de vida
-  // aunque el componente se desmonte y remonte (ej: Hot Module Replacement en dev).
   const productsAlreadyLoaded = useRef(false);
 
   const loadProducts = useCallback(async (forceRefresh = false) => {
-    // Si ya cargamos y no es refresh forzado (admin), salir sin tocar Firestore
     if (productsAlreadyLoaded.current && !forceRefresh) return;
-
     setLoading(true);
     try {
-      // 1. Intentar caché en localStorage (TTL 2 horas, persiste entre sesiones)
       if (!forceRefresh) {
         const cached = getCachedProducts();
         if (cached && cached.length > 0) {
@@ -898,22 +916,20 @@ export default function Home() {
           return;
         }
       }
-      // 2. Solo si no hay caché válido → leer Firestore (1 lectura por colección)
       const d = await fsGetAll();
       const sorted = d.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
       const final = sorted.length > 0 ? sorted : DEMO;
-      setCachedProducts(final); // Guardar en localStorage para próximas 2 horas
+      setCachedProducts(final);
       setProducts(final);
       productsAlreadyLoaded.current = true;
     } catch {
-      // Si falla Firestore, usar caché aunque esté vencido antes de caer a DEMO
       const stale = getCachedProducts();
       setProducts(stale && stale.length > 0 ? stale : DEMO);
       productsAlreadyLoaded.current = true;
     } finally {
       setLoading(false);
     }
-  }, []); // Sin dependencias: función completamente estable
+  }, []);
 
   useEffect(() => {
     const ok = FIREBASE_CONFIG.projectId !== "TU_PROJECT_ID";
@@ -922,7 +938,7 @@ export default function Home() {
     else { setProducts(DEMO); setLoading(false); }
     if (typeof window !== "undefined" && window.location.pathname === "/admin")
       setMainViewRaw("admin");
-  }, []); // Solo se ejecuta una vez al montar — loadProducts es estable
+  }, []);
 
   const handleProfilePhoto=useCallback(async(e:React.ChangeEvent<HTMLInputElement>)=>{const file=e.target.files?.[0];if(!file||!currentUser)return;setPhotoLoading(true);try{const url=await uploadImg(file);let idToken=currentUser.idToken;if(!idToken){const rt=localStorage.getItem("fokus_refresh");if(rt){const res=await refreshIdToken(rt);if(res)idToken=res.idToken;}}await fsSaveUser(currentUser.uid,{photoURL:url},idToken).catch(()=>{});setCurrentUser(prev=>{if(!prev)return prev;const u={...prev,photoURL:url,idToken};localStorage.setItem("fokus_user",JSON.stringify(u));return u;});}catch(err){console.error("Error subiendo foto:",err);}finally{setPhotoLoading(false);if(photoInputRef.current)photoInputRef.current.value="";};},[currentUser]);
 
@@ -963,7 +979,6 @@ export default function Home() {
     setOrderSnap(snap);setCart([]);setComprobante("");setPayMethod(null);setDeliveryInfo({zone:"",nombre:"",cedula:"",telefono:"",agencia:"",direccion:"",estado:""});setMainView("thankyou");
   },[canSendOrder,cart,totalPrice,payMethod,deliveryInfo,comprobanteUrl,buildWaUrl,setMainView]);
 
-  // Admin helpers
   const doLogin=()=>{if(adminEmail===ADMIN_EMAIL&&adminPwd===ADMIN_PASSWORD){setAdminLogged(true);setAdminErr("");setAdminSec("menu");}else setAdminErr("Credenciales incorrectas");};
   const doLogout=()=>{setAdminLogged(false);setAdminEmail("");setAdminPwd("");setMainView("fokus");if(typeof window!=="undefined")window.history.pushState("","","/");};
   const resetForm=()=>{setEditing(null);setFName("");setFDesc("");setFPrice("");setFCat("");setFFile(null);setFPrev("");setFErr("");setFOk("");if(fileRef.current)fileRef.current.value="";};
@@ -982,9 +997,8 @@ export default function Home() {
       const data={name:fName.trim(),description:fDesc.trim(),price:parseFloat(fPrice),category:fCat.toUpperCase(),img:imgUrl};
       if(editing){await fsUpdate(editing.id,data);setFOk("✓ Producto actualizado");}
       else{await fsAdd(data);setFOk("✓ Producto agregado");}
-      // Invalidar caché para que admin vea cambios al instante
       invalidateProductsCache();
-      productsAlreadyLoaded.current = false; // Forzar re-fetch en próxima carga
+      productsAlreadyLoaded.current = false;
       await loadProducts(true);
       fetch(`/api/catalog/revalidate?secret=fokus-revalidate-2024`,{method:"POST"}).catch(()=>{});
       setTimeout(resetForm,1800);
@@ -1049,7 +1063,6 @@ export default function Home() {
   const openProd=useCallback((p:Product)=>{setSel(p);setModalQty(1);trackViewContent(p,currentUser?.email);},[currentUser?.email]);
   const userReady=currentUser!==undefined;
 
-  // ── THANK YOU ──
   if(isTY&&orderSnap){
     return(
       <>
@@ -1128,12 +1141,54 @@ export default function Home() {
         </div>
       )}
 
-      {/* HOME */}
+      {/* ── HOME ── */}
       {mainView==="fokus"&&(
         <main style={{paddingTop:navH,background:C.bg}}>
           <div style={{maxWidth:760,margin:"0 auto",padding:"4rem 1.5rem 0",textAlign:"center",animation:"slideUp 0.5s ease"}}>
             <div style={{marginBottom:"2rem"}}><img src="/favicon.png" alt="Fokus" width={64} height={64} style={{objectFit:"contain",filter:"brightness(1.1)",pointerEvents:"none"}} draggable={false}/></div>
-            <p style={{fontSize:10,letterSpacing:6,color:"#333",fontWeight:700,marginBottom:"1rem"}}> ACCESORIOS PARA CABALLERO</p>
+
+            {/* ── ETIQUETA PREMIUM "ACCESORIOS PARA CABALLERO" ── */}
+            <div style={{
+              display:"inline-flex",
+              alignItems:"center",
+              gap:"0.55rem",
+              marginBottom:"1rem",
+              padding:"0.45rem 1.1rem 0.45rem 0.75rem",
+              borderRadius:40,
+              background:"linear-gradient(135deg,rgba(255,255,255,0.06) 0%,rgba(255,255,255,0.02) 100%)",
+              border:"1px solid rgba(255,255,255,0.1)",
+              backdropFilter:"blur(12px)",
+              WebkitBackdropFilter:"blur(12px)",
+              boxShadow:"0 1px 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)",
+              position:"relative",
+              overflow:"hidden",
+            }}>
+              {/* shimmer sweep */}
+              <div style={{
+                position:"absolute",
+                inset:0,
+                background:"linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.06) 50%,transparent 100%)",
+                backgroundSize:"200% 100%",
+                animation:"badgeShimmer 3s ease infinite",
+                pointerEvents:"none",
+                borderRadius:"inherit",
+              }}/>
+              {/* diamond icon */}
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style={{flexShrink:0,position:"relative"}}>
+                <path d="M6 3h12l4 6-10 12L2 9z" stroke="rgba(255,255,255,0.55)" strokeWidth="1.5" strokeLinejoin="round"/>
+                <path d="M2 9h20M6 3l4 6 2-6M18 3l-4 6-2-6" stroke="rgba(255,255,255,0.3)" strokeWidth="1" strokeLinejoin="round"/>
+              </svg>
+              <span style={{
+                fontSize:9,
+                fontWeight:800,
+                letterSpacing:3,
+                color:"rgba(255,255,255,0.5)",
+                textTransform:"uppercase" as const,
+                position:"relative",
+                whiteSpace:"nowrap",
+              }}>ACCESORIOS PARA CABALLERO</span>
+            </div>
+
             <h1 style={{fontSize:40,fontWeight:900,letterSpacing:8,marginBottom:"0.85rem",color:C.accent,lineHeight:1}}>FOKUS</h1>
             <p style={{fontSize:14,color:"#444",lineHeight:1.7,maxWidth:300,margin:"0 auto 2rem"}}>Cada detalle +<br/>Calidad, diseño y actitud.</p>
             <div style={{maxWidth:360,margin:"0 auto 2.5rem"}}><div style={{background:"rgba(76,175,80,0.06)",border:"1px solid rgba(76,175,80,0.2)",borderRadius:10,padding:"0.7rem 1.1rem",display:"flex",alignItems:"center",gap:"0.7rem"}}><IcTruck s={22} c="#4caf50"/><div style={{textAlign:"left"}}><p style={{margin:0,fontSize:11,fontWeight:800,color:"#4caf50",letterSpacing:0.8}}>ENVÍOS A TODA VENEZUELA</p><p style={{margin:"1px 0 0",fontSize:10,color:"#2a5a2a"}}>Llegamos a cualquier estado del país</p></div></div></div>
@@ -1335,7 +1390,7 @@ export default function Home() {
         </main>
       )}
 
-      {/* ADMIN */}
+      {/* ── ADMIN ── */}
       {isAdmin&&(
         <main style={{paddingTop:NAV_H,background:"#060606",minHeight:"100vh"}}>
           <div style={{maxWidth:720,margin:"0 auto",padding:"2rem 1rem 4rem"}}>
@@ -1347,7 +1402,15 @@ export default function Home() {
               <div style={{background:"#111",borderRadius:12,padding:"1.5rem",border:"1px solid #1a1a1a"}}>
                 <div style={{display:"flex",alignItems:"center",gap:"0.5rem",marginBottom:"0.85rem"}}><p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2,margin:0}}>PRODUCTOS ({adminProds.length})</p><span style={{fontSize:9,color:"#2a2a2a",background:"#161616",padding:"2px 7px",borderRadius:8,border:"1px solid #1e1e1e"}}>⠿ Arrastra para reordenar</span></div>
                 <input placeholder="Buscar…" value={adminSearch} onChange={e=>setAdminSearch(e.target.value)} style={{...S.input,marginBottom:"0.75rem"}}/>
-                <div className="ts" style={{display:"flex",gap:"0.35rem",overflowX:"auto",paddingBottom:"0.75rem",marginBottom:"0.5rem",WebkitOverflowScrolling:"touch",touchAction:"pan-x"}}>{["ALL",...usedCats].map(cat=>{const a=adminCat===cat;const n=cat==="ALL"?products.length:products.filter(p=>p.category===cat).length;return(<button key={cat} className="pl" onClick={()=>setAdminCat(cat)} style={{background:a?"#fff":"#161616",color:a?"#080808":"#555",border:`1px solid ${a?"#fff":"#222"}`,padding:"0.3rem 0.7rem",borderRadius:20,fontSize:9,fontWeight:800,letterSpacing:1,fontFamily:"inherit",flexShrink:0,WebkitTapHighlightColor:"transparent",cursor:"pointer",whiteSpace:"nowrap",transition:"all 0.12s ease"}}>{cat==="ALL"?"TODOS":catLabel(cat).toUpperCase()} · {n}</button>);})}</div>
+
+                {/* ── FILTRO DE CATEGORÍAS CON SCROLL DE RUEDA EN DESKTOP ── */}
+                <div
+                  ref={adminCatRef}
+                  className="admin-cat-scroll"
+                  style={{display:"flex",gap:"0.35rem",overflowX:"auto",paddingBottom:"0.75rem",marginBottom:"0.5rem",WebkitOverflowScrolling:"touch",touchAction:"pan-x"}}
+                >
+                  {["ALL",...usedCats].map(cat=>{const a=adminCat===cat;const n=cat==="ALL"?products.length:products.filter(p=>p.category===cat).length;return(<button key={cat} className="pl" onClick={()=>setAdminCat(cat)} style={{background:a?"#fff":"#161616",color:a?"#080808":"#555",border:`1px solid ${a?"#fff":"#222"}`,padding:"0.3rem 0.7rem",borderRadius:20,fontSize:9,fontWeight:800,letterSpacing:1,fontFamily:"inherit",flexShrink:0,WebkitTapHighlightColor:"transparent",cursor:"pointer",whiteSpace:"nowrap",transition:"all 0.12s ease"}}>{cat==="ALL"?"TODOS":catLabel(cat).toUpperCase()} · {n}</button>);})}</div>
+
                 {adminCat==="ALL"?(
                   <div className="admin-list">{usedCats.map(cat=>{const cp=products.filter(p=>p.category===cat&&(adminSearch===""||p.name.toLowerCase().includes(adminSearch.toLowerCase())));if(!cp.length)return null;return(<div key={cat} style={{marginBottom:"1.1rem"}}><div style={{display:"flex",alignItems:"center",gap:"0.5rem",padding:"0.4rem 0",marginBottom:"0.35rem",borderBottom:"1px solid #1a1a1a"}}><span style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#333"}}>{catLabel(cat).toUpperCase()}</span><span style={{fontSize:9,color:"#2a2a2a",background:"#1a1a1a",padding:"1px 6px",borderRadius:10}}>{cp.length}</span></div>{cp.map(p=>(<div key={p.id} data-rowid={p.id}><ARow p={p} editing={editing} onEdit={startEdit} onDel={delProd} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} isDragging={dragId===p.id} isOver={overId===p.id&&dragId!==p.id} onTouchStart={handleTouchDragStart} onTouchMove={handleTouchDragMove} onTouchEnd={handleTouchDragEnd}/></div>))}</div>);})}</div>
                 ):(
