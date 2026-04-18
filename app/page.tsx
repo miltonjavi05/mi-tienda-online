@@ -936,8 +936,25 @@ export default function Home() {
     setFbReady(ok);
     if (ok) loadProducts();
     else { setProducts(DEMO); setLoading(false); }
-    if (typeof window !== "undefined" && window.location.pathname === "/admin")
-      setMainViewRaw("admin");
+    if (typeof window !== "undefined") {
+      const path = window.location.pathname;
+      if (path === "/admin") { setMainViewRaw("admin"); }
+      else if (path.startsWith("/tienda/lentes/fotocromaticos")) { setMainViewRaw("shop"); setShopFilter("LENTES·FOTOCROMATICOS"); }
+      else if (path.startsWith("/tienda/lentes/anti-luz-azul")) { setMainViewRaw("shop"); setShopFilter("LENTES·ANTI-LUZ-AZUL"); }
+      else if (path.startsWith("/tienda/lentes/sol")) { setMainViewRaw("shop"); setShopFilter("LENTES·SOL"); }
+      else if (path.startsWith("/tienda/lentes/motorizados")) { setMainViewRaw("shop"); setShopFilter("LENTES·MOTORIZADOS"); }
+      else if (path.startsWith("/tienda/lentes")) { setMainViewRaw("shop"); setShopFilter("LENTES"); }
+      else if (path.startsWith("/tienda/relojes")) { setMainViewRaw("shop"); setShopFilter("RELOJES"); }
+      else if (path.startsWith("/tienda/collares")) { setMainViewRaw("shop"); setShopFilter("COLLARES"); }
+      else if (path.startsWith("/tienda/pulseras")) { setMainViewRaw("shop"); setShopFilter("PULSERAS"); }
+      else if (path.startsWith("/tienda/anillos")) { setMainViewRaw("shop"); setShopFilter("ANILLOS"); }
+      else if (path.startsWith("/tienda/aretes")) { setMainViewRaw("shop"); setShopFilter("ARETES"); }
+      else if (path.startsWith("/tienda/billeteras")) { setMainViewRaw("shop"); setShopFilter("BILLETERAS"); }
+      else if (path.startsWith("/tienda")) { setMainViewRaw("shop"); setShopFilter("TODO"); }
+      else if (path.startsWith("/comunidad")) { setMainViewRaw("comunidad"); }
+      else if (path.startsWith("/grabados")) { setMainViewRaw("grabados"); }
+      else if (path.startsWith("/carrito")) { setMainViewRaw("cart"); }
+    }
   }, []);
 
   const handleProfilePhoto=useCallback(async(e:React.ChangeEvent<HTMLInputElement>)=>{const file=e.target.files?.[0];if(!file||!currentUser)return;setPhotoLoading(true);try{const url=await uploadImg(file);let idToken=currentUser.idToken;if(!idToken){const rt=localStorage.getItem("fokus_refresh");if(rt){const res=await refreshIdToken(rt);if(res)idToken=res.idToken;}}await fsSaveUser(currentUser.uid,{photoURL:url},idToken).catch(()=>{});setCurrentUser(prev=>{if(!prev)return prev;const u={...prev,photoURL:url,idToken};localStorage.setItem("fokus_user",JSON.stringify(u));return u;});}catch(err){console.error("Error subiendo foto:",err);}finally{setPhotoLoading(false);if(photoInputRef.current)photoInputRef.current.value="";};},[currentUser]);
