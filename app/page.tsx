@@ -833,7 +833,7 @@ export default function Home() {
   const[showReviewModal,setShowReviewModal]=useState(false);
   const photoInputRef              = useRef<HTMLInputElement>(null);
 
-  const setMainView=useCallback((v:MainView)=>{setMainViewRaw(v);scrollTop();},[]);
+  const setMainView=useCallback((v:MainView)=>{setMainViewRaw(v);scrollTop();const paths:Partial<Record<MainView,string>>={fokus:"/",shop:"/tienda",comunidad:"/comunidad",grabados:"/grabados",cart:"/carrito",account:"/cuenta"};const p=paths[v];if(p&&typeof window!=="undefined")window.history.pushState({},"",p);},[]);
   const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",cedula:"",telefono:"",agencia:"",direccion:"",estado:""});
 
   const navRef=useRef<HTMLElement>(null);
