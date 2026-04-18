@@ -807,8 +807,8 @@ const ThankYouView=memo(function ThankYouView({order,onBack,currentUser}:{order:
 //  MAIN APP
 // ══════════════════════════════════════════════════════════════════════════════
 export default function Home() {
-  const[mainView,setMainViewRaw]   = useState<MainView>("fokus");
-  const[shopFilter,setShopFilter]  = useState<ShopFilter>("TODO");
+  const[mainView,setMainViewRaw]   = useState<MainView>(()=>{if(typeof window==="undefined")return"fokus";const path=window.location.pathname;if(path.startsWith("/tienda/lentes/fotocromaticos"))return"shop";if(path.startsWith("/tienda/lentes/anti-luz-azul"))return"shop";if(path.startsWith("/tienda/lentes/sol"))return"shop";if(path.startsWith("/tienda/lentes/motorizados"))return"shop";if(path.startsWith("/tienda"))return"shop";if(path.startsWith("/comunidad"))return"comunidad";if(path.startsWith("/grabados"))return"grabados";if(path.startsWith("/carrito"))return"cart";return"fokus";});
+  const[shopFilter,setShopFilter]  = useState<ShopFilter>(()=>{if(typeof window==="undefined")return"TODO";const path=window.location.pathname;if(path.startsWith("/tienda/lentes/fotocromaticos"))return"LENTES·FOTOCROMATICOS";if(path.startsWith("/tienda/lentes/anti-luz-azul"))return"LENTES·ANTI-LUZ-AZUL";if(path.startsWith("/tienda/lentes/sol"))return"LENTES·SOL";if(path.startsWith("/tienda/lentes/motorizados"))return"LENTES·MOTORIZADOS";if(path.startsWith("/tienda/lentes"))return"LENTES";if(path.startsWith("/tienda/relojes"))return"RELOJES";if(path.startsWith("/tienda/collares"))return"COLLARES";if(path.startsWith("/tienda/pulseras"))return"PULSERAS";if(path.startsWith("/tienda/anillos"))return"ANILLOS";if(path.startsWith("/tienda/aretes"))return"ARETES";if(path.startsWith("/tienda/billeteras"))return"BILLETERAS";return"TODO";});
   const[lentesOpen,setLentesOpen]  = useState(false);
   const[cart,setCart]              = useState<CartItem[]>([]);
   const[selectedProduct,setSel]    = useState<Product|null>(null);
