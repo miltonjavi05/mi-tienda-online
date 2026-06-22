@@ -454,14 +454,14 @@ const HRow=memo(function HRow({products,onSelect,fmtPrice}:{products:Product[];o
 });
 
 // ─── ADDED MODAL ─────────────────────────────────────────────────────────────
-const AddedModal=memo(function AddedModal({product,onClose,onGoCart}:{product:Product;onClose:()=>void;onGoCart:()=>void}){
+const AddedModal=memo(function AddedModal({product,onClose,onGoCart,fmtPrice}:{product:Product;onClose:()=>void;onGoCart:()=>void;fmtPrice:(n:number)=>string}){
   return(
     <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:600,background:"rgba(0,0,0,0.72)",display:"flex",alignItems:"flex-end",justifyContent:"center",animation:"fadeIn 0.18s ease"}}>
       <div onClick={e=>e.stopPropagation()} style={{background:"#161616",width:"100%",maxWidth:520,borderRadius:"18px 18px 0 0",padding:"1.25rem 1.25rem 2rem",animation:"slideUp 0.28s cubic-bezier(0.34,1.3,0.64,1)",border:"1px solid #222",borderBottom:"none"}}>
         <div style={{width:36,height:3,background:"#333",borderRadius:2,margin:"0 auto 1.25rem"}}/>
         <div style={{display:"flex",gap:"0.85rem",alignItems:"center",marginBottom:"1.25rem"}}>
           <div style={{width:58,height:58,borderRadius:8,overflow:"hidden",flexShrink:0,background:"#111"}}><img src={optImg(product.img,120)} alt={product.name} style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/></div>
-          <div style={{flex:1}}><p style={{margin:"0 0 2px",fontSize:11,color:"#555",letterSpacing:1.5,fontWeight:700}}>AÑADIDO AL CARRITO</p><p style={{margin:"0 0 2px",fontSize:14,color:C.text,fontWeight:600,lineHeight:1.3}}>{product.name}</p><p style={{margin:0,fontSize:13,color:"#888"}}><span style={{color:C.accent,fontWeight:700}}>${product.price.toFixed(2)}</span></p></div>
+          <div style={{flex:1}}><p style={{margin:"0 0 2px",fontSize:11,color:"#555",letterSpacing:1.5,fontWeight:700}}>AÑADIDO AL CARRITO</p><p style={{margin:"0 0 2px",fontSize:14,color:C.text,fontWeight:600,lineHeight:1.3}}>{product.name}</p><p style={{margin:0,fontSize:13,color:"#888"}}><span style={{color:C.accent,fontWeight:700}}>{fmtPrice(product.price)}</span></p></div>
           <div style={{width:32,height:32,borderRadius:"50%",background:"#1a2e1a",border:"1.5px solid #2a4a2a",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,animation:"scaleIn 0.3s cubic-bezier(0.34,1.4,0.64,1)"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.65rem"}}>
@@ -1489,7 +1489,7 @@ const fmtPrice=useCallback((usd:number)=>{if(showBs&&bcvRate){const bs=usd*bcvRa
         </div>
       )}
 
-      {addedProduct&&<AddedModal product={addedProduct} onClose={()=>setAddedProduct(null)} onGoCart={()=>{setAddedProduct(null);setMainView("cart");}}/>}
+      {addedProduct&&<AddedModal product={addedProduct} onClose={()=>setAddedProduct(null)} onGoCart={()=>{setAddedProduct(null);setMainView("cart");}} fmtPrice={fmtPrice}/>}
       {showAuth&&<AuthModal onClose={()=>setShowAuth(false)} onSuccess={u=>{setCurrentUser(u);setShowAuth(false);}}/>}
       {!isAdmin&&<DraggableWA/>}
     </div>
