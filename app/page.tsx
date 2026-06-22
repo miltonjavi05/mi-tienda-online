@@ -1108,11 +1108,7 @@ const fmtPrice=useCallback((usd:number)=>{if(showBs&&bcvRate){const bs=usd*bcvRa
             <img src="/favicon.png" alt="Fokus" width={26} height={26} style={{objectFit:"contain",flexShrink:0,pointerEvents:"none"}} draggable={false}/>
             <span style={{color:"#fff",fontSize:16,fontWeight:900,letterSpacing:5,whiteSpace:"nowrap"}}>FOKUS</span>
           </button>
-          <div style={{display:"flex",alignItems:"center",marginLeft:"auto",gap:4}}>
-  <button onClick={()=>{if(!showBs)fetchBcvRate();setShowBs(s=>!s);}} style={{display:"flex",alignItems:"center",gap:6,background:showBs?"#fff":"#181818",color:showBs?"#080808":"#aaa",border:`1.5px solid ${showBs?"#fff":"#2a2a2a"}`,borderRadius:20,padding:"6px 14px",fontSize:11,fontWeight:900,letterSpacing:1.2,cursor:"pointer",fontFamily:"inherit",flexShrink:0,transition:"all 0.18s ease",WebkitTapHighlightColor:"transparent",touchAction:"manipulation",userSelect:"none",WebkitUserSelect:"none"}}>
-    <span style={{width:7,height:7,borderRadius:"50%",flexShrink:0,background:rateLoading?"#888":bcvRate?"#4caf50":"#555",boxShadow:bcvRate&&!rateLoading?"0 0 0 2px rgba(76,175,80,0.25)":"none",transition:"background 0.2s"}}/>
-    {showBs?"USD":"BS"}
-  </button>
+          <div style={{display:"flex",alignItems:"center",marginLeft:"auto",gap:0}}>
             <button onClick={()=>{const n=!searchOpen;setSearchOpen(n);setSearchQuery("");if(n&&mainView!=="shop"){setMainViewRaw("shop");setShopFilter("TODO");scrollTop();}}} style={S.iconBtn}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
             </button>
@@ -1134,6 +1130,20 @@ const fmtPrice=useCallback((usd:number)=>{if(showBs&&bcvRate){const bs=usd*bcvRa
             <input autoFocus value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} placeholder="Buscar productos…" style={{...S.input,borderRadius:8}}/>
           </div>
         )}
+        <div style={{borderTop:"1px solid #161616",padding:"0 1rem",height:36,display:"flex",alignItems:"center",justifyContent:"space-between",gap:"0.5rem"}}>
+          <div style={{display:"flex",alignItems:"center",gap:6}}>
+            <span style={{width:6,height:6,borderRadius:"50%",background:rateLoading?"#555":bcvRate?"#4caf50":"#555",flexShrink:0}}/>
+            <span style={{fontSize:10,color:"#444",fontWeight:700,letterSpacing:0.5}}>
+              {rateLoading?"Cargando tasa BCV…":bcvRate?`1 USD = ${bcvRate.toLocaleString("es-VE",{minimumFractionDigits:2,maximumFractionDigits:2})} Bs · BCV`:"Tasa BCV"}
+            </span>
+          </div>
+          <button
+            onClick={()=>{if(!showBs)fetchBcvRate();setShowBs(s=>!s);}}
+            style={{display:"flex",alignItems:"center",gap:5,background:showBs?"#fff":"#1a1a1a",color:showBs?"#080808":"#888",border:`1px solid ${showBs?"#fff":"#2a2a2a"}`,borderRadius:20,padding:"4px 14px",fontSize:10,fontWeight:900,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",flexShrink:0,transition:"all 0.15s",WebkitTapHighlightColor:"transparent",touchAction:"manipulation"}}
+          >
+            {showBs?"VER EN USD ↕":"VER EN BS ↕"}
+          </button>
+        </div>
       </nav>
 
       {/* MENÚ LATERAL */}
