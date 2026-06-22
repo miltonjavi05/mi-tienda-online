@@ -833,7 +833,7 @@ export default function Home() {
   const[showReviewModal,setShowReviewModal]=useState(false);
 const photoInputRef              = useRef<HTMLInputElement>(null);
 const[bcvRate,setBcvRate]        = useState<number|null>(null);
-const[showBs,setShowBs]          = useState(false);
+const[showBs,setShowBs]          = useState(true);
 const[rateLoading,setRateLoading]= useState(false);
 const fetchBcvRate=useCallback(async()=>{if(bcvRate)return;setRateLoading(true);try{const r=await fetch("https://pydolarve.org/api/v1/dollar?page=bcv&monitor=usd");const d=await r.json();const parsed=parseFloat(d.price??d.monitors?.usd?.price??0);if(parsed>0){setBcvRate(parsed);setRateLoading(false);return;}throw new Error("sin tasa");}catch{try{const r2=await fetch("https://api.exchangerate-api.com/v4/latest/USD");const d2=await r2.json();const parsed2=parseFloat(d2.rates?.VES??0);if(parsed2>0)setBcvRate(parsed2);}catch{/*silencioso*/}}finally{setRateLoading(false);}},[bcvRate]);
 const fmtPrice=useCallback((usd:number)=>{if(showBs&&bcvRate){const bs=usd*bcvRate;return"Bs. "+bs.toLocaleString("es-VE",{minimumFractionDigits:2,maximumFractionDigits:2});}return"$"+usd.toFixed(2);},[showBs,bcvRate]);
@@ -894,11 +894,12 @@ const fmtPrice=useCallback((usd:number)=>{if(showBs&&bcvRate){const bs=usd*bcvRa
 
   useEffect(()=>{
     try{const stored=localStorage.getItem("fokus_user");if(stored){const parsed=JSON.parse(stored) as UserData;setCurrentUser(parsed);const rt=localStorage.getItem("fokus_refresh");if(rt&&parsed.uid){refreshIdToken(rt).then(async result=>{if(result){const fsData=await fsGetUser(parsed.uid).catch(()=>({photoURL:""}));setCurrentUser(prev=>{if(!prev)return prev;const updated={...prev,idToken:result.idToken,photoURL:fsData.photoURL||prev.photoURL||""};localStorage.setItem("fokus_user",JSON.stringify(updated));return updated;});}}).catch(()=>{});}}else{setCurrentUser(null);}}catch{setCurrentUser(null);}
-  },[]);
+  }, []);
+
+  useEffect(()=>{fetchBcvRate();},[]);
 
   useEffect(()=>{
-    if(currentUser===undefined)return;
-    if(currentUser)localStorage.setItem("fokus_user",JSON.stringify(currentUser));
+    if(currentUser===undefined)return;if(currentUser)localStorage.setItem("fokus_user",JSON.stringify(currentUser));
     else{localStorage.removeItem("fokus_user");localStorage.removeItem("fokus_refresh");}
   },[currentUser]);
 
@@ -1108,7 +1109,10 @@ const fmtPrice=useCallback((usd:number)=>{if(showBs&&bcvRate){const bs=usd*bcvRa
             <span style={{color:"#fff",fontSize:16,fontWeight:900,letterSpacing:5,whiteSpace:"nowrap"}}>FOKUS</span>
           </button>
           <div style={{display:"flex",alignItems:"center",marginLeft:"auto",gap:4}}>
-  <button onClick={()=>{if(!showBs)fetchBcvRate();setShowBs(s=>!s);}} style={{display:"flex",alignItems:"center",gap:5,background:showBs?"#fff":"rgba(255,255,255,0.06)",color:showBs?"#080808":"#fff",border:`1px solid ${showBs?"#fff":"rgba(255,255,255,0.15)"}`,borderRadius:20,padding:"4px 11px",fontSize:10,fontWeight:800,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",flexShrink:0,transition:"all 0.18s ease",WebkitTapHighlightColor:"transparent"}}><span style={{width:6,height:6,borderRadius:"50%",flexShrink:0,background:rateLoading?"#888":bcvRate?"#4caf50":"#666"}}/>{showBs&&bcvRate?bcvRate.toLocaleString("es-VE",{maximumFractionDigits:0})+" Bs":"BS"}</button>
+  <button onClick={()=>{if(!showBs)fetchBcvRate();setShowBs(s=>!s);}} style={{display:"flex",alignItems:"center",gap:6,background:showBs?"#fff":"#181818",color:showBs?"#080808":"#aaa",border:`1.5px solid ${showBs?"#fff":"#2a2a2a"}`,borderRadius:20,padding:"6px 14px",fontSize:11,fontWeight:900,letterSpacing:1.2,cursor:"pointer",fontFamily:"inherit",flexShrink:0,transition:"all 0.18s ease",WebkitTapHighlightColor:"transparent",touchAction:"manipulation",userSelect:"none",WebkitUserSelect:"none"}}>
+    <span style={{width:7,height:7,borderRadius:"50%",flexShrink:0,background:rateLoading?"#888":bcvRate?"#4caf50":"#555",boxShadow:bcvRate&&!rateLoading?"0 0 0 2px rgba(76,175,80,0.25)":"none",transition:"background 0.2s"}}/>
+    {showBs?"USD":"BS"}
+  </button>
             <button onClick={()=>{const n=!searchOpen;setSearchOpen(n);setSearchQuery("");if(n&&mainView!=="shop"){setMainViewRaw("shop");setShopFilter("TODO");scrollTop();}}} style={S.iconBtn}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
             </button>
@@ -1224,7 +1228,17 @@ const fmtPrice=useCallback((usd:number)=>{if(showBs&&bcvRate){const bs=usd*bcvRa
       {/* TIENDA */}
       {isShop&&(
         <main style={{paddingTop:navH,background:C.bg}}>
-          <div style={{position:"sticky",top:stickyTop,zIndex:100,background:"rgba(8,8,8,0.97)",borderBottom:`1px solid ${C.border}`,backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)"}}>
+          {bcvRate&&(
+        <div style={{background:"#0a150a",borderBottom:"1px solid #1a2e1a",padding:"6px 1rem",display:"flex",alignItems:"center",justifyContent:"center",gap:"0.6rem",flexWrap:"wrap"}}>
+          <span style={{fontSize:10,color:"#4caf50",fontWeight:800,letterSpacing:1}}>● TASA BCV HOY</span>
+          <span style={{fontSize:11,color:"#3a7a3a",fontWeight:700}}>1 USD = {bcvRate.toLocaleString("es-VE",{minimumFractionDigits:2,maximumFractionDigits:2})} Bs</span>
+          <span style={{fontSize:9,color:"#1e3e1e",letterSpacing:0.5}}>· Precios mostrados en {showBs?"bolívares":"dólares"}</span>
+          <button onClick={()=>setShowBs(s=>!s)} style={{background:"#fff",color:"#080808",border:"none",borderRadius:10,padding:"3px 10px",fontSize:9,fontWeight:900,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>
+            VER EN {showBs?"USD":"BS"}
+          </button>
+        </div>
+      )}
+      <div style={{position:"sticky",top:stickyTop,zIndex:100,background:"rgba(8,8,8,0.97)",borderBottom:`1px solid ${C.border}`,backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)"}}>
             <NativeTabs
               items={["TODO","LENTES",...(SHOP_CATS.filter(c=>c!=="LENTES") as string[])]}
               active={shopFilter==="TODO"?"TODO":isLentesActive?"LENTES":(SHOP_CATS.filter(c=>c!=="LENTES") as string[]).includes(shopFilter)?shopFilter:"TODO"}
