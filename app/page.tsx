@@ -415,7 +415,6 @@ const ProductCard=memo(function ProductCard({product,onClick,fmtPrice}:{product:
       </div>
       <p style={{margin:"0 0 3px",fontSize:12,lineHeight:1.35,color:"#bbb",letterSpacing:0.2}}>{product.name}</p>
       <p style={{margin:0,fontSize:14,fontWeight:800,color:C.accent,letterSpacing:0.5}}>{fmtPrice(product.price)}</p>
-      <p style={{margin:"2px 0 0",fontSize:11,color:"#444",letterSpacing:0.2}}>≈ ${product.price.toFixed(2)}</p>
     </div>
   );
 });
@@ -430,14 +429,6 @@ const HCard=memo(function HCard({product,onClick,fmtPrice}:{product:Product;onCl
       </div>
       <p style={{margin:"0 0 2px",fontSize:11,lineHeight:1.35,color:"#bbb",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{product.name}</p>
       <p style={{margin:0,fontSize:13,fontWeight:800,color:C.accent}}>{fmtPrice(product.price)}</p>
-      <p style={{margin:"2px 0 0",fontSize:10,color:"#444"}}>≈ ${product.price.toFixed(2)}</p>
-      <p style={{margin:"2px 0 0",fontSize:10,color:"#444"}}>≈ ${product.price.toFixed(2)}</p>
-      <p style={{margin:"2px 0 0",fontSize:10,color:"#444"}}>≈ ${product.price.toFixed(2)}</p>
-      <p style={{margin:"2px 0 0",fontSize:10,color:"#444"}}>≈ ${product.price.toFixed(2)}</p>
-      <p style={{margin:"2px 0 0",fontSize:10,color:"#444"}}>≈ ${product.price.toFixed(2)}</p>
-      <p style={{margin:"2px 0 0",fontSize:10,color:"#444"}}>≈ ${product.price.toFixed(2)}</p>
-      <p style={{margin:"2px 0 0",fontSize:10,color:"#444"}}>≈ ${product.price.toFixed(2)}</p>
-      <p style={{margin:"2px 0 0",fontSize:10,color:"#444"}}>≈ ${product.price.toFixed(2)}</p>
     </div>
   );
 });
@@ -463,14 +454,14 @@ const HRow=memo(function HRow({products,onSelect,fmtPrice}:{products:Product[];o
 });
 
 // ─── ADDED MODAL ─────────────────────────────────────────────────────────────
-const AddedModal=memo(function AddedModal({product,onClose,onGoCart,fmtPrice}:{product:Product;onClose:()=>void;onGoCart:()=>void;fmtPrice:(n:number)=>string}){
+const AddedModal=memo(function AddedModal({product,onClose,onGoCart}:{product:Product;onClose:()=>void;onGoCart:()=>void}){
   return(
     <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:600,background:"rgba(0,0,0,0.72)",display:"flex",alignItems:"flex-end",justifyContent:"center",animation:"fadeIn 0.18s ease"}}>
       <div onClick={e=>e.stopPropagation()} style={{background:"#161616",width:"100%",maxWidth:520,borderRadius:"18px 18px 0 0",padding:"1.25rem 1.25rem 2rem",animation:"slideUp 0.28s cubic-bezier(0.34,1.3,0.64,1)",border:"1px solid #222",borderBottom:"none"}}>
         <div style={{width:36,height:3,background:"#333",borderRadius:2,margin:"0 auto 1.25rem"}}/>
         <div style={{display:"flex",gap:"0.85rem",alignItems:"center",marginBottom:"1.25rem"}}>
           <div style={{width:58,height:58,borderRadius:8,overflow:"hidden",flexShrink:0,background:"#111"}}><img src={optImg(product.img,120)} alt={product.name} style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/></div>
-          <div style={{flex:1}}><p style={{margin:"0 0 2px",fontSize:11,color:"#555",letterSpacing:1.5,fontWeight:700}}>AÑADIDO AL CARRITO</p><p style={{margin:"0 0 2px",fontSize:14,color:C.text,fontWeight:600,lineHeight:1.3}}>{product.name}</p><p style={{margin:0,fontSize:13,color:"#888"}}><span style={{color:C.accent,fontWeight:700}}>{fmtPrice(product.price)}</span></p></div>
+          <div style={{flex:1}}><p style={{margin:"0 0 2px",fontSize:11,color:"#555",letterSpacing:1.5,fontWeight:700}}>AÑADIDO AL CARRITO</p><p style={{margin:"0 0 2px",fontSize:14,color:C.text,fontWeight:600,lineHeight:1.3}}>{product.name}</p><p style={{margin:0,fontSize:13,color:"#888"}}><span style={{color:C.accent,fontWeight:700}}>${product.price.toFixed(2)}</span></p></div>
           <div style={{width:32,height:32,borderRadius:"50%",background:"#1a2e1a",border:"1.5px solid #2a4a2a",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,animation:"scaleIn 0.3s cubic-bezier(0.34,1.4,0.64,1)"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.65rem"}}>
@@ -1405,13 +1396,13 @@ const fmtPrice=useCallback((usd:number)=>{if(showBs&&bcvRate){const bs=usd*bcvRa
                       <img src={optImg(item.product.img,120)} alt={item.product.name} style={{width:52,height:52,objectFit:"cover",borderRadius:6,pointerEvents:"none"}} draggable={false}/>
                       <span style={{fontSize:13,color:"#bbb"}}>{item.product.name}</span>
                     </div>
-                    <span style={{fontSize:13,color:"#555"}}>{fmtPrice(item.product.price)}</span>
+                    <span style={{fontSize:13,color:"#555"}}>${item.product.price.toFixed(2)}</span>
                     <div style={{display:"flex",alignItems:"center",border:`1px solid ${C.border}`,borderRadius:6}}>
                       <button onClick={()=>updQty(item.product.id,-1)} style={S.qtyBtn}>−</button>
                       <span style={{padding:"0 0.5rem",fontSize:14,color:C.text,minWidth:24,textAlign:"center"}}>{item.qty}</span>
                       <button onClick={()=>updQty(item.product.id,1)} style={S.qtyBtn}>+</button>
                     </div>
-                    <span style={{fontSize:14,fontWeight:800,color:C.accent}}>{fmtPrice(item.product.price*item.qty)}</span>
+                    <span style={{fontSize:14,fontWeight:800,color:C.accent}}>${(item.product.price*item.qty).toFixed(2)}</span>
                   </div>
                 ))}
                 <div style={{display:"flex",gap:"0.6rem",marginTop:"1.25rem",flexWrap:"wrap"}}>
@@ -1419,14 +1410,8 @@ const fmtPrice=useCallback((usd:number)=>{if(showBs&&bcvRate){const bs=usd*bcvRa
                   <button onClick={()=>setCart([])} style={{...S.darkBtn,background:"transparent",color:"#444",border:`1px solid ${C.border}`,borderRadius:4,fontSize:10,padding:"0.8rem 1.2rem"}}>Vaciar</button>
                 </div>
                 <div style={{marginTop:"2rem",background:"#0e0e0e",padding:"1.5rem",borderRadius:12,border:`1px solid ${C.border}`}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:"0.6rem",fontSize:13,color:"#555"}}><span>Subtotal</span><span>{fmtPrice(totalPrice)}</span></div>
-                  <div style={{borderTop:`1px solid ${C.border}`,paddingTop:"0.75rem",display:"flex",justifyContent:"space-between",alignItems:"flex-end",fontSize:18,fontWeight:900,color:C.accent}}>
-                    <span>Total</span>
-                    <div style={{textAlign:"right"}}>
-                      <span style={{display:"block"}}>{fmtPrice(totalPrice)}</span>
-                      <span style={{display:"block",fontSize:11,fontWeight:600,color:"#444"}}>${totalPrice.toFixed(2)} USD</span>
-                    </div>
-                  </div>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:"0.6rem",fontSize:13,color:"#555"}}><span>Subtotal</span><span>${totalPrice.toFixed(2)}</span></div>
+                  <div style={{borderTop:`1px solid ${C.border}`,paddingTop:"0.75rem",display:"flex",justifyContent:"space-between",fontSize:18,fontWeight:900,color:C.accent}}><span>Total</span><span>${totalPrice.toFixed(2)}</span></div>
                   {userReady&&!currentUser&&(<div style={{marginTop:"1.25rem",background:"#0a0a0a",borderRadius:10,padding:"1rem",border:"1px solid #1a1a1a",display:"flex",alignItems:"center",justifyContent:"space-between",gap:"0.75rem",flexWrap:"wrap"}}><p style={{margin:0,fontSize:12,color:"#555",lineHeight:1.5}}>¿Tienes cuenta? Inicia sesión para un pedido más rápido</p><button onClick={()=>setShowAuth(true)} style={{...S.darkBtn,borderRadius:8,padding:"0.6rem 1rem",fontSize:11,flexShrink:0}}>ENTRAR</button></div>)}
                   <div style={{marginTop:"1.75rem"}}><DeliveryForm info={deliveryInfo} onChange={setDeliveryInfo}/></div>
                   <div style={{marginTop:"1.75rem"}}>
@@ -1493,10 +1478,7 @@ const fmtPrice=useCallback((usd:number)=>{if(showBs&&bcvRate){const bs=usd*bcvRa
             </div>
             <h2 style={{fontSize:18,fontWeight:900,margin:"0 0 0.35rem",color:C.accent}}>{selectedProduct.name}</h2>
             {selectedProduct.description&&<p style={{fontSize:13,color:"#555",margin:"0 0 0.65rem",lineHeight:1.6}}>{selectedProduct.description}</p>}
-            <div style={{margin:"0 0 1.5rem"}}>
-              <p style={{fontSize:24,fontWeight:900,margin:"0 0 2px",color:C.accent}}>{fmtPrice(selectedProduct.price)}</p>
-              <p style={{fontSize:11,color:"#444",margin:0}}>≈ ${selectedProduct.price.toFixed(2)} USD</p>
-            </div>
+            <p style={{fontSize:24,fontWeight:900,margin:"0 0 1.5rem",color:C.accent}}>{fmtPrice(selectedProduct.price)}</p>
             <div style={{display:"flex",alignItems:"center",border:`1px solid ${C.border}`,width:"fit-content",marginBottom:"1rem",borderRadius:8}}>
               <button onClick={()=>setModalQty(Math.max(1,modalQty-1))} style={S.qtyBtn}>−</button>
               <span style={{padding:"0 1rem",fontSize:16,color:C.text,fontWeight:700}}>{modalQty}</span>
@@ -1507,7 +1489,7 @@ const fmtPrice=useCallback((usd:number)=>{if(showBs&&bcvRate){const bs=usd*bcvRa
         </div>
       )}
 
-      {addedProduct&&<AddedModal product={addedProduct} onClose={()=>setAddedProduct(null)} onGoCart={()=>{setAddedProduct(null);setMainView("cart");}} fmtPrice={fmtPrice}/>}
+      {addedProduct&&<AddedModal product={addedProduct} onClose={()=>setAddedProduct(null)} onGoCart={()=>{setAddedProduct(null);setMainView("cart");}}/>}
       {showAuth&&<AuthModal onClose={()=>setShowAuth(false)} onSuccess={u=>{setCurrentUser(u);setShowAuth(false);}}/>}
       {!isAdmin&&<DraggableWA/>}
     </div>
