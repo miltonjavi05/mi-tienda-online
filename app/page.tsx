@@ -406,7 +406,7 @@ const NativeTabs=memo(function NativeTabs({items,active,onSelect,renderItem,heig
 });
 
 // ─── PRODUCT CARD (GRID) ──────────────────────────────────────────────────────
-const ProductCard=memo(function ProductCard({product,onClick}:{product:Product;onClick:()=>void;index:number}){
+const ProductCard=memo(function ProductCard({product,onClick,fmtPrice}:{product:Product;onClick:()=>void;index:number;fmtPrice:(n:number)=>string}){
   return(
     <div className="pc" onClick={onClick} style={{cursor:"pointer",WebkitTapHighlightColor:"transparent",touchAction:"manipulation"}}>
       <div style={{background:"#111",aspectRatio:"1",overflow:"hidden",marginBottom:"0.55rem",borderRadius:10,position:"relative"}}>
@@ -414,13 +414,13 @@ const ProductCard=memo(function ProductCard({product,onClick}:{product:Product;o
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
       </div>
       <p style={{margin:"0 0 3px",fontSize:12,lineHeight:1.35,color:"#bbb",letterSpacing:0.2}}>{product.name}</p>
-      <p style={{margin:0,fontSize:14,fontWeight:800,color:C.accent,letterSpacing:0.5}}>${product.price.toFixed(2)}</p>
+      <p style={{margin:0,fontSize:14,fontWeight:800,color:C.accent,letterSpacing:0.5}}>{fmtPrice(product.price)}</p>
     </div>
   );
 });
 
 // ─── HORIZONTAL CARD ─────────────────────────────────────────────────────────
-const HCard=memo(function HCard({product,onClick}:{product:Product;onClick:()=>void}){
+const HCard=memo(function HCard({product,onClick,fmtPrice}:{product:Product;onClick:()=>void;fmtPrice:(n:number)=>string}){
   return(
     <div className="hc" onClick={onClick} style={{cursor:"pointer",flexShrink:0,width:148,WebkitTapHighlightColor:"transparent",touchAction:"manipulation"}}>
       <div style={{background:"#111",width:148,height:148,overflow:"hidden",marginBottom:"0.5rem",borderRadius:10,position:"relative"}}>
@@ -428,13 +428,13 @@ const HCard=memo(function HCard({product,onClick}:{product:Product;onClick:()=>v
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
       </div>
       <p style={{margin:"0 0 2px",fontSize:11,lineHeight:1.35,color:"#bbb",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{product.name}</p>
-      <p style={{margin:0,fontSize:13,fontWeight:800,color:C.accent}}>${product.price.toFixed(2)}</p>
+      <p style={{margin:0,fontSize:13,fontWeight:800,color:C.accent}}>{fmtPrice(product.price)}</p>
     </div>
   );
 });
 
 // ─── HORIZONTAL ROW ───────────────────────────────────────────────────────────
-const HRow=memo(function HRow({products,onSelect}:{products:Product[];onSelect:(p:Product)=>void}){
+const HRow=memo(function HRow({products,onSelect,fmtPrice}:{products:Product[];onSelect:(p:Product)=>void;fmtPrice:(n:number)=>string}){
   const rowRef=useRef<HTMLDivElement>(null);
   const[showLeft,setShowLeft]=useState(false);
   const[showRight,setShowRight]=useState(false);
@@ -447,7 +447,7 @@ const HRow=memo(function HRow({products,onSelect}:{products:Product[];onSelect:(
       <button onClick={()=>scrollBy(-1)} className={`hr-arrow${showLeft?" hr-arrow-visible":""}`} style={{...arrowBase,left:-4}} aria-label="Anterior"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
       <button onClick={()=>scrollBy(1)} className={`hr-arrow${showRight?" hr-arrow-visible":""}`} style={{...arrowBase,right:-4}} aria-label="Siguiente"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
       <div ref={rowRef} className="hr" style={{display:"flex",gap:"0.75rem",overflowX:"scroll",overflowY:"hidden",paddingBottom:"0.5rem",paddingLeft:"0.25rem",paddingRight:"1rem",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",touchAction:"pan-x pan-y",userSelect:"none",WebkitUserSelect:"none",scrollSnapType:"x proximity"} as React.CSSProperties}>
-        {products.map(p=>(<div key={p.id} style={{scrollSnapAlign:"start",flexShrink:0}}><HCard product={p} onClick={()=>onSelect(p)}/></div>))}
+        {products.map(p=>(<div key={p.id} style={{scrollSnapAlign:"start",flexShrink:0}}><HCard product={p} onClick={()=>onSelect(p)} fmtPrice={fmtPrice}/></div>))}
       </div>
     </div>
   );
@@ -831,8 +831,12 @@ export default function Home() {
   const[nameLoading,setNameLoading]= useState(false);
   const[photoLoading,setPhotoLoading]=useState(false);
   const[showReviewModal,setShowReviewModal]=useState(false);
-  const photoInputRef              = useRef<HTMLInputElement>(null);
-
+const photoInputRef              = useRef<HTMLInputElement>(null);
+const[bcvRate,setBcvRate]        = useState<number|null>(null);
+const[showBs,setShowBs]          = useState(false);
+const[rateLoading,setRateLoading]= useState(false);
+const fetchBcvRate=useCallback(async()=>{if(bcvRate)return;setRateLoading(true);try{const r=await fetch("https://pydolarve.org/api/v1/dollar?page=bcv&monitor=usd");const d=await r.json();const parsed=parseFloat(d.price??d.monitors?.usd?.price??0);if(parsed>0){setBcvRate(parsed);setRateLoading(false);return;}throw new Error("sin tasa");}catch{try{const r2=await fetch("https://api.exchangerate-api.com/v4/latest/USD");const d2=await r2.json();const parsed2=parseFloat(d2.rates?.VES??0);if(parsed2>0)setBcvRate(parsed2);}catch{/*silencioso*/}}finally{setRateLoading(false);}},[bcvRate]);
+const fmtPrice=useCallback((usd:number)=>{if(showBs&&bcvRate){const bs=usd*bcvRate;return"Bs. "+bs.toLocaleString("es-VE",{minimumFractionDigits:2,maximumFractionDigits:2});}return"$"+usd.toFixed(2);},[showBs,bcvRate]);
   const setMainView=useCallback((v:MainView)=>{setMainViewRaw(v);scrollTop();const paths:Partial<Record<MainView,string>>={fokus:"/",shop:"/tienda",comunidad:"/comunidad",grabados:"/grabados",cart:"/carrito",account:"/cuenta"};const p=paths[v];if(p&&typeof window!=="undefined")window.history.pushState({},"",p);},[]);
   const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",cedula:"",telefono:"",agencia:"",direccion:"",estado:""});
 
@@ -1103,7 +1107,8 @@ export default function Home() {
             <img src="/favicon.png" alt="Fokus" width={26} height={26} style={{objectFit:"contain",flexShrink:0,pointerEvents:"none"}} draggable={false}/>
             <span style={{color:"#fff",fontSize:16,fontWeight:900,letterSpacing:5,whiteSpace:"nowrap"}}>FOKUS</span>
           </button>
-          <div style={{display:"flex",marginLeft:"auto",gap:0}}>
+          <div style={{display:"flex",alignItems:"center",marginLeft:"auto",gap:4}}>
+  <button onClick={()=>{if(!showBs)fetchBcvRate();setShowBs(s=>!s);}} style={{display:"flex",alignItems:"center",gap:5,background:showBs?"#fff":"rgba(255,255,255,0.06)",color:showBs?"#080808":"#fff",border:`1px solid ${showBs?"#fff":"rgba(255,255,255,0.15)"}`,borderRadius:20,padding:"4px 11px",fontSize:10,fontWeight:800,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",flexShrink:0,transition:"all 0.18s ease",WebkitTapHighlightColor:"transparent"}}><span style={{width:6,height:6,borderRadius:"50%",flexShrink:0,background:rateLoading?"#888":bcvRate?"#4caf50":"#666"}}/>{showBs&&bcvRate?bcvRate.toLocaleString("es-VE",{maximumFractionDigits:0})+" Bs":"BS"}</button>
             <button onClick={()=>{const n=!searchOpen;setSearchOpen(n);setSearchQuery("");if(n&&mainView!=="shop"){setMainViewRaw("shop");setShopFilter("TODO");scrollTop();}}} style={S.iconBtn}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
             </button>
@@ -1247,7 +1252,7 @@ export default function Home() {
                       <h2 style={{fontSize:11,fontWeight:800,letterSpacing:3,margin:0,color:"#555"}}>{isLC?`LENTES · ${catLabel(cat).toUpperCase()}`:catLabel(cat).toUpperCase()}</h2>
                       <button onClick={()=>{setShopFilter(cat as ShopFilter);setLentesOpen(isLC);scrollTop();}} style={{background:"none",border:"none",fontSize:10,color:"#333",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",letterSpacing:1,fontWeight:700}}>VER TODOS</button>
                     </div>
-                    <HRow products={prods} onSelect={openProd}/>
+                    <HRow products={prods} onSelect={openProd} fmtPrice={fmtPrice}/>
                   </div>
                 );
               })
@@ -1263,7 +1268,7 @@ export default function Home() {
                       <button onClick={()=>{setShopFilter(cat as ShopFilter);setLentesOpen(isLC);scrollTop();}} style={{background:"none",border:"none",fontSize:10,color:"#333",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",letterSpacing:1,fontWeight:700}}>VER TODOS</button>
                     </div>
                     <div className="pg" style={{display:"grid",gap:"1rem"}}>
-                      {prods.map((p,i)=><ProductCard key={p.id} product={p} index={i} onClick={()=>openProd(p)}/>)}
+                      {prods.map((p,i)=><ProductCard key={p.id} product={p} index={i} onClick={()=>openProd(p)} fmtPrice={fmtPrice}/>)}
                     </div>
                   </div>
                 );
@@ -1449,7 +1454,7 @@ export default function Home() {
             </div>
             <h2 style={{fontSize:18,fontWeight:900,margin:"0 0 0.35rem",color:C.accent}}>{selectedProduct.name}</h2>
             {selectedProduct.description&&<p style={{fontSize:13,color:"#555",margin:"0 0 0.65rem",lineHeight:1.6}}>{selectedProduct.description}</p>}
-            <p style={{fontSize:24,fontWeight:900,margin:"0 0 1.5rem",color:C.accent}}>${selectedProduct.price.toFixed(2)}</p>
+            <p style={{fontSize:24,fontWeight:900,margin:"0 0 1.5rem",color:C.accent}}>{fmtPrice(selectedProduct.price)}</p>
             <div style={{display:"flex",alignItems:"center",border:`1px solid ${C.border}`,width:"fit-content",marginBottom:"1rem",borderRadius:8}}>
               <button onClick={()=>setModalQty(Math.max(1,modalQty-1))} style={S.qtyBtn}>−</button>
               <span style={{padding:"0 1rem",fontSize:16,color:C.text,fontWeight:700}}>{modalQty}</span>
