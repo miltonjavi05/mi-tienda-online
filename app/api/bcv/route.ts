@@ -53,3 +53,4 @@ export async function GET() {
 
   return NextResponse.json({ rate: cached.rate });
 }
+
