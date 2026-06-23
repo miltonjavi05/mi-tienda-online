@@ -183,8 +183,23 @@ async function trackInitiateCheckout(items: CartItem[], total: number, userEmail
 }
 async function trackPurchase(orderId: string, total: number, items: CartItem[], userEmail?: string, userPhone?: string): Promise<void> {
   const eventId = genEventId();
-  fbqTrack("Purchase", { order_id:orderId, value:total, currency:"USD", content_ids:items.map(i=>i.product.id), content_type:"product", num_items:items.reduce((s,i)=>s+i.qty,0), contents:items.map(i=>({ id:i.product.id, quantity:i.qty, item_price:i.product.price })) }, { eventID: eventId });
-  await sendCAPI("Purchase", eventId, { value:total, currency:"USD", content_ids:items.map(i=>i.product.id), content_type:"product", num_items:items.reduce((s,i)=>s+i.qty,0) }, { email: userEmail, phone: userPhone });
+  const roundedTotal = Math.round(total * 100) / 100;
+  fbqTrack("Purchase", {
+    value: roundedTotal,
+    currency: "USD",
+    order_id: orderId,
+    content_ids: items.map(i => i.product.id),
+    content_type: "product",
+    num_items: items.reduce((s, i) => s + i.qty, 0),
+    contents: items.map(i => ({ id: i.product.id, quantity: i.qty, item_price: Math.round(i.product.price * 100) / 100 }))
+  }, { eventID: eventId });
+  await sendCAPI("Purchase", eventId, {
+    value: roundedTotal,
+    currency: "USD",
+    content_ids: items.map(i => i.product.id),
+    content_type: "product",
+    num_items: items.reduce((s, i) => s + i.qty, 0)
+  }, { email: userEmail, phone: userPhone });
 }
 
 // ─── FIREBASE REST ────────────────────────────────────────────────────────────
