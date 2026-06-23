@@ -835,7 +835,56 @@ const photoInputRef              = useRef<HTMLInputElement>(null);
 const[bcvRate,setBcvRate]        = useState<number|null>(null);
 const[showBs,setShowBs]          = useState(true);
 const[rateLoading,setRateLoading]= useState(false);
-const fetchBcvRate=useCallback(async()=>{if(bcvRate)return;setRateLoading(true);try{const r=await fetch("https://pydolarve.org/api/v1/dollar?page=bcv&monitor=usd");const d=await r.json();const parsed=parseFloat(d.price??d.monitors?.usd?.price??0);if(parsed>0){setBcvRate(parsed);setRateLoading(false);return;}throw new Error("sin tasa");}catch{try{const r2=await fetch("https://api.exchangerate-api.com/v4/latest/USD");const d2=await r2.json();const parsed2=parseFloat(d2.rates?.VES??0);if(parsed2>0)setBcvRate(parsed2);}catch{/*silencioso*/}}finally{setRateLoading(false);}},[bcvRate]);
+const BCV_CACHE_KEY = "fokus_bcv_rate";
+const BCV_CACHE_TIME = "fokus_bcv_time";
+const BCV_TTL = 6 * 60 * 60 * 1000; // 6 horas en ms
+
+const fetchBcvRate = useCallback(async (force = false) => {
+  if (!force) {
+    try {
+      const cached = localStorage.getItem(BCV_CACHE_KEY);
+      const cachedTime = localStorage.getItem(BCV_CACHE_TIME);
+      if (cached && cachedTime && Date.now() - Number(cachedTime) < BCV_TTL) {
+        const parsed = parseFloat(cached);
+        if (parsed > 0) {
+          setBcvRate(parsed);
+          return;
+        }
+      }
+    } catch { /* silent */ }
+  }
+
+  setRateLoading(true);
+  try {
+    const r = await fetch("/api/bcv");
+    const d = await r.json();
+    const parsed = parseFloat(d.rate ?? 0);
+    if (parsed > 0) {
+      setBcvRate(parsed);
+      try {
+        localStorage.setItem(BCV_CACHE_KEY, String(parsed));
+        localStorage.setItem(BCV_CACHE_TIME, String(Date.now()));
+      } catch { /* silent */ }
+      return;
+    }
+    throw new Error("sin tasa");
+  } catch {
+    try {
+      const r2 = await fetch("https://api.exchangerate-api.com/v4/latest/USD");
+      const d2 = await r2.json();
+      const parsed2 = parseFloat(d2.rates?.VES ?? 0);
+      if (parsed2 > 0) {
+        setBcvRate(parsed2);
+        try {
+          localStorage.setItem(BCV_CACHE_KEY, String(parsed2));
+          localStorage.setItem(BCV_CACHE_TIME, String(Date.now()));
+        } catch { /* silent */ }
+      }
+    } catch { /* silencioso */ }
+  } finally {
+    setRateLoading(false);
+  }
+}, []);
 const fmtPrice=useCallback((usd:number)=>{if(showBs&&bcvRate){const bs=usd*bcvRate;return"Bs. "+bs.toLocaleString("es-VE",{minimumFractionDigits:2,maximumFractionDigits:2});}return"$"+usd.toFixed(2);},[showBs,bcvRate]);
   const setMainView=useCallback((v:MainView)=>{setMainViewRaw(v);scrollTop();const paths:Partial<Record<MainView,string>>={fokus:"/",shop:"/tienda",comunidad:"/comunidad",grabados:"/grabados",cart:"/carrito",account:"/cuenta"};const p=paths[v];if(p&&typeof window!=="undefined")window.history.pushState({},"",p);},[]);
   const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",cedula:"",telefono:"",agencia:"",direccion:"",estado:""});
@@ -896,7 +945,27 @@ const fmtPrice=useCallback((usd:number)=>{if(showBs&&bcvRate){const bs=usd*bcvRa
     try{const stored=localStorage.getItem("fokus_user");if(stored){const parsed=JSON.parse(stored) as UserData;setCurrentUser(parsed);const rt=localStorage.getItem("fokus_refresh");if(rt&&parsed.uid){refreshIdToken(rt).then(async result=>{if(result){const fsData=await fsGetUser(parsed.uid).catch(()=>({photoURL:""}));setCurrentUser(prev=>{if(!prev)return prev;const updated={...prev,idToken:result.idToken,photoURL:fsData.photoURL||prev.photoURL||""};localStorage.setItem("fokus_user",JSON.stringify(updated));return updated;});}}).catch(()=>{});}}else{setCurrentUser(null);}}catch{setCurrentUser(null);}
   }, []);
 
-  useEffect(()=>{fetchBcvRate();},[]);
+  useEffect(() => {
+  fetchBcvRate();
+
+  // Actualiza cada 6 horas mientras la pestaña está abierta
+  const interval = setInterval(() => {
+    fetchBcvRate(true); // force = true para ignorar caché
+  }, 6 * 60 * 60 * 1000);
+
+  // También actualiza cuando el usuario vuelve a la pestaña
+  const onVisibility = () => {
+    if (document.visibilityState === "visible") {
+      fetchBcvRate(); // respeta el caché, solo actualiza si ya expiró
+    }
+  };
+  document.addEventListener("visibilitychange", onVisibility);
+
+  return () => {
+    clearInterval(interval);
+    document.removeEventListener("visibilitychange", onVisibility);
+  };
+}, [fetchBcvRate]);
 
   useEffect(()=>{
     if(currentUser===undefined)return;if(currentUser)localStorage.setItem("fokus_user",JSON.stringify(currentUser));
