@@ -183,22 +183,25 @@ async function trackInitiateCheckout(items: CartItem[], total: number, userEmail
 }
 async function trackPurchase(orderId: string, total: number, items: CartItem[], userEmail?: string, userPhone?: string): Promise<void> {
   const eventId = genEventId();
-  const roundedTotal = Math.round(total * 100) / 100;
+  const roundedTotal = parseFloat(total.toFixed(2));
+  const contents = items.map(i=>({ id: i.product.id, quantity: i.qty, item_price: parseFloat(i.product.price.toFixed(2)) }));
+  const contentIds = items.map(i=>i.product.id);
+  const numItems = items.reduce((s,i)=>s+i.qty,0);
   fbqTrack("Purchase", {
     value: roundedTotal,
     currency: "USD",
     order_id: orderId,
-    content_ids: items.map(i => i.product.id),
+    content_ids: contentIds,
     content_type: "product",
-    num_items: items.reduce((s, i) => s + i.qty, 0),
-    contents: items.map(i => ({ id: i.product.id, quantity: i.qty, item_price: Math.round(i.product.price * 100) / 100 }))
+    num_items: numItems,
+    contents: contents,
   }, { eventID: eventId });
   await sendCAPI("Purchase", eventId, {
     value: roundedTotal,
     currency: "USD",
-    content_ids: items.map(i => i.product.id),
+    content_ids: contentIds,
     content_type: "product",
-    num_items: items.reduce((s, i) => s + i.qty, 0)
+    num_items: numItems,
   }, { email: userEmail, phone: userPhone });
 }
 
@@ -782,7 +785,14 @@ const ThankYouView=memo(function ThankYouView({order,onBack,currentUser}:{order:
   const fired=useRef(false);
   const[phase,setPhase]=useState(0);
   useEffect(()=>{const t1=setTimeout(()=>setPhase(1),60);const t2=setTimeout(()=>setPhase(2),420);const t3=setTimeout(()=>setPhase(3),700);return()=>{clearTimeout(t1);clearTimeout(t2);clearTimeout(t3);};},[]);
-  useEffect(()=>{if(fired.current)return;fired.current=true;trackPurchase(order.orderId,order.total,order.items,currentUser?.email,order.deliveryInfo.telefono||undefined);},[]);// eslint-disable-line
+  useEffect(()=>{
+  if(fired.current)return;
+  fired.current=true;
+  const roundedTotal = parseFloat(order.total.toFixed(2));
+  if(roundedTotal > 0){
+    trackPurchase(order.orderId, roundedTotal, order.items, currentUser?.email, order.deliveryInfo.telefono||undefined);
+  }
+},[]);// eslint-disable-line
   useEffect(()=>{const canvas=canvasRef.current;if(!canvas)return;const ctx=canvas.getContext("2d");if(!ctx)return;canvas.width=window.innerWidth;canvas.height=window.innerHeight;const pieces=Array.from({length:70},()=>({x:canvas.width/2+(Math.random()-0.5)*60,y:canvas.height*0.35,vx:(Math.random()-0.5)*8,vy:-(Math.random()*11+4),sz:Math.random()*4+2,color:["#fff","#ddd","#aaa","#777","#444"][Math.floor(Math.random()*5)],rot:Math.random()*Math.PI*2,rv:(Math.random()-0.5)*0.16,alpha:1}));let raf:number;const draw=()=>{ctx.clearRect(0,0,canvas.width,canvas.height);let alive=false;for(const p of pieces){p.x+=p.vx;p.y+=p.vy;p.vy+=0.26;p.vx*=0.996;p.rot+=p.rv;p.alpha-=0.011;if(p.alpha<=0)continue;alive=true;ctx.save();ctx.globalAlpha=Math.max(0,p.alpha);ctx.fillStyle=p.color;ctx.translate(p.x,p.y);ctx.rotate(p.rot);ctx.fillRect(-p.sz/2,-p.sz/2,p.sz,p.sz*0.5);ctx.restore();}if(alive)raf=requestAnimationFrame(draw);};const t=setTimeout(()=>{raf=requestAnimationFrame(draw);},400);return()=>{clearTimeout(t);cancelAnimationFrame(raf);};},[]);
   const pm=PAYMENT_METHODS.find(m=>m.id===order.payMethod);
   const fade=(delay=0):React.CSSProperties=>({opacity:phase>=3?1:0,transform:phase>=3?"translateY(0)":"translateY(12px)",transition:`opacity 0.4s ${delay}s ease, transform 0.4s ${delay}s ease`});
