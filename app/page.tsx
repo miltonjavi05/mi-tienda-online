@@ -1520,7 +1520,25 @@ const fmtPrice=useCallback((usd:number)=>{if(showBs&&bcvRate){const bs=usd*bcvRa
                       {PAYMENT_METHODS.map(pm=>(<button key={pm.id} className="pc2" onClick={()=>setPayMethod(pm.id)} style={{display:"flex",alignItems:"center",gap:"0.85rem",background:payMethod===pm.id?"#fff":"#111",color:payMethod===pm.id?"#080808":C.text,border:`1px solid ${payMethod===pm.id?"#fff":"#1e1e1e"}`,borderRadius:10,padding:"0.8rem 1rem",textAlign:"left",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",transition:"all 0.15s"}}><span style={{fontSize:18}}>{pm.icon}</span><div><p style={{margin:0,fontSize:13,fontWeight:700}}>{pm.name}</p><p style={{margin:0,fontSize:10,opacity:0.5,marginTop:1}}>{pm.detail}</p></div>{payMethod===pm.id&&<span style={{marginLeft:"auto",fontSize:14,fontWeight:700}}>✓</span>}</button>))}
                     </div>
                   </div>
-                  {payMethod&&(()=>{const pm=PAYMENT_METHODS.find(m=>m.id===payMethod)!;return(<div style={{marginTop:"1rem",background:"#080808",borderRadius:10,padding:"1rem",border:"1px solid #1a1a1a"}}><p style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#333",marginBottom:"0.5rem"}}>DATOS — {pm.name.toUpperCase()}</p><p style={{fontSize:14,color:C.text,margin:0,fontWeight:600}}>{pm.detail}</p><p style={{fontSize:11,color:"#444",marginTop:"0.4rem",lineHeight:1.6}}>Realiza el pago y sube tu comprobante abajo para continuar.</p></div>);})()}
+                  {payMethod&&(()=>{const pm=PAYMENT_METHODS.find(m=>m.id===payMethod)!;return(
+  <div style={{marginTop:"1rem",background:"linear-gradient(135deg,#0d0d0d 0%,#0a0a0a 100%)",borderRadius:12,border:"1px solid #2a2a2a",overflow:"hidden"}}>
+    <div style={{padding:"0.6rem 1rem",borderBottom:"1px solid #1a1a1a",display:"flex",alignItems:"center",gap:"0.5rem",background:"rgba(255,255,255,0.02)"}}>
+      <span style={{fontSize:15}}>{pm.icon}</span>
+      <p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#444",margin:0}}>DATOS DE PAGO — {pm.name.toUpperCase()}</p>
+    </div>
+    <div style={{padding:"1rem 1.1rem"}}>
+      <p style={{fontSize:16,color:"#fff",margin:"0 0 0.85rem",fontWeight:800,letterSpacing:0.5,lineHeight:1.5}}>{pm.detail}</p>
+      <button
+        onClick={()=>{navigator.clipboard.writeText(pm.detail).catch(()=>{});}}
+        style={{display:"inline-flex",alignItems:"center",gap:"0.4rem",background:"#161616",border:"1px solid #2a2a2a",color:"#666",padding:"0.4rem 0.85rem",borderRadius:8,fontSize:10,fontWeight:800,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",marginBottom:"0.85rem"}}
+      >
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        COPIAR DATOS
+      </button>
+      <p style={{fontSize:11,color:"#444",margin:0,lineHeight:1.7,borderTop:"1px solid #1a1a1a",paddingTop:"0.75rem"}}>Realiza el pago y sube tu comprobante abajo para continuar.</p>
+    </div>
+  </div>
+);})()}
                   {payMethod&&<ComprobanteUpload url={comprobanteUrl} onUrl={setComprobante}/>}
                   {!deliveryInfo.zone&&<p style={{textAlign:"center",fontSize:10,color:"#555",marginTop:"0.75rem"}}>Selecciona el tipo de envio para continuar</p>}
                   {deliveryInfo.zone&&!payMethod&&<p style={{textAlign:"center",fontSize:10,color:"#555",marginTop:"0.5rem"}}>Selecciona un método de pago para continuar</p>}
