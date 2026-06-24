@@ -1528,24 +1528,13 @@ const fmtPrice=useCallback((usd:number)=>{if(showBs&&bcvRate){const bs=usd*bcvRa
     </div>
     <div style={{padding:"1rem 1.1rem"}}>
       <p style={{fontSize:16,color:"#fff",margin:"0 0 0.85rem",fontWeight:800,letterSpacing:0.5,lineHeight:1.5}}>{pm.detail}</p>
-     {(()=>{
-  const[copied,setCopied]=useState(false);
-  return(
-    <button
-      onClick={()=>{
-        navigator.clipboard.writeText(pm.detail).catch(()=>{});
-        setCopied(true);
-        setTimeout(()=>setCopied(false),2000);
-      }}
-      style={{display:"inline-flex",alignItems:"center",gap:"0.4rem",background:copied?"#0d1e0d":"#161616",border:`1px solid ${copied?"#2a4a2a":"#2a2a2a"}`,color:copied?"#4caf50":"#666",padding:"0.4rem 0.85rem",borderRadius:8,fontSize:10,fontWeight:800,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",marginBottom:"0.85rem",transition:"all 0.2s ease"}}
-    >
-      {copied
-        ?<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>¡COPIADO!</>
-        :<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>COPIAR DATOS</>
-      }
-    </button>
-  );
-})()}
+      <button
+        onClick={()=>{navigator.clipboard.writeText(pm.detail).catch(()=>{});}}
+        style={{display:"inline-flex",alignItems:"center",gap:"0.4rem",background:"#161616",border:"1px solid #2a2a2a",color:"#666",padding:"0.4rem 0.85rem",borderRadius:8,fontSize:10,fontWeight:800,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",marginBottom:"0.85rem"}}
+      >
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        COPIAR DATOS
+      </button>
       <p style={{fontSize:11,color:"#444",margin:0,lineHeight:1.7,borderTop:"1px solid #1a1a1a",paddingTop:"0.75rem"}}>Realiza el pago y sube tu comprobante abajo para continuar.</p>
     </div>
   </div>
