@@ -1505,7 +1505,13 @@ const fmtPrice=useCallback((usd:number)=>{if(showBs&&bcvRate){const bs=usd*bcvRa
                 </div>
                 <div style={{marginTop:"2rem",background:"#0e0e0e",padding:"1.5rem",borderRadius:12,border:`1px solid ${C.border}`}}>
 <div style={{display:"flex",justifyContent:"space-between",marginBottom:"0.6rem",fontSize:13,color:"#555"}}><span>Subtotal</span><span>{fmtPrice(totalPrice)}</span></div>
-<div style={{borderTop:`1px solid ${C.border}`,paddingTop:"0.75rem",display:"flex",justifyContent:"space-between",fontSize:18,fontWeight:900,color:C.accent}}><span>Total</span><span>{fmtPrice(totalPrice)}</span></div>
+<div style={{borderTop:`1px solid ${C.border}`,paddingTop:"0.75rem",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+  <span style={{fontSize:18,fontWeight:900,color:C.accent}}>Total</span>
+  <div style={{textAlign:"right"}}>
+    <span style={{fontSize:22,fontWeight:900,color:"#fff",display:"block"}}>{fmtPrice(totalPrice)}</span>
+    {showBs&&bcvRate&&<span style={{fontSize:10,color:"#444"}}>≈ ${totalPrice.toFixed(2)} USD</span>}
+  </div>
+</div>
                   {userReady&&!currentUser&&(<div style={{marginTop:"1.25rem",background:"#0a0a0a",borderRadius:10,padding:"1rem",border:"1px solid #1a1a1a",display:"flex",alignItems:"center",justifyContent:"space-between",gap:"0.75rem",flexWrap:"wrap"}}><p style={{margin:0,fontSize:12,color:"#555",lineHeight:1.5}}>¿Tienes cuenta? Inicia sesión para un pedido más rápido</p><button onClick={()=>setShowAuth(true)} style={{...S.darkBtn,borderRadius:8,padding:"0.6rem 1rem",fontSize:11,flexShrink:0}}>ENTRAR</button></div>)}
                   <div style={{marginTop:"1.75rem"}}><DeliveryForm info={deliveryInfo} onChange={setDeliveryInfo}/></div>
                   <div style={{marginTop:"1.75rem"}}>
@@ -1521,7 +1527,7 @@ const fmtPrice=useCallback((usd:number)=>{if(showBs&&bcvRate){const bs=usd*bcvRa
                   {payMethod&&deliveryValid&&!comprobanteUrl&&(<div style={{marginTop:"0.75rem",background:"rgba(255,180,0,0.06)",border:"1px solid rgba(255,180,0,0.2)",borderRadius:8,padding:"0.65rem 1rem",display:"flex",alignItems:"center",gap:"0.5rem"}}><span style={{fontSize:14}}>📎</span><p style={{margin:0,fontSize:11,color:"#c8a000",lineHeight:1.5,fontWeight:600}}>Sube el comprobante de pago para activar el envío del pedido</p></div>)}
                   <button onClick={handleSendOrder} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.75rem",width:"100%",marginTop:"1.25rem",background:canSendOrder?"#25D366":"#1a1a1a",color:canSendOrder?"#fff":"#444",padding:"1rem",fontWeight:900,letterSpacing:2,fontSize:11,border:`1px solid ${canSendOrder?"transparent":"#2a2a2a"}`,borderRadius:10,cursor:canSendOrder?"pointer":"not-allowed",fontFamily:"inherit",transition:"background 0.25s, color 0.25s"}}>
                     <IcWA s={18} c={canSendOrder?"#fff":"#444"}/>
-                    {canSendOrder?"CONFIRMAR Y ENVIAR PEDIDO":"NOTIFICAR PAGO"}
+                    {canSendOrder?"CONFIRMAR Y ENVIAR PEDIDO →":!deliveryInfo.zone?"SELECCIONA TIPO DE ENVÍO":!payMethod?"SELECCIONA MÉTODO DE PAGO":"SUBE EL COMPROBANTE PARA CONTINUAR"}
                   </button>
                 </div>
               </>
