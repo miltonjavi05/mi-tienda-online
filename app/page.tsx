@@ -63,10 +63,10 @@ const VENEZUELA_STATES = [
   "Trujillo","Vargas","Yaracuy","Zulia",
 ];
 const PAYMENT_METHODS = [
-  { id:"zinli",        icon:"💳", name:"Zinli",                           detail:"miltonjavi05@gmail.com" },
-  { id:"binance",      icon:"🟡", name:"Binance Pay",                     detail:"miltonjavi05@gmail.com" },
   { id:"pagomovil_bv", icon:"🏦", name:"Pago Móvil – Banco de Venezuela", detail:"Tlf: 04243005733 · C.I: 28442429" },
   { id:"pagomovil_ba", icon:"🏦", name:"Pago Móvil – Bancamiga",          detail:"Tlf: 04243005733 · C.I: 28442429" },
+  { id:"binance",      icon:"🟡", name:"Binance Pay",                     detail:"miltonjavi05@gmail.com" },
+  { id:"zinli",        icon:"💳", name:"Zinli",                           detail:"miltonjavi05@gmail.com" },
 ];
 const SHOP_CATS = ["LENTES","RELOJES","COLLARES","PULSERAS","ANILLOS","ARETES","BILLETERAS"] as const;
 const LENTES_SUBCATS = ["LENTES·FOTOCROMATICOS","LENTES·ANTI-LUZ-AZUL","LENTES·SOL","LENTES·MOTORIZADOS"] as const;
@@ -915,6 +915,7 @@ const fmtPrice=useCallback((usd:number)=>{if(showBs&&bcvRate){const bs=usd*bcvRa
   const setMainView=useCallback((v:MainView)=>{setMainViewRaw(v);scrollTop();const paths:Partial<Record<MainView,string>>={fokus:"/",shop:"/tienda",comunidad:"/comunidad",grabados:"/grabados",cart:"/carrito",account:"/cuenta"};const p=paths[v];if(p&&typeof window!=="undefined")window.history.pushState({},"",p);},[]);
   const payMethodRef=useRef<HTMLDivElement>(null);
 const comprobanteRef=useRef<HTMLDivElement>(null);
+const otroAutoScrolled=useRef(false);
 const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",cedula:"",telefono:"",agencia:"",direccion:"",estado:""});
 
   const navRef=useRef<HTMLElement>(null);
@@ -1539,9 +1540,18 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
                 if(!deliveryInfo.zone&&i.zone&&i.zone!=="otro"){
                   setTimeout(()=>payMethodRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),300);
                 }
+                const otroCompleto=i.zone==="otro"&&!!(i.nombre&&i.cedula&&i.telefono&&i.agencia&&i.estado&&i.direccion);
+                if(otroCompleto&&!otroAutoScrolled.current){
+                  otroAutoScrolled.current=true;
+                  setTimeout(()=>payMethodRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),450);
+                }
               }}/>
             </div>
             <div ref={payMethodRef} style={{marginTop:"1.75rem"}}>
+              <div style={{display:"flex",alignItems:"center",gap:"0.5rem",background:"rgba(255,255,255,0.03)",border:"1px solid #1a1a1a",borderRadius:8,padding:"0.6rem 0.85rem",marginBottom:"0.85rem"}}>
+                <span style={{fontSize:14}}>🔒</span>
+                <p style={{margin:0,fontSize:10,color:"#666",lineHeight:1.5}}>Compra verificada manualmente · +1000 pedidos entregados en toda Venezuela 🖤</p>
+              </div>
               <p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#333",marginBottom:"0.75rem"}}>MÉTODO DE PAGO</p>
               <div style={{display:"flex",flexDirection:"column",gap:"0.45rem"}}>
                 {PAYMENT_METHODS.map(pm=>(<button key={pm.id} className="pc2" onClick={()=>{setPayMethod(pm.id);setTimeout(()=>comprobanteRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),300);}} style={{display:"flex",alignItems:"center",gap:"0.85rem",background:payMethod===pm.id?"#fff":"#111",color:payMethod===pm.id?"#080808":C.text,border:`1px solid ${payMethod===pm.id?"#fff":"#1e1e1e"}`,borderRadius:10,padding:"0.8rem 1rem",textAlign:"left",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",transition:"all 0.15s"}}><span style={{fontSize:18}}>{pm.icon}</span><div><p style={{margin:0,fontSize:13,fontWeight:700}}>{pm.name}</p><p style={{margin:0,fontSize:10,opacity:0.5,marginTop:1}}>{pm.detail}</p></div>{payMethod===pm.id&&<span style={{marginLeft:"auto",fontSize:14,fontWeight:700}}>✓</span>}</button>))}
