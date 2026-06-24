@@ -1628,7 +1628,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
         <div onClick={()=>setSel(null)} style={{position:"fixed",inset:0,zIndex:400,background:"rgba(0,0,0,0.88)",display:"flex",alignItems:"flex-end",justifyContent:"center",animation:"fadeIn 0.18s ease"}}>
           <div onClick={e=>e.stopPropagation()} style={{background:"#111",width:"100%",maxWidth:520,borderRadius:"18px 18px 0 0",padding:"1.5rem 1.5rem 2rem",maxHeight:"92vh",overflowY:"auto",animation:"slideUp 0.28s cubic-bezier(0.25,0.46,0.45,0.94)",border:"1px solid #1e1e1e",borderBottom:"none"}}>
             <div style={{width:36,height:3,background:"#222",borderRadius:2,margin:"0 auto 1rem"}}/>
-            <div style={{background:"#0a0a0a",aspectRatio:"4/3",overflow:"hidden",marginBottom:"1.1rem",borderRadius:12}}>
+            <div style={{background:"#0a0a0a",aspectRatio:"3/2",overflow:"hidden",marginBottom:"1.1rem",borderRadius:12}}>
               <LazyImg src={selectedProduct.img} alt={selectedProduct.name}/>
             </div>
             <h2 style={{fontSize:18,fontWeight:900,margin:"0 0 0.35rem",color:C.accent}}>{selectedProduct.name}</h2>
@@ -1646,7 +1646,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
 
       {addedProduct&&<AddedModal product={addedProduct} onClose={()=>setAddedProduct(null)} onGoCart={()=>{setAddedProduct(null);setMainView("cart");}} fmtPrice={fmtPrice}/>}
       {showAuth&&<AuthModal onClose={()=>setShowAuth(false)} onSuccess={u=>{setCurrentUser(u);setShowAuth(false);}}/>}
-      {totalItems>0&&!isCart&&!isAdmin&&!isTY&&<MiniCartBar totalItems={totalItems} totalPrice={totalPrice} fmtPrice={fmtPrice} onClick={()=>setMainView("cart")}/>}
+      {totalItems>0&&!isCart&&!isAdmin&&!isTY&&!selectedProduct&&<MiniCartBar totalItems={totalItems} totalPrice={totalPrice} fmtPrice={fmtPrice} onClick={()=>setMainView("cart")}/>}
       {!isAdmin&&<DraggableWA/>}
     </div>
   );
