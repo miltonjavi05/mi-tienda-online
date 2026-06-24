@@ -856,6 +856,7 @@ export default function Home() {
   const[nameLoading,setNameLoading]= useState(false);
   const[photoLoading,setPhotoLoading]=useState(false);
   const[showReviewModal,setShowReviewModal]=useState(false);
+const[copiedPay,setCopiedPay]=useState(false);
 const photoInputRef              = useRef<HTMLInputElement>(null);
 const[bcvRate,setBcvRate]        = useState<number|null>(null);
 const[showBs,setShowBs]          = useState(true);
@@ -1546,28 +1547,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
                 {PAYMENT_METHODS.map(pm=>(<button key={pm.id} className="pc2" onClick={()=>{setPayMethod(pm.id);setTimeout(()=>comprobanteRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),300);}} style={{display:"flex",alignItems:"center",gap:"0.85rem",background:payMethod===pm.id?"#fff":"#111",color:payMethod===pm.id?"#080808":C.text,border:`1px solid ${payMethod===pm.id?"#fff":"#1e1e1e"}`,borderRadius:10,padding:"0.8rem 1rem",textAlign:"left",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",transition:"all 0.15s"}}><span style={{fontSize:18}}>{pm.icon}</span><div><p style={{margin:0,fontSize:13,fontWeight:700}}>{pm.name}</p><p style={{margin:0,fontSize:10,opacity:0.5,marginTop:1}}>{pm.detail}</p></div>{payMethod===pm.id&&<span style={{marginLeft:"auto",fontSize:14,fontWeight:700}}>✓</span>}</button>))}
               </div>
             </div>
-            {payMethod&&(()=>{
-              const pm=PAYMENT_METHODS.find(m=>m.id===payMethod)!;
-              const[copied,setCopied]=useState(false);
-              return(
-                <div style={{marginTop:"1rem",background:"linear-gradient(135deg,#0d0d0d 0%,#0a0a0a 100%)",borderRadius:12,border:"1px solid #2a2a2a",overflow:"hidden"}}>
-                  <div style={{padding:"0.6rem 1rem",borderBottom:"1px solid #1a1a1a",display:"flex",alignItems:"center",gap:"0.5rem",background:"rgba(255,255,255,0.02)"}}>
-                    <span style={{fontSize:15}}>{pm.icon}</span>
-                    <p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#444",margin:0}}>DATOS DE PAGO — {pm.name.toUpperCase()}</p>
-                  </div>
-                  <div style={{padding:"1rem 1.1rem"}}>
-                    <p style={{fontSize:16,color:"#fff",margin:"0 0 0.85rem",fontWeight:800,letterSpacing:0.5,lineHeight:1.5}}>{pm.detail}</p>
-                    <button
-                      onClick={()=>{navigator.clipboard.writeText(pm.detail).catch(()=>{});setCopied(true);setTimeout(()=>setCopied(false),2000);}}
-                      style={{display:"inline-flex",alignItems:"center",gap:"0.4rem",background:copied?"#0d1e0d":"#161616",border:`1px solid ${copied?"#2a4a2a":"#2a2a2a"}`,color:copied?"#4caf50":"#666",padding:"0.4rem 0.85rem",borderRadius:8,fontSize:10,fontWeight:800,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",marginBottom:"0.85rem",transition:"all 0.2s ease"}}
-                    >
-                      {copied?<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>¡COPIADO!</>:<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>COPIAR DATOS</>}
-                    </button>
-                    <p style={{fontSize:11,color:"#444",margin:0,lineHeight:1.7,borderTop:"1px solid #1a1a1a",paddingTop:"0.75rem"}}>Realiza el pago y sube tu comprobante abajo para continuar.</p>
-                  </div>
-                </div>
-              );
-            })()}
+            {payMethod&&(()=>{const pm=PAYMENT_METHODS.find(m=>m.id===payMethod)!;return(<div style={{marginTop:"1rem",background:"linear-gradient(135deg,#0d0d0d 0%,#0a0a0a 100%)",borderRadius:12,border:"1px solid #2a2a2a",overflow:"hidden"}}><div style={{padding:"0.6rem 1rem",borderBottom:"1px solid #1a1a1a",display:"flex",alignItems:"center",gap:"0.5rem",background:"rgba(255,255,255,0.02)"}}><span style={{fontSize:15}}>{pm.icon}</span><p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#444",margin:0}}>DATOS DE PAGO — {pm.name.toUpperCase()}</p></div><div style={{padding:"1rem 1.1rem"}}><p style={{fontSize:16,color:"#fff",margin:"0 0 0.85rem",fontWeight:800,letterSpacing:0.5,lineHeight:1.5}}>{pm.detail}</p><button onClick={()=>{navigator.clipboard.writeText(pm.detail).catch(()=>{});setCopiedPay(true);setTimeout(()=>setCopiedPay(false),2000);}} style={{display:"inline-flex",alignItems:"center",gap:"0.4rem",background:copiedPay?"#0d1e0d":"#161616",border:`1px solid ${copiedPay?"#2a4a2a":"#2a2a2a"}`,color:copiedPay?"#4caf50":"#666",padding:"0.4rem 0.85rem",borderRadius:8,fontSize:10,fontWeight:800,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",marginBottom:"0.85rem",transition:"all 0.2s ease"}}>{copiedPay?<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>¡COPIADO!</>:<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>COPIAR DATOS</>}</button><p style={{fontSize:11,color:"#444",margin:0,lineHeight:1.7,borderTop:"1px solid #1a1a1a",paddingTop:"0.75rem"}}>Realiza el pago y sube tu comprobante abajo para continuar.</p></div></div>);})()}
             <div ref={comprobanteRef}>
               {payMethod&&<ComprobanteUpload url={comprobanteUrl} onUrl={setComprobante}/>}
             </div>
