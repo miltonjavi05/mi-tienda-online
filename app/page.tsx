@@ -544,6 +544,16 @@ function ComprobanteUpload({onUrl,url}:{onUrl:(u:string)=>void;url:string}){
 }
 
 // ─── FOOTER ───────────────────────────────────────────────────────────────────
+const MiniCartBar=memo(function MiniCartBar({totalItems,totalPrice,fmtPrice,onClick}:{totalItems:number;totalPrice:number;fmtPrice:(n:number)=>string;onClick:()=>void}){
+  return(
+    <button onClick={onClick} style={{position:"fixed",left:"50%",transform:"translateX(-50%)",bottom:16,zIndex:550,display:"flex",alignItems:"center",gap:"0.75rem",background:"#fff",color:"#080808",border:"none",borderRadius:50,padding:"0.75rem 1.25rem",boxShadow:"0 8px 30px rgba(0,0,0,0.5)",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",animation:"slideUp 0.3s ease"}}>
+      <span style={{width:22,height:22,borderRadius:"50%",background:"#080808",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:900,flexShrink:0}}>{totalItems}</span>
+      <span style={{fontSize:12,fontWeight:800,letterSpacing:0.5}}>Ver carrito · {fmtPrice(totalPrice)}</span>
+      <span style={{fontSize:13}}>→</span>
+    </button>
+  );
+});
+
 const Footer=memo(function Footer({setMainView,setShopFilter}:{setMainView:(v:MainView)=>void;setShopFilter:(v:ShopFilter)=>void}){
   const sA:React.CSSProperties={display:"flex",alignItems:"center",justifyContent:"center",width:36,height:36,borderRadius:"50%",background:"rgba(255,255,255,0.04)",textDecoration:"none",border:"1px solid rgba(255,255,255,0.07)",flexShrink:0};
   const cats=[{l:"Lentes",c:"LENTES"},{l:"Relojes",c:"RELOJES"},{l:"Collares",c:"COLLARES"},{l:"Pulseras",c:"PULSERAS"},{l:"Anillos",c:"ANILLOS"},{l:"Aretes",c:"ARETES"},{l:"Billeteras",c:"BILLETERAS"}];
@@ -1636,6 +1646,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
 
       {addedProduct&&<AddedModal product={addedProduct} onClose={()=>setAddedProduct(null)} onGoCart={()=>{setAddedProduct(null);setMainView("cart");}} fmtPrice={fmtPrice}/>}
       {showAuth&&<AuthModal onClose={()=>setShowAuth(false)} onSuccess={u=>{setCurrentUser(u);setShowAuth(false);}}/>}
+      {totalItems>0&&!isCart&&!isAdmin&&!isTY&&<MiniCartBar totalItems={totalItems} totalPrice={totalPrice} fmtPrice={fmtPrice} onClick={()=>setMainView("cart")}/>}
       {!isAdmin&&<DraggableWA/>}
     </div>
   );
