@@ -1514,50 +1514,78 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
         </div>
       ):(
         <>
-          {cart.map(item=>(
-            <div key={item.product.id} style={{display:"grid",gridTemplateColumns:"1fr auto auto auto",gap:"0.75rem",padding:"1rem 0",borderBottom:`1px solid ${C.border}`,alignItems:"center"}}>
-              <div style={{display:"flex",alignItems:"center",gap:"0.75rem"}}>
-                <button onClick={()=>updQty(item.product.id,-item.qty)} style={{background:"none",border:"none",cursor:"pointer",color:"#333",fontSize:12,padding:0}}>✕</button>
-                <img src={optImg(item.product.img,120)} alt={item.product.name} style={{width:52,height:52,objectFit:"cover",borderRadius:6,pointerEvents:"none"}} draggable={false}/>
-                <span style={{fontSize:13,color:"#bbb"}}>{item.product.name}</span>
-              </div>
-              <span style={{fontSize:13,color:"#555"}}>{fmtPrice(item.product.price)}</span>
-              <div style={{display:"flex",alignItems:"center",border:`1px solid ${C.border}`,borderRadius:6}}>
-                <button onClick={()=>updQty(item.product.id,-1)} style={S.qtyBtn}>−</button>
-                <span style={{padding:"0 0.5rem",fontSize:14,color:C.text,minWidth:24,textAlign:"center"}}>{item.qty}</span>
-                <button onClick={()=>updQty(item.product.id,1)} style={S.qtyBtn}>+</button>
-              </div>
-              <span style={{fontSize:14,fontWeight:800,color:C.accent}}>{fmtPrice(item.product.price*item.qty)}</span>
+          {/* ── RESUMEN COMPACTO DE PRODUCTOS ── */}
+          <div style={{background:"#0e0e0e",borderRadius:12,border:`1px solid ${C.border}`,marginBottom:"1.25rem",overflow:"hidden"}}>
+            <div style={{padding:"0.65rem 1rem",borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <span style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#333"}}>TU PEDIDO · {cart.reduce((s,i)=>s+i.qty,0)} ITEM{cart.reduce((s,i)=>s+i.qty,0)>1?"S":""}</span>
+              <button onClick={()=>setCart([])} style={{background:"none",border:"none",color:"#333",fontSize:10,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",letterSpacing:0.5}}>Vaciar</button>
             </div>
-          ))}
-          <div style={{display:"flex",gap:"0.6rem",marginTop:"1.25rem",flexWrap:"wrap"}}>
-            <button onClick={()=>setMainView("shop")} style={{...S.darkBtn,borderRadius:4,fontSize:10,padding:"0.8rem 1.4rem"}}>← SEGUIR COMPRANDO</button>
-            <button onClick={()=>setCart([])} style={{...S.darkBtn,background:"transparent",color:"#444",border:`1px solid ${C.border}`,borderRadius:4,fontSize:10,padding:"0.8rem 1.2rem"}}>Vaciar</button>
-          </div>
-          <div style={{marginTop:"2rem",background:"#0e0e0e",padding:"1.5rem",borderRadius:12,border:`1px solid ${C.border}`}}>
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:"0.6rem",fontSize:13,color:"#555"}}><span>Subtotal</span><span>{fmtPrice(totalPrice)}</span></div>
-            <div style={{borderTop:`1px solid ${C.border}`,paddingTop:"0.75rem",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <span style={{fontSize:18,fontWeight:900,color:C.accent}}>Total</span>
+            {cart.map(item=>(
+              <div key={item.product.id} style={{display:"flex",alignItems:"center",gap:"0.65rem",padding:"0.65rem 1rem",borderBottom:`1px solid ${C.border}`}}>
+                <button onClick={()=>updQty(item.product.id,-item.qty)} style={{background:"none",border:"none",cursor:"pointer",color:"#333",fontSize:11,padding:0,flexShrink:0,lineHeight:1}}>✕</button>
+                <img src={optImg(item.product.img,80)} alt={item.product.name} style={{width:40,height:40,objectFit:"cover",borderRadius:6,pointerEvents:"none",flexShrink:0}} draggable={false}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <p style={{margin:0,fontSize:12,color:"#bbb",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.product.name}</p>
+                  <p style={{margin:"2px 0 0",fontSize:11,color:"#555"}}>{fmtPrice(item.product.price)}</p>
+                </div>
+                <div style={{display:"flex",alignItems:"center",border:`1px solid ${C.border}`,borderRadius:6,flexShrink:0}}>
+                  <button onClick={()=>updQty(item.product.id,-1)} style={{...S.qtyBtn,width:28,height:28,fontSize:16}}>−</button>
+                  <span style={{padding:"0 0.4rem",fontSize:13,color:C.text,fontWeight:700,minWidth:18,textAlign:"center"}}>{item.qty}</span>
+                  <button onClick={()=>updQty(item.product.id,1)} style={{...S.qtyBtn,width:28,height:28,fontSize:16}}>+</button>
+                </div>
+                <span style={{fontSize:13,fontWeight:800,color:C.accent,flexShrink:0,minWidth:60,textAlign:"right"}}>{fmtPrice(item.product.price*item.qty)}</span>
+              </div>
+            ))}
+            <div style={{padding:"0.75rem 1rem",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <span style={{fontSize:13,color:"#555"}}>Total</span>
               <div style={{textAlign:"right"}}>
-                <span style={{fontSize:22,fontWeight:900,color:"#fff",display:"block"}}>{fmtPrice(totalPrice)}</span>
-                {showBs&&bcvRate&&<span style={{fontSize:10,color:"#444"}}>≈ ${totalPrice.toFixed(2)} USD</span>}
+                <span style={{fontSize:18,fontWeight:900,color:"#fff"}}>{fmtPrice(totalPrice)}</span>
+                {showBs&&bcvRate&&<p style={{margin:"1px 0 0",fontSize:10,color:"#444"}}>≈ ${totalPrice.toFixed(2)} USD</p>}
               </div>
             </div>
-            {userReady&&!currentUser&&(<div style={{marginTop:"1.25rem",background:"#0a0a0a",borderRadius:10,padding:"1rem",border:"1px solid #1a1a1a",display:"flex",alignItems:"center",justifyContent:"space-between",gap:"0.75rem",flexWrap:"wrap"}}><p style={{margin:0,fontSize:12,color:"#555",lineHeight:1.5}}>¿Tienes cuenta? Inicia sesión para un pedido más rápido</p><button onClick={()=>setShowAuth(true)} style={{...S.darkBtn,borderRadius:8,padding:"0.6rem 1rem",fontSize:11,flexShrink:0}}>ENTRAR</button></div>)}
-            <div style={{marginTop:"1.75rem"}}>
-              <DeliveryForm info={deliveryInfo} onChange={i=>{
-                setDeliveryInfo(i);
-                if(!deliveryInfo.zone&&i.zone&&i.zone!=="otro"){
-                  setTimeout(()=>payMethodRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),300);
-                }
-                const otroCompleto=i.zone==="otro"&&!!(i.nombre&&i.cedula&&i.telefono&&i.agencia&&i.estado&&i.direccion);
-                if(otroCompleto&&!otroAutoScrolled.current){
-                  otroAutoScrolled.current=true;
-                  setTimeout(()=>payMethodRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),450);
-                }
-              }}/>
-            </div>
-            <div ref={payMethodRef} style={{marginTop:"1.75rem"}}>
+          </div>
+
+          {/* ── CHECKOUT DIRECTO ── */}
+          <div style={{background:"#0e0e0e",padding:"1.25rem",borderRadius:12,border:`1px solid ${C.border}`}}>
+
+            {/* Indicador de siguiente paso */}
+            {!deliveryInfo.zone&&(
+              <div style={{display:"flex",alignItems:"center",gap:"0.65rem",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:10,padding:"0.75rem 1rem",marginBottom:"1.25rem",animation:"fadeIn 0.3s ease"}}>
+                <div style={{width:28,height:28,borderRadius:"50%",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#080808" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                <div>
+                  <p style={{margin:0,fontSize:12,fontWeight:800,color:"#fff",letterSpacing:0.5}}>Selecciona dónde enviamos tu pedido</p>
+                  <p style={{margin:"2px 0 0",fontSize:10,color:"#555"}}>Solo 3 pasos para completar tu compra</p>
+                </div>
+              </div>
+            )}
+
+            {userReady&&!currentUser&&(<div style={{marginBottom:"1.25rem",background:"#0a0a0a",borderRadius:10,padding:"0.85rem 1rem",border:"1px solid #1a1a1a",display:"flex",alignItems:"center",justifyContent:"space-between",gap:"0.75rem",flexWrap:"wrap"}}><p style={{margin:0,fontSize:12,color:"#555",lineHeight:1.5}}>¿Tienes cuenta? Inicia sesión para un pedido más rápido</p><button onClick={()=>setShowAuth(true)} style={{...S.darkBtn,borderRadius:8,padding:"0.6rem 1rem",fontSize:11,flexShrink:0}}>ENTRAR</button></div>)}
+
+            <DeliveryForm info={deliveryInfo} onChange={i=>{
+              setDeliveryInfo(i);
+              if(!deliveryInfo.zone&&i.zone&&i.zone!=="otro"){
+                setTimeout(()=>payMethodRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),300);
+              }
+              const otroCompleto=i.zone==="otro"&&!!(i.nombre&&i.cedula&&i.telefono&&i.agencia&&i.estado&&i.direccion);
+              if(otroCompleto&&!otroAutoScrolled.current){
+                otroAutoScrolled.current=true;
+                setTimeout(()=>payMethodRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),450);
+              }
+            }}/>
+
+            {/* Indicador paso 2 */}
+            {deliveryInfo.zone&&!payMethod&&(
+              <div style={{display:"flex",alignItems:"center",gap:"0.65rem",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:10,padding:"0.75rem 1rem",margin:"1.25rem 0 0",animation:"slideUp 0.25s ease"}}>
+                <div style={{width:28,height:28,borderRadius:"50%",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#080808" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                <p style={{margin:0,fontSize:12,fontWeight:800,color:"#fff",letterSpacing:0.5}}>Ahora elige cómo vas a pagar</p>
+              </div>
+            )}
+
+            <div ref={payMethodRef} style={{marginTop:"1.5rem"}}>
               <div style={{display:"flex",alignItems:"center",gap:"0.5rem",background:"rgba(255,255,255,0.03)",border:"1px solid #1a1a1a",borderRadius:8,padding:"0.6rem 0.85rem",marginBottom:"0.85rem"}}>
                 <span style={{fontSize:14}}>🔒</span>
                 <p style={{margin:0,fontSize:10,color:"#666",lineHeight:1.5}}>Compra verificada manualmente · +1000 pedidos entregados en toda Venezuela 🖤</p>
@@ -1567,12 +1595,13 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
                 {PAYMENT_METHODS.map(pm=>(<button key={pm.id} className="pc2" onClick={()=>{setPayMethod(pm.id);setTimeout(()=>comprobanteRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),300);}} style={{display:"flex",alignItems:"center",gap:"0.85rem",background:payMethod===pm.id?"#fff":"#111",color:payMethod===pm.id?"#080808":C.text,border:`1px solid ${payMethod===pm.id?"#fff":"#1e1e1e"}`,borderRadius:10,padding:"0.8rem 1rem",textAlign:"left",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",transition:"all 0.15s"}}><span style={{fontSize:18}}>{pm.icon}</span><div><p style={{margin:0,fontSize:13,fontWeight:700}}>{pm.name}</p><p style={{margin:0,fontSize:10,opacity:0.5,marginTop:1}}>{pm.detail}</p></div>{payMethod===pm.id&&<span style={{marginLeft:"auto",fontSize:14,fontWeight:700}}>✓</span>}</button>))}
               </div>
             </div>
+
             {payMethod&&(()=>{const pm=PAYMENT_METHODS.find(m=>m.id===payMethod)!;return(<div style={{marginTop:"1rem",background:"linear-gradient(135deg,#0d0d0d 0%,#0a0a0a 100%)",borderRadius:12,border:"1px solid #2a2a2a",overflow:"hidden"}}><div style={{padding:"0.6rem 1rem",borderBottom:"1px solid #1a1a1a",display:"flex",alignItems:"center",gap:"0.5rem",background:"rgba(255,255,255,0.02)"}}><span style={{fontSize:15}}>{pm.icon}</span><p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#444",margin:0}}>DATOS DE PAGO — {pm.name.toUpperCase()}</p></div><div style={{padding:"1rem 1.1rem"}}><p style={{fontSize:16,color:"#fff",margin:"0 0 0.85rem",fontWeight:800,letterSpacing:0.5,lineHeight:1.5}}>{pm.detail}</p><button onClick={()=>{navigator.clipboard.writeText(pm.detail).catch(()=>{});setCopiedPay(true);setTimeout(()=>setCopiedPay(false),2000);}} style={{display:"inline-flex",alignItems:"center",gap:"0.4rem",background:copiedPay?"#0d1e0d":"#161616",border:`1px solid ${copiedPay?"#2a4a2a":"#2a2a2a"}`,color:copiedPay?"#4caf50":"#666",padding:"0.4rem 0.85rem",borderRadius:8,fontSize:10,fontWeight:800,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",marginBottom:"0.85rem",transition:"all 0.2s ease"}}>{copiedPay?<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>¡COPIADO!</>:<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>COPIAR DATOS</>}</button><p style={{fontSize:11,color:"#444",margin:0,lineHeight:1.7,borderTop:"1px solid #1a1a1a",paddingTop:"0.75rem"}}>Realiza el pago y sube tu comprobante abajo para continuar.</p></div></div>);})()}
+
             <div ref={comprobanteRef}>
               {payMethod&&<ComprobanteUpload url={comprobanteUrl} onUrl={setComprobante}/>}
             </div>
-            {!deliveryInfo.zone&&<p style={{textAlign:"center",fontSize:10,color:"#555",marginTop:"0.75rem"}}>Selecciona el tipo de envio para continuar</p>}
-            {deliveryInfo.zone&&!payMethod&&<p style={{textAlign:"center",fontSize:10,color:"#555",marginTop:"0.5rem"}}>Selecciona un método de pago para continuar</p>}
+
             {payMethod&&deliveryValid&&!comprobanteUrl&&(<div style={{marginTop:"0.75rem",background:"rgba(255,180,0,0.06)",border:"1px solid rgba(255,180,0,0.2)",borderRadius:8,padding:"0.65rem 1rem",display:"flex",alignItems:"center",gap:"0.5rem"}}><span style={{fontSize:14}}>📎</span><p style={{margin:0,fontSize:11,color:"#c8a000",lineHeight:1.5,fontWeight:600}}>Sube el comprobante de pago para activar el envío del pedido</p></div>)}
             {canSendOrder&&(
               <div style={{display:"flex",alignItems:"center",gap:"0.5rem",background:"rgba(37,211,102,0.06)",border:"1px solid rgba(37,211,102,0.15)",borderRadius:8,padding:"0.6rem 1rem",marginTop:"1.25rem"}}>
@@ -1582,8 +1611,10 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
             )}
             <button onClick={handleSendOrder} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.75rem",width:"100%",marginTop:"1.25rem",background:canSendOrder?"#25D366":"#1a1a1a",color:canSendOrder?"#fff":"#444",padding:"1rem",fontWeight:900,letterSpacing:2,fontSize:11,border:`1px solid ${canSendOrder?"transparent":"#2a2a2a"}`,borderRadius:10,cursor:canSendOrder?"pointer":"not-allowed",fontFamily:"inherit",transition:"background 0.25s, color 0.25s"}}>
               <IcWA s={18} c={canSendOrder?"#fff":"#444"}/>
-              {canSendOrder?"CONFIRMAR Y ENVIAR PEDIDO →":!deliveryInfo.zone?"SELECCIONA TIPO DE ENVÍO":!payMethod?"SELECCIONA MÉTODO DE PAGO":"SUBE EL COMPROBANTE PARA CONTINUAR"}
+              {canSendOrder?"CONFIRMAR Y ENVIAR PEDIDO →":!deliveryInfo.zone?"SELECCIONA TIPO DE ENVÍO ↑":!payMethod?"SELECCIONA MÉTODO DE PAGO ↑":"SUBE EL COMPROBANTE PARA CONTINUAR ↑"}
             </button>
+
+            <button onClick={()=>setMainView("shop")} style={{display:"flex",alignItems:"center",justifyContent:"center",width:"100%",marginTop:"0.65rem",background:"transparent",color:"#333",border:"none",padding:"0.6rem",fontSize:10,fontWeight:700,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>← SEGUIR COMPRANDO</button>
           </div>
         </>
       )}
