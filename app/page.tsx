@@ -436,7 +436,7 @@ const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,fmtPrice}:
         <p style={{margin:0,fontSize:14,fontWeight:800,color:C.accent,letterSpacing:0.5}}>{fmtPrice(product.price)}</p>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.4rem"}}>
-        <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{background:"#161616",color:"#ececec",border:"1px solid #2a2a2a",padding:"8px 0",fontSize:9,fontWeight:800,letterSpacing:1.2,cursor:"pointer",fontFamily:"inherit",borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",gap:4,WebkitTapHighlightColor:"transparent",textDecoration:"none"}}>
+        <a href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`Hola! Me interesa el producto: ${product.name} ($${product.price.toFixed(2)}), ¿me puedes dar más información?`)}`} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{background:"#161616",color:"#ececec",border:"1px solid #2a2a2a",padding:"8px 0",fontSize:9,fontWeight:800,letterSpacing:1.2,cursor:"pointer",fontFamily:"inherit",borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",gap:4,WebkitTapHighlightColor:"transparent",textDecoration:"none"}}>
           <IcWA s={11} c="#ececec"/>
           CONSULTAR
         </a>
@@ -463,7 +463,7 @@ const HCard=memo(function HCard({product,onClick,onBuyNow,fmtPrice}:{product:Pro
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.35rem"}}>
         <a
-          href={`https://wa.me/${WHATSAPP_NUMBER}`}
+          href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`Hola! Me interesa el producto: ${product.name} ($${product.price.toFixed(2)}), ¿me puedes dar más información?`)}`}
           target="_blank"
           rel="noreferrer"
           onClick={e=>e.stopPropagation()}
@@ -1109,7 +1109,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
 
   const isLentesSubcat=useMemo(()=>(LENTES_SUBCATS as readonly string[]).includes(shopFilter),[shopFilter]);
   const isLentesActive=useMemo(()=>shopFilter==="LENTES"||isLentesSubcat,[shopFilter,isLentesSubcat]);
-  const getVisCats=useCallback(():string[]=>{if(shopFilter==="TODO")return[...LENTES_SUBCATS,...SHOP_CATS.filter(c=>c!=="LENTES")];if(shopFilter==="LENTES")return[...LENTES_SUBCATS];return[shopFilter];},[shopFilter]);
+  const getVisCats=useCallback(():string[]=>{if(shopFilter==="TODO")return["LENTES·ANTI-LUZ-AZUL","LENTES·FOTOCROMATICOS","LENTES·SOL","LENTES·MOTORIZADOS",...SHOP_CATS.filter(c=>c!=="LENTES")];if(shopFilter==="LENTES")return[...LENTES_SUBCATS];return[shopFilter];},[shopFilter]);
   const getProds=useCallback((cat:string)=>products.filter(p=>p.category===cat&&(searchQuery===""||p.name.toLowerCase().includes(searchQuery.toLowerCase()))),[products,searchQuery]);
   const totalItems=useMemo(()=>cart.reduce((s,i)=>s+i.qty,0),[cart]);
   const totalPrice=useMemo(()=>cart.reduce((s,i)=>s+i.product.price*i.qty,0),[cart]);
