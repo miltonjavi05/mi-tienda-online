@@ -1516,7 +1516,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
       {/* CARRITO */}
 {isCart&&(
   <main style={{paddingTop:navH,background:C.bg}}>
-    <div style={{maxWidth:1100,margin:"0 auto",padding:"2rem 1.5rem 5rem",animation:"fadeIn 0.25s ease",display:"grid",gridTemplateColumns:"minmax(0,1fr)",gap:"1.5rem"} as React.CSSProperties}>
+    <div style={{maxWidth:680,margin:"0 auto",padding:"2rem 1rem 5rem",animation:"fadeIn 0.25s ease"}}>
       <h1 style={{fontSize:11,fontWeight:800,letterSpacing:3,marginBottom:"1rem",color:"#444"}}>CARRITO DE COMPRAS</h1>
       <div style={{display:"flex",alignItems:"center",gap:0,marginBottom:"1.75rem"}}>
         {[{n:1,l:"Productos"},{n:2,l:"Envío"},{n:3,l:"Pago"},{n:4,l:"Comprobante"}].map((step,i,arr)=>{
@@ -1541,10 +1541,9 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
           <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={{...S.darkBtn,borderRadius:4,fontSize:11}}>IR A LA TIENDA</button>
         </div>
       ):(
-        <div style={{display:"grid",gap:"1.25rem"} as React.CSSProperties} className="cart-grid">
-          <style>{`@media(min-width:768px){.cart-grid{grid-template-columns:1fr 1fr !important;}}`}</style>
+        <>
           {/* ── RESUMEN COMPACTO DE PRODUCTOS ── */}
-          <div style={{background:"#0e0e0e",borderRadius:12,border:`1px solid ${C.border}`,overflow:"hidden"}}>
+          <div style={{background:"#0e0e0e",borderRadius:12,border:`1px solid ${C.border}`,marginBottom:"1.25rem",overflow:"hidden"}}>
             <div style={{padding:"0.65rem 1rem",borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
               <span style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#333"}}>TU PEDIDO · {cart.reduce((s,i)=>s+i.qty,0)} ITEM{cart.reduce((s,i)=>s+i.qty,0)>1?"S":""}</span>
               <button onClick={()=>setCart([])} style={{background:"none",border:"none",color:"#333",fontSize:10,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",letterSpacing:0.5}}>Vaciar</button>
@@ -1595,7 +1594,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
             <DeliveryForm info={deliveryInfo} onChange={i=>{
               setDeliveryInfo(i);
               if(i.zone&&i.zone!=="otro"&&i.zone!==deliveryInfo.zone){
-                setTimeout(()=>payMethodRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),500);
+                setTimeout(()=>payMethodRef.current?.scrollIntoView({behavior:"smooth",block:"nearest"}),500);
               }
               const otroCompleto=i.zone==="otro"&&!!(i.nombre&&i.cedula&&i.telefono&&i.agencia&&i.estado&&i.direccion);
               if(otroCompleto&&!otroAutoScrolled.current){
@@ -1617,7 +1616,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
             <div ref={payMethodRef} style={{marginTop:"1.5rem"}}>
               <div style={{background:"linear-gradient(135deg,#0f0f0f 0%,#111 100%)",border:"1px solid #2a2a2a",borderRadius:10,padding:"0.85rem 1rem",marginBottom:"0.85rem",display:"flex",alignItems:"center",gap:"0.75rem"}}>
                 <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap",flex:1}}>
-                  {[{n:"2.000+",l:"Pedidos"},{n:"4.9 ★",l:"Valoración"},{n:"23",l:"Estados"}].map(({n,l})=>(
+                  {[{n:"1.000+",l:"Pedidos"},{ n:"5 ★",l:"Valoración"},{n:"23",l:"Estados"}].map(({n,l})=>(
                     <div key={l} style={{textAlign:"center",background:"rgba(255,255,255,0.04)",border:"1px solid #2a2a2a",borderRadius:8,padding:"0.4rem 0.75rem",flex:1}}>
                       <p style={{margin:0,fontSize:13,fontWeight:900,color:"#fff"}}>{n}</p>
                       <p style={{margin:0,fontSize:8,color:"#555",letterSpacing:1}}>{l.toUpperCase()}</p>
@@ -1635,7 +1634,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
               </div>
             </div>
 
-            {payMethod&&(()=>{const pm=PAYMENT_METHODS.find(m=>m.id===payMethod)!;return(<div style={{marginTop:"1rem",background:"linear-gradient(135deg,#0d0d0d 0%,#0a0a0a 100%)",borderRadius:12,border:"1px solid #2a2a2a",overflow:"hidden"}}><div style={{padding:"0.6rem 1rem",borderBottom:"1px solid #1a1a1a",display:"flex",alignItems:"center",gap:"0.5rem",background:"rgba(255,255,255,0.02)"}}><span style={{fontSize:15}}>{pm.icon}</span><p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#444",margin:0}}>DATOS DE PAGO — {pm.name.toUpperCase()}</p></div><div style={{padding:"1rem 1.1rem"}}><div style={{display:"flex",alignItems:"center",gap:6,background:"rgba(76,175,80,0.06)",border:"1px solid rgba(76,175,80,0.15)",borderRadius:8,padding:"0.5rem 0.75rem",marginBottom:"0.65rem"}}><span style={{fontSize:11}}>✓</span><p style={{margin:0,fontSize:10,color:"#4caf50",fontWeight:700}}>Más de 2.000 clientes ya pagaron por este método ✓</p></div>
+            {payMethod&&(()=>{const pm=PAYMENT_METHODS.find(m=>m.id===payMethod)!;return(<div style={{marginTop:"1rem",background:"linear-gradient(135deg,#0d0d0d 0%,#0a0a0a 100%)",borderRadius:12,border:"1px solid #2a2a2a",overflow:"hidden"}}><div style={{padding:"0.6rem 1rem",borderBottom:"1px solid #1a1a1a",display:"flex",alignItems:"center",gap:"0.5rem",background:"rgba(255,255,255,0.02)"}}><span style={{fontSize:15}}>{pm.icon}</span><p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#444",margin:0}}>DATOS DE PAGO — {pm.name.toUpperCase()}</p></div><div style={{padding:"1rem 1.1rem"}}><div style={{display:"flex",alignItems:"center",gap:6,background:"rgba(76,175,80,0.06)",border:"1px solid rgba(76,175,80,0.15)",borderRadius:8,padding:"0.5rem 0.75rem",marginBottom:"0.65rem"}}><span style={{fontSize:11}}>✓</span><p style={{margin:0,fontSize:10,color:"#4caf50",fontWeight:700}}>Más de 1.000 clientes ya pagaron por este método</p></div>
                 <p style={{fontSize:16,color:"#fff",margin:"0 0 0.85rem",fontWeight:800,letterSpacing:0.5,lineHeight:1.5}}>{pm.detail}</p><button onClick={()=>{navigator.clipboard.writeText(pm.detail).catch(()=>{});setCopiedPay(true);setTimeout(()=>setCopiedPay(false),2000);}} style={{display:"inline-flex",alignItems:"center",gap:"0.4rem",background:copiedPay?"#0d1e0d":"#161616",border:`1px solid ${copiedPay?"#2a4a2a":"#2a2a2a"}`,color:copiedPay?"#4caf50":"#666",padding:"0.4rem 0.85rem",borderRadius:8,fontSize:10,fontWeight:800,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",marginBottom:"0.85rem",transition:"all 0.2s ease"}}>{copiedPay?<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>¡COPIADO!</>:<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>COPIAR DATOS</>}</button><p style={{fontSize:11,color:"#444",margin:0,lineHeight:1.7,borderTop:"1px solid #1a1a1a",paddingTop:"0.75rem"}}>Realiza el pago y sube tu comprobante abajo para continuar.</p></div></div>);})()}
 
             <div ref={comprobanteRef}>
@@ -1661,7 +1660,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
               SEGUIR COMPRANDO
             </button>
           </div>
-        </div>
+        </>
       )}
     </div>
   </main>
