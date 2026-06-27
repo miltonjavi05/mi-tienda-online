@@ -1594,7 +1594,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
             <DeliveryForm info={deliveryInfo} onChange={i=>{
               setDeliveryInfo(i);
               if(i.zone&&i.zone!=="otro"&&i.zone!==deliveryInfo.zone){
-                setTimeout(()=>payMethodRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),300);
+                setTimeout(()=>payMethodRef.current?.scrollIntoView({behavior:"smooth",block:"nearest"}),500);
               }
               const otroCompleto=i.zone==="otro"&&!!(i.nombre&&i.cedula&&i.telefono&&i.agencia&&i.estado&&i.direccion);
               if(otroCompleto&&!otroAutoScrolled.current){
@@ -1614,9 +1614,19 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
             )}
 
             <div ref={payMethodRef} style={{marginTop:"1.5rem"}}>
-              <div style={{display:"flex",alignItems:"center",gap:"0.5rem",background:"rgba(255,255,255,0.03)",border:"1px solid #1a1a1a",borderRadius:8,padding:"0.6rem 0.85rem",marginBottom:"0.85rem"}}>
-                <span style={{fontSize:14}}>🔒</span>
-                <p style={{margin:0,fontSize:10,color:"#666",lineHeight:1.5}}>Compra verificada manualmente · +1000 pedidos entregados en toda Venezuela 🖤</p>
+              <div style={{background:"linear-gradient(135deg,#0f0f0f 0%,#111 100%)",border:"1px solid #2a2a2a",borderRadius:10,padding:"0.85rem 1rem",marginBottom:"0.85rem",display:"flex",alignItems:"center",gap:"0.75rem"}}>
+                <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap",flex:1}}>
+                  {[{n:"1.000+",l:"Pedidos"},{ n:"5 ★",l:"Valoración"},{n:"23",l:"Estados"}].map(({n,l})=>(
+                    <div key={l} style={{textAlign:"center",background:"rgba(255,255,255,0.04)",border:"1px solid #2a2a2a",borderRadius:8,padding:"0.4rem 0.75rem",flex:1}}>
+                      <p style={{margin:0,fontSize:13,fontWeight:900,color:"#fff"}}>{n}</p>
+                      <p style={{margin:0,fontSize:8,color:"#555",letterSpacing:1}}>{l.toUpperCase()}</p>
+                    </div>
+                  ))}
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
+                  <span style={{fontSize:12}}>🔒</span>
+                  <span style={{fontSize:9,color:"#444",fontWeight:700,letterSpacing:0.5}}>PAGO SEGURO</span>
+                </div>
               </div>
               <p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#333",marginBottom:"0.75rem"}}>MÉTODO DE PAGO</p>
               <div style={{display:"flex",flexDirection:"column",gap:"0.45rem"}}>
@@ -1624,7 +1634,8 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
               </div>
             </div>
 
-            {payMethod&&(()=>{const pm=PAYMENT_METHODS.find(m=>m.id===payMethod)!;return(<div style={{marginTop:"1rem",background:"linear-gradient(135deg,#0d0d0d 0%,#0a0a0a 100%)",borderRadius:12,border:"1px solid #2a2a2a",overflow:"hidden"}}><div style={{padding:"0.6rem 1rem",borderBottom:"1px solid #1a1a1a",display:"flex",alignItems:"center",gap:"0.5rem",background:"rgba(255,255,255,0.02)"}}><span style={{fontSize:15}}>{pm.icon}</span><p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#444",margin:0}}>DATOS DE PAGO — {pm.name.toUpperCase()}</p></div><div style={{padding:"1rem 1.1rem"}}><p style={{fontSize:16,color:"#fff",margin:"0 0 0.85rem",fontWeight:800,letterSpacing:0.5,lineHeight:1.5}}>{pm.detail}</p><button onClick={()=>{navigator.clipboard.writeText(pm.detail).catch(()=>{});setCopiedPay(true);setTimeout(()=>setCopiedPay(false),2000);}} style={{display:"inline-flex",alignItems:"center",gap:"0.4rem",background:copiedPay?"#0d1e0d":"#161616",border:`1px solid ${copiedPay?"#2a4a2a":"#2a2a2a"}`,color:copiedPay?"#4caf50":"#666",padding:"0.4rem 0.85rem",borderRadius:8,fontSize:10,fontWeight:800,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",marginBottom:"0.85rem",transition:"all 0.2s ease"}}>{copiedPay?<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>¡COPIADO!</>:<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>COPIAR DATOS</>}</button><p style={{fontSize:11,color:"#444",margin:0,lineHeight:1.7,borderTop:"1px solid #1a1a1a",paddingTop:"0.75rem"}}>Realiza el pago y sube tu comprobante abajo para continuar.</p></div></div>);})()}
+            {payMethod&&(()=>{const pm=PAYMENT_METHODS.find(m=>m.id===payMethod)!;return(<div style={{marginTop:"1rem",background:"linear-gradient(135deg,#0d0d0d 0%,#0a0a0a 100%)",borderRadius:12,border:"1px solid #2a2a2a",overflow:"hidden"}}><div style={{padding:"0.6rem 1rem",borderBottom:"1px solid #1a1a1a",display:"flex",alignItems:"center",gap:"0.5rem",background:"rgba(255,255,255,0.02)"}}><span style={{fontSize:15}}>{pm.icon}</span><p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#444",margin:0}}>DATOS DE PAGO — {pm.name.toUpperCase()}</p></div><div style={{padding:"1rem 1.1rem"}}><div style={{display:"flex",alignItems:"center",gap:6,background:"rgba(76,175,80,0.06)",border:"1px solid rgba(76,175,80,0.15)",borderRadius:8,padding:"0.5rem 0.75rem",marginBottom:"0.65rem"}}><span style={{fontSize:11}}>✓</span><p style={{margin:0,fontSize:10,color:"#4caf50",fontWeight:700}}>Más de 1.000 clientes ya pagaron por este método</p></div>
+                <p style={{fontSize:16,color:"#fff",margin:"0 0 0.85rem",fontWeight:800,letterSpacing:0.5,lineHeight:1.5}}>{pm.detail}</p><button onClick={()=>{navigator.clipboard.writeText(pm.detail).catch(()=>{});setCopiedPay(true);setTimeout(()=>setCopiedPay(false),2000);}} style={{display:"inline-flex",alignItems:"center",gap:"0.4rem",background:copiedPay?"#0d1e0d":"#161616",border:`1px solid ${copiedPay?"#2a4a2a":"#2a2a2a"}`,color:copiedPay?"#4caf50":"#666",padding:"0.4rem 0.85rem",borderRadius:8,fontSize:10,fontWeight:800,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",marginBottom:"0.85rem",transition:"all 0.2s ease"}}>{copiedPay?<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>¡COPIADO!</>:<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>COPIAR DATOS</>}</button><p style={{fontSize:11,color:"#444",margin:0,lineHeight:1.7,borderTop:"1px solid #1a1a1a",paddingTop:"0.75rem"}}>Realiza el pago y sube tu comprobante abajo para continuar.</p></div></div>);})()}
 
             <div ref={comprobanteRef}>
               {payMethod&&<ComprobanteUpload url={comprobanteUrl} onUrl={setComprobante}/>}
@@ -1637,12 +1648,14 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
                 <p style={{margin:0,fontSize:11,color:"#3a7a3a",fontWeight:700,lineHeight:1.5}}>Todo listo — tu pedido será confirmado por WhatsApp en minutos</p>
               </div>
             )}
-            <button onClick={handleSendOrder} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.75rem",width:"100%",marginTop:"1.25rem",background:canSendOrder?"#25D366":"#1a1a1a",color:canSendOrder?"#fff":"#444",padding:"1rem",fontWeight:900,letterSpacing:2,fontSize:11,border:`1px solid ${canSendOrder?"transparent":"#2a2a2a"}`,borderRadius:10,cursor:canSendOrder?"pointer":"not-allowed",fontFamily:"inherit",transition:"background 0.25s, color 0.25s"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,marginBottom:"0.65rem",padding:"0.5rem",background:"rgba(255,255,255,0.02)",borderRadius:8,border:"1px solid #1e1e1e"}}><span style={{fontSize:10}}>⚡</span><p style={{margin:0,fontSize:10,color:"#555",fontWeight:700,letterSpacing:0.5}}>Tu pedido se confirma por WhatsApp en menos de 5 minutos</p></div>
+              <button onClick={handleSendOrder} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.75rem",width:"100%",marginTop:"0",background:canSendOrder?"#25D366":"#1a1a1a",color:canSendOrder?"#fff":"#444",padding:"1rem",fontWeight:900,letterSpacing:2,fontSize:11,border:`1px solid ${canSendOrder?"transparent":"#2a2a2a"}`,borderRadius:10,cursor:canSendOrder?"pointer":"not-allowed",fontFamily:"inherit",transition:"background 0.25s, color 0.25s"}}>
               {canSendOrder&&<IcWA s={18} c="#fff"/>}
               {canSendOrder?"CONFIRMAR Y ENVIAR PEDIDO →":!deliveryInfo.zone?"SELECCIONA TIPO DE ENVÍO ↑":!payMethod?"SELECCIONA MÉTODO DE PAGO ↑":"SUBE EL COMPROBANTE PARA CONTINUAR ↑"}
             </button>
 
-            <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.5rem",width:"100%",marginTop:"0.65rem",background:"#111",color:"#888",border:"1px solid #2a2a2a",padding:"0.85rem",fontSize:10,fontWeight:800,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",borderRadius:10}}>
+            <div style={{display:"flex",justifyContent:"center",gap:"1.5rem",marginTop:"1rem",marginBottom:"0.25rem",flexWrap:"wrap"}}>{[{i:"🔒",t:"Pago seguro"},{i:"📦",t:"Envío a todo el país"},{i:"⭐",t:"1.000+ clientes"}].map(({i,t})=>(<div key={t} style={{display:"flex",alignItems:"center",gap:4}}><span style={{fontSize:10}}>{i}</span><span style={{fontSize:9,color:"#333",fontWeight:700,letterSpacing:0.5}}>{t.toUpperCase()}</span></div>))}</div>
+              <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.5rem",width:"100%",marginTop:"0.5rem",background:"#111",color:"#888",border:"1px solid #2a2a2a",padding:"0.85rem",fontSize:10,fontWeight:800,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",borderRadius:10}}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
               SEGUIR COMPRANDO
             </button>
