@@ -426,8 +426,7 @@ const NativeTabs=memo(function NativeTabs({items,active,onSelect,renderItem,heig
 // ─── PRODUCT CARD (GRID) ──────────────────────────────────────────────────────
 const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,fmtPrice}:{product:Product;onClick:()=>void;onBuyNow:()=>void;index:number;fmtPrice:(n:number)=>string}){
   const[hovered,setHovered]=useState(false);
-  const isMobile=typeof window!=="undefined"&&window.matchMedia("(hover:none)").matches;
-  const showBtn=isMobile||hovered;
+  const showBtn=true;
   return(
     <div className="pc" onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)} style={{cursor:"pointer",WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative"}}>
       <div onClick={onClick} style={{background:"#111",aspectRatio:"1",overflow:"hidden",marginBottom:"0.55rem",borderRadius:10,position:"relative"}}>
@@ -455,21 +454,29 @@ const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,fmtPrice}:
 });
 
 // ─── HORIZONTAL CARD ─────────────────────────────────────────────────────────
-const HCard=memo(function HCard({product,onClick,fmtPrice}:{product:Product;onClick:()=>void;fmtPrice:(n:number)=>string}){
+const HCard=memo(function HCard({product,onClick,onBuyNow,fmtPrice}:{product:Product;onClick:()=>void;onBuyNow:()=>void;fmtPrice:(n:number)=>string}){
   return(
-    <div className="hc" onClick={onClick} style={{cursor:"pointer",flexShrink:0,width:148,WebkitTapHighlightColor:"transparent",touchAction:"manipulation"}}>
-      <div style={{background:"#111",width:148,height:148,overflow:"hidden",marginBottom:"0.5rem",borderRadius:10,position:"relative"}}>
+    <div className="hc" style={{cursor:"pointer",flexShrink:0,width:148,WebkitTapHighlightColor:"transparent",touchAction:"manipulation"}}>
+      <div onClick={onClick} style={{background:"#111",width:148,height:148,overflow:"hidden",marginBottom:"0.5rem",borderRadius:10,position:"relative"}}>
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
+        <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"0 5px 6px",zIndex:10}}>
+          <div style={{position:"absolute",bottom:0,left:0,right:0,height:70,background:"linear-gradient(to top,rgba(8,8,8,0.95) 0%,transparent 100%)",pointerEvents:"none",borderRadius:"0 0 10px 10px"}}/>
+          <button onClick={e=>{e.stopPropagation();onBuyNow();}} style={{position:"relative",width:"100%",background:"#fff",color:"#080808",border:"none",padding:"7px 0",fontSize:9,fontWeight:900,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",gap:3,WebkitTapHighlightColor:"transparent"}}>
+            PAGAR AHORA →
+          </button>
+        </div>
       </div>
-      <p style={{margin:"0 0 2px",fontSize:11,lineHeight:1.35,color:"#bbb",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{product.name}</p>
-      <p style={{margin:0,fontSize:13,fontWeight:800,color:C.accent}}>{fmtPrice(product.price)}</p>
+      <div onClick={onClick}>
+        <p style={{margin:"0 0 2px",fontSize:11,lineHeight:1.35,color:"#bbb",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{product.name}</p>
+        <p style={{margin:0,fontSize:13,fontWeight:800,color:C.accent}}>{fmtPrice(product.price)}</p>
+      </div>
     </div>
   );
 });
 
 // ─── HORIZONTAL ROW ───────────────────────────────────────────────────────────
-const HRow=memo(function HRow({products,onSelect,fmtPrice}:{products:Product[];onSelect:(p:Product)=>void;fmtPrice:(n:number)=>string}){
+const HRow=memo(function HRow({products,onSelect,onBuyNow,fmtPrice}:{products:Product[];onSelect:(p:Product)=>void;onBuyNow:(p:Product)=>void;fmtPrice:(n:number)=>string}){
   const rowRef=useRef<HTMLDivElement>(null);
   const[showLeft,setShowLeft]=useState(false);
   const[showRight,setShowRight]=useState(false);
@@ -482,7 +489,7 @@ const HRow=memo(function HRow({products,onSelect,fmtPrice}:{products:Product[];o
       <button onClick={()=>scrollBy(-1)} className={`hr-arrow${showLeft?" hr-arrow-visible":""}`} style={{...arrowBase,left:-4}} aria-label="Anterior"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
       <button onClick={()=>scrollBy(1)} className={`hr-arrow${showRight?" hr-arrow-visible":""}`} style={{...arrowBase,right:-4}} aria-label="Siguiente"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
       <div ref={rowRef} className="hr" style={{display:"flex",gap:"0.75rem",overflowX:"scroll",overflowY:"hidden",paddingBottom:"0.5rem",paddingLeft:"0.25rem",paddingRight:"1rem",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",touchAction:"pan-x pan-y",userSelect:"none",WebkitUserSelect:"none",scrollSnapType:"x proximity"} as React.CSSProperties}>
-        {products.map(p=>(<div key={p.id} style={{scrollSnapAlign:"start",flexShrink:0}}><HCard product={p} onClick={()=>onSelect(p)} fmtPrice={fmtPrice}/></div>))}
+        {products.map(p=>(<div key={p.id} style={{scrollSnapAlign:"start",flexShrink:0}}><HCard product={p} onClick={()=>onSelect(p)} onBuyNow={()=>onBuyNow(p)} fmtPrice={fmtPrice}/></div>))}
       </div>
     </div>
   );
@@ -1407,7 +1414,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
                       <h2 style={{fontSize:11,fontWeight:800,letterSpacing:3,margin:0,color:"#555"}}>{isLC?`LENTES · ${catLabel(cat).toUpperCase()}`:catLabel(cat).toUpperCase()}</h2>
                       <button onClick={()=>{setShopFilter(cat as ShopFilter);setLentesOpen(isLC);scrollTop();}} style={{background:"none",border:"none",fontSize:10,color:"#333",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",letterSpacing:1,fontWeight:700}}>VER TODOS</button>
                     </div>
-                    <HRow products={prods} onSelect={openProd} fmtPrice={fmtPrice}/>
+                    <HRow products={prods} onSelect={openProd} onBuyNow={handleBuyNow} fmtPrice={fmtPrice}/>
                   </div>
                 );
               })
