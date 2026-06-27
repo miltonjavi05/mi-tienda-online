@@ -435,14 +435,14 @@ const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,fmtPrice}:
         <p style={{margin:"0 0 3px",fontSize:12,lineHeight:1.35,color:"#bbb",letterSpacing:0.2}}>{product.name}</p>
         <p style={{margin:0,fontSize:14,fontWeight:800,color:C.accent,letterSpacing:0.5}}>{fmtPrice(product.price)}</p>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.4rem"}}>
-        <a href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`Hola! Me interesa el producto: ${product.name} ($${product.price.toFixed(2)}), ¿me puedes dar más información?`)}`} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{background:"#161616",color:"#ececec",border:"1px solid #2a2a2a",padding:"8px 0",fontSize:9,fontWeight:800,letterSpacing:1.2,cursor:"pointer",fontFamily:"inherit",borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",gap:4,WebkitTapHighlightColor:"transparent",textDecoration:"none"}}>
-          <IcWA s={11} c="#ececec"/>
-          CONSULTAR
-        </a>
-        <button onClick={e=>{e.stopPropagation();onBuyNow();}} style={{background:"linear-gradient(135deg,#fff 0%,#e8e8e8 100%)",color:"#080808",border:"none",padding:"8px 0",fontSize:9,fontWeight:900,letterSpacing:1.2,cursor:"pointer",fontFamily:"inherit",borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",gap:4,WebkitTapHighlightColor:"transparent",boxShadow:"0 2px 8px rgba(255,255,255,0.15)"}}>
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-          COMPRAR
+      <div style={{display:"flex",flexDirection:"column",gap:"0.35rem"}}>
+        <button onClick={e=>{e.stopPropagation();onBuyNow();}} style={{background:"#fff",color:"#080808",border:"none",padding:"9px 0",fontSize:9,fontWeight:900,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",gap:4,WebkitTapHighlightColor:"transparent",width:"100%"}}>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          COMPRAR AHORA
+        </button>
+        <button onClick={e=>{e.stopPropagation();onClick();}} style={{background:"transparent",color:"#888",border:"1px solid #222",padding:"7px 0",fontSize:9,fontWeight:700,letterSpacing:1,cursor:"pointer",fontFamily:"inherit",borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",gap:4,WebkitTapHighlightColor:"transparent",width:"100%"}}>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+          + CARRITO
         </button>
       </div>
     </div>
@@ -461,21 +461,20 @@ const HCard=memo(function HCard({product,onClick,onBuyNow,fmtPrice}:{product:Pro
         <p style={{margin:"0 0 2px",fontSize:11,lineHeight:1.35,color:"#bbb",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{product.name}</p>
         <p style={{margin:0,fontSize:13,fontWeight:800,color:C.accent}}>{fmtPrice(product.price)}</p>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.35rem"}}>
-        <a
-          href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`Hola! Me interesa el producto: ${product.name} ($${product.price.toFixed(2)}), ¿me puedes dar más información?`)}`}
-          target="_blank"
-          rel="noreferrer"
-          onClick={e=>e.stopPropagation()}
-          style={{background:"#1a1a1a",color:"#ececec",border:"1px solid #2a2a2a",padding:"7px 0",fontSize:8,fontWeight:800,letterSpacing:0.8,fontFamily:"inherit",borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",gap:3,WebkitTapHighlightColor:"transparent",textDecoration:"none"}}
-        >
-          <IcWA s={10} c="#ececec"/>INFO
-        </a>
+      <div style={{display:"flex",flexDirection:"column",gap:"0.3rem"}}>
         <button
           onClick={e=>{e.stopPropagation();onBuyNow();}}
-          style={{background:"#fff",color:"#080808",border:"none",padding:"7px 0",fontSize:8,fontWeight:900,letterSpacing:0.8,cursor:"pointer",fontFamily:"inherit",borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",WebkitTapHighlightColor:"transparent"}}
+          style={{background:"#fff",color:"#080808",border:"none",padding:"7px 0",fontSize:8,fontWeight:900,letterSpacing:1,cursor:"pointer",fontFamily:"inherit",borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",gap:3,WebkitTapHighlightColor:"transparent",width:"100%"}}
         >
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
           COMPRAR
+        </button>
+        <button
+          onClick={e=>{e.stopPropagation();onClick();}}
+          style={{background:"transparent",color:"#666",border:"1px solid #1e1e1e",padding:"6px 0",fontSize:8,fontWeight:700,letterSpacing:0.8,cursor:"pointer",fontFamily:"inherit",borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",gap:3,WebkitTapHighlightColor:"transparent",width:"100%"}}
+        >
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+          + CARRITO
         </button>
       </div>
     </div>
@@ -952,7 +951,7 @@ const fetchBcvRate = useCallback(async (force = false) => {
     setRateLoading(false);
   }
 }, []);
-const fmtPrice=useCallback((usd:number)=>{if(showBs&&bcvRate){const bs=usd*bcvRate;return"Bs. "+bs.toLocaleString("es-VE",{minimumFractionDigits:2,maximumFractionDigits:2});}return"$"+usd.toFixed(2);},[showBs,bcvRate]);
+const fmtPrice=useCallback((usd:number)=>{if(showBs&&bcvRate){const bs=usd*bcvRate;return"Bs. "+Math.round(bs).toLocaleString("es-VE");}return"$"+usd.toFixed(2);},[showBs,bcvRate]);
   const setMainView=useCallback((v:MainView)=>{setMainViewRaw(v);scrollTop();const paths:Partial<Record<MainView,string>>={fokus:"/",shop:"/tienda",comunidad:"/comunidad",grabados:"/grabados",cart:"/carrito",account:"/cuenta"};const p=paths[v];if(p&&typeof window!=="undefined")window.history.pushState({},"",p);},[]);
   const payMethodRef=useRef<HTMLDivElement>(null);
 const comprobanteRef=useRef<HTMLDivElement>(null);
@@ -1596,11 +1595,20 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
               if(i.zone&&i.zone!=="otro"&&i.zone!==deliveryInfo.zone){
                 setTimeout(()=>payMethodRef.current?.scrollIntoView({behavior:"smooth",block:"nearest"}),500);
               }
-              const otroCompleto=i.zone==="otro"&&!!(i.nombre&&i.cedula&&i.telefono&&i.agencia&&i.estado&&i.direccion);
-              if(otroCompleto&&!otroAutoScrolled.current){
-                otroAutoScrolled.current=true;
-                setTimeout(()=>payMethodRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),450);
-              }
+              if(i.zone==="otro"&&i.zone!==deliveryInfo.zone&&!otroAutoScrolled.current){
+  otroAutoScrolled.current=false;
+}
+const otroCompleto=i.zone==="otro"&&!!(i.nombre&&i.cedula&&i.telefono&&i.agencia&&i.estado&&i.direccion);
+if(otroCompleto&&!otroAutoScrolled.current){
+  otroAutoScrolled.current=true;
+  setTimeout(()=>payMethodRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),450);
+}
+if(i.zone==="otro"&&!i.cedula&&!i.nombre){
+  setTimeout(()=>{
+    const firstInput=document.querySelector('[placeholder="Nombre y Apellido *"]') as HTMLElement|null;
+    firstInput?.scrollIntoView({behavior:"smooth",block:"center"});
+  },300);
+}
             }}/>
 
             {/* Indicador paso 2 */}
