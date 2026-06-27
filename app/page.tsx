@@ -440,7 +440,7 @@ const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,fmtPrice}:
           <IcWA s={11} c="#ececec"/>
           CONSULTAR
         </a>
-        <button onClick={e=>{e.stopPropagation();onBuyNow();}} style={{background:"linear-gradient(135deg,#fff 0%,#e8e8e8 100%)",color:"#080808",border:"none",padding:"8px 0",fontSize:9,fontWeight:900,letterSpacing:1.2,cursor:"pointer",fontFamily:"inherit",borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",gap:4,WebkitTapHighlightColor:"transparent",boxShadow:"0 2px 8px rgba(255,255,255,0.15)"}}>
+        <button onClick={e=>{e.stopPropagation();onClick();}} style={{background:"linear-gradient(135deg,#fff 0%,#e8e8e8 100%)",color:"#080808",border:"none",padding:"8px 0",fontSize:9,fontWeight:900,letterSpacing:1.2,cursor:"pointer",fontFamily:"inherit",borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",gap:4,WebkitTapHighlightColor:"transparent",boxShadow:"0 2px 8px rgba(255,255,255,0.15)"}}>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
           COMPRAR
         </button>
@@ -1593,7 +1593,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
 
             <DeliveryForm info={deliveryInfo} onChange={i=>{
               setDeliveryInfo(i);
-              if(!deliveryInfo.zone&&i.zone&&i.zone!=="otro"){
+              if(i.zone&&i.zone!=="otro"&&i.zone!==deliveryInfo.zone){
                 setTimeout(()=>payMethodRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),300);
               }
               const otroCompleto=i.zone==="otro"&&!!(i.nombre&&i.cedula&&i.telefono&&i.agencia&&i.estado&&i.direccion);
@@ -1638,7 +1638,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
               </div>
             )}
             <button onClick={handleSendOrder} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.75rem",width:"100%",marginTop:"1.25rem",background:canSendOrder?"#25D366":"#1a1a1a",color:canSendOrder?"#fff":"#444",padding:"1rem",fontWeight:900,letterSpacing:2,fontSize:11,border:`1px solid ${canSendOrder?"transparent":"#2a2a2a"}`,borderRadius:10,cursor:canSendOrder?"pointer":"not-allowed",fontFamily:"inherit",transition:"background 0.25s, color 0.25s"}}>
-              <IcWA s={18} c={canSendOrder?"#fff":"#444"}/>
+              {canSendOrder&&<IcWA s={18} c="#fff"/>}
               {canSendOrder?"CONFIRMAR Y ENVIAR PEDIDO →":!deliveryInfo.zone?"SELECCIONA TIPO DE ENVÍO ↑":!payMethod?"SELECCIONA MÉTODO DE PAGO ↑":"SUBE EL COMPROBANTE PARA CONTINUAR ↑"}
             </button>
 
