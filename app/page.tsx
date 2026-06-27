@@ -425,29 +425,25 @@ const NativeTabs=memo(function NativeTabs({items,active,onSelect,renderItem,heig
 
 // ─── PRODUCT CARD (GRID) ──────────────────────────────────────────────────────
 const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,fmtPrice}:{product:Product;onClick:()=>void;onBuyNow:()=>void;index:number;fmtPrice:(n:number)=>string}){
-  const[hovered,setHovered]=useState(false);
-  const showBtn=true;
   return(
-    <div className="pc" onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)} style={{cursor:"pointer",WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative"}}>
-      <div onClick={onClick} style={{background:"#111",aspectRatio:"1",overflow:"hidden",marginBottom:"0.55rem",borderRadius:10,position:"relative"}}>
+    <div className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative"}}>
+      <div onClick={onClick} style={{background:"#111",aspectRatio:"1",overflow:"hidden",borderRadius:10,position:"relative",marginBottom:"0.55rem"}}>
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
-        <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"0 7px 8px",transform:showBtn?"translateY(0)":"translateY(110%)",opacity:showBtn?1:0,transition:"transform 0.22s cubic-bezier(0.34,1.2,0.64,1), opacity 0.18s ease",zIndex:10}}>
-          <div style={{position:"absolute",bottom:0,left:0,right:0,height:80,background:"linear-gradient(to top,rgba(8,8,8,0.92) 0%,transparent 100%)",pointerEvents:"none",borderRadius:"0 0 10px 10px"}}/>
-          <div style={{position:"relative",textAlign:"center",marginBottom:4}}>
-            <span style={{display:"inline-flex",alignItems:"center",gap:4,background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:20,padding:"3px 8px",fontSize:8,fontWeight:800,letterSpacing:1.5,color:"rgba(255,255,255,0.5)",backdropFilter:"blur(8px)"}}>
-              <span style={{width:5,height:5,borderRadius:"50%",background:"#4caf50",display:"inline-block"}}/>
-              COMPRA YA
-            </span>
-          </div>
-          <button onClick={e=>{e.stopPropagation();onBuyNow();}} style={{width:"100%",background:"#fff",color:"#080808",border:"none",padding:"9px 0",fontSize:10,fontWeight:900,letterSpacing:2,cursor:"pointer",fontFamily:"inherit",borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",gap:5,position:"relative",WebkitTapHighlightColor:"transparent"}}>
-            PAGAR AHORA <span style={{fontSize:14,fontWeight:900}}>→</span>
-          </button>
-        </div>
       </div>
-      <div onClick={onClick}>
+      <div onClick={onClick} style={{marginBottom:"0.6rem"}}>
         <p style={{margin:"0 0 3px",fontSize:12,lineHeight:1.35,color:"#bbb",letterSpacing:0.2}}>{product.name}</p>
         <p style={{margin:0,fontSize:14,fontWeight:800,color:C.accent,letterSpacing:0.5}}>{fmtPrice(product.price)}</p>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.4rem"}}>
+        <button onClick={onClick} style={{background:"transparent",color:"#888",border:"1px solid #2a2a2a",padding:"8px 0",fontSize:9,fontWeight:800,letterSpacing:1.2,cursor:"pointer",fontFamily:"inherit",borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",gap:4,WebkitTapHighlightColor:"transparent"}}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+          VER MÁS
+        </button>
+        <button onClick={e=>{e.stopPropagation();onBuyNow();}} style={{background:"#fff",color:"#080808",border:"none",padding:"8px 0",fontSize:9,fontWeight:900,letterSpacing:1.2,cursor:"pointer",fontFamily:"inherit",borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",gap:4,WebkitTapHighlightColor:"transparent"}}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          COMPRAR
+        </button>
       </div>
     </div>
   );
