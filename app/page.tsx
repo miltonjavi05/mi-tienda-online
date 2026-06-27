@@ -436,10 +436,10 @@ const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,fmtPrice}:
         <p style={{margin:0,fontSize:14,fontWeight:800,color:C.accent,letterSpacing:0.5}}>{fmtPrice(product.price)}</p>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.4rem"}}>
-        <button onClick={onClick} style={{background:"transparent",color:"#888",border:"1px solid #2a2a2a",padding:"8px 0",fontSize:9,fontWeight:800,letterSpacing:1.2,cursor:"pointer",fontFamily:"inherit",borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",gap:4,WebkitTapHighlightColor:"transparent"}}>
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
-          VER MÁS
-        </button>
+        <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{background:"#0d1a0d",color:"#4caf50",border:"1px solid #1a3a1a",padding:"8px 0",fontSize:9,fontWeight:800,letterSpacing:1.2,cursor:"pointer",fontFamily:"inherit",borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",gap:4,WebkitTapHighlightColor:"transparent",textDecoration:"none"}}>
+          <IcWA s={11} c="#4caf50"/>
+          PREGUNTAR
+        </a>
         <button onClick={e=>{e.stopPropagation();onBuyNow();}} style={{background:"#fff",color:"#080808",border:"none",padding:"8px 0",fontSize:9,fontWeight:900,letterSpacing:1.2,cursor:"pointer",fontFamily:"inherit",borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",gap:4,WebkitTapHighlightColor:"transparent"}}>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
           COMPRAR
@@ -457,10 +457,15 @@ const HCard=memo(function HCard({product,onClick,onBuyNow,fmtPrice}:{product:Pro
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
         <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"0 5px 6px",zIndex:10}}>
-          <div style={{position:"absolute",bottom:0,left:0,right:0,height:70,background:"linear-gradient(to top,rgba(8,8,8,0.95) 0%,transparent 100%)",pointerEvents:"none",borderRadius:"0 0 10px 10px"}}/>
-          <button onClick={e=>{e.stopPropagation();onBuyNow();}} style={{position:"relative",width:"100%",background:"#fff",color:"#080808",border:"none",padding:"7px 0",fontSize:9,fontWeight:900,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",gap:3,WebkitTapHighlightColor:"transparent"}}>
-            PAGAR AHORA →
-          </button>
+          <div style={{position:"absolute",bottom:0,left:0,right:0,height:80,background:"linear-gradient(to top,rgba(8,8,8,0.97) 0%,transparent 100%)",pointerEvents:"none",borderRadius:"0 0 10px 10px"}}/>
+          <div style={{position:"relative",display:"grid",gridTemplateColumns:"1fr 1fr",gap:"4px"}}>
+            <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{background:"#0d1a0d",color:"#4caf50",border:"1px solid #1a3a1a",padding:"7px 0",fontSize:8,fontWeight:800,letterSpacing:1,cursor:"pointer",fontFamily:"inherit",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",gap:3,WebkitTapHighlightColor:"transparent",textDecoration:"none"}}>
+              <IcWA s={10} c="#4caf50"/>WS
+            </a>
+            <button onClick={e=>{e.stopPropagation();onBuyNow();}} style={{background:"#fff",color:"#080808",border:"none",padding:"7px 0",fontSize:8,fontWeight:900,letterSpacing:1,cursor:"pointer",fontFamily:"inherit",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",gap:3,WebkitTapHighlightColor:"transparent"}}>
+              COMPRAR
+            </button>
+          </div>
         </div>
       </div>
       <div onClick={onClick}>
@@ -1640,7 +1645,10 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
               {canSendOrder?"CONFIRMAR Y ENVIAR PEDIDO →":!deliveryInfo.zone?"SELECCIONA TIPO DE ENVÍO ↑":!payMethod?"SELECCIONA MÉTODO DE PAGO ↑":"SUBE EL COMPROBANTE PARA CONTINUAR ↑"}
             </button>
 
-            <button onClick={()=>setMainView("shop")} style={{display:"flex",alignItems:"center",justifyContent:"center",width:"100%",marginTop:"0.65rem",background:"transparent",color:"#333",border:"none",padding:"0.6rem",fontSize:10,fontWeight:700,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>← SEGUIR COMPRANDO</button>
+            <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.5rem",width:"100%",marginTop:"0.65rem",background:"#111",color:"#888",border:"1px solid #2a2a2a",padding:"0.85rem",fontSize:10,fontWeight:800,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",borderRadius:10}}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
+              SEGUIR COMPRANDO
+            </button>
           </div>
         </>
       )}
