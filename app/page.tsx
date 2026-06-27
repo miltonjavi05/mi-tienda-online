@@ -442,7 +442,7 @@ const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,fmtPrice}:
         </a>
         <button onClick={e=>{e.stopPropagation();onBuyNow();}} style={{background:"linear-gradient(135deg,#fff 0%,#e8e8e8 100%)",color:"#080808",border:"none",padding:"8px 0",fontSize:9,fontWeight:900,letterSpacing:1.2,cursor:"pointer",fontFamily:"inherit",borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",gap:4,WebkitTapHighlightColor:"transparent",boxShadow:"0 2px 8px rgba(255,255,255,0.15)"}}>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-          ADQUIRIR
+          COMPRAR
         </button>
       </div>
     </div>
