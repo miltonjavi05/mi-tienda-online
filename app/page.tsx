@@ -452,25 +452,31 @@ const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,fmtPrice}:
 // ─── HORIZONTAL CARD ─────────────────────────────────────────────────────────
 const HCard=memo(function HCard({product,onClick,onBuyNow,fmtPrice}:{product:Product;onClick:()=>void;onBuyNow:()=>void;fmtPrice:(n:number)=>string}){
   return(
-    <div className="hc" style={{cursor:"pointer",flexShrink:0,width:148,WebkitTapHighlightColor:"transparent",touchAction:"manipulation"}}>
-      <div onClick={onClick} style={{background:"#111",width:148,height:148,overflow:"hidden",marginBottom:"0.5rem",borderRadius:10,position:"relative"}}>
+    <div className="hc" style={{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation"}}>
+      <div onClick={onClick} style={{background:"#111",width:152,height:152,overflow:"hidden",marginBottom:"0.55rem",borderRadius:10,position:"relative",cursor:"pointer"}}>
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
-        <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"0 5px 6px",zIndex:10}}>
-          <div style={{position:"absolute",bottom:0,left:0,right:0,height:80,background:"linear-gradient(to top,rgba(8,8,8,0.97) 0%,transparent 100%)",pointerEvents:"none",borderRadius:"0 0 10px 10px"}}/>
-          <div style={{position:"relative",display:"grid",gridTemplateColumns:"1fr 1fr",gap:"4px"}}>
-            <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{background:"#0d1a0d",color:"#4caf50",border:"1px solid #1a3a1a",padding:"7px 0",fontSize:8,fontWeight:800,letterSpacing:1,cursor:"pointer",fontFamily:"inherit",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",gap:3,WebkitTapHighlightColor:"transparent",textDecoration:"none"}}>
-              <IcWA s={10} c="#4caf50"/>WS
-            </a>
-            <button onClick={e=>{e.stopPropagation();onBuyNow();}} style={{background:"#fff",color:"#080808",border:"none",padding:"7px 0",fontSize:8,fontWeight:900,letterSpacing:1,cursor:"pointer",fontFamily:"inherit",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",gap:3,WebkitTapHighlightColor:"transparent"}}>
-              COMPRAR
-            </button>
-          </div>
-        </div>
       </div>
-      <div onClick={onClick}>
+      <div onClick={onClick} style={{marginBottom:"0.5rem",cursor:"pointer"}}>
         <p style={{margin:"0 0 2px",fontSize:11,lineHeight:1.35,color:"#bbb",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{product.name}</p>
         <p style={{margin:0,fontSize:13,fontWeight:800,color:C.accent}}>{fmtPrice(product.price)}</p>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.35rem"}}>
+        <a
+          href={`https://wa.me/${WHATSAPP_NUMBER}`}
+          target="_blank"
+          rel="noreferrer"
+          onClick={e=>e.stopPropagation()}
+          style={{background:"#0a150a",color:"#4caf50",border:"1px solid #1a3a1a",padding:"7px 0",fontSize:8,fontWeight:800,letterSpacing:0.8,fontFamily:"inherit",borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",gap:3,WebkitTapHighlightColor:"transparent",textDecoration:"none"}}
+        >
+          <IcWA s={10} c="#4caf50"/>WS
+        </a>
+        <button
+          onClick={e=>{e.stopPropagation();onBuyNow();}}
+          style={{background:"#fff",color:"#080808",border:"none",padding:"7px 0",fontSize:8,fontWeight:900,letterSpacing:0.8,cursor:"pointer",fontFamily:"inherit",borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",WebkitTapHighlightColor:"transparent"}}
+        >
+          COMPRAR
+        </button>
       </div>
     </div>
   );
@@ -1377,16 +1383,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
       {/* TIENDA */}
       {isShop&&(
         <main style={{paddingTop:navH,background:C.bg}}>
-          {bcvRate&&(
-        <div style={{background:"#0a150a",borderBottom:"1px solid #1a2e1a",padding:"6px 1rem",display:"flex",alignItems:"center",justifyContent:"center",gap:"0.6rem",flexWrap:"wrap"}}>
-          <span style={{fontSize:10,color:"#4caf50",fontWeight:800,letterSpacing:1}}>● TASA BCV HOY</span>
-          <span style={{fontSize:11,color:"#3a7a3a",fontWeight:700}}>1 USD = {bcvRate.toLocaleString("es-VE",{minimumFractionDigits:2,maximumFractionDigits:2})} Bs</span>
-          <span style={{fontSize:9,color:"#1e3e1e",letterSpacing:0.5}}>· Precios mostrados en {showBs?"bolívares":"dólares"}</span>
-          <button onClick={()=>setShowBs(s=>!s)} style={{background:"#fff",color:"#080808",border:"none",borderRadius:10,padding:"3px 10px",fontSize:9,fontWeight:900,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>
-            VER EN {showBs?"USD":"BS"}
-          </button>
-        </div>
-      )}
+          
       <div style={{position:"sticky",top:stickyTop,zIndex:100,background:"rgba(8,8,8,0.97)",borderBottom:`1px solid ${C.border}`,backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)"}}>
             <NativeTabs
               items={["TODO","LENTES",...(SHOP_CATS.filter(c=>c!=="LENTES") as string[])]}
