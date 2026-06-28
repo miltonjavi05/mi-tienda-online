@@ -441,7 +441,7 @@ const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,fmtPrice}:
           COMPRAR AHORA
         </button>
         <div style={{display:"flex",gap:"0.4rem"}}>
-          <button onClick={e=>{e.stopPropagation();onClick();}} style={{background:"rgba(255,255,255,0.03)",color:"#999",border:"1px solid rgba(255,255,255,0.14)",padding:"5px 0",fontSize:9,fontWeight:700,letterSpacing:1,cursor:"pointer",fontFamily:"inherit",borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",gap:4,WebkitTapHighlightColor:"transparent",flex:1}}>
+          <button onClick={e=>{e.stopPropagation();onClick();}} style={{background:"rgba(255,255,255,0.03)",color:"#999",border:"1px solid rgba(255,255,255,0.14)",padding:"5px 0",cursor:"pointer",fontFamily:"inherit",borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",gap:4,WebkitTapHighlightColor:"transparent",flex:1,backdropFilter:"blur(6px)",WebkitBackdropFilter:"blur(6px)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.35), 0 2px 10px rgba(0,0,0,0.4)"}}>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
             + CARRITO
           </button>
@@ -478,7 +478,7 @@ const HCard=memo(function HCard({product,onClick,onBuyNow,fmtPrice}:{product:Pro
         <div style={{display:"flex",gap:"0.3rem"}}>
           <button
             onClick={e=>{e.stopPropagation();onClick();}}
-            style={{background:"rgba(255,255,255,0.03)",color:"#777",border:"1px solid rgba(255,255,255,0.12)",padding:"4px 0",fontSize:8,fontWeight:700,letterSpacing:0.8,cursor:"pointer",fontFamily:"inherit",borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",gap:3,WebkitTapHighlightColor:"transparent",flex:1}}
+            style={{background:"rgba(255,255,255,0.03)",color:"#777",border:"1px solid rgba(255,255,255,0.12)",padding:"4px 0",cursor:"pointer",fontFamily:"inherit",borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",gap:3,WebkitTapHighlightColor:"transparent",flex:1,backdropFilter:"blur(6px)",WebkitBackdropFilter:"blur(6px)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.35), 0 2px 8px rgba(0,0,0,0.4)"}}
           >
             <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
             + CARRITO
