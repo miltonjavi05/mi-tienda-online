@@ -69,7 +69,7 @@ const PAYMENT_METHODS = [
   { id:"zinli",        icon:"💳", name:"Zinli",                           detail:"miltonjavi05@gmail.com" },
 ];
 const SHOP_CATS = ["LENTES","RELOJES","COLLARES","PULSERAS","ANILLOS","ARETES","BILLETERAS"] as const;
-const LENTES_SUBCATS = ["LENTES·FOTOCROMATICOS","LENTES·ANTI-LUZ-AZUL","LENTES·SOL","LENTES·MOTORIZADOS"] as const;
+const LENTES_SUBCATS = ["LENTES·ANTI-LUZ-AZUL","LENTES·FOTOCROMATICOS","LENTES·SOL","LENTES·MOTORIZADOS"] as const;
 const ALL_SHOP_CATS = ["LENTES",...LENTES_SUBCATS,"RELOJES","COLLARES","PULSERAS","ANILLOS","ARETES","BILLETERAS"] as const;
 const DELIVERY_ZONES = [
   { id:"naguanagua", label:"Naguanagua (Gratis)", price:0 },
