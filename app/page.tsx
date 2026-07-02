@@ -489,7 +489,7 @@ const HCard=memo(function HCard({product,onClick,onBuyNow,fmtPrice}:{product:Pro
             + CARRITO
           </button>
           <button
-            onClick={e=>{e.stopPropagation();window.open(buildConsultUrl(product),"_blank","noreferrer");}}
+            onClick={e=>{e.stopPropagation();trackLeadWhatsApp("finalizar_pedido");window.open(buildConsultUrl(product),"_blank","noreferrer");}}
             aria-label="Finalizar pedido por WhatsApp"
             style={{position:"relative",overflow:"hidden",background:"linear-gradient(150deg, rgba(255,255,255,0.20) 0%, rgba(255,255,255,0.05) 55%, rgba(255,255,255,0.16) 100%)",border:"1px solid rgba(255,255,255,0.3)",padding:"1px 0",cursor:"pointer",fontFamily:"inherit",borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",gap:3,WebkitTapHighlightColor:"transparent",flex:1,backdropFilter:"blur(6px)",WebkitBackdropFilter:"blur(6px)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.35), 0 2px 8px rgba(0,0,0,0.4)"}}
           >
