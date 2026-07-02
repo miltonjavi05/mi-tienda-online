@@ -415,7 +415,7 @@ function SkeletonCard(){return(<div><div style={{aspectRatio:"1",background:"#14
 
 // ─── DRAGGABLE WA BUTTON ──────────────────────────────────────────────────────
 function DraggableWA(){
-  const BTN=48,MG=14;
+  const BTN=60,MG=14;
   const[ready,setReady]=useState(false);
   const[pos,setPos]=useState({x:0,y:0});
   const[pressed,setPressed]=useState(false);
@@ -856,14 +856,7 @@ const ThankYouView=memo(function ThankYouView({order,onBack,currentUser}:{order:
   const fired=useRef(false);
   const[phase,setPhase]=useState(0);
   useEffect(()=>{const t1=setTimeout(()=>setPhase(1),60);const t2=setTimeout(()=>setPhase(2),420);const t3=setTimeout(()=>setPhase(3),700);return()=>{clearTimeout(t1);clearTimeout(t2);clearTimeout(t3);};},[]);
-  useEffect(()=>{
-  if(fired.current)return;
-  fired.current=true;
-  const roundedTotal = parseFloat(order.total.toFixed(2));
-  if(roundedTotal > 0){
-    trackPurchase(order.orderId, roundedTotal, order.items, currentUser?.email, order.deliveryInfo.telefono||undefined);
-  }
-},[]);// eslint-disable-line
+  
   useEffect(()=>{const canvas=canvasRef.current;if(!canvas)return;const ctx=canvas.getContext("2d");if(!ctx)return;canvas.width=window.innerWidth;canvas.height=window.innerHeight;const pieces=Array.from({length:70},()=>({x:canvas.width/2+(Math.random()-0.5)*60,y:canvas.height*0.35,vx:(Math.random()-0.5)*8,vy:-(Math.random()*11+4),sz:Math.random()*4+2,color:["#fff","#ddd","#aaa","#777","#444"][Math.floor(Math.random()*5)],rot:Math.random()*Math.PI*2,rv:(Math.random()-0.5)*0.16,alpha:1}));let raf:number;const draw=()=>{ctx.clearRect(0,0,canvas.width,canvas.height);let alive=false;for(const p of pieces){p.x+=p.vx;p.y+=p.vy;p.vy+=0.26;p.vx*=0.996;p.rot+=p.rv;p.alpha-=0.011;if(p.alpha<=0)continue;alive=true;ctx.save();ctx.globalAlpha=Math.max(0,p.alpha);ctx.fillStyle=p.color;ctx.translate(p.x,p.y);ctx.rotate(p.rot);ctx.fillRect(-p.sz/2,-p.sz/2,p.sz,p.sz*0.5);ctx.restore();}if(alive)raf=requestAnimationFrame(draw);};const t=setTimeout(()=>{raf=requestAnimationFrame(draw);},400);return()=>{clearTimeout(t);cancelAnimationFrame(raf);};},[]);
   const pm=PAYMENT_METHODS.find(m=>m.id===order.payMethod);
   const fade=(delay=0):React.CSSProperties=>({opacity:phase>=3?1:0,transform:phase>=3?"translateY(0)":"translateY(12px)",transition:`opacity 0.4s ${delay}s ease, transform 0.4s ${delay}s ease`});
@@ -888,7 +881,7 @@ const ThankYouView=memo(function ThankYouView({order,onBack,currentUser}:{order:
         {order.comprobanteUrl&&(<div style={{...fade(0.1),display:"flex",alignItems:"center",gap:"0.6rem",background:"rgba(76,175,80,0.05)",border:"1px solid rgba(76,175,80,0.12)",borderRadius:10,padding:"0.7rem 1rem",marginBottom:"0.85rem"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg><p style={{margin:0,fontSize:12,color:"#3a7a3a",fontWeight:700}}>Comprobante de pago recibido ✓</p></div>)}
         <div style={{...fade(0.12),height:1,background:"linear-gradient(90deg,transparent,#191919,transparent)",margin:"1.1rem 0"}}/>
         <div style={{...fade(0.15)}}>
-          <a href={order.waUrl} target="_blank" rel="noreferrer" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.65rem",background:"#25D366",color:"#fff",padding:"1rem 1.25rem",borderRadius:12,textDecoration:"none",fontSize:12,fontWeight:900,letterSpacing:1.5,marginBottom:"0.65rem",boxShadow:"0 8px 24px rgba(37,211,102,0.18)",WebkitTapHighlightColor:"transparent"}}><IcWA s={18} c="#fff"/>ENVIAR PEDIDO POR WHATSAPP →</a>
+          <a href={order.waUrl} target="_blank" rel="noreferrer" onClick={()=>{if(fired.current)return;fired.current=true;const roundedTotal=parseFloat(order.total.toFixed(2));if(roundedTotal>0)trackPurchase(order.orderId,roundedTotal,order.items,currentUser?.email,order.deliveryInfo.telefono||undefined);}} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.65rem",background:"#25D366",color:"#fff",padding:"1rem 1.25rem",borderRadius:12,textDecoration:"none",fontSize:12,fontWeight:900,letterSpacing:1.5,marginBottom:"0.65rem",boxShadow:"0 8px 24px rgba(37,211,102,0.18)",WebkitTapHighlightColor:"transparent"}}><IcWA s={18} c="#fff"/>ENVIAR PEDIDO POR WHATSAPP →</a>
           <p style={{textAlign:"center",fontSize:10,color:"#2a2a2a",margin:"0 0 1rem",lineHeight:1.6}}>Toca para abrir WhatsApp con tu pedido listo para enviar</p>
           <button onClick={onBack} style={{display:"flex",alignItems:"center",justifyContent:"center",width:"100%",background:"transparent",color:"#333",border:"1px solid #1a1a1a",padding:"0.8rem 1rem",borderRadius:12,fontSize:10,fontWeight:800,letterSpacing:2,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>SEGUIR COMPRANDO</button>
         </div>
