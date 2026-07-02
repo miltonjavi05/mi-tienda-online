@@ -16,6 +16,15 @@ const CLOUDINARY_PRESET = "fokus_products";
 const ADMIN_EMAIL    = process.env.NEXT_PUBLIC_ADMIN_EMAIL    || "miltonjavi05@gmail.com";
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "2844242900";
 const WHATSAPP_NUMBER = "584243005733";
+if (typeof document !== "undefined") {
+  document.addEventListener("click", (e:MouseEvent) => {
+    const el = (e.target as HTMLElement).closest?.("a[href*='wa.me']");
+    if (el && !el.getAttribute("data-fokus-tracked")) {
+      // @ts-ignore
+      trackLeadWhatsApp("meta_wa_plugin");
+    }
+  }, true);
+}
 
 const META_PIXEL_ID = "840893159040582";
 
