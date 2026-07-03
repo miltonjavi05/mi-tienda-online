@@ -21,6 +21,7 @@ export async function POST(req: NextRequest) {
         },
         custom_data: body.custom_data,
       }],
+      TEST_EVENT_CODE: "TEST82962",
     };
 
     const r = await fetch(
