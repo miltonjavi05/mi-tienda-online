@@ -29,7 +29,10 @@ export async function POST(req: NextRequest) {
     );
 
     const data = await r.json();
-    return NextResponse.json(data, { status: r.ok ? 200 : 400 });
+if (!r.ok) {
+  console.error("META CAPI ERROR:", JSON.stringify(data));
+}
+return NextResponse.json(data, { status: r.ok ? 200 : 400 });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
