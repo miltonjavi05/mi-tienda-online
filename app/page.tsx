@@ -231,6 +231,7 @@ async function fsGetAll():Promise<Product[]>{const r=await fetch(`${fsBase()}/pr
 async function fsAdd(p:Omit<Product,"id">):Promise<void>{const fields=Object.fromEntries(Object.entries({...p,createdAt:Date.now()}).map(([k,v])=>[k,toFs(v)]));const r=await fetch(`${fsBase()}/products`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fields})});if(!r.ok)throw new Error(await r.text());}
 async function fsUpdate(id:string,p:Partial<Omit<Product,"id">>):Promise<void>{const fields=Object.fromEntries(Object.entries(p).map(([k,v])=>[k,toFs(v)]));const mask=Object.keys(p).map(k=>`updateMask.fieldPaths=${encodeURIComponent(k)}`).join("&");const r=await fetch(`${fsBase()}/products/${id}?${mask}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({fields})});if(!r.ok)throw new Error(await r.text());}
 async function fsDelete(id:string):Promise<void>{await fetch(`${fsBase()}/products/${id}`,{method:"DELETE"});}
+async function fsAddToCollection(collection:string,data:Record<string,unknown>):Promise<void>{const fields=Object.fromEntries(Object.entries(data).map(([k,v])=>[k,toFs(v as unknown)]));const r=await fetch(`${fsBase()}/${collection}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fields})});if(!r.ok)throw new Error(await r.text());}
 async function fsSaveUser(uid:string,data:Record<string,unknown>,idToken?:string):Promise<void>{const fields=Object.fromEntries(Object.entries(data).map(([k,v])=>[k,toFs(v as unknown)]));const mask=Object.keys(data).map(k=>`updateMask.fieldPaths=${encodeURIComponent(k)}`).join("&");const headers:Record<string,string>={"Content-Type":"application/json"};if(idToken)headers["Authorization"]=`Bearer ${idToken}`;await fetch(`${fsBase()}/users/${uid}?${mask}`,{method:"PATCH",headers,body:JSON.stringify({fields})}).catch(()=>{});}
 async function refreshIdToken(refreshToken:string):Promise<{idToken:string;localId:string}|null>{try{const r=await fetch(`https://securetoken.googleapis.com/v1/token?key=${FIREBASE_CONFIG.apiKey}`,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:`grant_type=refresh_token&refresh_token=${encodeURIComponent(refreshToken)}`});const d=await r.json() as{id_token?:string;user_id?:string};if(!r.ok||!d.id_token)return null;return{idToken:d.id_token,localId:d.user_id!};}catch{return null;}}
 async function authSignUp(email:string,password:string,displayName:string):Promise<{idToken:string;localId:string;refreshToken:string}>{const r=await fetch(`${AUTH_BASE}:signUp?key=${FIREBASE_CONFIG.apiKey}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password,returnSecureToken:true})});const d=await r.json() as{idToken?:string;localId?:string;refreshToken?:string;error?:{message:string}};if(!r.ok||d.error)throw new Error(d.error?.message||"Error al registrar");await fetch(`${AUTH_BASE}:update?key=${FIREBASE_CONFIG.apiKey}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({idToken:d.idToken,displayName,returnSecureToken:false})});return{idToken:d.idToken!,localId:d.localId!,refreshToken:d.refreshToken!};}
@@ -985,7 +986,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   const[adminEmail,setAdminEmail]  =useState("");
   const[adminPwd,setAdminPwd]      =useState("");
   const[adminErr,setAdminErr]      =useState("");
-  const[adminSec,setAdminSec]      =useState<"menu"|"products">("menu");
+  const[adminSec,setAdminSec]=useState<"menu"|"products"|"sales">("menu");
   const[adminCat,setAdminCat]      =useState("ALL");
   const[editing,setEditing]        =useState<Product|null>(null);
   const[fName,setFName]            =useState("");
@@ -998,6 +999,16 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   const[fErr,setFErr]              =useState("");
   const[fOk,setFOk]                =useState("");
   const[adminSearch,setAdminSearch]=useState("");
+  const[saleName,setSaleName]=useState("");
+  const[saleEmail,setSaleEmail]=useState("");
+  const[salePhone,setSalePhone]=useState("");
+  const[saleProduct,setSaleProduct]=useState("");
+  const[saleAmount,setSaleAmount]=useState("");
+  const[salePayMethod,setSalePayMethod]=useState("");
+  const[saleNotes,setSaleNotes]=useState("");
+  const[saleLoading,setSaleLoading]=useState(false);
+  const[saleErr,setSaleErr]=useState("");
+  const[saleOk,setSaleOk]=useState("");
   const fileRef =useRef<HTMLInputElement>(null);
   const formRef =useRef<HTMLDivElement>(null);
   const[dragId,setDragId]  =useState<string|null>(null);
@@ -1187,6 +1198,31 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
     invalidateProductsCache();
     productsAlreadyLoaded.current = false;
     await loadProducts(true);
+  };
+
+  const resetSaleForm=()=>{setSaleName("");setSaleEmail("");setSalePhone("");setSaleProduct("");setSaleAmount("");setSalePayMethod("");setSaleNotes("");setSaleErr("");setSaleOk("");};
+
+  const submitManualSale=async()=>{
+    setSaleErr("");setSaleOk("");
+    const amountNum=parseFloat(saleAmount);
+    if(!amountNum||amountNum<=0){setSaleErr("Ingresa un monto válido.");return;}
+    if(!saleEmail.trim()&&!salePhone.trim()){setSaleErr("Ingresa al menos el correo o el teléfono del cliente.");return;}
+    setSaleLoading(true);
+    try{
+      const orderId=`FKS-WA-${Date.now().toString(36).toUpperCase()}`;
+      const eventId=genEventId();
+      const roundedTotal=parseFloat(amountNum.toFixed(2));
+      const normalizedPhone=salePhone.trim().replace(/[^0-9]/g,"");
+      fbqTrack("Purchase",{value:roundedTotal,currency:"USD",order_id:orderId,content_name:saleProduct.trim()||"Venta manual",content_type:"product"},{eventID:eventId});
+      await sendCAPI("Purchase",eventId,{value:roundedTotal,currency:"USD",content_name:saleProduct.trim()||"Venta manual",content_type:"product"},{email:saleEmail.trim()||undefined,phone:normalizedPhone||undefined});
+      await fsAddToCollection("manual_sales",{orderId,name:saleName.trim(),email:saleEmail.trim(),phone:salePhone.trim(),product:saleProduct.trim(),amount:roundedTotal,payMethod:salePayMethod.trim(),notes:saleNotes.trim(),createdAt:Date.now()});
+      setSaleOk("✓ Venta registrada y enviada a Meta (CAPI)");
+      setTimeout(resetSaleForm,1800);
+    }catch(err){
+      setSaleErr("Error: "+(err instanceof Error?err.message:"desconocido"));
+    }finally{
+      setSaleLoading(false);
+    }
   };
 
   const handleDragStart=useCallback((id:string)=>setDragId(id),[]);
@@ -1688,7 +1724,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
         <main style={{paddingTop:NAV_H,background:"#060606",minHeight:"100vh"}}>
           <div style={{maxWidth:720,margin:"0 auto",padding:"2rem 1rem 4rem"}}>
             {!adminLogged&&(<div style={{background:"#111",borderRadius:14,padding:"2.5rem 2rem",maxWidth:380,margin:"2rem auto",border:"1px solid #1a1a1a",animation:"slideUp 0.3s ease"}}><h1 style={{color:"#fff",fontSize:20,fontWeight:900,marginBottom:"1.5rem",textAlign:"center",letterSpacing:2}}>ADMIN</h1><div style={{display:"flex",flexDirection:"column",gap:"0.85rem"}}><input type="email" placeholder="Correo" value={adminEmail} onChange={e=>setAdminEmail(e.target.value)} style={S.input}/><PwdInput placeholder="Contraseña" value={adminPwd} onChange={setAdminPwd} onKeyDown={e=>e.key==="Enter"&&doLogin()} autoComplete="current-password"/>{adminErr&&<p style={{color:"#ff5555",fontSize:12,margin:0,background:"#1e0a0a",padding:"0.6rem 1rem",borderRadius:8}}>{adminErr}</p>}<button onClick={doLogin} style={S.adminBtn}>Entrar</button><button onClick={doLogout} style={{...S.adminBtn,background:"transparent",color:"#333",marginTop:4}}>← Volver</button></div></div>)}
-            {adminLogged&&adminSec==="menu"&&(<div style={{background:"#111",borderRadius:14,padding:"2.5rem 2rem",maxWidth:380,margin:"2rem auto",border:"1px solid #1a1a1a",animation:"slideUp 0.3s ease"}}><h1 style={{color:"#fff",fontSize:18,fontWeight:900,marginBottom:"0.4rem",textAlign:"center",letterSpacing:2}}>PANEL</h1><p style={{color:"#333",fontSize:12,textAlign:"center",marginBottom:"2rem",letterSpacing:1}}>Selecciona una opción</p><div style={{display:"flex",flexDirection:"column",gap:"0.65rem"}}><button onClick={()=>setAdminSec("products")} style={S.adminBtn}>📦 Gestionar productos</button><button onClick={doLogout} style={{...S.adminBtn,background:"transparent",color:"#ff5555",border:"none",marginTop:8,letterSpacing:1}}>Cerrar sesión</button></div></div>)}
+            {adminLogged&&adminSec==="menu"&&(<div style={{background:"#111",borderRadius:14,padding:"2.5rem 2rem",maxWidth:380,margin:"2rem auto",border:"1px solid #1a1a1a",animation:"slideUp 0.3s ease"}}><h1 style={{color:"#fff",fontSize:18,fontWeight:900,marginBottom:"0.4rem",textAlign:"center",letterSpacing:2}}>PANEL</h1><p style={{color:"#333",fontSize:12,textAlign:"center",marginBottom:"2rem",letterSpacing:1}}>Selecciona una opción</p><div style={{display:"flex",flexDirection:"column",gap:"0.65rem"}}><button onClick={()=>setAdminSec("products")} style={S.adminBtn}>📦 Gestionar productos</button><button onClick={()=>setAdminSec("sales")} style={S.adminBtn}>💰 Registrar venta manual</button><button onClick={doLogout} style={{...S.adminBtn,background:"transparent",color:"#ff5555",border:"none",marginTop:8,letterSpacing:1}}>Cerrar sesión</button></div></div>)}
             {adminLogged&&adminSec==="products"&&(<>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem"}}><h1 style={{color:"#fff",fontSize:16,fontWeight:900,margin:0,letterSpacing:2}}>{editing?"EDITAR PRODUCTO":"PRODUCTOS"}</h1><button onClick={()=>{setAdminSec("menu");resetForm();}} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:12,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>← MENÚ</button></div>
               <div ref={formRef} style={{background:"#111",borderRadius:12,padding:"1.5rem",marginBottom:"1.25rem",border:editing?"1px solid #2a2a2a":"1px solid #1a1a1a"}}><p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 1.25rem"}}>{editing?`EDITANDO: ${editing.name}`:"NUEVO PRODUCTO"}</p><div style={{display:"flex",flexDirection:"column",gap:"0.8rem"}}><input placeholder="Nombre del producto *" value={fName} onChange={e=>setFName(e.target.value)} style={S.input}/><textarea placeholder="Descripción (opcional)" value={fDesc} onChange={e=>setFDesc(e.target.value)} rows={2} style={{...S.input,resize:"vertical" as any,lineHeight:1.6}}/><input placeholder="Precio en USD *" type="number" min="0" step="0.01" value={fPrice} onChange={e=>setFPrice(e.target.value)} style={S.input}/><select value={fCat} onChange={e=>setFCat(e.target.value)} style={{...S.input,appearance:"auto" as any}}><option value="">Selecciona categoría *</option><optgroup label="── LENTES">{LENTES_SUBCATS.map(s=><option key={s} value={s}>{catLabel(s)}</option>)}</optgroup><optgroup label="── OTROS">{SHOP_CATS.filter(c=>c!=="LENTES").map(c=><option key={c} value={c}>{catLabel(c)}</option>)}</optgroup></select><div style={{background:"#0e0e0e",borderRadius:8,padding:"1rem",border:"1px dashed #1e1e1e"}}><p style={{color:"#333",fontSize:9,letterSpacing:2,margin:"0 0 0.65rem",fontWeight:800}}>IMAGEN {!editing&&"*"}</p><input ref={fileRef} type="file" accept="image/*" onChange={onFileChange} style={{display:"none"}} id="fi"/><label htmlFor="fi" style={{display:"inline-flex",alignItems:"center",gap:"0.45rem",background:"#1a1a1a",color:"#888",padding:"0.55rem 1rem",borderRadius:8,cursor:"pointer",fontSize:12,border:"1px solid #222",fontFamily:"inherit"}}>📷 {fFile?"Cambiar":"Elegir foto"}</label>{fFile&&<span style={{color:"#444",fontSize:11,marginLeft:"0.65rem"}}>{fFile.name}</span>}{fPrev&&<div style={{marginTop:"0.65rem",width:80,height:80,borderRadius:8,overflow:"hidden",border:"1px solid #222"}}><img src={fPrev} alt="preview" style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/></div>}</div>{fErr&&<div style={{color:"#ff5555",fontSize:12,background:"#1e0808",padding:"0.65rem 1rem",borderRadius:8}}>{fErr}</div>}{fOk&&<div style={{color:"#55cc77",fontSize:12,background:"#081e0e",padding:"0.65rem 1rem",borderRadius:8}}>{fOk}</div>}<div style={{display:"flex",gap:"0.65rem",flexWrap:"wrap"}}><button onClick={submitProduct} disabled={fLoad} style={{...S.adminBtn,flex:1,opacity:fLoad?0.4:1,cursor:fLoad?"not-allowed":"pointer"}}>{fLoad?"Subiendo...":(editing?"Guardar cambios":"Agregar producto")}</button>{editing&&<button onClick={resetForm} style={{...S.adminBtn,flex:"0 0 auto",width:"auto",padding:"0.8rem 1.1rem",background:"transparent",color:"#444",border:"1px solid #1e1e1e"}}>Cancelar</button>}</div></div></div>
@@ -1709,6 +1745,25 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                 ):(
                   <div className="admin-list" style={{display:"flex",flexDirection:"column",gap:2}}>{adminProds.map(p=>(<div key={p.id} data-rowid={p.id}><ARow p={p} editing={editing} onEdit={startEdit} onDel={delProd} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} isDragging={dragId===p.id} isOver={overId===p.id&&dragId!==p.id} onTouchStart={handleTouchDragStart} onTouchMove={handleTouchDragMove} onTouchEnd={handleTouchDragEnd}/></div>))}{!adminProds.length&&<p style={{color:"#333",textAlign:"center",padding:"1.5rem",fontSize:12}}>Sin resultados</p>}</div>
                 )}
+              </div>
+            </>)}
+
+            {adminLogged&&adminSec==="sales"&&(<>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem"}}><h1 style={{color:"#fff",fontSize:16,fontWeight:900,margin:0,letterSpacing:2}}>REGISTRAR VENTA MANUAL</h1><button onClick={()=>{setAdminSec("menu");resetSaleForm();}} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:12,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>← MENÚ</button></div>
+              <div style={{background:"#111",borderRadius:12,padding:"1.5rem",border:"1px solid #1a1a1a"}}>
+                <p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 1.25rem"}}>PARA VENTAS CERRADAS POR WHATSAPP U OTRO CANAL FUERA DEL CHECKOUT AUTOMÁTICO</p>
+                <div style={{display:"flex",flexDirection:"column",gap:"0.8rem"}}>
+                  <input placeholder="Nombre del cliente" value={saleName} onChange={e=>setSaleName(e.target.value)} style={S.input}/>
+                  <input placeholder="Correo del cliente (recomendado)" type="email" value={saleEmail} onChange={e=>setSaleEmail(e.target.value)} style={S.input}/>
+                  <input placeholder="Teléfono del cliente (recomendado)" value={salePhone} onChange={e=>setSalePhone(e.target.value)} style={S.input}/>
+                  <input placeholder="Producto(s) vendido(s)" value={saleProduct} onChange={e=>setSaleProduct(e.target.value)} style={S.input}/>
+                  <input placeholder="Monto total en USD *" type="number" min="0" step="0.01" value={saleAmount} onChange={e=>setSaleAmount(e.target.value)} style={S.input}/>
+                  <input placeholder="Método de pago (opcional)" value={salePayMethod} onChange={e=>setSalePayMethod(e.target.value)} style={S.input}/>
+                  <textarea placeholder="Notas (opcional)" value={saleNotes} onChange={e=>setSaleNotes(e.target.value)} rows={2} style={{...S.input,resize:"vertical" as any,lineHeight:1.6}}/>
+                  {saleErr&&<div style={{color:"#ff5555",fontSize:12,background:"#1e0808",padding:"0.65rem 1rem",borderRadius:8}}>{saleErr}</div>}
+                  {saleOk&&<div style={{color:"#55cc77",fontSize:12,background:"#081e0e",padding:"0.65rem 1rem",borderRadius:8}}>{saleOk}</div>}
+                  <button onClick={submitManualSale} disabled={saleLoading} style={{...S.adminBtn,opacity:saleLoading?0.4:1,cursor:saleLoading?"not-allowed":"pointer"}}>{saleLoading?"Registrando...":"Registrar venta y enviar a Meta"}</button>
+                </div>
               </div>
             </>)}
           </div>
