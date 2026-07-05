@@ -120,6 +120,12 @@ async function sha256(value: string): Promise<string> {
     return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
   } catch { return ""; }
 }
+function normalizeVEPhone(phone: string): string {
+  let digits = phone.trim().replace(/[^0-9]/g, "");
+  if (digits.startsWith("0")) digits = digits.slice(1);
+  if (!digits.startsWith("58")) digits = "58" + digits;
+  return digits;
+}
 function initMetaPixel(): void {
   if (typeof window === "undefined") return;
   if ((window as any).fbq) return;
@@ -141,7 +147,7 @@ function fbqTrack(event: string, params?: Record<string, unknown>, options?: { e
     (window as any).fbq('track', event, params || {});
   }
 }
-async function sendCAPI(eventName: string, eventId: string, data: { value?: number; currency?: string; content_ids?: string[]; content_name?: string; content_type?: string; num_items?: number; }, userData?: { email?: string; phone?: string; state?: string }): Promise<void> {
+async function sendCAPI(eventName: string, eventId: string, data: { value?: number; currency?: string; content_ids?: string[]; content_name?: string; content_type?: string; num_items?: number; }, userData?: { email?: string; phone?: string; state?: string }, actionSource: string = "website"): Promise<void> {
   try {
     const normalizeState=(s:string)=>s.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z]/g,"");
     const [hashedEmail, hashedPhone, hashedState] = await Promise.all([
@@ -152,8 +158,8 @@ async function sendCAPI(eventName: string, eventId: string, data: { value?: numb
     const payload = {
       event_name: eventName, event_id: eventId,
       event_time: Math.floor(Date.now() / 1000),
-      event_source_url: typeof window !== "undefined" ? window.location.href : "",
-      action_source: "website",
+      event_source_url: actionSource === "website" && typeof window !== "undefined" ? window.location.href : undefined,
+      action_source: actionSource,
       user_data: {
         ...(hashedEmail && { em: hashedEmail }),
         ...(hashedPhone && { ph: hashedPhone }),
@@ -196,6 +202,7 @@ async function trackInitiateCheckout(items: CartItem[], total: number, userEmail
 async function trackPurchase(orderId: string, total: number, items: CartItem[], userEmail?: string, userPhone?: string, userState?: string): Promise<void> {
   const eventId = genEventId();
   const roundedTotal = parseFloat(total.toFixed(2));
+  if (userPhone) userPhone = normalizeVEPhone(userPhone);
   const contents = items.map(i=>({ id: i.product.id, quantity: i.qty, item_price: parseFloat(i.product.price.toFixed(2)) }));
   const contentIds = items.map(i=>i.product.id);
   const numItems = items.reduce((s,i)=>s+i.qty,0);
@@ -1226,9 +1233,9 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
       const roundedTotal=parseFloat(amountNum.toFixed(2));
       if(saleSendMeta){
         const eventId=genEventId();
-        const normalizedPhone=salePhone.trim().replace(/[^0-9]/g,"");
-        fbqTrack("Purchase",{value:roundedTotal,currency:"USD",order_id:orderId,content_name:saleProduct.trim()||"Venta manual",content_type:"product"},{eventID:eventId});
-        await sendCAPI("Purchase",eventId,{value:roundedTotal,currency:"USD",content_name:saleProduct.trim()||"Venta manual",content_type:"product"},{email:saleEmail.trim()||undefined,phone:normalizedPhone||undefined,state:saleState||undefined});
+        const normalizedPhone=salePhone.trim()?normalizeVEPhone(salePhone):"";
+        // Solo CAPI (servidor) — nunca fbqTrack para ventas offline, esa sesión es la del admin, no la del cliente
+        await sendCAPI("Purchase",eventId,{value:roundedTotal,currency:"USD",content_name:saleProduct.trim()||"Venta manual",content_type:"product"},{email:saleEmail.trim()||undefined,phone:normalizedPhone||undefined,state:saleState||undefined},"chat");
       }
       await fsAddToCollection("manual_sales",{orderId,source:saleSendMeta?"manual":"offline",name:saleName.trim(),email:saleEmail.trim(),phone:salePhone.trim(),product:saleProduct.trim(),amount:roundedTotal,payMethod:salePayMethod.trim(),state:saleState.trim(),notes:saleNotes.trim(),createdAt:Date.now()});
       setSaleOk(saleSendMeta?"✓ Venta registrada y enviada a Meta (CAPI)":"✓ Venta registrada solo en tu panel (no se envió a Meta)");
