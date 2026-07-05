@@ -1012,6 +1012,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   const[salePayMethod,setSalePayMethod]=useState("");
   const[saleState,setSaleState]=useState("");
   const[saleNotes,setSaleNotes]=useState("");
+  const[saleSendMeta,setSaleSendMeta]=useState(true);
   const[saleLoading,setSaleLoading]=useState(false);
   const[saleErr,setSaleErr]=useState("");
   const[saleOk,setSaleOk]=useState("");
@@ -1019,6 +1020,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   const[leadsList,setLeadsList]=useState<Array<Record<string,unknown>&{id:string}>>([]);
   const[statsLoading,setStatsLoading]=useState(false);
   const[statsErr,setStatsErr]=useState("");
+  const[statsPeriod,setStatsPeriod]=useState<"7d"|"30d"|"90d"|"all">("30d");
   const statsLoaded=useRef(false);
   const fileRef =useRef<HTMLInputElement>(null);
   const formRef =useRef<HTMLDivElement>(null);
@@ -1211,23 +1213,25 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
     await loadProducts(true);
   };
 
-  const resetSaleForm=()=>{setSaleName("");setSaleEmail("");setSalePhone("");setSaleProduct("");setSaleAmount("");setSalePayMethod("");setSaleState("");setSaleNotes("");setSaleErr("");setSaleOk("");};
+  const resetSaleForm=()=>{setSaleName("");setSaleEmail("");setSalePhone("");setSaleProduct("");setSaleAmount("");setSalePayMethod("");setSaleState("");setSaleNotes("");setSaleSendMeta(true);setSaleErr("");setSaleOk("");};
 
   const submitManualSale=async()=>{
     setSaleErr("");setSaleOk("");
     const amountNum=parseFloat(saleAmount);
     if(!amountNum||amountNum<=0){setSaleErr("Ingresa un monto válido.");return;}
-    if(!saleEmail.trim()&&!salePhone.trim()){setSaleErr("Ingresa al menos el correo o el teléfono del cliente.");return;}
+    if(saleSendMeta&&!saleEmail.trim()&&!salePhone.trim()){setSaleErr("Ingresa al menos el correo o el teléfono del cliente.");return;}
     setSaleLoading(true);
     try{
       const orderId=`FKS-WA-${Date.now().toString(36).toUpperCase()}`;
-      const eventId=genEventId();
       const roundedTotal=parseFloat(amountNum.toFixed(2));
-      const normalizedPhone=salePhone.trim().replace(/[^0-9]/g,"");
-      fbqTrack("Purchase",{value:roundedTotal,currency:"USD",order_id:orderId,content_name:saleProduct.trim()||"Venta manual",content_type:"product"},{eventID:eventId});
-      await sendCAPI("Purchase",eventId,{value:roundedTotal,currency:"USD",content_name:saleProduct.trim()||"Venta manual",content_type:"product"},{email:saleEmail.trim()||undefined,phone:normalizedPhone||undefined,state:saleState||undefined});
-      await fsAddToCollection("manual_sales",{orderId,source:"manual",name:saleName.trim(),email:saleEmail.trim(),phone:salePhone.trim(),product:saleProduct.trim(),amount:roundedTotal,payMethod:salePayMethod.trim(),state:saleState.trim(),notes:saleNotes.trim(),createdAt:Date.now()});
-      setSaleOk("✓ Venta registrada y enviada a Meta (CAPI)");
+      if(saleSendMeta){
+        const eventId=genEventId();
+        const normalizedPhone=salePhone.trim().replace(/[^0-9]/g,"");
+        fbqTrack("Purchase",{value:roundedTotal,currency:"USD",order_id:orderId,content_name:saleProduct.trim()||"Venta manual",content_type:"product"},{eventID:eventId});
+        await sendCAPI("Purchase",eventId,{value:roundedTotal,currency:"USD",content_name:saleProduct.trim()||"Venta manual",content_type:"product"},{email:saleEmail.trim()||undefined,phone:normalizedPhone||undefined,state:saleState||undefined});
+      }
+      await fsAddToCollection("manual_sales",{orderId,source:saleSendMeta?"manual":"offline",name:saleName.trim(),email:saleEmail.trim(),phone:salePhone.trim(),product:saleProduct.trim(),amount:roundedTotal,payMethod:salePayMethod.trim(),state:saleState.trim(),notes:saleNotes.trim(),createdAt:Date.now()});
+      setSaleOk(saleSendMeta?"✓ Venta registrada y enviada a Meta (CAPI)":"✓ Venta registrada solo en tu panel (no se envió a Meta)");
       statsLoaded.current=false;
       setTimeout(resetSaleForm,1800);
     }catch(err){
@@ -1293,25 +1297,42 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   const adminProds=useMemo(()=>{let l=products;if(adminCat!=="ALL")l=l.filter(p=>p.category===adminCat);if(adminSearch!=="")l=l.filter(p=>p.name.toLowerCase().includes(adminSearch.toLowerCase())||p.category.toLowerCase().includes(adminSearch.toLowerCase()));return l;},[products,adminCat,adminSearch]);
   const usedCats=useMemo(()=>[...new Set(products.map(p=>p.category))].sort(),[products]);
 
+  const periodCutoff=useMemo(()=>{
+    if(statsPeriod==="all")return 0;
+    const daysBack=statsPeriod==="7d"?7:statsPeriod==="30d"?30:90;
+    const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-(daysBack-1));
+    return d.getTime();
+  },[statsPeriod]);
+
+  const filteredSales=useMemo(()=>salesList.filter(s=>(Number(s.createdAt)||0)>=periodCutoff),[salesList,periodCutoff]);
+  const filteredLeads=useMemo(()=>leadsList.filter(l=>(Number(l.createdAt)||0)>=periodCutoff),[leadsList,periodCutoff]);
+
   const salesStats=useMemo(()=>{
-    const totalRevenue=salesList.reduce((s,sale)=>s+(Number(sale.amount)||0),0);
-    const totalSales=salesList.length;
+    const onlineSales=filteredSales.filter(s=>s.source!=="offline");
+    const offlineSales=filteredSales.filter(s=>s.source==="offline");
+    const totalRevenue=onlineSales.reduce((s,sale)=>s+(Number(sale.amount)||0),0);
+    const offlineRevenue=offlineSales.reduce((s,sale)=>s+(Number(sale.amount)||0),0);
+    const totalSales=onlineSales.length;
     const avgTicket=totalSales>0?totalRevenue/totalSales:0;
-    const totalLeads=leadsList.length;
+    const totalLeads=filteredLeads.length;
     const conversionRate=totalLeads>0?(totalSales/totalLeads)*100:0;
     const payMethodCounts:Record<string,number>={};
-    salesList.forEach(s=>{const pm=(s.payMethod as string)||"Sin especificar";payMethodCounts[pm]=(payMethodCounts[pm]||0)+1;});
+    onlineSales.forEach(s=>{const pm=(s.payMethod as string)||"Sin especificar";payMethodCounts[pm]=(payMethodCounts[pm]||0)+1;});
     const topPayMethod=Object.entries(payMethodCounts).sort((a,b)=>b[1]-a[1])[0]?.[0]||"—";
+    const bucketCount=statsPeriod==="7d"?7:statsPeriod==="30d"?30:statsPeriod==="90d"?13:12;
+    const bucketDays=statsPeriod==="90d"?7:statsPeriod==="all"?30:1;
+    const allForChart=onlineSales.concat(offlineSales);
     const days:{label:string;total:number}[]=[];
-    for(let i=6;i>=0;i--){
-      const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-i);
-      const dayStart=d.getTime();const dayEnd=dayStart+86400000;
-      const total=salesList.filter(s=>{const t=Number(s.createdAt)||0;return t>=dayStart&&t<dayEnd;}).reduce((s,sale)=>s+(Number(sale.amount)||0),0);
-      days.push({label:d.toLocaleDateString("es-VE",{weekday:"short"}).toUpperCase(),total});
+    for(let i=bucketCount-1;i>=0;i--){
+      const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-i*bucketDays);
+      const dayStart=d.getTime();const dayEnd=dayStart+bucketDays*86400000;
+      const total=allForChart.filter(s=>{const t=Number(s.createdAt)||0;return t>=dayStart&&t<dayEnd;}).reduce((s,sale)=>s+(Number(sale.amount)||0),0);
+      const label=bucketDays===1?d.toLocaleDateString("es-VE",{weekday:"short"}).toUpperCase():d.toLocaleDateString("es-VE",{day:"2-digit",month:"short"}).toUpperCase();
+      days.push({label,total});
     }
     const maxDay=Math.max(1,...days.map(d=>d.total));
-    return{totalRevenue,totalSales,avgTicket,totalLeads,conversionRate,topPayMethod,days,maxDay};
-  },[salesList,leadsList]);
+    return{totalRevenue,offlineRevenue,totalSales,offlineCount:offlineSales.length,avgTicket,totalLeads,conversionRate,topPayMethod,days,maxDay,onlineSales,offlineSales};
+  },[filteredSales,filteredLeads,statsPeriod]);
 
   const isShop  = mainView==="shop";
   const isAdmin = mainView==="admin";
@@ -1802,9 +1823,13 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
               <div style={{background:"#111",borderRadius:12,padding:"1.5rem",border:"1px solid #1a1a1a"}}>
                 <p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 1.25rem"}}>PARA VENTAS CERRADAS POR WHATSAPP U OTRO CANAL FUERA DEL CHECKOUT AUTOMÁTICO</p>
                 <div style={{display:"flex",flexDirection:"column",gap:"0.8rem"}}>
+                  <button onClick={()=>setSaleSendMeta(v=>!v)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:saleSendMeta?"#0d1e0d":"#1a1a0d",border:`1px solid ${saleSendMeta?"#2a4a2a":"#4a4a2a"}`,borderRadius:10,padding:"0.75rem 1rem",cursor:"pointer",fontFamily:"inherit",textAlign:"left",WebkitTapHighlightColor:"transparent"}}>
+                    <div><p style={{margin:"0 0 2px",fontSize:12,fontWeight:800,color:saleSendMeta?"#4caf50":"#ffd43b"}}>{saleSendMeta?"📤 Se enviará a Meta (CAPI)":"📋 Solo registro interno (no se envía a Meta)"}</p><p style={{margin:0,fontSize:10,color:"#666"}}>{saleSendMeta?"Cuenta como conversión de Purchase en Eventos Manager":"Útil para ventas hechas fuera de tus campañas, o ya reportadas antes"}</p></div>
+                    <div style={{width:40,height:22,borderRadius:20,background:saleSendMeta?"#4caf50":"#333",position:"relative",flexShrink:0,transition:"background 0.2s"}}><div style={{position:"absolute",top:2,left:saleSendMeta?20:2,width:18,height:18,borderRadius:"50%",background:"#fff",transition:"left 0.2s"}}/></div>
+                  </button>
                   <input placeholder="Nombre del cliente" value={saleName} onChange={e=>setSaleName(e.target.value)} style={S.input}/>
-                  <input placeholder="Correo del cliente (recomendado)" type="email" value={saleEmail} onChange={e=>setSaleEmail(e.target.value)} style={S.input}/>
-                  <input placeholder="Teléfono del cliente (recomendado)" value={salePhone} onChange={e=>setSalePhone(e.target.value)} style={S.input}/>
+                  <input placeholder={saleSendMeta?"Correo del cliente (recomendado)":"Correo del cliente (opcional)"} type="email" value={saleEmail} onChange={e=>setSaleEmail(e.target.value)} style={S.input}/>
+                  <input placeholder={saleSendMeta?"Teléfono del cliente (recomendado)":"Teléfono del cliente (opcional)"} value={salePhone} onChange={e=>setSalePhone(e.target.value)} style={S.input}/>
                   <input placeholder="Producto(s) vendido(s)" value={saleProduct} onChange={e=>setSaleProduct(e.target.value)} style={S.input}/>
                   <input placeholder="Monto total en USD *" type="number" min="0" step="0.01" value={saleAmount} onChange={e=>setSaleAmount(e.target.value)} style={S.input}/>
                   <input placeholder="Método de pago (opcional)" value={salePayMethod} onChange={e=>setSalePayMethod(e.target.value)} style={S.input}/>
@@ -1812,7 +1837,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   <textarea placeholder="Notas (opcional)" value={saleNotes} onChange={e=>setSaleNotes(e.target.value)} rows={2} style={{...S.input,resize:"vertical" as any,lineHeight:1.6}}/>
                   {saleErr&&<div style={{color:"#ff5555",fontSize:12,background:"#1e0808",padding:"0.65rem 1rem",borderRadius:8}}>{saleErr}</div>}
                   {saleOk&&<div style={{color:"#55cc77",fontSize:12,background:"#081e0e",padding:"0.65rem 1rem",borderRadius:8}}>{saleOk}</div>}
-                  <button onClick={submitManualSale} disabled={saleLoading} style={{...S.adminBtn,opacity:saleLoading?0.4:1,cursor:saleLoading?"not-allowed":"pointer"}}>{saleLoading?"Registrando...":"Registrar venta y enviar a Meta"}</button>
+                  <button onClick={submitManualSale} disabled={saleLoading} style={{...S.adminBtn,opacity:saleLoading?0.4:1,cursor:saleLoading?"not-allowed":"pointer"}}>{saleLoading?"Registrando...":(saleSendMeta?"Registrar venta y enviar a Meta":"Registrar venta (solo interno)")}</button>
                 </div>
               </div>
             </>)}
@@ -1826,15 +1851,22 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                 </div>
               </div>
 
+              <div style={{display:"flex",gap:"0.4rem",marginBottom:"1.25rem",flexWrap:"wrap"}}>
+                {[{id:"7d" as const,l:"7 DÍAS"},{id:"30d" as const,l:"30 DÍAS"},{id:"90d" as const,l:"90 DÍAS"},{id:"all" as const,l:"TODO"}].map(p=>(
+                  <button key={p.id} onClick={()=>setStatsPeriod(p.id)} style={{background:statsPeriod===p.id?"#fff":"#161616",color:statsPeriod===p.id?"#080808":"#666",border:`1px solid ${statsPeriod===p.id?"#fff":"#222"}`,padding:"0.4rem 0.9rem",borderRadius:20,fontSize:10,fontWeight:800,letterSpacing:1,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",transition:"all 0.15s"}}>{p.l}</button>
+                ))}
+              </div>
+
               {statsErr&&<div style={{color:"#ff5555",fontSize:12,background:"#1e0808",padding:"0.75rem 1rem",borderRadius:8,marginBottom:"1.25rem"}}>{statsErr}</div>}
 
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:"0.75rem",marginBottom:"1.5rem"}}>
                 {[
-                  {icon:"💰",label:"VENTAS TOTALES",value:`$${salesStats.totalRevenue.toFixed(2)}`,color:"#4caf50"},
-                  {icon:"🧾",label:"PEDIDOS",value:String(salesStats.totalSales),color:"#fff"},
+                  {icon:"💰",label:"VENTAS (META)",value:`$${salesStats.totalRevenue.toFixed(2)}`,color:"#4caf50"},
+                  {icon:"🧾",label:"PEDIDOS (META)",value:String(salesStats.totalSales),color:"#fff"},
                   {icon:"📈",label:"TICKET PROMEDIO",value:`$${salesStats.avgTicket.toFixed(2)}`,color:"#fff"},
                   {icon:"💬",label:"LEADS TOTALES",value:String(salesStats.totalLeads),color:"#4dabf7"},
                   {icon:"🎯",label:"CONVERSIÓN",value:`${salesStats.conversionRate.toFixed(1)}%`,color:"#ffd43b"},
+                  {icon:"📋",label:"FUERA DE META",value:`$${salesStats.offlineRevenue.toFixed(2)} (${salesStats.offlineCount})`,color:"#c084fc"},
                 ].map(k=>(
                   <div key={k.label} style={{background:"linear-gradient(160deg,#141414 0%,#0d0d0d 100%)",border:"1px solid #1e1e1e",borderRadius:14,padding:"1.1rem 1rem",position:"relative",overflow:"hidden"}}>
                     <div style={{position:"absolute",top:0,left:0,right:0,height:1,background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent)"}}/>
@@ -1846,13 +1878,13 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
               </div>
 
               <div style={{background:"#111",borderRadius:14,border:"1px solid #1a1a1a",padding:"1.25rem",marginBottom:"1.25rem"}}>
-                <p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#333",margin:"0 0 1rem"}}>VENTAS · ÚLTIMOS 7 DÍAS</p>
-                <div style={{display:"flex",alignItems:"flex-end",gap:"0.6rem",height:120}}>
+                <p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#333",margin:"0 0 1rem"}}>VENTAS · {statsPeriod==="7d"?"ÚLTIMOS 7 DÍAS":statsPeriod==="30d"?"ÚLTIMOS 30 DÍAS":statsPeriod==="90d"?"ÚLTIMOS 90 DÍAS (POR SEMANA)":"HISTÓRICO (POR MES)"}</p>
+                <div className="ts" style={{display:"flex",alignItems:"flex-end",gap:statsPeriod==="30d"?"0.25rem":"0.6rem",height:120,overflowX:statsPeriod==="30d"?"auto":"visible",WebkitOverflowScrolling:"touch"}}>
                   {salesStats.days.map((d,i)=>(
-                    <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:6,height:"100%",justifyContent:"flex-end"}}>
-                      <span style={{fontSize:9,color:"#555",fontWeight:700}}>{d.total>0?`$${d.total.toFixed(0)}`:""}</span>
+                    <div key={i} style={{flex:statsPeriod==="30d"?"0 0 auto":1,width:statsPeriod==="30d"?24:"auto",display:"flex",flexDirection:"column",alignItems:"center",gap:6,height:"100%",justifyContent:"flex-end"}}>
+                      <span style={{fontSize:8,color:"#555",fontWeight:700,whiteSpace:"nowrap"}}>{d.total>0?`$${d.total.toFixed(0)}`:""}</span>
                       <div style={{width:"100%",maxWidth:28,height:`${Math.max(4,(d.total/salesStats.maxDay)*90)}px`,background:d.total>0?"linear-gradient(180deg,#fff 0%,#999 100%)":"#1e1e1e",borderRadius:"4px 4px 0 0",transition:"height 0.3s ease"}}/>
-                      <span style={{fontSize:8,color:"#333",fontWeight:800,letterSpacing:1}}>{d.label}</span>
+                      <span style={{fontSize:8,color:"#333",fontWeight:800,letterSpacing:1,whiteSpace:"nowrap"}}>{d.label}</span>
                     </div>
                   ))}
                 </div>
@@ -1864,14 +1896,14 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
               </div>
 
               <div style={{background:"#111",borderRadius:14,border:"1px solid #1a1a1a",padding:"1.25rem",marginBottom:"1.25rem"}}>
-                <p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#333",margin:"0 0 1rem"}}>VENTAS RECIENTES ({salesList.length})</p>
-                {statsLoading&&!salesList.length?(
+                <p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#333",margin:"0 0 1rem"}}>VENTAS RECIENTES · META ({salesStats.onlineSales.length})</p>
+                {statsLoading&&!salesStats.onlineSales.length?(
                   <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"1rem"}}>Cargando…</p>
-                ):salesList.length===0?(
-                  <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"1rem"}}>Aún no hay ventas registradas</p>
+                ):salesStats.onlineSales.length===0?(
+                  <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"1rem"}}>Aún no hay ventas registradas en este período</p>
                 ):(
                   <div style={{display:"flex",flexDirection:"column",gap:2}}>
-                    {salesList.slice(0,15).map(sale=>(
+                    {salesStats.onlineSales.slice(0,15).map(sale=>(
                       <div key={sale.id} style={{display:"flex",alignItems:"center",gap:"0.75rem",padding:"0.65rem",borderRadius:8,background:"#0c0c0c"}}>
                         <div style={{width:32,height:32,borderRadius:"50%",background:"#0d1e0d",border:"1px solid #2a4a2a",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:13}}>💵</span></div>
                         <div style={{flex:1,minWidth:0}}>
@@ -1885,15 +1917,35 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                 )}
               </div>
 
-              <div style={{background:"#111",borderRadius:14,border:"1px solid #1a1a1a",padding:"1.25rem"}}>
-                <p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#333",margin:"0 0 1rem"}}>LEADS RECIENTES ({leadsList.length})</p>
-                {statsLoading&&!leadsList.length?(
-                  <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"1rem"}}>Cargando…</p>
-                ):leadsList.length===0?(
-                  <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"1rem"}}>Aún no hay leads registrados</p>
+              <div style={{background:"#111",borderRadius:14,border:"1px solid #2a1a3a",padding:"1.25rem",marginBottom:"1.25rem"}}>
+                <p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#c084fc",margin:"0 0 1rem"}}>VENTAS FUERA DE META ({salesStats.offlineSales.length}) · ${salesStats.offlineRevenue.toFixed(2)}</p>
+                {salesStats.offlineSales.length===0?(
+                  <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"1rem"}}>Aún no hay ventas fuera de Meta registradas en este período</p>
                 ):(
                   <div style={{display:"flex",flexDirection:"column",gap:2}}>
-                    {leadsList.slice(0,15).map(lead=>(
+                    {salesStats.offlineSales.slice(0,15).map(sale=>(
+                      <div key={sale.id} style={{display:"flex",alignItems:"center",gap:"0.75rem",padding:"0.65rem",borderRadius:8,background:"#0c0c0c"}}>
+                        <div style={{width:32,height:32,borderRadius:"50%",background:"#1a0d2a",border:"1px solid #4a2a5a",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:13}}>📋</span></div>
+                        <div style={{flex:1,minWidth:0}}>
+                          <p style={{margin:"0 0 1px",fontSize:12,fontWeight:700,color:"#ccc",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{(sale.name as string)||"Cliente sin nombre"} {sale.product?`· ${sale.product}`:""}</p>
+                          <p style={{margin:0,fontSize:10,color:"#444"}}>{sale.createdAt?new Date(Number(sale.createdAt)).toLocaleString("es-VE",{dateStyle:"medium",timeStyle:"short"}):""} {sale.payMethod?`· ${sale.payMethod}`:""} {sale.notes?`· ${sale.notes}`:""}</p>
+                        </div>
+                        <span style={{fontSize:13,fontWeight:900,color:"#c084fc",flexShrink:0}}>${(Number(sale.amount)||0).toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div style={{background:"#111",borderRadius:14,border:"1px solid #1a1a1a",padding:"1.25rem"}}>
+                <p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#333",margin:"0 0 1rem"}}>LEADS RECIENTES ({filteredLeads.length})</p>
+                {statsLoading&&!filteredLeads.length?(
+                  <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"1rem"}}>Cargando…</p>
+                ):filteredLeads.length===0?(
+                  <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"1rem"}}>Aún no hay leads registrados en este período</p>
+                ):(
+                  <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                    {filteredLeads.slice(0,15).map(lead=>(
                       <div key={lead.id} style={{display:"flex",alignItems:"center",gap:"0.75rem",padding:"0.6rem 0.65rem",borderRadius:8,background:"#0c0c0c"}}>
                         <div style={{width:28,height:28,borderRadius:"50%",background:"#0a1a2a",border:"1px solid #1a3a5a",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:11}}>💬</span></div>
                         <div style={{flex:1,minWidth:0}}>
