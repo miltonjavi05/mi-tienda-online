@@ -879,7 +879,7 @@ const ThankYouView=memo(function ThankYouView({order,onBack,currentUser}:{order:
         {order.comprobanteUrl&&(<div style={{...fade(0.1),display:"flex",alignItems:"center",gap:"0.6rem",background:"rgba(76,175,80,0.05)",border:"1px solid rgba(76,175,80,0.12)",borderRadius:10,padding:"0.7rem 1rem",marginBottom:"0.85rem"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg><p style={{margin:0,fontSize:12,color:"#3a7a3a",fontWeight:700}}>Comprobante de pago recibido ✓</p></div>)}
         <div style={{...fade(0.12),height:1,background:"linear-gradient(90deg,transparent,#191919,transparent)",margin:"1.1rem 0"}}/>
         <div style={{...fade(0.15)}}>
-          <a href={order.waUrl} target="_blank" rel="noreferrer" data-fokus-tracked="true" onClick={()=>{if(fired.current)return;fired.current=true;const roundedTotal=parseFloat(order.total.toFixed(2));const orderState=order.deliveryInfo.estado||(order.deliveryInfo.zone==="naguanagua"||order.deliveryInfo.zone==="valencia"?"Carabobo":undefined);if(roundedTotal>0){trackPurchase(order.orderId,roundedTotal,order.items,currentUser?.email,order.deliveryInfo.telefono||undefined,orderState);fsAddToCollection("manual_sales",{orderId:order.orderId,source:"web",name:currentUser?.displayName||order.deliveryInfo.nombre||"Cliente Web",email:currentUser?.email||"",phone:order.deliveryInfo.telefono||"",product:order.items.map(i=>`${i.product.name} x${i.qty}`).join(", "),amount:roundedTotal,payMethod:PAYMENT_METHODS.find(m=>m.id===order.payMethod)?.name||order.payMethod||"",state:orderState||"",notes:"Compra desde la web",createdAt:Date.now()}).catch(()=>{});}}} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.65rem",background:"#25D366",color:"#fff",padding:"1rem 1.25rem",borderRadius:12,textDecoration:"none",fontSize:12,fontWeight:900,letterSpacing:1.5,marginBottom:"0.65rem",boxShadow:"0 8px 24px rgba(37,211,102,0.18)",WebkitTapHighlightColor:"transparent"}}><IcWA s={18} c="#fff"/>ENVIAR PEDIDO POR WHATSAPP →</a>
+          <a href={order.waUrl} target="_blank" rel="noreferrer" data-fokus-tracked="true" onClick={()=>{if(fired.current)return;fired.current=true;const roundedTotal=parseFloat(order.total.toFixed(2));const orderState=order.deliveryInfo.estado||(order.deliveryInfo.zone==="naguanagua"||order.deliveryInfo.zone==="valencia"?"Carabobo":undefined);if(roundedTotal>0){trackPurchase(order.orderId,roundedTotal,order.items,currentUser?.email,order.deliveryInfo.telefono||undefined,orderState);const orderCategory=[...new Set(order.items.map(i=>i.product.category))].join(", ");fsAddToCollection("manual_sales",{orderId:order.orderId,source:"web",name:currentUser?.displayName||order.deliveryInfo.nombre||"Cliente Web",email:currentUser?.email||"",phone:order.deliveryInfo.telefono||"",product:order.items.map(i=>`${i.product.name} x${i.qty}`).join(", "),category:orderCategory,amount:roundedTotal,payMethod:PAYMENT_METHODS.find(m=>m.id===order.payMethod)?.name||order.payMethod||"",state:orderState||"",notes:"Compra desde la web",createdAt:Date.now()}).catch(()=>{});}}} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.65rem",background:"#25D366",color:"#fff",padding:"1rem 1.25rem",borderRadius:12,textDecoration:"none",fontSize:12,fontWeight:900,letterSpacing:1.5,marginBottom:"0.65rem",boxShadow:"0 8px 24px rgba(37,211,102,0.18)",WebkitTapHighlightColor:"transparent"}}><IcWA s={18} c="#fff"/>ENVIAR PEDIDO POR WHATSAPP →</a>
           <p style={{textAlign:"center",fontSize:10,color:"#2a2a2a",margin:"0 0 1rem",lineHeight:1.6}}>Toca para abrir WhatsApp con tu pedido listo para enviar</p>
           <button onClick={onBack} style={{display:"flex",alignItems:"center",justifyContent:"center",width:"100%",background:"transparent",color:"#333",border:"1px solid #1a1a1a",padding:"0.8rem 1rem",borderRadius:12,fontSize:10,fontWeight:800,letterSpacing:2,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>SEGUIR COMPRANDO</button>
         </div>
@@ -1015,6 +1015,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   const[saleEmail,setSaleEmail]=useState("");
   const[salePhone,setSalePhone]=useState("");
   const[saleProduct,setSaleProduct]=useState("");
+  const[saleCategory,setSaleCategory]=useState("");
   const[saleAmount,setSaleAmount]=useState("");
   const[salePayMethod,setSalePayMethod]=useState("");
   const[saleState,setSaleState]=useState("");
@@ -1028,6 +1029,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   const[statsLoading,setStatsLoading]=useState(false);
   const[statsErr,setStatsErr]=useState("");
   const[statsPeriod,setStatsPeriod]=useState<"7d"|"30d"|"90d"|"all">("30d");
+  const[statsCategory,setStatsCategory]=useState("ALL");
   const statsLoaded=useRef(false);
   const fileRef =useRef<HTMLInputElement>(null);
   const formRef =useRef<HTMLDivElement>(null);
@@ -1220,7 +1222,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
     await loadProducts(true);
   };
 
-  const resetSaleForm=()=>{setSaleName("");setSaleEmail("");setSalePhone("");setSaleProduct("");setSaleAmount("");setSalePayMethod("");setSaleState("");setSaleNotes("");setSaleSendMeta(true);setSaleErr("");setSaleOk("");};
+  const resetSaleForm=()=>{setSaleName("");setSaleEmail("");setSalePhone("");setSaleProduct("");setSaleCategory("");setSaleAmount("");setSalePayMethod("");setSaleState("");setSaleNotes("");setSaleSendMeta(true);setSaleErr("");setSaleOk("");};
 
   const submitManualSale=async()=>{
     setSaleErr("");setSaleOk("");
@@ -1237,7 +1239,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
         // Solo CAPI (servidor) — nunca fbqTrack para ventas offline, esa sesión es la del admin, no la del cliente
         await sendCAPI("Purchase",eventId,{value:roundedTotal,currency:"USD",content_name:saleProduct.trim()||"Venta manual",content_type:"product"},{email:saleEmail.trim()||undefined,phone:normalizedPhone||undefined,state:saleState||undefined},"chat");
       }
-      await fsAddToCollection("manual_sales",{orderId,source:saleSendMeta?"manual":"offline",name:saleName.trim(),email:saleEmail.trim(),phone:salePhone.trim(),product:saleProduct.trim(),amount:roundedTotal,payMethod:salePayMethod.trim(),state:saleState.trim(),notes:saleNotes.trim(),createdAt:Date.now()});
+      await fsAddToCollection("manual_sales",{orderId,source:saleSendMeta?"manual":"offline",name:saleName.trim(),email:saleEmail.trim(),phone:salePhone.trim(),product:saleProduct.trim(),category:saleCategory,amount:roundedTotal,payMethod:salePayMethod.trim(),state:saleState.trim(),notes:saleNotes.trim(),createdAt:Date.now()});
       setSaleOk(saleSendMeta?"✓ Venta registrada y enviada a Meta (CAPI)":"✓ Venta registrada solo en tu panel (no se envió a Meta)");
       statsLoaded.current=false;
       setTimeout(resetSaleForm,1800);
@@ -1311,8 +1313,9 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
     return d.getTime();
   },[statsPeriod]);
 
-  const filteredSales=useMemo(()=>salesList.filter(s=>(Number(s.createdAt)||0)>=periodCutoff),[salesList,periodCutoff]);
+  const filteredSales=useMemo(()=>salesList.filter(s=>(Number(s.createdAt)||0)>=periodCutoff&&(statsCategory==="ALL"||(s.category as string)===statsCategory)),[salesList,periodCutoff,statsCategory]);
   const filteredLeads=useMemo(()=>leadsList.filter(l=>(Number(l.createdAt)||0)>=periodCutoff),[leadsList,periodCutoff]);
+  const salesCategories=useMemo(()=>[...new Set(salesList.map(s=>s.category as string).filter(Boolean))].sort(),[salesList]);
 
   const salesStats=useMemo(()=>{
     const onlineSales=filteredSales.filter(s=>s.source!=="offline");
@@ -1838,6 +1841,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   <input placeholder={saleSendMeta?"Correo del cliente (recomendado)":"Correo del cliente (opcional)"} type="email" value={saleEmail} onChange={e=>setSaleEmail(e.target.value)} style={S.input}/>
                   <input placeholder={saleSendMeta?"Teléfono del cliente (recomendado)":"Teléfono del cliente (opcional)"} value={salePhone} onChange={e=>setSalePhone(e.target.value)} style={S.input}/>
                   <input placeholder="Producto(s) vendido(s)" value={saleProduct} onChange={e=>setSaleProduct(e.target.value)} style={S.input}/>
+                  <select value={saleCategory} onChange={e=>setSaleCategory(e.target.value)} style={{...S.input,appearance:"auto" as any}}><option value="">Categoría del artículo (para estadísticas)</option><optgroup label="── LENTES">{LENTES_SUBCATS.map(s=><option key={s} value={s}>{catLabel(s)}</option>)}</optgroup><optgroup label="── OTROS">{SHOP_CATS.filter(c=>c!=="LENTES").map(c=><option key={c} value={c}>{catLabel(c)}</option>)}</optgroup></select>
                   <input placeholder="Monto total en USD *" type="number" min="0" step="0.01" value={saleAmount} onChange={e=>setSaleAmount(e.target.value)} style={S.input}/>
                   <input placeholder="Método de pago (opcional)" value={salePayMethod} onChange={e=>setSalePayMethod(e.target.value)} style={S.input}/>
                   <select value={saleState} onChange={e=>setSaleState(e.target.value)} style={{...S.input,appearance:"auto" as any}}><option value="">Estado de Venezuela (ubicación para Meta)</option>{VENEZUELA_STATES.map(s=><option key={s} value={s}>{s}</option>)}</select>
@@ -1858,10 +1862,14 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                 </div>
               </div>
 
-              <div style={{display:"flex",gap:"0.4rem",marginBottom:"1.25rem",flexWrap:"wrap"}}>
+              <div style={{display:"flex",gap:"0.4rem",marginBottom:"0.75rem",flexWrap:"wrap"}}>
                 {[{id:"7d" as const,l:"7 DÍAS"},{id:"30d" as const,l:"30 DÍAS"},{id:"90d" as const,l:"90 DÍAS"},{id:"all" as const,l:"TODO"}].map(p=>(
                   <button key={p.id} onClick={()=>setStatsPeriod(p.id)} style={{background:statsPeriod===p.id?"#fff":"#161616",color:statsPeriod===p.id?"#080808":"#666",border:`1px solid ${statsPeriod===p.id?"#fff":"#222"}`,padding:"0.4rem 0.9rem",borderRadius:20,fontSize:10,fontWeight:800,letterSpacing:1,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",transition:"all 0.15s"}}>{p.l}</button>
                 ))}
+              </div>
+              <div style={{display:"flex",gap:"0.35rem",marginBottom:"1.25rem",flexWrap:"wrap"}}>
+                <button onClick={()=>setStatsCategory("ALL")} style={{background:statsCategory==="ALL"?"#fff":"#161616",color:statsCategory==="ALL"?"#080808":"#666",border:`1px solid ${statsCategory==="ALL"?"#fff":"#222"}`,padding:"0.3rem 0.75rem",borderRadius:20,fontSize:9,fontWeight:800,letterSpacing:0.5,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",whiteSpace:"nowrap"}}>TODOS LOS ARTÍCULOS</button>
+                {salesCategories.map(cat=>(<button key={cat} onClick={()=>setStatsCategory(cat)} style={{background:statsCategory===cat?"#fff":"#161616",color:statsCategory===cat?"#080808":"#666",border:`1px solid ${statsCategory===cat?"#fff":"#222"}`,padding:"0.3rem 0.75rem",borderRadius:20,fontSize:9,fontWeight:800,letterSpacing:0.5,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",whiteSpace:"nowrap"}}>{catLabel(cat).toUpperCase()}</button>))}
               </div>
 
               {statsErr&&<div style={{color:"#ff5555",fontSize:12,background:"#1e0808",padding:"0.75rem 1rem",borderRadius:8,marginBottom:"1.25rem"}}>{statsErr}</div>}
@@ -1915,7 +1923,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                         <div style={{width:32,height:32,borderRadius:"50%",background:"#0d1e0d",border:"1px solid #2a4a2a",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:13}}>💵</span></div>
                         <div style={{flex:1,minWidth:0}}>
                           <p style={{margin:"0 0 1px",fontSize:12,fontWeight:700,color:"#ccc",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{(sale.name as string)||"Cliente sin nombre"} {sale.product?`· ${sale.product}`:""}</p>
-                          <p style={{margin:0,fontSize:10,color:"#444"}}>{sale.createdAt?new Date(Number(sale.createdAt)).toLocaleString("es-VE",{dateStyle:"medium",timeStyle:"short"}):""} {sale.payMethod?`· ${sale.payMethod}`:""} {sale.source?<span style={{color:sale.source==="web"?"#4dabf7":"#ffd43b",fontWeight:800}}>· {sale.source==="web"?"WEB":"MANUAL"}</span>:null}</p>
+                          <p style={{margin:0,fontSize:10,color:"#444"}}>{sale.createdAt?new Date(Number(sale.createdAt)).toLocaleString("es-VE",{dateStyle:"medium",timeStyle:"short"}):""} {sale.payMethod?`· ${sale.payMethod}`:""} {sale.category?`· ${catLabel(sale.category as string)}`:""} {sale.source?<span style={{color:sale.source==="web"?"#4dabf7":"#ffd43b",fontWeight:800}}>· {sale.source==="web"?"WEB":"MANUAL"}</span>:null}</p>
                         </div>
                         <span style={{fontSize:13,fontWeight:900,color:"#4caf50",flexShrink:0}}>${(Number(sale.amount)||0).toFixed(2)}</span>
                       </div>
@@ -1935,7 +1943,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                         <div style={{width:32,height:32,borderRadius:"50%",background:"#1a0d2a",border:"1px solid #4a2a5a",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:13}}>📋</span></div>
                         <div style={{flex:1,minWidth:0}}>
                           <p style={{margin:"0 0 1px",fontSize:12,fontWeight:700,color:"#ccc",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{(sale.name as string)||"Cliente sin nombre"} {sale.product?`· ${sale.product}`:""}</p>
-                          <p style={{margin:0,fontSize:10,color:"#444"}}>{sale.createdAt?new Date(Number(sale.createdAt)).toLocaleString("es-VE",{dateStyle:"medium",timeStyle:"short"}):""} {sale.payMethod?`· ${sale.payMethod}`:""} {sale.notes?`· ${sale.notes}`:""}</p>
+                          <p style={{margin:0,fontSize:10,color:"#444"}}>{sale.createdAt?new Date(Number(sale.createdAt)).toLocaleString("es-VE",{dateStyle:"medium",timeStyle:"short"}):""} {sale.payMethod?`· ${sale.payMethod}`:""} {sale.category?`· ${catLabel(sale.category as string)}`:""} {sale.notes?`· ${sale.notes}`:""}</p>
                         </div>
                         <span style={{fontSize:13,fontWeight:900,color:"#c084fc",flexShrink:0}}>${(Number(sale.amount)||0).toFixed(2)}</span>
                       </div>
