@@ -384,6 +384,46 @@ function catLabel(cat:string):string{const m:Record<string,string>={"LENTES·FOT
 function scrollTop(){window.scrollTo({top:0,behavior:"instant" as ScrollBehavior});}
 function buildConsultUrl(product:Product):string{const msg=`Hola! Quiero más información sobre este producto:\n\n*${product.name}*\nPrecio: $${product.price.toFixed(2)}\n\n¿Podrían ayudarme?`;return`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;}
 
+// ─── ROUTING: apartado ↔ URL ──────────────────────────────────────────────────
+const BASE_PATHS: Partial<Record<MainView,string>> = { fokus:"/", comunidad:"/comunidad", grabados:"/grabados", cart:"/carrito", account:"/cuenta", admin:"/admin" };
+function shopFilterToPath(filter: ShopFilter): string {
+  const map: Record<string,string> = {
+    "TODO":"/tienda",
+    "LENTES":"/tienda/lentes",
+    "LENTES·FOTOCROMATICOS":"/tienda/lentes/fotocromaticos",
+    "LENTES·ANTI-LUZ-AZUL":"/tienda/lentes/anti-luz-azul",
+    "LENTES·SOL":"/tienda/lentes/sol",
+    "LENTES·MOTORIZADOS":"/tienda/lentes/motorizados",
+    "RELOJES":"/tienda/relojes",
+    "COLLARES":"/tienda/collares",
+    "PULSERAS":"/tienda/pulseras",
+    "ANILLOS":"/tienda/anillos",
+    "ARETES":"/tienda/aretes",
+    "BILLETERAS":"/tienda/billeteras",
+  };
+  return map[filter] || "/tienda";
+}
+function pathToShopState(path: string): { view: MainView; filter: ShopFilter } {
+  if (path === "/admin") return { view:"admin", filter:"TODO" };
+  if (path.startsWith("/tienda/lentes/fotocromaticos")) return { view:"shop", filter:"LENTES·FOTOCROMATICOS" };
+  if (path.startsWith("/tienda/lentes/anti-luz-azul")) return { view:"shop", filter:"LENTES·ANTI-LUZ-AZUL" };
+  if (path.startsWith("/tienda/lentes/sol")) return { view:"shop", filter:"LENTES·SOL" };
+  if (path.startsWith("/tienda/lentes/motorizados")) return { view:"shop", filter:"LENTES·MOTORIZADOS" };
+  if (path.startsWith("/tienda/lentes")) return { view:"shop", filter:"LENTES" };
+  if (path.startsWith("/tienda/relojes")) return { view:"shop", filter:"RELOJES" };
+  if (path.startsWith("/tienda/collares")) return { view:"shop", filter:"COLLARES" };
+  if (path.startsWith("/tienda/pulseras")) return { view:"shop", filter:"PULSERAS" };
+  if (path.startsWith("/tienda/anillos")) return { view:"shop", filter:"ANILLOS" };
+  if (path.startsWith("/tienda/aretes")) return { view:"shop", filter:"ARETES" };
+  if (path.startsWith("/tienda/billeteras")) return { view:"shop", filter:"BILLETERAS" };
+  if (path.startsWith("/tienda")) return { view:"shop", filter:"TODO" };
+  if (path.startsWith("/comunidad")) return { view:"comunidad", filter:"TODO" };
+  if (path.startsWith("/grabados")) return { view:"grabados", filter:"TODO" };
+  if (path.startsWith("/carrito")) return { view:"cart", filter:"TODO" };
+  if (path.startsWith("/cuenta")) return { view:"account", filter:"TODO" };
+  return { view:"fokus", filter:"TODO" };
+}
+
 function PwdInput({value,onChange,placeholder,onKeyDown,autoComplete}:{value:string;onChange:(v:string)=>void;placeholder:string;onKeyDown?:(e:React.KeyboardEvent)=>void;autoComplete?:string;}){
   const[show,setShow]=useState(false);
   return(<div style={{position:"relative",display:"flex",alignItems:"center"}}><input type={show?"text":"password"} placeholder={placeholder} value={value} onChange={e=>onChange(e.target.value)} onKeyDown={onKeyDown} autoComplete={autoComplete} style={{...S.input,paddingRight:"2.8rem"}}/><button type="button" onClick={()=>setShow(s=>!s)} style={{position:"absolute",right:10,background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",padding:4,WebkitTapHighlightColor:"transparent"}} tabIndex={-1}>{show?<IcEyeOff s={18} c="#666"/>:<IcEye s={18} c="#666"/>}</button></div>);
@@ -974,7 +1014,7 @@ const fetchBcvRate = useCallback(async (force = false) => {
   }
 }, []);
 const fmtPrice=useCallback((usd:number)=>{if(showBs&&bcvRate){const bs=usd*bcvRate;return"Bs. "+Math.round(bs).toLocaleString("es-VE");}return"$"+usd.toFixed(2);},[showBs,bcvRate]);
-  const setMainView=useCallback((v:MainView)=>{setMainViewRaw(v);scrollTop();const paths:Partial<Record<MainView,string>>={fokus:"/",shop:"/tienda",comunidad:"/comunidad",grabados:"/grabados",cart:"/carrito",account:"/cuenta"};const p=paths[v];if(p&&typeof window!=="undefined")window.history.pushState({},"",p);},[]);
+  const setMainView=useCallback((v:MainView)=>{setMainViewRaw(v);scrollTop();},[]);
   const payMethodRef=useRef<HTMLDivElement>(null);
 const comprobanteRef=useRef<HTMLDivElement>(null);
 const otroAutoScrolled=useRef(false);
@@ -986,6 +1026,37 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
 
   useEffect(()=>{initMetaPixel();},[]);
   useEffect(()=>{if(typeof window!=="undefined"&&(window as any).fbq)(window as any).fbq("track","PageView");},[mainView]);
+
+  // ─── URL ↔ ESTADO: cada apartado con su propio link + back/forward sin trabarse ──
+  const isPoppingRef = useRef(false);
+  useEffect(()=>{
+    if(typeof window==="undefined")return;
+    if(isPoppingRef.current){isPoppingRef.current=false;return;}
+    if(mainView==="thankyou")return;
+    const path = mainView==="shop" ? shopFilterToPath(shopFilter) : (BASE_PATHS[mainView] || "/");
+    if(window.location.pathname!==path)window.history.pushState({},"",path);
+  },[mainView,shopFilter]);
+  useEffect(()=>{
+    if(typeof window==="undefined")return;
+    const onPopState=()=>{
+      isPoppingRef.current=true;
+      const{view,filter}=pathToShopState(window.location.pathname);
+      setMenuOpen(false);
+      setSearchOpen(false);
+      setSel(null);
+      setShowAuth(false);
+      setLightboxIdx(null);
+      setShowReviewModal(false);
+      setAddedProduct(null);
+      setLentesOpen(filter==="LENTES"||(LENTES_SUBCATS as readonly string[]).includes(filter));
+      setShopFilter(filter);
+      setMainViewRaw(view);
+      scrollTop();
+      setTimeout(()=>{isPoppingRef.current=false;},0);
+    };
+    window.addEventListener("popstate",onPopState);
+    return()=>window.removeEventListener("popstate",onPopState);
+  },[]);
 
   const checkoutTracked=useRef(false);
   useEffect(()=>{
