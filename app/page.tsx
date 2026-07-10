@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
+import { usePathname } from "next/navigation";
 
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 const FIREBASE_CONFIG = {
@@ -934,9 +935,11 @@ const ThankYouView=memo(function ThankYouView({order,onBack,currentUser}:{order:
 //  MAIN APP
 // ══════════════════════════════════════════════════════════════════════════════
 export default function Home() {
-  const[mainView,setMainViewRaw]   = useState<MainView>(()=>{if(typeof window==="undefined")return"fokus";const path=window.location.pathname;if(path.startsWith("/tienda/lentes/fotocromaticos"))return"shop";if(path.startsWith("/tienda/lentes/anti-luz-azul"))return"shop";if(path.startsWith("/tienda/lentes/sol"))return"shop";if(path.startsWith("/tienda/lentes/motorizados"))return"shop";if(path.startsWith("/tienda"))return"shop";if(path.startsWith("/comunidad"))return"comunidad";if(path.startsWith("/grabados"))return"grabados";if(path.startsWith("/carrito"))return"cart";return"fokus";});
-  const[shopFilter,setShopFilter]  = useState<ShopFilter>(()=>{if(typeof window==="undefined")return"TODO";const path=window.location.pathname;if(path.startsWith("/tienda/lentes/fotocromaticos"))return"LENTES·FOTOCROMATICOS";if(path.startsWith("/tienda/lentes/anti-luz-azul"))return"LENTES·ANTI-LUZ-AZUL";if(path.startsWith("/tienda/lentes/sol"))return"LENTES·SOL";if(path.startsWith("/tienda/lentes/motorizados"))return"LENTES·MOTORIZADOS";if(path.startsWith("/tienda/lentes"))return"LENTES";if(path.startsWith("/tienda/relojes"))return"RELOJES";if(path.startsWith("/tienda/collares"))return"COLLARES";if(path.startsWith("/tienda/pulseras"))return"PULSERAS";if(path.startsWith("/tienda/anillos"))return"ANILLOS";if(path.startsWith("/tienda/aretes"))return"ARETES";if(path.startsWith("/tienda/billeteras"))return"BILLETERAS";return"TODO";});
-  const[lentesOpen,setLentesOpen]  = useState(false);
+  const pathname = usePathname();
+  const initialRoute = useMemo(()=>pathToShopState(pathname||"/"),[]); // solo la primera vez, evita el flash de "FOKUS"
+  const[mainView,setMainViewRaw]   = useState<MainView>(initialRoute.view);
+  const[shopFilter,setShopFilter]  = useState<ShopFilter>(initialRoute.filter);
+  const[lentesOpen,setLentesOpen]  = useState(initialRoute.filter==="LENTES"||(LENTES_SUBCATS as readonly string[]).includes(initialRoute.filter));
   const[cart,setCart]              = useState<CartItem[]>([]);
   const[selectedProduct,setSel]    = useState<Product|null>(null);
   const[modalQty,setModalQty]      = useState(1);
