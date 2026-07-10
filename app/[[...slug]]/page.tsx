@@ -1032,6 +1032,8 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
 
   // ─── URL ↔ ESTADO: cada apartado con su propio link + back/forward sin trabarse ──
   const isPoppingRef = useRef(false);
+  const selectedProductRef = useRef<Product|null>(null);
+  useEffect(()=>{selectedProductRef.current=selectedProduct;},[selectedProduct]);
   useEffect(()=>{
     if(typeof window==="undefined")return;
     if(isPoppingRef.current){isPoppingRef.current=false;return;}
@@ -1043,6 +1045,11 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
     if(typeof window==="undefined")return;
     const onPopState=()=>{
       isPoppingRef.current=true;
+      if(selectedProductRef.current){
+        setSel(null);
+        setTimeout(()=>{isPoppingRef.current=false;},0);
+        return;
+      }
       const{view,filter}=pathToShopState(window.location.pathname);
       setMenuOpen(false);
       setSearchOpen(false);
