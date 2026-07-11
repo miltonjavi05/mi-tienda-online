@@ -102,7 +102,8 @@ interface DeliveryInfo { zone:string; nombre:string; cedula:string; telefono:str
 interface Product { id:string; name:string; category:string; price:number; img:string; description?:string; createdAt?:number; order?:number; active?:boolean; discount?:number; images?:string[]; }
 interface CartItem { product:Product; qty:number; }
 interface UserData { uid:string; email:string; displayName:string; createdAt:number; photoURL?:string; idToken?:string; }
-interface OrderSnapshot { items:CartItem[]; total:number; payMethod:string; deliveryInfo:DeliveryInfo; comprobanteUrl:string; waUrl:string; orderId:string; }
+interface Coupon { id:string; code:string; type:"general"|"product"; productId?:string; productName?:string; discountPercent:number; durationHours:number; createdAt:number; expiresAt:number; active:boolean; }
+interface OrderSnapshot { items:CartItem[]; total:number; payMethod:string; deliveryInfo:DeliveryInfo; comprobanteUrl:string; waUrl:string; orderId:string; couponCode?:string; couponDiscount?:number; }
 
 type MainView = "fokus"|"shop"|"comunidad"|"grabados"|"cart"|"admin"|"account"|"thankyou";
 type ShopFilter = typeof ALL_SHOP_CATS[number]|"TODO"|typeof LENTES_SUBCATS[number];
@@ -245,6 +246,8 @@ async function fsGetAll():Promise<Product[]>{const r=await fetch(`${fsBase()}/pr
 async function fsAdd(p:Omit<Product,"id">):Promise<void>{const fields=Object.fromEntries(Object.entries({...p,createdAt:Date.now()}).map(([k,v])=>[k,toFs(v)]));const r=await fetch(`${fsBase()}/products`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fields})});if(!r.ok)throw new Error(await r.text());}
 async function fsUpdate(id:string,p:Partial<Omit<Product,"id">>):Promise<void>{const fields=Object.fromEntries(Object.entries(p).map(([k,v])=>[k,toFs(v)]));const mask=Object.keys(p).map(k=>`updateMask.fieldPaths=${encodeURIComponent(k)}`).join("&");const r=await fetch(`${fsBase()}/products/${id}?${mask}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({fields})});if(!r.ok)throw new Error(await r.text());}
 async function fsDelete(id:string):Promise<void>{await fetch(`${fsBase()}/products/${id}`,{method:"DELETE"});}
+async function fsUpdateDoc(collection:string,id:string,p:Record<string,unknown>):Promise<void>{const fields=Object.fromEntries(Object.entries(p).map(([k,v])=>[k,toFs(v)]));const mask=Object.keys(p).map(k=>`updateMask.fieldPaths=${encodeURIComponent(k)}`).join("&");const r=await fetch(`${fsBase()}/${collection}/${id}?${mask}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({fields})});if(!r.ok)throw new Error(await r.text());}
+async function fsDeleteDoc(collection:string,id:string):Promise<void>{await fetch(`${fsBase()}/${collection}/${id}`,{method:"DELETE"});}
 async function fsAddToCollection(collection:string,data:Record<string,unknown>):Promise<void>{const fields=Object.fromEntries(Object.entries(data).map(([k,v])=>[k,toFs(v as unknown)]));const r=await fetch(`${fsBase()}/${collection}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fields})});if(!r.ok)throw new Error(await r.text());}
 async function fsGetCollection(collection:string,pageSize=300):Promise<Array<Record<string,unknown>&{id:string}>>{const r=await fetch(`${fsBase()}/${collection}?pageSize=${pageSize}`);if(!r.ok)throw new Error(await r.text());const d=await r.json() as{documents?:FsDoc[]};return(d.documents||[]).map(doc=>{const fields=doc.fields||{};const obj:Record<string,unknown>={};Object.entries(fields).forEach(([k,v])=>{obj[k]=fromFs(v);});return{...obj,id:doc.name.split("/").pop() as string};});}
 async function fsSaveUser(uid:string,data:Record<string,unknown>,idToken?:string):Promise<void>{const fields=Object.fromEntries(Object.entries(data).map(([k,v])=>[k,toFs(v as unknown)]));const mask=Object.keys(data).map(k=>`updateMask.fieldPaths=${encodeURIComponent(k)}`).join("&");const headers:Record<string,string>={"Content-Type":"application/json"};if(idToken)headers["Authorization"]=`Bearer ${idToken}`;await fetch(`${fsBase()}/users/${uid}?${mask}`,{method:"PATCH",headers,body:JSON.stringify({fields})}).catch(()=>{});}
@@ -459,6 +462,7 @@ function productIdFromPath(path:string):string|null{
   const parts=rest.split("-");
   return parts[parts.length-1]||null;
 }
+function generateCouponCode():string{const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let s="FOKUS-";for(let i=0;i<5;i++)s+=chars[Math.floor(Math.random()*chars.length)];return s;}
 
 function PwdInput({value,onChange,placeholder,onKeyDown,autoComplete}:{value:string;onChange:(v:string)=>void;placeholder:string;onKeyDown?:(e:React.KeyboardEvent)=>void;autoComplete?:string;}){
   const[show,setShow]=useState(false);
@@ -977,6 +981,7 @@ const ThankYouView=memo(function ThankYouView({order,onBack,currentUser}:{order:
           <div><p style={{margin:"0 0 2px",fontSize:8,fontWeight:800,letterSpacing:2.5,color:"#252525"}}>TOTAL</p><p style={{margin:0,fontSize:28,fontWeight:900,color:"#fff",letterSpacing:0.5,fontVariantNumeric:"tabular-nums"}}>${order.total.toFixed(2)}<span style={{fontSize:11,color:"#2a2a2a",marginLeft:4}}>USD</span></p></div>
           {pm&&(<div style={{textAlign:"right"}}><p style={{margin:"0 0 2px",fontSize:8,letterSpacing:2,color:"#252525",fontWeight:700}}>MÉTODO</p><p style={{margin:0,fontSize:13,fontWeight:700,color:"#4a4a4a"}}>{pm.name}</p></div>)}
         </div>
+        {!!order.couponCode&&(<div style={{...fade(0.03),display:"flex",alignItems:"center",gap:"0.5rem",background:"rgba(255,212,59,0.06)",border:"1px solid rgba(255,212,59,0.18)",borderRadius:10,padding:"0.6rem 1rem",marginBottom:"0.85rem"}}><span style={{fontSize:13}}>🎟️</span><p style={{margin:0,fontSize:11,color:"#ffd43b",fontWeight:700}}>Cupón {order.couponCode} aplicado{order.couponDiscount?` · -$${order.couponDiscount.toFixed(2)}`:""}</p></div>)}
         {order.items.length>0&&(<div style={{...fade(0.06),border:"1px solid #151515",borderRadius:12,overflow:"hidden",marginBottom:"0.85rem"}}><div style={{padding:"0.5rem 1rem",borderBottom:"1px solid #111",display:"flex",justifyContent:"space-between"}}><span style={{fontSize:8,fontWeight:800,letterSpacing:2.5,color:"#222"}}>PRODUCTOS ({order.items.reduce((s,i)=>s+i.qty,0)})</span><span style={{fontSize:8,color:"#1c1c1c",fontWeight:700}}>PRECIO</span></div>{order.items.map((item,idx)=>(<div key={idx} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"0.7rem 1rem",borderBottom:idx<order.items.length-1?"1px solid #0f0f0f":"none"}}><div style={{display:"flex",alignItems:"center",gap:"0.6rem"}}><div style={{width:5,height:5,borderRadius:"50%",background:"#1e1e1e",flexShrink:0}}/><div><p style={{margin:"0 0 1px",fontSize:12,fontWeight:700,color:"#aaa"}}>{item.product.name}</p>{item.qty>1&&<p style={{margin:0,fontSize:10,color:"#2e2e2e"}}>× {item.qty}</p>}</div></div><span style={{fontSize:12,fontWeight:800,color:"#555",fontVariantNumeric:"tabular-nums"}}>${(getFinalPrice(item.product)*item.qty).toFixed(2)}</span></div>))}</div>)}
         {order.comprobanteUrl&&(<div style={{...fade(0.1),display:"flex",alignItems:"center",gap:"0.6rem",background:"rgba(76,175,80,0.05)",border:"1px solid rgba(76,175,80,0.12)",borderRadius:10,padding:"0.7rem 1rem",marginBottom:"0.85rem"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg><p style={{margin:0,fontSize:12,color:"#3a7a3a",fontWeight:700}}>Comprobante de pago recibido ✓</p></div>)}
         <div style={{...fade(0.12),height:1,background:"linear-gradient(90deg,transparent,#191919,transparent)",margin:"1.1rem 0"}}/>
@@ -1012,9 +1017,12 @@ export default function Home() {
   const[menuOpen,setMenuOpen]      = useState(false);
   const[searchOpen,setSearchOpen]  = useState(false);
   const[searchQuery,setSearchQuery]= useState("");
-  const[payMethod,setPayMethod]    = useState<string|null>(null);
-  const[comprobanteUrl,setComprobante]=useState("");
-  const[products,setProducts]      = useState<Product[]>([]);
+const[payMethod,setPayMethod]    = useState<string|null>(null);
+const[comprobanteUrl,setComprobante]=useState("");
+const[couponInput,setCouponInput]=useState("");
+const[appliedCoupon,setAppliedCoupon]=useState<Coupon|null>(null);
+const[couponCheckLoading,setCouponCheckLoading]=useState(false);
+const[couponCheckErr,setCouponCheckErr]=useState("");  const[products,setProducts]      = useState<Product[]>([]);
   const[loading,setLoading]        = useState(true);
   const[fbReady,setFbReady]        = useState(false);
   const[addedProduct,setAddedProduct]=useState<Product|null>(null);
@@ -1151,7 +1159,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   const[adminEmail,setAdminEmail]  =useState("");
   const[adminPwd,setAdminPwd]      =useState("");
   const[adminErr,setAdminErr]      =useState("");
-  const[adminSec,setAdminSec]=useState<"menu"|"products"|"sales"|"stats">("menu");
+  const[adminSec,setAdminSec]=useState<"menu"|"products"|"sales"|"stats"|"coupons">("menu");
   const[adminCat,setAdminCat]      =useState("ALL");
   const[editing,setEditing]        =useState<Product|null>(null);
   const[fName,setFName]            =useState("");
@@ -1167,6 +1175,16 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   const[fGalleryUploading,setFGalleryUploading]=useState(false);
   const[fActive,setFActive]        =useState(true);
   const[fDiscount,setFDiscount]    =useState("");
+const[couponCode,setCouponCode]  =useState("");
+const[couponType,setCouponType]  =useState<"general"|"product">("general");
+const[couponProductId,setCouponProductId]=useState("");
+const[couponDiscount,setCouponDiscount]=useState("");
+const[couponHours,setCouponHours]=useState("24");
+const[couponLoading,setCouponLoading]=useState(false);
+const[couponErr,setCouponErr]=useState("");
+const[couponOk,setCouponOk]=useState("");
+const[couponsList,setCouponsList]=useState<Coupon[]>([]);
+const[couponsLoading,setCouponsLoading]=useState(false);
   const[adminSearch,setAdminSearch]=useState("");
   const[saleName,setSaleName]=useState("");
   const[saleEmail,setSaleEmail]=useState("");
@@ -1188,6 +1206,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   const[statsPeriod,setStatsPeriod]=useState<"7d"|"30d"|"90d"|"all">("30d");
   const[statsCategory,setStatsCategory]=useState("ALL");
   const statsLoaded=useRef(false);
+const couponsLoaded=useRef(false);
   const fileRef =useRef<HTMLInputElement>(null);
   const galleryFileRef =useRef<HTMLInputElement>(null);
   const formRef =useRef<HTMLDivElement>(null);
@@ -1336,7 +1355,15 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   const getVisCats=useCallback(():string[]=>{if(shopFilter==="TODO")return["LENTES·ANTI-LUZ-AZUL","LENTES·FOTOCROMATICOS","LENTES·SOL","LENTES·MOTORIZADOS",...SHOP_CATS.filter(c=>c!=="LENTES")];if(shopFilter==="LENTES")return[...LENTES_SUBCATS];return[shopFilter];},[shopFilter]);
   const getProds=useCallback((cat:string)=>products.filter(p=>p.category===cat&&p.active!==false&&(searchQuery===""||p.name.toLowerCase().includes(searchQuery.toLowerCase()))),[products,searchQuery]);
   const totalItems=useMemo(()=>cart.reduce((s,i)=>s+i.qty,0),[cart]);
-  const totalPrice=useMemo(()=>cart.reduce((s,i)=>s+getFinalPrice(i.product)*i.qty,0),[cart]);
+  const totalPriceBeforeCoupon=useMemo(()=>cart.reduce((s,i)=>s+getFinalPrice(i.product)*i.qty,0),[cart]);
+const couponDiscountAmount=useMemo(()=>{
+  if(!appliedCoupon)return 0;
+  if(appliedCoupon.type==="general")return totalPriceBeforeCoupon*(appliedCoupon.discountPercent/100);
+  const item=cart.find(i=>i.product.id===appliedCoupon.productId);
+  if(!item)return 0;
+  return getFinalPrice(item.product)*item.qty*(appliedCoupon.discountPercent/100);
+},[appliedCoupon,cart,totalPriceBeforeCoupon]);
+const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmount),[totalPriceBeforeCoupon,couponDiscountAmount]);
 
   const closeProdModal=useCallback(()=>{if(modalPushedRef.current)window.history.back();else setSel(null);},[]);
 
@@ -1357,7 +1384,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   const deliveryValid=useMemo(()=>{if(!deliveryInfo.zone)return false;if(deliveryInfo.zone==="otro")return!!(deliveryInfo.nombre&&deliveryInfo.cedula&&deliveryInfo.telefono&&deliveryInfo.agencia&&deliveryInfo.estado&&deliveryInfo.direccion);return true;},[deliveryInfo]);
   const canSendOrder=useMemo(()=>!!(payMethod&&deliveryValid&&comprobanteUrl),[payMethod,deliveryValid,comprobanteUrl]);
 
-  const buildWaUrl=useCallback(()=>{const lines=cart.map(i=>`• ${i.product.name} x${i.qty} — $${(getFinalPrice(i.product)*i.qty).toFixed(2)}`);const pm=PAYMENT_METHODS.find(m=>m.id===payMethod);const pmL=pm?`\n\nMétodo de pago: ${pm.name} (${pm.detail})`:"";const dz=DELIVERY_ZONES_MAP.get(deliveryInfo.zone);let delivL=dz?`\n\nEnvio: ${dz.label}`:"";if(deliveryInfo.zone==="otro")delivL+=`\nEstado: ${deliveryInfo.estado}\nNombre: ${deliveryInfo.nombre}\nCédula: ${deliveryInfo.cedula}\nTeléfono: ${deliveryInfo.telefono}\nAgencia: ${deliveryInfo.agencia}\nDirección: ${deliveryInfo.direccion}`;const userL=currentUser?`\n\nCliente: ${currentUser.displayName} (${currentUser.email})`:"";const compL=comprobanteUrl?`\n\n📎 Comprobante: ${comprobanteUrl}`:"";return`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`Hola! Quiero hacer un pedido:\n\n${lines.join("\n")}\n\nTotal: $${totalPrice.toFixed(2)}${pmL}${delivL}${userL}${compL}`)}`;},[cart,totalPrice,payMethod,deliveryInfo,currentUser,comprobanteUrl]);
+  const buildWaUrl=useCallback(()=>{const lines=cart.map(i=>`• ${i.product.name} x${i.qty} — $${(getFinalPrice(i.product)*i.qty).toFixed(2)}`);const pm=PAYMENT_METHODS.find(m=>m.id===payMethod);const pmL=pm?`\n\nMétodo de pago: ${pm.name} (${pm.detail})`:"";const dz=DELIVERY_ZONES_MAP.get(deliveryInfo.zone);let delivL=dz?`\n\nEnvio: ${dz.label}`:"";if(deliveryInfo.zone==="otro")delivL+=`\nEstado: ${deliveryInfo.estado}\nNombre: ${deliveryInfo.nombre}\nCédula: ${deliveryInfo.cedula}\nTeléfono: ${deliveryInfo.telefono}\nAgencia: ${deliveryInfo.agencia}\nDirección: ${deliveryInfo.direccion}`;const userL=currentUser?`\n\nCliente: ${currentUser.displayName} (${currentUser.email})`:"";const compL=comprobanteUrl?`\n\n📎 Comprobante: ${comprobanteUrl}`:"";const cupL=appliedCoupon?`\n\n🎟️ Cupón: ${appliedCoupon.code} (-${appliedCoupon.discountPercent}%, -$${couponDiscountAmount.toFixed(2)})`:"";return`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`Hola! Quiero hacer un pedido:\n\n${lines.join("\n")}\n\nSubtotal: $${totalPriceBeforeCoupon.toFixed(2)}${cupL}\n\nTotal: $${totalPrice.toFixed(2)}${pmL}${delivL}${userL}${compL}`)}`;},[cart,totalPrice,totalPriceBeforeCoupon,payMethod,deliveryInfo,currentUser,comprobanteUrl,appliedCoupon,couponDiscountAmount]);
 
   const handleSendOrder=useCallback(()=>{
     if(!canSendOrder){
@@ -1368,9 +1395,9 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
       return;
     }
     const orderId=`FKS-${Date.now().toString(36).toUpperCase()}`;
-    const snap:OrderSnapshot={items:[...cart],total:totalPrice,payMethod:payMethod!,deliveryInfo:{...deliveryInfo},comprobanteUrl,waUrl:buildWaUrl(),orderId};
-    setOrderSnap(snap);setCart([]);setComprobante("");setPayMethod(null);setDeliveryInfo({zone:"",nombre:"",cedula:"",telefono:"",agencia:"",direccion:"",estado:""});setMainView("thankyou");
-  },[canSendOrder,cart,totalPrice,payMethod,deliveryInfo,comprobanteUrl,buildWaUrl,setMainView]);
+    const snap:OrderSnapshot={items:[...cart],total:totalPrice,payMethod:payMethod!,deliveryInfo:{...deliveryInfo},comprobanteUrl,waUrl:buildWaUrl(),orderId,couponCode:appliedCoupon?.code,couponDiscount:appliedCoupon?couponDiscountAmount:undefined};
+    setOrderSnap(snap);setCart([]);setComprobante("");setPayMethod(null);setDeliveryInfo({zone:"",nombre:"",cedula:"",telefono:"",agencia:"",direccion:"",estado:""});setAppliedCoupon(null);setCouponInput("");setMainView("thankyou");
+  },[canSendOrder,cart,totalPrice,payMethod,deliveryInfo,comprobanteUrl,buildWaUrl,setMainView,appliedCoupon,couponDiscountAmount]);
 
   const doLogin=()=>{if(adminEmail===ADMIN_EMAIL&&adminPwd===ADMIN_PASSWORD){setAdminLogged(true);setAdminErr("");setAdminSec("menu");}else setAdminErr("Credenciales incorrectas");};
   const doLogout=()=>{setAdminLogged(false);setAdminEmail("");setAdminPwd("");setMainView("fokus");if(typeof window!=="undefined")window.history.pushState("","","/");};
@@ -1382,6 +1409,80 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   const removeGalleryImage=(idx:number)=>setFGallery(prev=>prev.filter((_,i)=>i!==idx));
   const toggleProductActive=async(p:Product)=>{const newActive=p.active===false;setProducts(prev=>{const upd=prev.map(x=>x.id===p.id?{...x,active:newActive}:x);setCachedProducts(upd);return upd;});try{await fsUpdate(p.id,{active:newActive});invalidateProductsCache();}catch{}};
   const promptDiscount=async(p:Product)=>{const current=p.discount&&p.discount>0?String(p.discount):"";const input=window.prompt(`Descuento para "${p.name}" (0-95). Deja vacío o 0 para quitar la oferta:`,current);if(input===null)return;const val=Math.max(0,Math.min(95,parseFloat(input)||0));setProducts(prev=>{const upd=prev.map(x=>x.id===p.id?{...x,discount:val}:x);setCachedProducts(upd);return upd;});try{await fsUpdate(p.id,{discount:val});invalidateProductsCache();}catch{}};
+
+const loadCoupons=useCallback(async(force=false)=>{
+  if(couponsLoaded.current&&!force)return;
+  setCouponsLoading(true);
+  try{
+    const raw=await fsGetCollection("coupons",100);
+    const list:Coupon[]=raw.map(r=>({id:r.id,code:(r.code as string)||"",type:((r.type as string)==="product"?"product":"general"),productId:(r.productId as string)||"",productName:(r.productName as string)||"",discountPercent:Number(r.discountPercent)||0,durationHours:Number(r.durationHours)||0,createdAt:Number(r.createdAt)||0,expiresAt:Number(r.expiresAt)||0,active:r.active!==false}));
+    list.sort((a,b)=>b.createdAt-a.createdAt);
+    setCouponsList(list);
+    couponsLoaded.current=true;
+  }catch(err){setCouponErr("Error al cargar cupones: "+(err instanceof Error?err.message:"desconocido"));}
+  finally{setCouponsLoading(false);}
+},[]);
+
+const resetCouponForm=()=>{setCouponCode(generateCouponCode());setCouponType("general");setCouponProductId("");setCouponDiscount("");setCouponHours("24");setCouponErr("");setCouponOk("");};
+
+const submitCoupon=async()=>{
+  setCouponErr("");setCouponOk("");
+  const disc=parseFloat(couponDiscount);
+  const hours=parseFloat(couponHours);
+  if(!couponCode.trim()){setCouponErr("Ingresa o genera un código.");return;}
+  if(!disc||disc<=0||disc>95){setCouponErr("El descuento debe ser entre 1 y 95%.");return;}
+  if(!hours||hours<=0){setCouponErr("Ingresa la duración en horas.");return;}
+  if(couponType==="product"&&!couponProductId){setCouponErr("Selecciona el producto para este cupón.");return;}
+  setCouponLoading(true);
+  try{
+    const now=Date.now();
+    const prod=couponType==="product"?products.find(p=>p.id===couponProductId):null;
+    await fsAddToCollection("coupons",{code:couponCode.trim().toUpperCase(),type:couponType,productId:couponType==="product"?couponProductId:"",productName:prod?prod.name:"",discountPercent:Math.min(95,disc),durationHours:hours,createdAt:now,expiresAt:now+hours*3600000,active:true});
+    setCouponOk("✓ Cupón creado correctamente");
+    couponsLoaded.current=false;
+    await loadCoupons(true);
+    setTimeout(resetCouponForm,1600);
+  }catch(err){setCouponErr("Error: "+(err instanceof Error?err.message:"desconocido"));}
+  finally{setCouponLoading(false);}
+};
+
+const toggleCouponActive=async(c:Coupon)=>{
+  const newActive=!c.active;
+  setCouponsList(prev=>prev.map(x=>x.id===c.id?{...x,active:newActive}:x));
+  try{await fsUpdateDoc("coupons",c.id,{active:newActive});}catch{}
+};
+
+const deleteCoupon=async(id:string)=>{
+  if(!confirm("¿Eliminar este cupón?"))return;
+  setCouponsList(prev=>prev.filter(c=>c.id!==id));
+  try{await fsDeleteDoc("coupons",id);}catch{}
+};
+
+const applyCouponCode=useCallback(async()=>{
+  const code=couponInput.trim().toUpperCase();
+  if(!code){setCouponCheckErr("Ingresa un código de cupón.");return;}
+  setCouponCheckLoading(true);setCouponCheckErr("");
+  try{
+    const raw=await fsGetCollection("coupons",100);
+    const now=Date.now();
+    const found=raw.find(r=>((r.code as string)||"").toUpperCase()===code);
+    if(!found){setCouponCheckErr("Cupón no válido.");setAppliedCoupon(null);return;}
+    const active=found.active!==false;
+    const expiresAt=Number(found.expiresAt)||0;
+    if(!active||now>expiresAt){setCouponCheckErr("Este cupón ha expirado.");setAppliedCoupon(null);return;}
+    const type=(found.type as string)==="product"?"product":"general";
+    if(type==="product"){
+      const pid=(found.productId as string)||"";
+      const inCart=cart.some(i=>i.product.id===pid);
+      if(!inCart){setCouponCheckErr(`Este cupón solo aplica para "${found.productName||"un producto específico"}". Agrégalo al carrito.`);setAppliedCoupon(null);return;}
+    }
+    setAppliedCoupon({id:found.id,code:(found.code as string)||"",type,productId:(found.productId as string)||"",productName:(found.productName as string)||"",discountPercent:Number(found.discountPercent)||0,durationHours:Number(found.durationHours)||0,createdAt:Number(found.createdAt)||0,expiresAt,active:true});
+    setCouponCheckErr("");
+  }catch{setCouponCheckErr("Error al validar el cupón. Intenta de nuevo.");}
+  finally{setCouponCheckLoading(false);}
+},[couponInput,cart]);
+
+const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");setCouponCheckErr("");},[]);
 
   const submitProduct=async()=>{
     setFErr("");setFOk("");
@@ -1456,6 +1557,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   },[]);
 
   useEffect(()=>{if(adminSec==="stats")loadStats();},[adminSec,loadStats]);
+useEffect(()=>{if(adminSec==="coupons"){loadCoupons();if(!couponCode)setCouponCode(generateCouponCode());}},[adminSec,loadCoupons]);
 
   const handleDragStart=useCallback((id:string)=>setDragId(id),[]);
   const handleDragOver=useCallback((id:string)=>setOverId(id),[]);
@@ -1889,6 +1991,18 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
                 <span style={{fontSize:13,fontWeight:800,color:C.accent,flexShrink:0,minWidth:60,textAlign:"right"}}>{fmtPrice(getFinalPrice(item.product)*item.qty)}</span>
               </div>
             ))}
+            {!!appliedCoupon&&(
+              <div style={{padding:"0.55rem 1rem",display:"flex",justifyContent:"space-between",alignItems:"center",borderTop:`1px dashed ${C.border}`}}>
+                <span style={{fontSize:11,color:"#888"}}>Subtotal</span>
+                <span style={{fontSize:12,color:"#888"}}>{fmtPrice(totalPriceBeforeCoupon)}</span>
+              </div>
+            )}
+            {!!appliedCoupon&&(
+              <div style={{padding:"0 1rem 0.6rem",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <span style={{fontSize:11,color:"#ffd43b",fontWeight:700}}>🎟️ Cupón {appliedCoupon.code}</span>
+                <span style={{fontSize:12,color:"#ffd43b",fontWeight:800}}>-{fmtPrice(couponDiscountAmount)}</span>
+              </div>
+            )}
             <div style={{padding:"0.75rem 1rem",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
               <span style={{fontSize:13,color:"#555"}}>Total</span>
               <div style={{textAlign:"right"}}>
@@ -1896,6 +2010,32 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
                 {showBs&&bcvRate&&<p style={{margin:"1px 0 0",fontSize:10,color:"#444"}}>≈ ${totalPrice.toFixed(2)} USD</p>}
               </div>
             </div>
+          </div>
+
+          {/* ── CUPÓN DE DESCUENTO ── */}
+          <div style={{background:"linear-gradient(135deg,#141410 0%,#0a0a08 100%)",borderRadius:12,border:`1px solid ${appliedCoupon?"#3a3520":C.border}`,marginBottom:"1.25rem",padding:"1.1rem",position:"relative",overflow:"hidden"}}>
+            <div style={{position:"absolute",top:0,left:0,right:0,height:1,background:"linear-gradient(90deg,transparent,rgba(255,212,59,0.25),transparent)"}}/>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:appliedCoupon?"0.75rem":"0.85rem"}}>
+              <div style={{width:28,height:28,borderRadius:8,background:"linear-gradient(135deg,#ffd43b 0%,#c99a1f 100%)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#080808" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12V7H5a2 2 0 010-4h14v4"/><path d="M3 5v14a2 2 0 002 2h16v-5"/><path d="M18 12a2 2 0 000 4h4v-4z"/></svg>
+              </div>
+              <p style={{margin:0,fontSize:11,fontWeight:800,letterSpacing:1.5,color:"#ffd43b"}}>¿TIENES UN CUPÓN?</p>
+            </div>
+            {appliedCoupon?(
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:"0.75rem",background:"rgba(255,212,59,0.08)",border:"1px solid rgba(255,212,59,0.25)",borderRadius:10,padding:"0.7rem 0.9rem"}}>
+                <div>
+                  <p style={{margin:"0 0 2px",fontSize:13,fontWeight:800,color:"#ffd43b",letterSpacing:1,fontFamily:"monospace"}}>{appliedCoupon.code}</p>
+                  <p style={{margin:0,fontSize:10,color:"#888"}}>-{appliedCoupon.discountPercent}% {appliedCoupon.type==="general"?"en todo el pedido":`en ${appliedCoupon.productName||"el producto"}`}</p>
+                </div>
+                <button onClick={removeCoupon} style={{background:"none",border:"1px solid rgba(255,255,255,0.15)",color:"#888",borderRadius:8,padding:"0.4rem 0.75rem",cursor:"pointer",fontSize:10,fontFamily:"inherit",fontWeight:700}}>Quitar</button>
+              </div>
+            ):(
+              <div style={{display:"flex",gap:"0.5rem"}}>
+                <input value={couponInput} onChange={e=>{setCouponInput(e.target.value.toUpperCase());setCouponCheckErr("");}} onKeyDown={e=>e.key==="Enter"&&applyCouponCode()} placeholder="INGRESA TU CÓDIGO" style={{...S.input,flex:1,fontWeight:800,letterSpacing:1.5}}/>
+                <button onClick={applyCouponCode} disabled={couponCheckLoading} style={{background:"linear-gradient(135deg,#ffd43b 0%,#c99a1f 100%)",color:"#080808",border:"none",borderRadius:8,padding:"0 1.1rem",cursor:couponCheckLoading?"not-allowed":"pointer",fontFamily:"inherit",fontSize:11,fontWeight:900,letterSpacing:1,flexShrink:0,opacity:couponCheckLoading?0.6:1}}>{couponCheckLoading?"…":"APLICAR"}</button>
+              </div>
+            )}
+            {couponCheckErr&&<p style={{margin:"0.6rem 0 0",fontSize:11,color:"#ff8888"}}>{couponCheckErr}</p>}
           </div>
 
           {/* ── CHECKOUT DIRECTO ── */}
@@ -2005,7 +2145,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
         <main style={{paddingTop:NAV_H,background:"#060606",minHeight:"100vh"}}>
           <div style={{maxWidth:720,margin:"0 auto",padding:"2rem 1rem 4rem"}}>
             {!adminLogged&&(<div style={{background:"#111",borderRadius:14,padding:"2.5rem 2rem",maxWidth:380,margin:"2rem auto",border:"1px solid #1a1a1a",animation:"slideUp 0.3s ease"}}><h1 style={{color:"#fff",fontSize:20,fontWeight:900,marginBottom:"1.5rem",textAlign:"center",letterSpacing:2}}>ADMIN</h1><div style={{display:"flex",flexDirection:"column",gap:"0.85rem"}}><input type="email" placeholder="Correo" value={adminEmail} onChange={e=>setAdminEmail(e.target.value)} style={S.input}/><PwdInput placeholder="Contraseña" value={adminPwd} onChange={setAdminPwd} onKeyDown={e=>e.key==="Enter"&&doLogin()} autoComplete="current-password"/>{adminErr&&<p style={{color:"#ff5555",fontSize:12,margin:0,background:"#1e0a0a",padding:"0.6rem 1rem",borderRadius:8}}>{adminErr}</p>}<button onClick={doLogin} style={S.adminBtn}>Entrar</button><button onClick={doLogout} style={{...S.adminBtn,background:"transparent",color:"#333",marginTop:4}}>← Volver</button></div></div>)}
-            {adminLogged&&adminSec==="menu"&&(<div style={{background:"#111",borderRadius:14,padding:"2.5rem 2rem",maxWidth:380,margin:"2rem auto",border:"1px solid #1a1a1a",animation:"slideUp 0.3s ease"}}><h1 style={{color:"#fff",fontSize:18,fontWeight:900,marginBottom:"0.4rem",textAlign:"center",letterSpacing:2}}>PANEL</h1><p style={{color:"#333",fontSize:12,textAlign:"center",marginBottom:"2rem",letterSpacing:1}}>Selecciona una opción</p><div style={{display:"flex",flexDirection:"column",gap:"0.65rem"}}><button onClick={()=>setAdminSec("products")} style={S.adminBtn}>📦 Gestionar productos</button><button onClick={()=>setAdminSec("sales")} style={S.adminBtn}>💰 Registrar venta manual</button><button onClick={()=>setAdminSec("stats")} style={S.adminBtn}>📊 Ver estadísticas</button><button onClick={doLogout} style={{...S.adminBtn,background:"transparent",color:"#ff5555",border:"none",marginTop:8,letterSpacing:1}}>Cerrar sesión</button></div></div>)}
+            {adminLogged&&adminSec==="menu"&&(<div style={{background:"#111",borderRadius:14,padding:"2.5rem 2rem",maxWidth:380,margin:"2rem auto",border:"1px solid #1a1a1a",animation:"slideUp 0.3s ease"}}><h1 style={{color:"#fff",fontSize:18,fontWeight:900,marginBottom:"0.4rem",textAlign:"center",letterSpacing:2}}>PANEL</h1><p style={{color:"#333",fontSize:12,textAlign:"center",marginBottom:"2rem",letterSpacing:1}}>Selecciona una opción</p><div style={{display:"flex",flexDirection:"column",gap:"0.65rem"}}><button onClick={()=>setAdminSec("products")} style={S.adminBtn}>📦 Gestionar productos</button><button onClick={()=>setAdminSec("sales")} style={S.adminBtn}>💰 Registrar venta manual</button><button onClick={()=>setAdminSec("stats")} style={S.adminBtn}>📊 Ver estadísticas</button><button onClick={()=>setAdminSec("coupons")} style={{...S.adminBtn,background:"linear-gradient(135deg,#fff 0%,#ccc 100%)"}}>🎟️ Cupones de descuento</button><button onClick={doLogout} style={{...S.adminBtn,background:"transparent",color:"#ff5555",border:"none",marginTop:8,letterSpacing:1}}>Cerrar sesión</button></div></div>)}
             {adminLogged&&adminSec==="products"&&(<>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem"}}><h1 style={{color:"#fff",fontSize:16,fontWeight:900,margin:0,letterSpacing:2}}>{editing?"EDITAR PRODUCTO":"PRODUCTOS"}</h1><button onClick={()=>{setAdminSec("menu");resetForm();}} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:12,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>← MENÚ</button></div>
               <div ref={formRef} style={{background:"#111",borderRadius:12,padding:"1.5rem",marginBottom:"1.25rem",border:editing?"1px solid #2a2a2a":"1px solid #1a1a1a"}}><p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 1.25rem"}}>{editing?`EDITANDO: ${editing.name}`:"NUEVO PRODUCTO"}</p><div style={{display:"flex",flexDirection:"column",gap:"0.8rem"}}><input placeholder="Nombre del producto *" value={fName} onChange={e=>setFName(e.target.value)} style={S.input}/><textarea placeholder="Descripción (opcional)" value={fDesc} onChange={e=>setFDesc(e.target.value)} rows={2} style={{...S.input,resize:"vertical" as any,lineHeight:1.6}}/><input placeholder="Precio en USD *" type="number" min="0" step="0.01" value={fPrice} onChange={e=>setFPrice(e.target.value)} style={S.input}/><select value={fCat} onChange={e=>setFCat(e.target.value)} style={{...S.input,appearance:"auto" as any}}><option value="">Selecciona categoría *</option><optgroup label="── LENTES">{LENTES_SUBCATS.map(s=><option key={s} value={s}>{catLabel(s)}</option>)}</optgroup><optgroup label="── OTROS">{SHOP_CATS.filter(c=>c!=="LENTES").map(c=><option key={c} value={c}>{catLabel(c)}</option>)}</optgroup></select><div style={{background:"#0e0e0e",borderRadius:8,padding:"1rem",border:"1px dashed #1e1e1e"}}><p style={{color:"#333",fontSize:9,letterSpacing:2,margin:"0 0 0.65rem",fontWeight:800}}>IMAGEN {!editing&&"*"}</p><input ref={fileRef} type="file" accept="image/*" onChange={onFileChange} style={{display:"none"}} id="fi"/><label htmlFor="fi" style={{display:"inline-flex",alignItems:"center",gap:"0.45rem",background:"#1a1a1a",color:"#888",padding:"0.55rem 1rem",borderRadius:8,cursor:"pointer",fontSize:12,border:"1px solid #222",fontFamily:"inherit"}}>📷 {fFile?"Cambiar":"Elegir foto"}</label>{fFile&&<span style={{color:"#444",fontSize:11,marginLeft:"0.65rem"}}>{fFile.name}</span>}{fPrev&&<div style={{marginTop:"0.65rem",width:80,height:80,borderRadius:8,overflow:"hidden",border:"1px solid #222"}}><img src={fPrev} alt="preview" style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/></div>}</div>
@@ -2200,6 +2340,82 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+              </div>
+            </>)}
+
+            {adminLogged&&adminSec==="coupons"&&(<>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem"}}><h1 style={{color:"#fff",fontSize:16,fontWeight:900,margin:0,letterSpacing:2}}>CUPONES DE DESCUENTO</h1><button onClick={()=>setAdminSec("menu")} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:12,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>← MENÚ</button></div>
+
+              <div style={{background:"linear-gradient(160deg,#141414 0%,#0a0a0a 100%)",borderRadius:14,padding:"1.5rem",border:"1px solid #2a2a2a",marginBottom:"1.5rem",position:"relative",overflow:"hidden"}}>
+                <div style={{position:"absolute",top:0,left:0,right:0,height:1,background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent)"}}/>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:"1.25rem"}}>
+                  <div style={{width:32,height:32,borderRadius:8,background:"linear-gradient(135deg,#fff 0%,#999 100%)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#080808" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12V7H5a2 2 0 010-4h14v4"/><path d="M3 5v14a2 2 0 002 2h16v-5"/><path d="M18 12a2 2 0 000 4h4v-4z"/></svg>
+                  </div>
+                  <p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2.5,margin:0}}>GENERAR NUEVO CUPÓN</p>
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:"0.8rem"}}>
+                  <div style={{display:"flex",gap:"0.6rem"}}>
+                    <input placeholder="CÓDIGO" value={couponCode} onChange={e=>setCouponCode(e.target.value.toUpperCase())} style={{...S.input,flex:1,fontWeight:800,letterSpacing:2}}/>
+                    <button type="button" onClick={()=>setCouponCode(generateCouponCode())} style={{background:"#1a1a1a",color:"#ccc",border:"1px solid #2a2a2a",borderRadius:8,padding:"0 1rem",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:800,flexShrink:0}}>🎲 GENERAR</button>
+                  </div>
+                  <div style={{display:"flex",gap:"0.5rem"}}>
+                    <button type="button" onClick={()=>setCouponType("general")} style={{flex:1,background:couponType==="general"?"#fff":"#111",color:couponType==="general"?"#080808":"#666",border:`1px solid ${couponType==="general"?"#fff":"#222"}`,borderRadius:8,padding:"0.65rem",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:800,letterSpacing:0.5}}>🌐 GENERAL (TODO EL CARRITO)</button>
+                    <button type="button" onClick={()=>setCouponType("product")} style={{flex:1,background:couponType==="product"?"#fff":"#111",color:couponType==="product"?"#080808":"#666",border:`1px solid ${couponType==="product"?"#fff":"#222"}`,borderRadius:8,padding:"0.65rem",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:800,letterSpacing:0.5}}>🎯 PRODUCTO ESPECÍFICO</button>
+                  </div>
+                  {couponType==="product"&&(
+                    <select value={couponProductId} onChange={e=>setCouponProductId(e.target.value)} style={{...S.input,appearance:"auto" as any}}>
+                      <option value="">Selecciona el producto *</option>
+                      {products.map(p=><option key={p.id} value={p.id}>{p.name} — ${p.price.toFixed(2)}</option>)}
+                    </select>
+                  )}
+                  <div style={{display:"flex",gap:"0.6rem"}}>
+                    <input placeholder="% descuento *" type="number" min="1" max="95" value={couponDiscount} onChange={e=>setCouponDiscount(e.target.value)} style={{...S.input,flex:1}}/>
+                    <input placeholder="Duración (horas) *" type="number" min="1" value={couponHours} onChange={e=>setCouponHours(e.target.value)} style={{...S.input,flex:1}}/>
+                  </div>
+                  {couponErr&&<div style={{color:"#ff5555",fontSize:12,background:"#1e0808",padding:"0.65rem 1rem",borderRadius:8}}>{couponErr}</div>}
+                  {couponOk&&<div style={{color:"#55cc77",fontSize:12,background:"#081e0e",padding:"0.65rem 1rem",borderRadius:8}}>{couponOk}</div>}
+                  <button onClick={submitCoupon} disabled={couponLoading} style={{...S.adminBtn,background:"linear-gradient(135deg,#fff 0%,#ccc 100%)",opacity:couponLoading?0.5:1,cursor:couponLoading?"not-allowed":"pointer"}}>{couponLoading?"Creando...":"✨ Crear cupón"}</button>
+                </div>
+              </div>
+
+              <div style={{background:"#111",borderRadius:14,border:"1px solid #1a1a1a",padding:"1.25rem"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1rem"}}>
+                  <p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2.5,margin:0}}>CUPONES CREADOS ({couponsList.length})</p>
+                  <button onClick={()=>loadCoupons(true)} disabled={couponsLoading} style={{background:"none",border:"1px solid #2a2a2a",color:"#888",padding:"0.3rem 0.7rem",borderRadius:8,cursor:couponsLoading?"not-allowed":"pointer",fontSize:10,fontFamily:"inherit",fontWeight:700}}>{couponsLoading?"…":"↻"}</button>
+                </div>
+                {couponsLoading&&!couponsList.length?(
+                  <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"1.5rem"}}>Cargando…</p>
+                ):couponsList.length===0?(
+                  <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"1.5rem"}}>Aún no has creado ningún cupón</p>
+                ):(
+                  <div style={{display:"flex",flexDirection:"column",gap:"0.5rem"}}>
+                    {couponsList.map(c=>{
+                      const now=Date.now();
+                      const expired=now>c.expiresAt;
+                      const isLive=c.active&&!expired;
+                      const msLeft=c.expiresAt-now;
+                      const hLeft=Math.max(0,Math.floor(msLeft/3600000));
+                      const mLeft=Math.max(0,Math.floor((msLeft%3600000)/60000));
+                      return(
+                        <div key={c.id} style={{display:"flex",alignItems:"center",gap:"0.75rem",padding:"0.75rem",borderRadius:10,background:isLive?"linear-gradient(135deg,#141410 0%,#0d0d0a 100%)":"#0c0c0c",border:`1px solid ${isLive?"#3a3520":"#1a1a1a"}`}}>
+                          <div style={{width:38,height:38,borderRadius:8,background:isLive?"linear-gradient(135deg,#ffd43b 0%,#c99a1f 100%)":"#1a1a1a",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                            <span style={{fontSize:15}}>{c.type==="general"?"🌐":"🎯"}</span>
+                          </div>
+                          <div style={{flex:1,minWidth:0}}>
+                            <p style={{margin:"0 0 2px",fontSize:12,fontWeight:800,color:"#fff",letterSpacing:1,fontFamily:"monospace"}}>{c.code} <span style={{color:"#ffd43b"}}>-{c.discountPercent}%</span></p>
+                            <p style={{margin:0,fontSize:10,color:"#555"}}>{c.type==="general"?"Aplica a todo el carrito":`Solo: ${c.productName||"producto"}`} {isLive?`· quedan ${hLeft}h ${mLeft}m`:expired?"· expirado":"· desactivado"}</p>
+                          </div>
+                          <span style={{fontSize:9,fontWeight:800,letterSpacing:1,padding:"3px 8px",borderRadius:20,background:isLive?"#0d1e0d":"#1e0d0d",color:isLive?"#4caf50":"#ff6666",flexShrink:0}}>{isLive?"ACTIVO":expired?"EXPIRADO":"PAUSADO"}</span>
+                          <div style={{display:"flex",gap:"0.3rem",flexShrink:0}}>
+                            <button onClick={()=>toggleCouponActive(c)} title={c.active?"Pausar":"Reactivar"} style={{background:"#1a1a1a",color:"#888",border:"1px solid #222",padding:"0.3rem 0.5rem",borderRadius:6,cursor:"pointer",fontSize:11,fontFamily:"inherit"}}>{c.active?"⏸️":"▶️"}</button>
+                            <button onClick={()=>deleteCoupon(c.id)} style={{background:"none",color:"#cc3333",border:"1px solid #2a1515",padding:"0.3rem 0.55rem",borderRadius:6,cursor:"pointer",fontSize:11,fontFamily:"inherit"}}>✕</button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
