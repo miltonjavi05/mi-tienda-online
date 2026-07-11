@@ -1053,6 +1053,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   const selectedProductRef = useRef<Product|null>(null);
   const modalPushedRef = useRef(false);
   const pendingProductDeepLinkRef = useRef(typeof window!=="undefined"&&window.location.pathname.startsWith("/producto/"));
+  const[deepLinkPending,setDeepLinkPending]=useState(typeof window!=="undefined"&&window.location.pathname.startsWith("/producto/"));
   useEffect(()=>{selectedProductRef.current=selectedProduct;},[selectedProduct]);
   useEffect(()=>{
     if(typeof window==="undefined")return;
@@ -1250,11 +1251,11 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
     if(typeof window==="undefined")return;
     if(deepLinkHandled.current)return;
     const id=productIdFromPath(window.location.pathname);
-    if(!id){pendingProductDeepLinkRef.current=false;return;}
+    if(!id){pendingProductDeepLinkRef.current=false;setDeepLinkPending(false);return;}
     if(!products.length)return;
     deepLinkHandled.current=true;
     const prod=products.find(p=>p.id===id);
-    if(!prod){pendingProductDeepLinkRef.current=false;return;}
+    if(!prod){pendingProductDeepLinkRef.current=false;setDeepLinkPending(false);return;}
     const filter:ShopFilter=(ALL_SHOP_CATS as readonly string[]).includes(prod.category)?(prod.category as ShopFilter):"TODO";
     const shopPath=shopFilterToPath(filter);
     window.history.replaceState({},"",shopPath);
@@ -1267,6 +1268,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
     setModalQty(1);
     trackViewContent(prod,currentUser?.email);
     pendingProductDeepLinkRef.current=false;
+    setDeepLinkPending(false);
   },[products,currentUser?.email]);
 
   const handleProfilePhoto=useCallback(async(e:React.ChangeEvent<HTMLInputElement>)=>{const file=e.target.files?.[0];if(!file||!currentUser)return;setPhotoLoading(true);try{const url=await uploadImg(file);let idToken=currentUser.idToken;if(!idToken){const rt=localStorage.getItem("fokus_refresh");if(rt){const res=await refreshIdToken(rt);if(res)idToken=res.idToken;}}await fsSaveUser(currentUser.uid,{photoURL:url},idToken).catch(()=>{});setCurrentUser(prev=>{if(!prev)return prev;const u={...prev,photoURL:url,idToken};localStorage.setItem("fokus_user",JSON.stringify(u));return u;});}catch(err){console.error("Error subiendo foto:",err);}finally{setPhotoLoading(false);if(photoInputRef.current)photoInputRef.current.value="";};},[currentUser]);
@@ -1488,6 +1490,17 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
       <>
         <style>{GLOBAL_CSS}</style>
         <ThankYouView order={orderSnap} onBack={()=>{setOrderSnap(null);setMainView("shop");setShopFilter("TODO");}} currentUser={currentUser}/>
+      </>
+    );
+  }
+
+  if(deepLinkPending){
+    return(
+      <>
+        <style>{GLOBAL_CSS}</style>
+        <div style={{background:C.bg,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <div style={{width:34,height:34,border:"2px solid #222",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/>
+        </div>
       </>
     );
   }
