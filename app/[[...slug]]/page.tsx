@@ -1122,7 +1122,11 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   },[mainView,shopFilter]);
   useEffect(()=>{
     if(typeof window==="undefined")return;
-    const onPopState=()=>{
+    const onPopState=(e:PopStateEvent)=>{
+      if(window.location.pathname==="/admin"&&adminSecRef.current!=="menu"&&!(e.state&&(e.state as any).adminSec)){
+        setAdminSec("menu");
+        return;
+      }
       isPoppingRef.current=true;
       if(selectedProductRef.current){
         modalPushedRef.current=false;
@@ -1160,6 +1164,19 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   const[adminPwd,setAdminPwd]      =useState("");
   const[adminErr,setAdminErr]      =useState("");
   const[adminSec,setAdminSec]=useState<"menu"|"products"|"sales"|"stats"|"coupons">("menu");
+  const adminSecRef=useRef(adminSec);
+  useEffect(()=>{adminSecRef.current=adminSec;},[adminSec]);
+  const enterAdminSec=useCallback((sec:"products"|"sales"|"stats"|"coupons")=>{
+    try{window.history.pushState({adminSec:sec},"","/admin");}catch{}
+    setAdminSec(sec);
+  },[]);
+  const exitAdminSec=useCallback(()=>{
+    if(typeof window!=="undefined"&&window.history.state&&(window.history.state as any).adminSec){
+      window.history.back();
+    }else{
+      setAdminSec("menu");
+    }
+  },[]);
   const[adminCat,setAdminCat]      =useState("ALL");
   const[editing,setEditing]        =useState<Product|null>(null);
   const[fName,setFName]            =useState("");
@@ -1178,6 +1195,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
 const[couponCode,setCouponCode]  =useState("");
 const[couponType,setCouponType]  =useState<"general"|"product">("general");
 const[couponProductId,setCouponProductId]=useState("");
+const[couponProductSearch,setCouponProductSearch]=useState("");
 const[couponDiscount,setCouponDiscount]=useState("");
 const[couponHours,setCouponHours]=useState("24");
 const[couponLoading,setCouponLoading]=useState(false);
@@ -1423,7 +1441,7 @@ const loadCoupons=useCallback(async(force=false)=>{
   finally{setCouponsLoading(false);}
 },[]);
 
-const resetCouponForm=()=>{setCouponCode(generateCouponCode());setCouponType("general");setCouponProductId("");setCouponDiscount("");setCouponHours("24");setCouponErr("");setCouponOk("");};
+const resetCouponForm=()=>{setCouponCode(generateCouponCode());setCouponType("general");setCouponProductId("");setCouponProductSearch("");setCouponDiscount("");setCouponHours("24");setCouponErr("");setCouponOk("");};
 
 const submitCoupon=async()=>{
   setCouponErr("");setCouponOk("");
@@ -2145,9 +2163,9 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
         <main style={{paddingTop:NAV_H,background:"#060606",minHeight:"100vh"}}>
           <div style={{maxWidth:720,margin:"0 auto",padding:"2rem 1rem 4rem"}}>
             {!adminLogged&&(<div style={{background:"#111",borderRadius:14,padding:"2.5rem 2rem",maxWidth:380,margin:"2rem auto",border:"1px solid #1a1a1a",animation:"slideUp 0.3s ease"}}><h1 style={{color:"#fff",fontSize:20,fontWeight:900,marginBottom:"1.5rem",textAlign:"center",letterSpacing:2}}>ADMIN</h1><div style={{display:"flex",flexDirection:"column",gap:"0.85rem"}}><input type="email" placeholder="Correo" value={adminEmail} onChange={e=>setAdminEmail(e.target.value)} style={S.input}/><PwdInput placeholder="Contraseña" value={adminPwd} onChange={setAdminPwd} onKeyDown={e=>e.key==="Enter"&&doLogin()} autoComplete="current-password"/>{adminErr&&<p style={{color:"#ff5555",fontSize:12,margin:0,background:"#1e0a0a",padding:"0.6rem 1rem",borderRadius:8}}>{adminErr}</p>}<button onClick={doLogin} style={S.adminBtn}>Entrar</button><button onClick={doLogout} style={{...S.adminBtn,background:"transparent",color:"#333",marginTop:4}}>← Volver</button></div></div>)}
-            {adminLogged&&adminSec==="menu"&&(<div style={{background:"#111",borderRadius:14,padding:"2.5rem 2rem",maxWidth:380,margin:"2rem auto",border:"1px solid #1a1a1a",animation:"slideUp 0.3s ease"}}><h1 style={{color:"#fff",fontSize:18,fontWeight:900,marginBottom:"0.4rem",textAlign:"center",letterSpacing:2}}>PANEL</h1><p style={{color:"#333",fontSize:12,textAlign:"center",marginBottom:"2rem",letterSpacing:1}}>Selecciona una opción</p><div style={{display:"flex",flexDirection:"column",gap:"0.65rem"}}><button onClick={()=>setAdminSec("products")} style={S.adminBtn}>📦 Gestionar productos</button><button onClick={()=>setAdminSec("sales")} style={S.adminBtn}>💰 Registrar venta manual</button><button onClick={()=>setAdminSec("stats")} style={S.adminBtn}>📊 Ver estadísticas</button><button onClick={()=>setAdminSec("coupons")} style={{...S.adminBtn,background:"linear-gradient(135deg,#fff 0%,#ccc 100%)"}}>🎟️ Cupones de descuento</button><button onClick={doLogout} style={{...S.adminBtn,background:"transparent",color:"#ff5555",border:"none",marginTop:8,letterSpacing:1}}>Cerrar sesión</button></div></div>)}
+            {adminLogged&&adminSec==="menu"&&(<div style={{background:"#111",borderRadius:14,padding:"2.5rem 2rem",maxWidth:380,margin:"2rem auto",border:"1px solid #1a1a1a",animation:"slideUp 0.3s ease"}}><h1 style={{color:"#fff",fontSize:18,fontWeight:900,marginBottom:"0.4rem",textAlign:"center",letterSpacing:2}}>PANEL</h1><p style={{color:"#333",fontSize:12,textAlign:"center",marginBottom:"2rem",letterSpacing:1}}>Selecciona una opción</p><div style={{display:"flex",flexDirection:"column",gap:"0.65rem"}}><button onClick={()=>enterAdminSec("products")} style={S.adminBtn}>📦 Gestionar productos</button><button onClick={()=>enterAdminSec("sales")} style={S.adminBtn}>💰 Registrar venta manual</button><button onClick={()=>enterAdminSec("stats")} style={S.adminBtn}>📊 Ver estadísticas</button><button onClick={()=>enterAdminSec("coupons")} style={{...S.adminBtn,background:"linear-gradient(135deg,#fff 0%,#ccc 100%)"}}>🎟️ Cupones de descuento</button><button onClick={doLogout} style={{...S.adminBtn,background:"transparent",color:"#ff5555",border:"none",marginTop:8,letterSpacing:1}}>Cerrar sesión</button></div></div>)}
             {adminLogged&&adminSec==="products"&&(<>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem"}}><h1 style={{color:"#fff",fontSize:16,fontWeight:900,margin:0,letterSpacing:2}}>{editing?"EDITAR PRODUCTO":"PRODUCTOS"}</h1><button onClick={()=>{setAdminSec("menu");resetForm();}} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:12,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>← MENÚ</button></div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem"}}><h1 style={{color:"#fff",fontSize:16,fontWeight:900,margin:0,letterSpacing:2}}>{editing?"EDITAR PRODUCTO":"PRODUCTOS"}</h1><button onClick={()=>{exitAdminSec();resetForm();}} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:12,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>← MENÚ</button></div>
               <div ref={formRef} style={{background:"#111",borderRadius:12,padding:"1.5rem",marginBottom:"1.25rem",border:editing?"1px solid #2a2a2a":"1px solid #1a1a1a"}}><p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 1.25rem"}}>{editing?`EDITANDO: ${editing.name}`:"NUEVO PRODUCTO"}</p><div style={{display:"flex",flexDirection:"column",gap:"0.8rem"}}><input placeholder="Nombre del producto *" value={fName} onChange={e=>setFName(e.target.value)} style={S.input}/><textarea placeholder="Descripción (opcional)" value={fDesc} onChange={e=>setFDesc(e.target.value)} rows={2} style={{...S.input,resize:"vertical" as any,lineHeight:1.6}}/><input placeholder="Precio en USD *" type="number" min="0" step="0.01" value={fPrice} onChange={e=>setFPrice(e.target.value)} style={S.input}/><select value={fCat} onChange={e=>setFCat(e.target.value)} style={{...S.input,appearance:"auto" as any}}><option value="">Selecciona categoría *</option><optgroup label="── LENTES">{LENTES_SUBCATS.map(s=><option key={s} value={s}>{catLabel(s)}</option>)}</optgroup><optgroup label="── OTROS">{SHOP_CATS.filter(c=>c!=="LENTES").map(c=><option key={c} value={c}>{catLabel(c)}</option>)}</optgroup></select><div style={{background:"#0e0e0e",borderRadius:8,padding:"1rem",border:"1px dashed #1e1e1e"}}><p style={{color:"#333",fontSize:9,letterSpacing:2,margin:"0 0 0.65rem",fontWeight:800}}>IMAGEN {!editing&&"*"}</p><input ref={fileRef} type="file" accept="image/*" onChange={onFileChange} style={{display:"none"}} id="fi"/><label htmlFor="fi" style={{display:"inline-flex",alignItems:"center",gap:"0.45rem",background:"#1a1a1a",color:"#888",padding:"0.55rem 1rem",borderRadius:8,cursor:"pointer",fontSize:12,border:"1px solid #222",fontFamily:"inherit"}}>📷 {fFile?"Cambiar":"Elegir foto"}</label>{fFile&&<span style={{color:"#444",fontSize:11,marginLeft:"0.65rem"}}>{fFile.name}</span>}{fPrev&&<div style={{marginTop:"0.65rem",width:80,height:80,borderRadius:8,overflow:"hidden",border:"1px solid #222"}}><img src={fPrev} alt="preview" style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/></div>}</div>
 <div style={{background:"#0e0e0e",borderRadius:8,padding:"1rem",border:"1px dashed #1e1e1e"}}>
   <p style={{color:"#333",fontSize:9,letterSpacing:2,margin:"0 0 0.65rem",fontWeight:800}}>FOTOS ADICIONALES (GALERÍA)</p>
@@ -2200,7 +2218,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
             </>)}
 
             {adminLogged&&adminSec==="sales"&&(<>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem"}}><h1 style={{color:"#fff",fontSize:16,fontWeight:900,margin:0,letterSpacing:2}}>REGISTRAR VENTA MANUAL</h1><button onClick={()=>{setAdminSec("menu");resetSaleForm();}} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:12,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>← MENÚ</button></div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem"}}><h1 style={{color:"#fff",fontSize:16,fontWeight:900,margin:0,letterSpacing:2}}>REGISTRAR VENTA MANUAL</h1><button onClick={()=>{exitAdminSec();resetSaleForm();}} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:12,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>← MENÚ</button></div>
               <div style={{background:"#111",borderRadius:12,padding:"1.5rem",border:"1px solid #1a1a1a"}}>
                 <p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 1.25rem"}}>PARA VENTAS CERRADAS POR WHATSAPP U OTRO CANAL FUERA DEL CHECKOUT AUTOMÁTICO</p>
                 <div style={{display:"flex",flexDirection:"column",gap:"0.8rem"}}>
@@ -2229,7 +2247,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                 <h1 style={{color:"#fff",fontSize:16,fontWeight:900,margin:0,letterSpacing:2}}>ESTADÍSTICAS</h1>
                 <div style={{display:"flex",gap:"0.5rem",alignItems:"center"}}>
                   <button onClick={()=>loadStats(true)} disabled={statsLoading} style={{background:"none",border:"1px solid #2a2a2a",color:"#888",padding:"0.4rem 0.85rem",borderRadius:8,cursor:statsLoading?"not-allowed":"pointer",fontSize:11,fontFamily:"inherit",fontWeight:700,WebkitTapHighlightColor:"transparent"}}>{statsLoading?"Cargando…":"↻ Actualizar"}</button>
-                  <button onClick={()=>setAdminSec("menu")} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:12,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>← MENÚ</button>
+                  <button onClick={()=>exitAdminSec()} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:12,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>← MENÚ</button>
                 </div>
               </div>
 
@@ -2346,7 +2364,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
             </>)}
 
             {adminLogged&&adminSec==="coupons"&&(<>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem"}}><h1 style={{color:"#fff",fontSize:16,fontWeight:900,margin:0,letterSpacing:2}}>CUPONES DE DESCUENTO</h1><button onClick={()=>setAdminSec("menu")} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:12,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>← MENÚ</button></div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem"}}><h1 style={{color:"#fff",fontSize:16,fontWeight:900,margin:0,letterSpacing:2}}>CUPONES DE DESCUENTO</h1><button onClick={()=>exitAdminSec()} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:12,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>← MENÚ</button></div>
 
               <div style={{background:"linear-gradient(160deg,#141414 0%,#0a0a0a 100%)",borderRadius:14,padding:"1.5rem",border:"1px solid #2a2a2a",marginBottom:"1.5rem",position:"relative",overflow:"hidden"}}>
                 <div style={{position:"absolute",top:0,left:0,right:0,height:1,background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent)"}}/>
@@ -2366,10 +2384,13 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                     <button type="button" onClick={()=>setCouponType("product")} style={{flex:1,background:couponType==="product"?"#fff":"#111",color:couponType==="product"?"#080808":"#666",border:`1px solid ${couponType==="product"?"#fff":"#222"}`,borderRadius:8,padding:"0.65rem",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:800,letterSpacing:0.5}}>🎯 PRODUCTO ESPECÍFICO</button>
                   </div>
                   {couponType==="product"&&(
-                    <select value={couponProductId} onChange={e=>setCouponProductId(e.target.value)} style={{...S.input,appearance:"auto" as any}}>
-                      <option value="">Selecciona el producto *</option>
-                      {products.map(p=><option key={p.id} value={p.id}>{p.name} — ${p.price.toFixed(2)}</option>)}
-                    </select>
+                    <>
+                      <input placeholder="🔎 Buscar producto…" value={couponProductSearch} onChange={e=>setCouponProductSearch(e.target.value)} style={S.input}/>
+                      <select value={couponProductId} onChange={e=>setCouponProductId(e.target.value)} style={{...S.input,appearance:"auto" as any}}>
+                        <option value="">Selecciona el producto *</option>
+                        {products.filter(p=>p.name.toLowerCase().includes(couponProductSearch.toLowerCase())).map(p=><option key={p.id} value={p.id}>{p.name} — ${p.price.toFixed(2)}</option>)}
+                      </select>
+                    </>
                   )}
                   <div style={{display:"flex",gap:"0.6rem"}}>
                     <input placeholder="% descuento *" type="number" min="1" max="95" value={couponDiscount} onChange={e=>setCouponDiscount(e.target.value)} style={{...S.input,flex:1}}/>
