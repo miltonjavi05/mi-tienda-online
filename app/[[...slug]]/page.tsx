@@ -99,7 +99,7 @@ const DELIVERY_ZONES_MAP = new Map(DELIVERY_ZONES.map(z=>[z.id,z]));
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 interface DeliveryInfo { zone:string; nombre:string; cedula:string; telefono:string; agencia:string; direccion:string; estado:string; }
-interface Product { id:string; name:string; category:string; price:number; img:string; description?:string; createdAt?:number; order?:number; active?:boolean; discount?:number; images?:string[]; }
+interface Product { id:string; name:string; category:string; price:number; img:string; description?:string; createdAt?:number; order?:number; active?:boolean; discount?:number; images?:string[]; code?:string; }
 interface CartItem { product:Product; qty:number; }
 interface UserData { uid:string; email:string; displayName:string; createdAt:number; photoURL?:string; idToken?:string; }
 interface Coupon { id:string; code:string; type:"general"|"product"; productId?:string; productName?:string; discountPercent:number; durationHours:number; createdAt:number; expiresAt:number; active:boolean; }
@@ -241,7 +241,7 @@ type FsVal=|{stringValue:string}|{doubleValue:number}|{integerValue:string}|{boo
 function toFs(v:unknown):FsVal{if(v===null||v===undefined)return{nullValue:null};if(typeof v==="string")return{stringValue:v};if(typeof v==="number")return{doubleValue:v};if(typeof v==="boolean")return{booleanValue:v};if(Array.isArray(v))return{arrayValue:{values:v.map(toFs)}};if(typeof v==="object")return{mapValue:{fields:Object.fromEntries(Object.entries(v as Record<string,unknown>).map(([k,val])=>[k,toFs(val)]))}};return{stringValue:String(v)};}
 function fromFs(f:FsVal):unknown{if("stringValue" in f)return f.stringValue;if("doubleValue" in f)return f.doubleValue;if("integerValue" in f)return Number(f.integerValue);if("booleanValue" in f)return f.booleanValue;if("nullValue" in f)return null;if("arrayValue" in f)return((f as{arrayValue:{values?:FsVal[]}}).arrayValue.values||[]).map(fromFs);if("mapValue" in f){const fields=(f as{mapValue:{fields?:Record<string,FsVal>}}).mapValue.fields||{};return Object.fromEntries(Object.entries(fields).map(([k,v])=>[k,fromFs(v)]));}return null;}
 interface FsDoc{name:string;fields:Record<string,FsVal>;}
-function docToProduct(doc:FsDoc):Product{const f=doc.fields||{};const rawImages=fromFs(f.images??{nullValue:null}) as string[]|null;return{id:doc.name.split("/").pop() as string,name:fromFs(f.name??{nullValue:null}) as string||"",category:((fromFs(f.category??{nullValue:null}) as string)||"").toUpperCase(),price:fromFs(f.price??{nullValue:null}) as number||0,img:fromFs(f.img??{nullValue:null}) as string||"",description:fromFs(f.description??{nullValue:null}) as string||"",createdAt:fromFs(f.createdAt??{nullValue:null}) as number||0,order:fromFs(f.order??{nullValue:null}) as number||0,active:f.active!==undefined?(fromFs(f.active) as boolean):true,discount:fromFs(f.discount??{nullValue:null}) as number||0,images:Array.isArray(rawImages)?rawImages:[]};}
+function docToProduct(doc:FsDoc):Product{const f=doc.fields||{};const rawImages=fromFs(f.images??{nullValue:null}) as string[]|null;const id=doc.name.split("/").pop() as string;return{id,name:fromFs(f.name??{nullValue:null}) as string||"",category:((fromFs(f.category??{nullValue:null}) as string)||"").toUpperCase(),price:fromFs(f.price??{nullValue:null}) as number||0,img:fromFs(f.img??{nullValue:null}) as string||"",description:fromFs(f.description??{nullValue:null}) as string||"",createdAt:fromFs(f.createdAt??{nullValue:null}) as number||0,order:fromFs(f.order??{nullValue:null}) as number||0,active:f.active!==undefined?(fromFs(f.active) as boolean):true,discount:fromFs(f.discount??{nullValue:null}) as number||0,images:Array.isArray(rawImages)?rawImages:[],code:(fromFs(f.code??{nullValue:null}) as string)||("FK-"+id.slice(-6).toUpperCase())};}
 async function fsGetAll():Promise<Product[]>{const r=await fetch(`${fsBase()}/products?pageSize=300`);if(!r.ok)throw new Error(await r.text());const d=await r.json() as{documents?:FsDoc[]};return(d.documents||[]).map(docToProduct);}
 async function fsAdd(p:Omit<Product,"id">):Promise<void>{const fields=Object.fromEntries(Object.entries({...p,createdAt:Date.now()}).map(([k,v])=>[k,toFs(v)]));const r=await fetch(`${fsBase()}/products`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fields})});if(!r.ok)throw new Error(await r.text());}
 async function fsUpdate(id:string,p:Partial<Omit<Product,"id">>):Promise<void>{const fields=Object.fromEntries(Object.entries(p).map(([k,v])=>[k,toFs(v)]));const mask=Object.keys(p).map(k=>`updateMask.fieldPaths=${encodeURIComponent(k)}`).join("&");const r=await fetch(`${fsBase()}/products/${id}?${mask}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({fields})});if(!r.ok)throw new Error(await r.text());}
@@ -259,7 +259,17 @@ async function uploadImg(file:File,preset=CLOUDINARY_PRESET):Promise<string>{con
 function optImg(url:string,w=400):string{if(!url||!url.includes("cloudinary.com"))return url;return url.replace("/upload/",`/upload/w_${w},q_auto,f_webp,dpr_auto/`);}
 function getAllImages(p:Product):string[]{const extra=(p.images||[]).filter(u=>u&&u!==p.img);return[p.img,...extra].filter(Boolean);}
 function getFinalPrice(p:Product):number{if(p.discount&&p.discount>0)return p.price*(1-p.discount/100);return p.price;}
-const DiscountBadge=memo(function DiscountBadge({percent}:{percent:number}){
+const SUPER_OFFER_THRESHOLD=40;
+function isSuperOffer(discount?:number):boolean{return!!discount&&discount>=SUPER_OFFER_THRESHOLD;}
+const DiscountBadge=memo(function DiscountBadge({percent,issuper}:{percent:number;issuper?:boolean}){
+  if(issuper){
+    return(
+      <div style={{position:"absolute",top:8,left:8,zIndex:2,display:"flex",alignItems:"center",gap:5,background:"linear-gradient(135deg,#ff3b3b 0%,#c0392b 55%,#7a0000 100%)",color:"#fff",padding:"5px 10px 5px 8px",borderRadius:20,fontSize:9,fontWeight:900,letterSpacing:1,boxShadow:"0 4px 18px rgba(255,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.35)",border:"1px solid rgba(255,255,255,0.5)",animation:"superPulse 1.6s ease infinite"}}>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="#fff"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.2L12 16.6l-6.3 4.4L8 13.8 2 9.4h7.6z"/></svg>
+        SUPER -{percent}%
+      </div>
+    );
+  }
   return(
     <div style={{position:"absolute",top:8,left:8,zIndex:2,display:"flex",alignItems:"center",gap:4,background:"linear-gradient(135deg,#fff 0%,#e2e2e2 45%,#8f8f8f 100%)",color:"#080808",padding:"4px 9px 4px 7px",borderRadius:20,fontSize:10,fontWeight:900,letterSpacing:0.5,boxShadow:"0 4px 14px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.7)",border:"1px solid rgba(255,255,255,0.85)"}}>
       <svg width="10" height="10" viewBox="0 0 24 24" fill="#080808"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.2L12 16.6l-6.3 4.4L8 13.8 2 9.4h7.6z"/></svg>
@@ -303,6 +313,9 @@ const S={
 
 // ─── GLOBAL STYLES ────────────────────────────────────────────────────────────
 const GLOBAL_CSS = `
+  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@700;800&display=swap');
+  .fokus-logo { font-family:'Rajdhani',Arial,sans-serif; font-weight:800; letter-spacing:2px; transform:skewX(-10deg); display:inline-block; }
+  @keyframes superPulse { 0%{box-shadow:0 4px 18px rgba(255,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.35);} 50%{box-shadow:0 4px 30px rgba(255,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.5);} 100%{box-shadow:0 4px 18px rgba(255,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.35);} }
   *, *::before, *::after { box-sizing: border-box; }
   html { overflow-y: scroll; scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
   body { background: #080808; margin: 0; overscroll-behavior-y: contain; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
@@ -406,7 +419,7 @@ const IcUpload=memo(({s=18,c="#fff"}:{s?:number;c?:string})=>(<svg width={s} hei
 
 function catLabel(cat:string):string{const m:Record<string,string>={"LENTES·FOTOCROMATICOS":"Fotocromaticos","LENTES·ANTI-LUZ-AZUL":"Anti Luz Azul","LENTES·SOL":"De Sol","LENTES·MOTORIZADOS":"Para Motos"};return m[cat]??(cat[0]+cat.slice(1).toLowerCase());}
 function scrollTop(){window.scrollTo({top:0,behavior:"instant" as ScrollBehavior});}
-function buildConsultUrl(product:Product):string{const msg=`Hola! Quiero más información sobre este producto:\n\n*${product.name}*\nPrecio: $${product.price.toFixed(2)}\n\n¿Podrían ayudarme?`;return`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;}
+function buildConsultUrl(product:Product):string{const msg=`Hola! Quiero más información sobre este producto:\n\n*${product.name}*${product.code?`\nCódigo: ${product.code}`:""}\nPrecio: $${product.price.toFixed(2)}\n\n¿Podrían ayudarme?`;return`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;}
 
 // ─── ROUTING: apartado ↔ URL ──────────────────────────────────────────────────
 const BASE_PATHS: Partial<Record<MainView,string>> = { fokus:"/", comunidad:"/comunidad", grabados:"/grabados", cart:"/carrito", account:"/cuenta", admin:"/admin" };
@@ -520,7 +533,7 @@ function DraggableWA(){
   const onDown=useCallback((e:React.PointerEvent)=>{e.preventDefault();(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);dragging.current=true;moved.current=false;startPtr.current={x:e.clientX,y:e.clientY};startPos.current={...live.current};setPressed(true);setSnapping(false);},[]);
   const onMove=useCallback((e:React.PointerEvent)=>{if(!dragging.current)return;e.preventDefault();const dx=e.clientX-startPtr.current.x,dy=e.clientY-startPtr.current.y;if(Math.abs(dx)>4||Math.abs(dy)>4)moved.current=true;const n=clamp(startPos.current.x+dx,startPos.current.y+dy);live.current=n;cancelAnimationFrame(raf.current);raf.current=requestAnimationFrame(()=>setPos({...n}));},[clamp]);
   const finishDrag=useCallback(()=>{if(!dragging.current)return;dragging.current=false;setPressed(false);if(moved.current){const s=snapToEdge(live.current.x,live.current.y);live.current=s;setSnapping(true);setPos({...s});setTimeout(()=>setSnapping(false),420);}},[snapToEdge]);
-  const onClick=useCallback((e:React.MouseEvent)=>{if(moved.current){e.preventDefault();return;}trackLeadWhatsApp("boton_flotante");window.open(SOCIAL.whatsapp,"_blank","noreferrer");},[]);
+  const onClick=useCallback((e:React.MouseEvent)=>{if(moved.current){e.preventDefault();return;}trackLeadWhatsApp("boton_flotante");const msg=encodeURIComponent("Hola! Vi su tienda Fokus y quiero más información 🖤");window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`,"_blank","noreferrer");},[]);
   return(<div onPointerDown={onDown} onPointerMove={onMove} onPointerUp={finishDrag} onPointerCancel={finishDrag} onClick={onClick} style={{position:"fixed",left:pos.x,top:pos.y,zIndex:500,width:BTN,height:BTN,borderRadius:"50%",background:pressed?"rgba(255,255,255,0.22)":"rgba(255,255,255,0.10)",backdropFilter:"blur(18px)",WebkitBackdropFilter:"blur(18px)",border:"1px solid rgba(255,255,255,0.20)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"grab",touchAction:"none",userSelect:"none",WebkitUserSelect:"none",visibility:ready?"visible":"hidden",transition:snapping?"left 0.38s cubic-bezier(0.25,0.46,0.45,0.94), top 0.38s cubic-bezier(0.25,0.46,0.45,0.94), background 0.2s":"background 0.2s",willChange:"left,top",boxShadow:pressed?"0 0 0 10px rgba(255,255,255,0.06)":"0 4px 24px rgba(0,0,0,0.6), 0 1px 4px rgba(0,0,0,0.4)"}}><IcWA s={BTN-14} c={pressed?"#080808":"#fff"}/></div>);
 }
 
@@ -538,14 +551,14 @@ const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,fmtPrice}:
       <div onClick={onClick} style={{background:"#111",aspectRatio:"1",overflow:"hidden",borderRadius:10,position:"relative",marginBottom:"0.55rem"}}>
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
-        {!!product.discount&&product.discount>0&&<DiscountBadge percent={product.discount}/>}
+        {!!product.discount&&product.discount>0&&<DiscountBadge percent={product.discount} issuper={isSuperOffer(product.discount)}/>}
         {getAllImages(product).length>1&&<GalleryBadge/>}
       </div>
       <div onClick={onClick} style={{marginBottom:"0.5rem",flex:1}}>
         <p style={{margin:"0 0 3px",fontSize:12,lineHeight:1.35,color:"#bbb",letterSpacing:0.2}}>{product.name}</p>
         {product.discount&&product.discount>0?(
           <div style={{display:"flex",alignItems:"baseline",gap:6,flexWrap:"wrap"}}>
-            <p style={{margin:0,fontSize:14,fontWeight:800,color:"#ffd43b",letterSpacing:0.5}}>{fmtPrice(getFinalPrice(product))}</p>
+            <p style={{margin:0,fontSize:14,fontWeight:800,color:isSuperOffer(product.discount)?"#ff5555":"#ffd43b",letterSpacing:0.5}}>{fmtPrice(getFinalPrice(product))}</p>
             <p style={{margin:0,fontSize:11,color:"#555",textDecoration:"line-through"}}>{fmtPrice(product.price)}</p>
           </div>
         ):(
@@ -579,7 +592,7 @@ const HCard=memo(function HCard({product,onClick,onBuyNow,fmtPrice}:{product:Pro
         <p style={{margin:"0 0 2px",fontSize:11,lineHeight:1.35,color:"#bbb",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{product.name}</p>
         {product.discount&&product.discount>0?(
           <div style={{display:"flex",alignItems:"baseline",gap:5,flexWrap:"wrap"}}>
-            <p style={{margin:0,fontSize:13,fontWeight:800,color:"#ffd43b"}}>{fmtPrice(getFinalPrice(product))}</p>
+            <p style={{margin:0,fontSize:13,fontWeight:800,color:isSuperOffer(product.discount)?"#ff5555":"#ffd43b"}}>{fmtPrice(getFinalPrice(product))}</p>
             <p style={{margin:0,fontSize:10,color:"#555",textDecoration:"line-through"}}>{fmtPrice(product.price)}</p>
           </div>
         ):(
@@ -729,7 +742,7 @@ const Footer=memo(function Footer({setMainView,setShopFilter}:{setMainView:(v:Ma
           </div>
           <div>
             <p style={{fontSize:9,fontWeight:800,letterSpacing:3,color:"#2a2a2a",marginBottom:"0.75rem"}}>CONTACTO</p>
-            <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noreferrer" style={{display:"inline-flex",alignItems:"center",gap:"0.45rem",background:"#0d1e0d",color:"#4caf50",padding:"0.55rem 0.9rem",borderRadius:8,fontSize:11,fontWeight:700,textDecoration:"none",marginBottom:"0.75rem",border:"1px solid #162516"}} data-fokus-tracked="true" onClick={()=>trackLeadWhatsApp("footer_contacto")}><IcWA s={12} c="#4caf50"/> WhatsApp</a>
+            <a href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent("Hola! Quiero más información sobre los productos de Fokus 🖤")}`} target="_blank" rel="noreferrer" style={{display:"inline-flex",alignItems:"center",gap:"0.45rem",background:"#0d1e0d",color:"#4caf50",padding:"0.55rem 0.9rem",borderRadius:8,fontSize:11,fontWeight:700,textDecoration:"none",marginBottom:"0.75rem",border:"1px solid #162516"}} data-fokus-tracked="true" onClick={()=>trackLeadWhatsApp("footer_contacto")}><IcWA s={12} c="#4caf50"/> WhatsApp</a>
             <div style={{display:"flex",flexDirection:"column",gap:"0.2rem"}}><p style={{fontSize:10,color:"#2a2a2a",margin:0}}>miltonjavi05@gmail.com</p><p style={{fontSize:10,color:"#2a2a2a",margin:0}}>+58 424-300-5733</p></div>
           </div>
         </div>
@@ -941,9 +954,9 @@ const ARow=memo(function ARow({p,editing,onEdit,onDel,onDragStart,onDragOver,onD
       <div onTouchStart={e=>{e.stopPropagation();const t=e.touches[0];onTouchStart(p.id,t.clientY);}} onTouchMove={e=>{e.stopPropagation();e.preventDefault();const t=e.touches[0];onTouchMove(t.clientY,t.clientX);}} onTouchEnd={e=>{e.stopPropagation();onTouchEnd();}} style={{cursor:"grab",flexShrink:0,padding:"6px 8px",color:"#444",display:"flex",alignItems:"center",touchAction:"none",WebkitTapHighlightColor:"transparent",userSelect:"none",WebkitUserSelect:"none",WebkitTouchCallout:"none"} as React.CSSProperties}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="8" cy="6" r="1.2" fill="currentColor"/><circle cx="16" cy="6" r="1.2" fill="currentColor"/><circle cx="8" cy="12" r="1.2" fill="currentColor"/><circle cx="16" cy="12" r="1.2" fill="currentColor"/><circle cx="8" cy="18" r="1.2" fill="currentColor"/><circle cx="16" cy="18" r="1.2" fill="currentColor"/></svg></div>
       <div style={{position:"relative",width:44,height:44,flexShrink:0}}>
         <img src={optImg(p.img,120)} alt={p.name} style={{width:44,height:44,objectFit:"cover",borderRadius:6,background:"#1a1a1a",pointerEvents:"none",userSelect:"none",WebkitUserSelect:"none",WebkitTouchCallout:"none",opacity:p.active===false?0.35:1} as React.CSSProperties} draggable={false}/>
-        {!!p.discount&&p.discount>0&&<span style={{position:"absolute",top:-4,left:-4,background:"linear-gradient(135deg,#fff,#999)",color:"#080808",fontSize:8,fontWeight:900,padding:"1px 4px",borderRadius:6,border:"1px solid #fff"}}>-{p.discount}%</span>}
+        {!!p.discount&&p.discount>0&&<span style={{position:"absolute",top:-4,left:-4,background:isSuperOffer(p.discount)?"linear-gradient(135deg,#ff3b3b,#7a0000)":"linear-gradient(135deg,#fff,#999)",color:isSuperOffer(p.discount)?"#fff":"#080808",fontSize:8,fontWeight:900,padding:"1px 4px",borderRadius:6,border:isSuperOffer(p.discount)?"1px solid #ff8888":"1px solid #fff"}}>-{p.discount}%</span>}
       </div>
-      <div style={{flex:1,minWidth:0,userSelect:"none",WebkitUserSelect:"none"} as React.CSSProperties}><p style={{color:p.active===false?"#666":"#ccc",fontSize:12,fontWeight:700,margin:"0 0 1px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}{p.active===false&&<span style={{color:"#ff6666",fontSize:9,marginLeft:6,fontWeight:800}}>OCULTO</span>}</p><p style={{color:"#333",fontSize:10,margin:0}}>${p.price.toFixed(2)}</p></div>
+      <div style={{flex:1,minWidth:0,userSelect:"none",WebkitUserSelect:"none"} as React.CSSProperties}><p style={{color:p.active===false?"#666":"#ccc",fontSize:12,fontWeight:700,margin:"0 0 1px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}{p.active===false&&<span style={{color:"#ff6666",fontSize:9,marginLeft:6,fontWeight:800}}>OCULTO</span>}</p><p style={{color:"#333",fontSize:10,margin:0}}>${p.price.toFixed(2)} {p.code&&<span style={{color:"#555",fontFamily:"monospace",marginLeft:6}}>· {p.code}</span>}</p></div>
       <div style={{display:"flex",gap:"0.3rem",flexShrink:0,flexWrap:"wrap",justifyContent:"flex-end",maxWidth:170}}>
         <button onClick={()=>onToggleActive(p)} title={p.active===false?"Mostrar en tienda":"Ocultar (agotado)"} style={{background:p.active===false?"#1e0d0d":"#0d1e0d",color:p.active===false?"#ff8888":"#4caf50",border:`1px solid ${p.active===false?"#3a1515":"#1a3a1a"}`,padding:"0.3rem 0.5rem",borderRadius:6,cursor:"pointer",fontSize:10,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>{p.active===false?"👁️‍🗨️":"👁️"}</button>
         <button onClick={()=>onToggleDiscount(p)} title="Configurar oferta" style={{background:p.discount?"#1a1608":"#1a1a1a",color:p.discount?"#ffd43b":"#888",border:`1px solid ${p.discount?"#3a2f10":"#222"}`,padding:"0.3rem 0.55rem",borderRadius:6,cursor:"pointer",fontSize:10,fontFamily:"inherit",fontWeight:700,WebkitTapHighlightColor:"transparent"}}>🏷️{p.discount?` -${p.discount}%`:""}</button>
@@ -1163,10 +1176,10 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   const[adminEmail,setAdminEmail]  =useState("");
   const[adminPwd,setAdminPwd]      =useState("");
   const[adminErr,setAdminErr]      =useState("");
-  const[adminSec,setAdminSec]=useState<"menu"|"products"|"sales"|"stats"|"coupons">("menu");
+  const[adminSec,setAdminSec]=useState<"menu"|"products"|"sales"|"stats"|"coupons"|"lookup">("menu");
   const adminSecRef=useRef(adminSec);
   useEffect(()=>{adminSecRef.current=adminSec;},[adminSec]);
-  const enterAdminSec=useCallback((sec:"products"|"sales"|"stats"|"coupons")=>{
+  const enterAdminSec=useCallback((sec:"products"|"sales"|"stats"|"coupons"|"lookup")=>{
     try{window.history.pushState({adminSec:sec},"","/admin");}catch{}
     setAdminSec(sec);
   },[]);
@@ -1192,6 +1205,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   const[fGalleryUploading,setFGalleryUploading]=useState(false);
   const[fActive,setFActive]        =useState(true);
   const[fDiscount,setFDiscount]    =useState("");
+  const[fCode,setFCode]            =useState("");
 const[couponCode,setCouponCode]  =useState("");
 const[couponType,setCouponType]  =useState<"general"|"product">("general");
 const[couponProductId,setCouponProductId]=useState("");
@@ -1204,6 +1218,7 @@ const[couponOk,setCouponOk]=useState("");
 const[couponsList,setCouponsList]=useState<Coupon[]>([]);
 const[couponsLoading,setCouponsLoading]=useState(false);
   const[adminSearch,setAdminSearch]=useState("");
+  const[lookupCode,setLookupCode]=useState("");
   const[saleName,setSaleName]=useState("");
   const[saleEmail,setSaleEmail]=useState("");
   const[salePhone,setSalePhone]=useState("");
@@ -1406,7 +1421,7 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
   const deliveryValid=useMemo(()=>{if(!deliveryInfo.zone)return false;if(deliveryInfo.zone==="otro")return!!(deliveryInfo.nombre&&deliveryInfo.cedula&&deliveryInfo.telefono&&deliveryInfo.agencia&&deliveryInfo.estado&&deliveryInfo.direccion);return true;},[deliveryInfo]);
   const canSendOrder=useMemo(()=>!!(payMethod&&deliveryValid&&comprobanteUrl),[payMethod,deliveryValid,comprobanteUrl]);
 
-  const buildWaUrl=useCallback(()=>{const lines=cart.map(i=>`• ${i.product.name} x${i.qty} — $${(getFinalPrice(i.product)*i.qty).toFixed(2)}`);const pm=PAYMENT_METHODS.find(m=>m.id===payMethod);const pmL=pm?`\n\nMétodo de pago: ${pm.name} (${pm.detail})`:"";const dz=DELIVERY_ZONES_MAP.get(deliveryInfo.zone);let delivL=dz?`\n\nEnvio: ${dz.label}`:"";if(deliveryInfo.zone==="otro")delivL+=`\nEstado: ${deliveryInfo.estado}\nNombre: ${deliveryInfo.nombre}\nCédula: ${deliveryInfo.cedula}\nTeléfono: ${deliveryInfo.telefono}\nAgencia: ${deliveryInfo.agencia}\nDirección: ${deliveryInfo.direccion}`;const userL=currentUser?`\n\nCliente: ${currentUser.displayName} (${currentUser.email})`:"";const compL=comprobanteUrl?`\n\n📎 Comprobante: ${comprobanteUrl}`:"";const cupL=appliedCoupon?`\n\n🎟️ Cupón: ${appliedCoupon.code} (-${appliedCoupon.discountPercent}%, -$${couponDiscountAmount.toFixed(2)})`:"";return`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`Hola! Quiero hacer un pedido:\n\n${lines.join("\n")}\n\nSubtotal: $${totalPriceBeforeCoupon.toFixed(2)}${cupL}\n\nTotal: $${totalPrice.toFixed(2)}${pmL}${delivL}${userL}${compL}`)}`;},[cart,totalPrice,totalPriceBeforeCoupon,payMethod,deliveryInfo,currentUser,comprobanteUrl,appliedCoupon,couponDiscountAmount]);
+  const buildWaUrl=useCallback(()=>{const lines=cart.map(i=>`• ${i.product.name} ${i.product.code?`(${i.product.code}) `:""}x${i.qty} — $${(getFinalPrice(i.product)*i.qty).toFixed(2)}`);const pm=PAYMENT_METHODS.find(m=>m.id===payMethod);const pmL=pm?`\n\nMétodo de pago: ${pm.name} (${pm.detail})`:"";const dz=DELIVERY_ZONES_MAP.get(deliveryInfo.zone);let delivL=dz?`\n\nEnvio: ${dz.label}`:"";if(deliveryInfo.zone==="otro")delivL+=`\nEstado: ${deliveryInfo.estado}\nNombre: ${deliveryInfo.nombre}\nCédula: ${deliveryInfo.cedula}\nTeléfono: ${deliveryInfo.telefono}\nAgencia: ${deliveryInfo.agencia}\nDirección: ${deliveryInfo.direccion}`;const userL=currentUser?`\n\nCliente: ${currentUser.displayName} (${currentUser.email})`:"";const compL=comprobanteUrl?`\n\n📎 Comprobante: ${comprobanteUrl}`:"";const cupL=appliedCoupon?`\n\n🎟️ Cupón: ${appliedCoupon.code} (-${appliedCoupon.discountPercent}%, -$${couponDiscountAmount.toFixed(2)})`:"";return`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`Hola! Quiero hacer un pedido:\n\n${lines.join("\n")}\n\nSubtotal: $${totalPriceBeforeCoupon.toFixed(2)}${cupL}\n\nTotal: $${totalPrice.toFixed(2)}${pmL}${delivL}${userL}${compL}`)}`;},[cart,totalPrice,totalPriceBeforeCoupon,payMethod,deliveryInfo,currentUser,comprobanteUrl,appliedCoupon,couponDiscountAmount]);
 
   const handleSendOrder=useCallback(()=>{
     if(!canSendOrder){
@@ -1423,8 +1438,8 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
 
   const doLogin=()=>{if(adminEmail===ADMIN_EMAIL&&adminPwd===ADMIN_PASSWORD){setAdminLogged(true);setAdminErr("");setAdminSec("menu");}else setAdminErr("Credenciales incorrectas");};
   const doLogout=()=>{setAdminLogged(false);setAdminEmail("");setAdminPwd("");setMainView("fokus");if(typeof window!=="undefined")window.history.pushState("","","/");};
-  const resetForm=()=>{setEditing(null);setFName("");setFDesc("");setFPrice("");setFCat("");setFFile(null);setFPrev("");setFErr("");setFOk("");setFGallery([]);setFActive(true);setFDiscount("");if(fileRef.current)fileRef.current.value="";};
-  const startEdit=(p:Product)=>{setEditing(p);setFName(p.name);setFDesc(p.description||"");setFPrice(String(p.price));setFCat(p.category);setFPrev(p.img);setFFile(null);setFGallery(p.images||[]);setFActive(p.active!==false);setFDiscount(p.discount&&p.discount>0?String(p.discount):"");setFErr("");setFOk("");if(fileRef.current)fileRef.current.value="";setTimeout(()=>formRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),50);};
+  const resetForm=()=>{setEditing(null);setFName("");setFDesc("");setFPrice("");setFCat("");setFFile(null);setFPrev("");setFErr("");setFOk("");setFGallery([]);setFActive(true);setFDiscount("");setFCode("");if(fileRef.current)fileRef.current.value="";};
+  const startEdit=(p:Product)=>{setEditing(p);setFName(p.name);setFDesc(p.description||"");setFPrice(String(p.price));setFCat(p.category);setFPrev(p.img);setFFile(null);setFGallery(p.images||[]);setFActive(p.active!==false);setFDiscount(p.discount&&p.discount>0?String(p.discount):"");setFCode(p.code||"");setFErr("");setFOk("");if(fileRef.current)fileRef.current.value="";setTimeout(()=>formRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),50);};
   const onFileChange=(e:React.ChangeEvent<HTMLInputElement>)=>{const file=e.target.files?.[0];if(!file)return;setFFile(file);const r=new FileReader();r.onload=ev=>setFPrev(ev.target?.result as string);r.readAsDataURL(file);};
   const onGalleryFilesChange=async(e:React.ChangeEvent<HTMLInputElement>)=>{const files=Array.from(e.target.files||[]);if(!files.length)return;setFGalleryUploading(true);try{const urls=await Promise.all(files.map(f=>uploadImg(f)));setFGallery(prev=>[...prev,...urls]);}catch{setFErr("Error subiendo alguna de las fotos adicionales.");}finally{setFGalleryUploading(false);if(galleryFileRef.current)galleryFileRef.current.value="";}};
   const makeGalleryImageMain=(idx:number)=>{setFGallery(prevGal=>{const url=prevGal[idx];const newGal=[...prevGal];newGal.splice(idx,1);if(fPrev)newGal.push(fPrev);setFPrev(url);setFFile(null);return newGal;});};
@@ -1515,7 +1530,7 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     try{
       let imgUrl=fPrev;
       if(fFile)imgUrl=await uploadImg(fFile);
-      const data={name:fName.trim(),description:fDesc.trim(),price:parseFloat(fPrice),category:fCat.toUpperCase(),img:imgUrl,active:fActive,discount:fDiscount?Math.max(0,Math.min(95,parseFloat(fDiscount))):0,images:fGallery};
+      const data={name:fName.trim(),description:fDesc.trim(),price:parseFloat(fPrice),category:fCat.toUpperCase(),img:imgUrl,active:fActive,discount:fDiscount?Math.max(0,Math.min(95,parseFloat(fDiscount))):0,images:fGallery,code:fCode.trim()?fCode.trim().toUpperCase():("FK-"+Date.now().toString(36).slice(-6).toUpperCase())};
       if(editing){await fsUpdate(editing.id,data);setFOk("✓ Producto actualizado");}
       else{await fsAdd(data);setFOk("✓ Producto agregado");}
       invalidateProductsCache();
@@ -1707,7 +1722,7 @@ useEffect(()=>{if(adminSec==="coupons"){loadCoupons();if(!couponCode)setCouponCo
           </button>
           <button onClick={()=>setMainView("fokus")} style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:7,position:"absolute",left:"50%",transform:"translateX(-50%)",padding:"0 8px",WebkitTapHighlightColor:"transparent",maxWidth:"calc(100% - 120px)"}}>
             <img src="/favicon.png" alt="Fokus" width={26} height={26} style={{objectFit:"contain",flexShrink:0,pointerEvents:"none"}} draggable={false}/>
-            <span style={{color:"#fff",fontSize:16,fontWeight:900,letterSpacing:5,whiteSpace:"nowrap"}}>FOKUS</span>
+            <span className="fokus-logo" style={{color:"#fff",fontSize:18,whiteSpace:"nowrap"}}>FOKUS</span>
           </button>
           <div style={{display:"flex",alignItems:"center",marginLeft:"auto",gap:0}}>
             <button onClick={()=>{const n=!searchOpen;setSearchOpen(n);setSearchQuery("");if(n&&mainView!=="shop"){setMainViewRaw("shop");setShopFilter("TODO");scrollTop();}}} style={S.iconBtn}>
@@ -1826,7 +1841,7 @@ useEffect(()=>{if(adminSec==="coupons"){loadCoupons();if(!couponCode)setCouponCo
               }}>ACCESORIOS PARA CABALLERO</span>
             </div>
 
-            <h1 style={{fontSize:40,fontWeight:900,letterSpacing:8,marginBottom:"0.85rem",color:C.accent,lineHeight:1}}>FOKUS</h1>
+            <h1 className="fokus-logo" style={{fontSize:46,marginBottom:"0.85rem",color:C.accent,lineHeight:1}}>FOKUS</h1>
             <p style={{fontSize:14,color:"#444",lineHeight:1.7,maxWidth:300,margin:"0 auto 2rem"}}>Cada detalle +<br/>Calidad, diseño y actitud.</p>
             <div style={{maxWidth:360,margin:"0 auto 2rem"}}><div style={{background:"linear-gradient(135deg,rgba(255,255,255,0.04) 0%,rgba(255,255,255,0.01) 100%)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:14,padding:"0.85rem 1.25rem",display:"flex",alignItems:"center",gap:"0.85rem",position:"relative",overflow:"hidden",boxShadow:"0 0 32px rgba(255,255,255,0.02), inset 0 1px 0 rgba(255,255,255,0.05)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"}}><div style={{position:"absolute",inset:0,background:"linear-gradient(90deg,transparent 0%,rgba(76,175,80,0.04) 50%,transparent 100%)",backgroundSize:"200% 100%",animation:"badgeShimmer 3s ease infinite",pointerEvents:"none"}}/><div style={{width:38,height:38,borderRadius:10,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><IcTruck s={20} c="rgba(255,255,255,0.6)"/></div><div style={{textAlign:"left",position:"relative",flex:1}}><p style={{margin:"0 0 2px",fontSize:11,fontWeight:900,color:"rgba(255,255,255,0.75)",letterSpacing:1.5}}>ENVÍOS A TODA VENEZUELA</p><p style={{margin:0,fontSize:10,color:"rgba(255,255,255,0.25)"}}>Llegamos a cualquier estado del país</p></div><div style={{width:6,height:6,borderRadius:"50%",background:"rgba(255,255,255,0.5)",boxShadow:"0 0 0 3px rgba(255,255,255,0.08)",animation:"pulseRing 2s infinite",flexShrink:0}}/></div></div>
             <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={{...S.darkBtn,fontSize:11,padding:"1.1rem 2.8rem",letterSpacing:3,borderRadius:3}}>VER COLECCIÓN →</button><div style={{maxWidth:360,margin:"1.5rem auto 0",background:"linear-gradient(135deg,rgba(255,255,255,0.03) 0%,rgba(255,255,255,0.01) 100%)",border:"1px solid #1e1e1e",borderRadius:14,padding:"1rem 1.25rem",position:"relative",overflow:"hidden"}}><div style={{position:"absolute",inset:0,background:"linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.02) 50%,transparent 100%)",backgroundSize:"200% 100%",animation:"badgeShimmer 4s ease infinite",pointerEvents:"none"}}/><div style={{display:"flex",alignItems:"center",gap:"0.75rem",marginBottom:"0.6rem",position:"relative"}}><div style={{width:32,height:32,borderRadius:8,background:"rgba(255,255,255,0.04)",border:"1px solid #2a2a2a",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div><div style={{flex:1}}><p style={{margin:0,fontSize:11,fontWeight:900,color:"rgba(255,255,255,0.6)",letterSpacing:1.5}}>GRABADOS LÁSER</p><p style={{margin:0,fontSize:9,color:"#2a2a2a",letterSpacing:0.5}}>Personalización exclusiva</p></div><span/></div><p style={{margin:0,fontSize:11,color:"#444",lineHeight:1.75,position:"relative"}}>Personalizamos tu <span style={{color:"rgba(255,255,255,0.3)",fontWeight:700}}>reloj</span>, <span style={{color:"rgba(255,255,255,0.3)",fontWeight:700}}>pulsera</span>, <span style={{color:"rgba(255,255,255,0.3)",fontWeight:700}}>collar</span> y <span style={{color:"rgba(255,255,255,0.3)",fontWeight:700}}>billetera</span> con tu nombre, fecha o diseño especial.</p></div>
@@ -1931,7 +1946,7 @@ useEffect(()=>{if(adminSec==="coupons"){loadCoupons();if(!couponCode)setCouponCo
         </main>
       )}
 
-      {mainView==="grabados"&&(<main style={{paddingTop:navH,background:C.bg}}><div style={{maxWidth:680,margin:"0 auto",padding:"3rem 1.5rem 0",textAlign:"center",animation:"slideUp 0.4s ease"}}><div style={{display:"inline-flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:20,padding:"0.35rem 1rem",marginBottom:"1.25rem"}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg><span style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"rgba(255,255,255,0.4)"}}>PERSONALIZACIÓN EXCLUSIVA</span></div><h2 style={{fontSize:28,fontWeight:900,letterSpacing:4,marginBottom:"0.5rem",color:C.accent,lineHeight:1.1}}>GRABADOS<br/>LÁSER</h2><p style={{color:"#444",fontSize:13,lineHeight:1.8,maxWidth:360,margin:"0 auto 1rem"}}>Personalizamos tu accesorio con tu nombre, iniciales, fecha o diseño especial. Único, como tú.</p><div style={{display:"flex",justifyContent:"center",gap:"2rem",marginBottom:"2.5rem",flexWrap:"wrap"}}>{[{n:"Relojes",i:"⌚"},{n:"Pulseras",i:"📿"},{n:"Collares",i:"✝️"},{n:"Billeteras",i:"👜"}].map(({n,i})=>(<div key={n} style={{textAlign:"center",background:"rgba(255,255,255,0.03)",border:"1px solid #1a1a1a",borderRadius:10,padding:"0.6rem 1rem"}}><p style={{margin:0,fontSize:18}}>{i}</p><p style={{margin:"3px 0 0",fontSize:9,color:"#444",letterSpacing:1.5,fontWeight:700}}>{n.toUpperCase()}</p></div>))}</div></div><div style={{maxWidth:900,margin:"0 auto",padding:"0 1rem 5rem"}}><div className="cg" style={{display:"grid",gap:"0.75rem",gridTemplateColumns:"repeat(2,1fr)"}}>{[{img:"/grabados/photo_1.jpg",caption:"Billetera grabada con nombre"},{img:"/grabados/photo_2.jpg",caption:"Pulsera con iniciales"},{img:"/grabados/photo_3.jpg",caption:"Pulsera personalizada"},{img:"/grabados/photo_4.jpg",caption:"Collares con nombres y fechas"}].map((item,i)=>(<div key={i} style={{borderRadius:14,overflow:"hidden",background:"#0d0d0d",border:"1px solid #1a1a1a",position:"relative",aspectRatio:"1",cursor:"pointer"}} className="cc"><img src={item.img} alt={item.caption} loading="lazy" style={{width:"100%",height:"100%",objectFit:"cover",display:"block",pointerEvents:"none"} as React.CSSProperties} draggable={false}/><div style={{position:"absolute",inset:0,background:"linear-gradient(to top,rgba(0,0,0,0.7) 0%,transparent 60%)",pointerEvents:"none"}}/><p style={{position:"absolute",bottom:10,left:12,right:12,margin:0,fontSize:11,fontWeight:700,color:"#fff",lineHeight:1.3}}>{item.caption}</p></div>))}</div><div style={{marginTop:"2rem",background:"linear-gradient(135deg,#0f0f0f 0%,#111 100%)",borderRadius:16,border:"1px solid #1e1e1e",padding:"1.75rem 1.5rem",textAlign:"center"}}><p style={{fontSize:9,fontWeight:800,letterSpacing:3,color:"#333",margin:"0 0 0.5rem"}}>¿QUIERES EL TUYO?</p><h3 style={{fontSize:18,fontWeight:900,color:C.accent,margin:"0 0 0.5rem",letterSpacing:1}}>Pide tu grabado personalizado</h3><p style={{fontSize:12,color:"#444",lineHeight:1.7,margin:"0 0 1.25rem"}}>Escríbenos por WhatsApp con el accesorio que quieres grabar y el texto o diseño que deseas.</p><a href={SOCIAL.whatsapp} onClick={()=>trackLeadWhatsApp("grabados_contacto")} target="_blank" rel="noreferrer" data-fokus-tracked="true" style={{display:"inline-flex",alignItems:"center",gap:"0.65rem",background:"#25D366",color:"#fff",padding:"0.95rem 1.75rem",borderRadius:10,textDecoration:"none",fontSize:12,fontWeight:900,letterSpacing:1.5,WebkitTapHighlightColor:"transparent"}}><svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>PEDIR GRABADO →</a></div></div><Footer setMainView={setMainView} setShopFilter={setShopFilter}/></main>)}{lightboxIdx!==null&&(<CommunityLightbox post={COMMUNITY_POSTS[lightboxIdx]} onClose={()=>setLightboxIdx(null)} onPrev={()=>setLightboxIdx(i=>i!==null?Math.max(0,i-1):0)} onNext={()=>setLightboxIdx(i=>i!==null?Math.min(COMMUNITY_POSTS.length-1,i+1):0)} hasPrev={lightboxIdx>0} hasNext={lightboxIdx<COMMUNITY_POSTS.length-1}/>)}
+      {mainView==="grabados"&&(<main style={{paddingTop:navH,background:C.bg}}><div style={{maxWidth:680,margin:"0 auto",padding:"3rem 1.5rem 0",textAlign:"center",animation:"slideUp 0.4s ease"}}><div style={{display:"inline-flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:20,padding:"0.35rem 1rem",marginBottom:"1.25rem"}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg><span style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"rgba(255,255,255,0.4)"}}>PERSONALIZACIÓN EXCLUSIVA</span></div><h2 style={{fontSize:28,fontWeight:900,letterSpacing:4,marginBottom:"0.5rem",color:C.accent,lineHeight:1.1}}>GRABADOS<br/>LÁSER</h2><p style={{color:"#444",fontSize:13,lineHeight:1.8,maxWidth:360,margin:"0 auto 1rem"}}>Personalizamos tu accesorio con tu nombre, iniciales, fecha o diseño especial. Único, como tú.</p><div style={{display:"flex",justifyContent:"center",gap:"2rem",marginBottom:"2.5rem",flexWrap:"wrap"}}>{[{n:"Relojes",i:"⌚"},{n:"Pulseras",i:"📿"},{n:"Collares",i:"✝️"},{n:"Billeteras",i:"👜"}].map(({n,i})=>(<div key={n} style={{textAlign:"center",background:"rgba(255,255,255,0.03)",border:"1px solid #1a1a1a",borderRadius:10,padding:"0.6rem 1rem"}}><p style={{margin:0,fontSize:18}}>{i}</p><p style={{margin:"3px 0 0",fontSize:9,color:"#444",letterSpacing:1.5,fontWeight:700}}>{n.toUpperCase()}</p></div>))}</div></div><div style={{maxWidth:900,margin:"0 auto",padding:"0 1rem 5rem"}}><div className="cg" style={{display:"grid",gap:"0.75rem",gridTemplateColumns:"repeat(2,1fr)"}}>{[{img:"/grabados/photo_1.jpg",caption:"Billetera grabada con nombre"},{img:"/grabados/photo_2.jpg",caption:"Pulsera con iniciales"},{img:"/grabados/photo_3.jpg",caption:"Pulsera personalizada"},{img:"/grabados/photo_4.jpg",caption:"Collares con nombres y fechas"}].map((item,i)=>(<div key={i} style={{borderRadius:14,overflow:"hidden",background:"#0d0d0d",border:"1px solid #1a1a1a",position:"relative",aspectRatio:"1",cursor:"pointer"}} className="cc"><img src={item.img} alt={item.caption} loading="lazy" style={{width:"100%",height:"100%",objectFit:"cover",display:"block",pointerEvents:"none"} as React.CSSProperties} draggable={false}/><div style={{position:"absolute",inset:0,background:"linear-gradient(to top,rgba(0,0,0,0.7) 0%,transparent 60%)",pointerEvents:"none"}}/><p style={{position:"absolute",bottom:10,left:12,right:12,margin:0,fontSize:11,fontWeight:700,color:"#fff",lineHeight:1.3}}>{item.caption}</p></div>))}</div><div style={{marginTop:"2rem",background:"linear-gradient(135deg,#0f0f0f 0%,#111 100%)",borderRadius:16,border:"1px solid #1e1e1e",padding:"1.75rem 1.5rem",textAlign:"center"}}><p style={{fontSize:9,fontWeight:800,letterSpacing:3,color:"#333",margin:"0 0 0.5rem"}}>¿QUIERES EL TUYO?</p><h3 style={{fontSize:18,fontWeight:900,color:C.accent,margin:"0 0 0.5rem",letterSpacing:1}}>Pide tu grabado personalizado</h3><p style={{fontSize:12,color:"#444",lineHeight:1.7,margin:"0 0 1.25rem"}}>Escríbenos por WhatsApp con el accesorio que quieres grabar y el texto o diseño que deseas.</p><a href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent("Hola! Quiero solicitar un GRABADO LÁSER personalizado ✨\n\nAccesorio a grabar: \nTexto / diseño que deseo grabar: \n\n¿Podrían darme información sobre precios y tiempo de entrega?")}`} onClick={()=>trackLeadWhatsApp("grabados_contacto")} target="_blank" rel="noreferrer" data-fokus-tracked="true" style={{display:"inline-flex",alignItems:"center",gap:"0.65rem",background:"#25D366",color:"#fff",padding:"0.95rem 1.75rem",borderRadius:10,textDecoration:"none",fontSize:12,fontWeight:900,letterSpacing:1.5,WebkitTapHighlightColor:"transparent"}}><svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>PEDIR GRABADO →</a></div></div><Footer setMainView={setMainView} setShopFilter={setShopFilter}/></main>)}{lightboxIdx!==null&&(<CommunityLightbox post={COMMUNITY_POSTS[lightboxIdx]} onClose={()=>setLightboxIdx(null)} onPrev={()=>setLightboxIdx(i=>i!==null?Math.max(0,i-1):0)} onNext={()=>setLightboxIdx(i=>i!==null?Math.min(COMMUNITY_POSTS.length-1,i+1):0)} hasPrev={lightboxIdx>0} hasNext={lightboxIdx<COMMUNITY_POSTS.length-1}/>)}
       {showReviewModal&&<ReviewModal onClose={()=>setShowReviewModal(false)}/>}
 
       {/* ACCOUNT */}
@@ -2010,7 +2025,7 @@ useEffect(()=>{if(adminSec==="coupons"){loadCoupons();if(!couponCode)setCouponCo
                 <img src={optImg(item.product.img,80)} alt={item.product.name} style={{width:40,height:40,objectFit:"cover",borderRadius:6,pointerEvents:"none",flexShrink:0}} draggable={false}/>
                 <div style={{flex:1,minWidth:0}}>
                   <p style={{margin:0,fontSize:12,color:"#bbb",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.product.name}</p>
-                  <p style={{margin:"2px 0 0",fontSize:11,color:item.product.discount?"#ffd43b":"#555"}}>{fmtPrice(getFinalPrice(item.product))}{!!item.product.discount&&<span style={{textDecoration:"line-through",color:"#444",marginLeft:6}}>{fmtPrice(item.product.price)}</span>}</p>
+                  <p style={{margin:"2px 0 0",fontSize:11,color:item.product.discount?(isSuperOffer(item.product.discount)?"#ff5555":"#ffd43b"):"#555"}}>{fmtPrice(getFinalPrice(item.product))}{!!item.product.discount&&<span style={{textDecoration:"line-through",color:"#444",marginLeft:6}}>{fmtPrice(item.product.price)}</span>}</p>
                 </div>
                 <div style={{display:"flex",alignItems:"center",border:`1px solid ${C.border}`,borderRadius:6,flexShrink:0}}>
                   <button onClick={()=>updQty(item.product.id,-1)} style={{...S.qtyBtn,width:28,height:28,fontSize:16}}>−</button>
@@ -2177,7 +2192,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
         <main style={{paddingTop:NAV_H,background:"#060606",minHeight:"100vh"}}>
           <div style={{maxWidth:720,margin:"0 auto",padding:"2rem 1rem 4rem"}}>
             {!adminLogged&&(<div style={{background:"#111",borderRadius:14,padding:"2.5rem 2rem",maxWidth:380,margin:"2rem auto",border:"1px solid #1a1a1a",animation:"slideUp 0.3s ease"}}><h1 style={{color:"#fff",fontSize:20,fontWeight:900,marginBottom:"1.5rem",textAlign:"center",letterSpacing:2}}>ADMIN</h1><div style={{display:"flex",flexDirection:"column",gap:"0.85rem"}}><input type="email" placeholder="Correo" value={adminEmail} onChange={e=>setAdminEmail(e.target.value)} style={S.input}/><PwdInput placeholder="Contraseña" value={adminPwd} onChange={setAdminPwd} onKeyDown={e=>e.key==="Enter"&&doLogin()} autoComplete="current-password"/>{adminErr&&<p style={{color:"#ff5555",fontSize:12,margin:0,background:"#1e0a0a",padding:"0.6rem 1rem",borderRadius:8}}>{adminErr}</p>}<button onClick={doLogin} style={S.adminBtn}>Entrar</button><button onClick={doLogout} style={{...S.adminBtn,background:"transparent",color:"#333",marginTop:4}}>← Volver</button></div></div>)}
-            {adminLogged&&adminSec==="menu"&&(<div style={{background:"#111",borderRadius:14,padding:"2.5rem 2rem",maxWidth:380,margin:"2rem auto",border:"1px solid #1a1a1a",animation:"slideUp 0.3s ease"}}><h1 style={{color:"#fff",fontSize:18,fontWeight:900,marginBottom:"0.4rem",textAlign:"center",letterSpacing:2}}>PANEL</h1><p style={{color:"#333",fontSize:12,textAlign:"center",marginBottom:"2rem",letterSpacing:1}}>Selecciona una opción</p><div style={{display:"flex",flexDirection:"column",gap:"0.65rem"}}><button onClick={()=>enterAdminSec("products")} style={S.adminBtn}>📦 Gestionar productos</button><button onClick={()=>enterAdminSec("sales")} style={S.adminBtn}>💰 Registrar venta manual</button><button onClick={()=>enterAdminSec("stats")} style={S.adminBtn}>📊 Ver estadísticas</button><button onClick={()=>enterAdminSec("coupons")} style={{...S.adminBtn,background:"linear-gradient(135deg,#fff 0%,#ccc 100%)"}}>🎟️ Cupones de descuento</button><button onClick={doLogout} style={{...S.adminBtn,background:"transparent",color:"#ff5555",border:"none",marginTop:8,letterSpacing:1}}>Cerrar sesión</button></div></div>)}
+            {adminLogged&&adminSec==="menu"&&(<div style={{background:"#111",borderRadius:14,padding:"2.5rem 2rem",maxWidth:380,margin:"2rem auto",border:"1px solid #1a1a1a",animation:"slideUp 0.3s ease"}}><h1 style={{color:"#fff",fontSize:18,fontWeight:900,marginBottom:"0.4rem",textAlign:"center",letterSpacing:2}}>PANEL</h1><p style={{color:"#333",fontSize:12,textAlign:"center",marginBottom:"2rem",letterSpacing:1}}>Selecciona una opción</p><div style={{display:"flex",flexDirection:"column",gap:"0.65rem"}}><button onClick={()=>enterAdminSec("products")} style={S.adminBtn}>📦 Gestionar productos</button><button onClick={()=>enterAdminSec("sales")} style={S.adminBtn}>💰 Registrar venta manual</button><button onClick={()=>enterAdminSec("stats")} style={S.adminBtn}>📊 Ver estadísticas</button><button onClick={()=>enterAdminSec("coupons")} style={{...S.adminBtn,background:"linear-gradient(135deg,#fff 0%,#ccc 100%)"}}>🎟️ Cupones de descuento</button><button onClick={()=>enterAdminSec("lookup")} style={S.adminBtn}>🔍 Buscar por código</button><button onClick={doLogout} style={{...S.adminBtn,background:"transparent",color:"#ff5555",border:"none",marginTop:8,letterSpacing:1}}>Cerrar sesión</button></div></div>)}
             {adminLogged&&adminSec==="products"&&(<>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem"}}><h1 style={{color:"#fff",fontSize:16,fontWeight:900,margin:0,letterSpacing:2}}>{editing?"EDITAR PRODUCTO":"PRODUCTOS"}</h1><button onClick={()=>{exitAdminSec();resetForm();}} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:12,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>← MENÚ</button></div>
               <div ref={formRef} style={{background:"#111",borderRadius:12,padding:"1.5rem",marginBottom:"1.25rem",border:editing?"1px solid #2a2a2a":"1px solid #1a1a1a"}}><p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 1.25rem"}}>{editing?`EDITANDO: ${editing.name}`:"NUEVO PRODUCTO"}</p><div style={{display:"flex",flexDirection:"column",gap:"0.8rem"}}><input placeholder="Nombre del producto *" value={fName} onChange={e=>setFName(e.target.value)} style={S.input}/><textarea placeholder="Descripción (opcional)" value={fDesc} onChange={e=>setFDesc(e.target.value)} rows={2} style={{...S.input,resize:"vertical" as any,lineHeight:1.6}}/><input placeholder="Precio en USD *" type="number" min="0" step="0.01" value={fPrice} onChange={e=>setFPrice(e.target.value)} style={S.input}/><select value={fCat} onChange={e=>setFCat(e.target.value)} style={{...S.input,appearance:"auto" as any}}><option value="">Selecciona categoría *</option><optgroup label="── LENTES">{LENTES_SUBCATS.map(s=><option key={s} value={s}>{catLabel(s)}</option>)}</optgroup><optgroup label="── OTROS">{SHOP_CATS.filter(c=>c!=="LENTES").map(c=><option key={c} value={c}>{catLabel(c)}</option>)}</optgroup></select><div style={{background:"#0e0e0e",borderRadius:8,padding:"1rem",border:"1px dashed #1e1e1e"}}><p style={{color:"#333",fontSize:9,letterSpacing:2,margin:"0 0 0.65rem",fontWeight:800}}>IMAGEN {!editing&&"*"}</p><input ref={fileRef} type="file" accept="image/*" onChange={onFileChange} style={{display:"none"}} id="fi"/><label htmlFor="fi" style={{display:"inline-flex",alignItems:"center",gap:"0.45rem",background:"#1a1a1a",color:"#888",padding:"0.55rem 1rem",borderRadius:8,cursor:"pointer",fontSize:12,border:"1px solid #222",fontFamily:"inherit"}}>📷 {fFile?"Cambiar":"Elegir foto"}</label>{fFile&&<span style={{color:"#444",fontSize:11,marginLeft:"0.65rem"}}>{fFile.name}</span>}{fPrev&&<div style={{marginTop:"0.65rem",width:80,height:80,borderRadius:8,overflow:"hidden",border:"1px solid #222"}}><img src={fPrev} alt="preview" style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/></div>}</div>
@@ -2210,7 +2225,12 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
   {fDiscount&&parseFloat(fDiscount)>0&&fPrice&&(
     <p style={{margin:"0.6rem 0 0",fontSize:11,color:"#ffd43b"}}>Precio con oferta: <strong>${(parseFloat(fPrice)*(1-Math.min(95,parseFloat(fDiscount))/100)).toFixed(2)}</strong> <span style={{color:"#666",textDecoration:"line-through"}}>${parseFloat(fPrice).toFixed(2)}</span></p>
   )}
-</div>{fErr&&<div style={{color:"#ff5555",fontSize:12,background:"#1e0808",padding:"0.65rem 1rem",borderRadius:8}}>{fErr}</div>}{fOk&&<div style={{color:"#55cc77",fontSize:12,background:"#081e0e",padding:"0.65rem 1rem",borderRadius:8}}>{fOk}</div>}<div style={{display:"flex",gap:"0.65rem",flexWrap:"wrap"}}><button onClick={submitProduct} disabled={fLoad} style={{...S.adminBtn,flex:1,opacity:fLoad?0.4:1,cursor:fLoad?"not-allowed":"pointer"}}>{fLoad?"Subiendo...":(editing?"Guardar cambios":"Agregar producto")}</button>{editing&&<button onClick={resetForm} style={{...S.adminBtn,flex:"0 0 auto",width:"auto",padding:"0.8rem 1.1rem",background:"transparent",color:"#444",border:"1px solid #1e1e1e"}}>Cancelar</button>}</div></div></div>
+</div>
+<div style={{background:"#0e0e0e",borderRadius:8,padding:"1rem",border:"1px dashed #1e1e1e"}}>
+  <p style={{color:"#333",fontSize:9,letterSpacing:2,margin:"0 0 0.6rem",fontWeight:800}}>CÓDIGO DE PRODUCTO (SKU)</p>
+  <input placeholder="Ej: FK-RELOJ01 (vacío = se genera automático)" value={fCode} onChange={e=>setFCode(e.target.value.toUpperCase())} style={{...S.input,fontWeight:800,letterSpacing:1}}/>
+</div>
+{fErr&&<div style={{color:"#ff5555",fontSize:12,background:"#1e0808",padding:"0.65rem 1rem",borderRadius:8}}>{fErr}</div>}{fOk&&<div style={{color:"#55cc77",fontSize:12,background:"#081e0e",padding:"0.65rem 1rem",borderRadius:8}}>{fOk}</div>}<div style={{display:"flex",gap:"0.65rem",flexWrap:"wrap"}}><button onClick={submitProduct} disabled={fLoad} style={{...S.adminBtn,flex:1,opacity:fLoad?0.4:1,cursor:fLoad?"not-allowed":"pointer"}}>{fLoad?"Subiendo...":(editing?"Guardar cambios":"Agregar producto")}</button>{editing&&<button onClick={resetForm} style={{...S.adminBtn,flex:"0 0 auto",width:"auto",padding:"0.8rem 1.1rem",background:"transparent",color:"#444",border:"1px solid #1e1e1e"}}>Cancelar</button>}</div></div></div>
               <div style={{background:"#111",borderRadius:12,padding:"1.5rem",border:"1px solid #1a1a1a"}}>
                 <div style={{display:"flex",alignItems:"center",gap:"0.5rem",marginBottom:"0.85rem"}}><p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2,margin:0}}>PRODUCTOS ({adminProds.length})</p><span style={{fontSize:9,color:"#2a2a2a",background:"#161616",padding:"2px 7px",borderRadius:8,border:"1px solid #1e1e1e"}}>⠿ Arrastra para reordenar</span></div>
                 <input placeholder="Buscar…" value={adminSearch} onChange={e=>setAdminSearch(e.target.value)} style={{...S.input,marginBottom:"0.75rem"}}/>
@@ -2455,6 +2475,34 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                 )}
               </div>
             </>)}
+
+            {adminLogged&&adminSec==="lookup"&&(<>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem"}}><h1 style={{color:"#fff",fontSize:16,fontWeight:900,margin:0,letterSpacing:2}}>BUSCAR POR CÓDIGO</h1><button onClick={()=>exitAdminSec()} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:12,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>← MENÚ</button></div>
+              <div style={{background:"#111",borderRadius:14,padding:"1.5rem",border:"1px solid #1a1a1a"}}>
+                <p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 1rem"}}>INGRESA EL CÓDIGO QUE TE ENVIÓ EL CLIENTE EN SU PEDIDO</p>
+                <input autoFocus placeholder="Ej: FK-RELOJ01" value={lookupCode} onChange={e=>setLookupCode(e.target.value.toUpperCase())} style={{...S.input,fontWeight:800,letterSpacing:1.5,marginBottom:"1.25rem"}}/>
+                {lookupCode.trim()===""?(
+                  <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"1.5rem"}}>Escribe un código para buscar el producto</p>
+                ):(()=>{
+                  const results=products.filter(p=>(p.code||"").toUpperCase().includes(lookupCode.trim()));
+                  if(!results.length)return<p style={{color:"#ff6666",fontSize:12,textAlign:"center",padding:"1.5rem",background:"#1e0808",borderRadius:8}}>No se encontró ningún producto con ese código</p>;
+                  return(
+                    <div style={{display:"flex",flexDirection:"column",gap:"0.6rem"}}>
+                      {results.map(p=>(
+                        <div key={p.id} style={{display:"flex",alignItems:"center",gap:"0.85rem",background:"linear-gradient(135deg,#141410 0%,#0d0d0a 100%)",border:"1px solid #2a4a2a",borderRadius:10,padding:"0.85rem"}}>
+                          <img src={optImg(p.img,120)} alt={p.name} style={{width:56,height:56,objectFit:"cover",borderRadius:8,flexShrink:0}} draggable={false}/>
+                          <div style={{flex:1,minWidth:0}}>
+                            <p style={{margin:"0 0 3px",fontSize:13,fontWeight:800,color:"#fff"}}>{p.name}</p>
+                            <p style={{margin:"0 0 2px",fontSize:11,color:"#4caf50",fontFamily:"monospace",fontWeight:800}}>{p.code}</p>
+                            <p style={{margin:0,fontSize:11,color:"#666"}}>{catLabel(p.category)} · ${p.price.toFixed(2)} {p.active===false&&<span style={{color:"#ff6666",fontWeight:800}}> · OCULTO</span>}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            </>)}
           </div>
         </main>
       )}
@@ -2462,43 +2510,50 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
       {/* PRODUCT MODAL */}
       {selectedProduct&&(
         <div onClick={closeProdModal} style={{position:"fixed",inset:0,zIndex:400,background:"rgba(0,0,0,0.88)",display:"flex",alignItems:"flex-end",justifyContent:"center",animation:"fadeIn 0.18s ease"}}>
-          <div onClick={e=>e.stopPropagation()} style={{background:"#111",width:"100%",maxWidth:520,borderRadius:"18px 18px 0 0",padding:"1.5rem 1.5rem 2rem",maxHeight:"92vh",overflowY:"auto",animation:"slideUp 0.28s cubic-bezier(0.25,0.46,0.45,0.94)",border:"1px solid #1e1e1e",borderBottom:"none"}}>
-            <div style={{width:36,height:3,background:"#222",borderRadius:2,margin:"0 auto 1rem"}}/>
-            <div style={{background:"#0a0a0a",aspectRatio:"1/1",overflow:"hidden",marginBottom:"0.6rem",borderRadius:12,position:"relative"}}>
-              <LazyImg src={getAllImages(selectedProduct)[modalImgIdx]||selectedProduct.img} alt={selectedProduct.name} fit="contain"/>
-              {!!selectedProduct.discount&&selectedProduct.discount>0&&<DiscountBadge percent={selectedProduct.discount}/>}
+          <div onClick={e=>e.stopPropagation()} style={{background:"#111",width:"100%",maxWidth:520,maxHeight:"92vh",borderRadius:"18px 18px 0 0",display:"flex",flexDirection:"column",animation:"slideUp 0.28s cubic-bezier(0.25,0.46,0.45,0.94)",border:"1px solid #1e1e1e",borderBottom:"none",overflow:"hidden"}}>
+            <div style={{padding:"1.5rem 1.5rem 0",flexShrink:0}}>
+              <div style={{width:36,height:3,background:"#222",borderRadius:2,margin:"0 auto 1rem"}}/>
             </div>
-            {getAllImages(selectedProduct).length>1&&(
-              <div className="ts" style={{display:"flex",gap:"0.5rem",overflowX:"auto",marginBottom:"1.1rem",WebkitOverflowScrolling:"touch"}}>
-                {getAllImages(selectedProduct).map((src,i)=>(
-                  <button key={i} onClick={()=>setModalImgIdx(i)} style={{flexShrink:0,width:56,height:56,borderRadius:8,overflow:"hidden",padding:0,cursor:"pointer",background:"#0a0a0a",border:`2px solid ${modalImgIdx===i?"#fff":"transparent"}`,WebkitTapHighlightColor:"transparent"}}>
-                    <img src={optImg(src,120)} alt="" style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/>
-                  </button>
-                ))}
+            <div className="ts" style={{overflowY:"auto",WebkitOverflowScrolling:"touch",padding:"0 1.5rem",flex:1,minHeight:0}}>
+              <div style={{background:"#0a0a0a",aspectRatio:"1/1",overflow:"hidden",marginBottom:"0.6rem",borderRadius:12,position:"relative"}}>
+                <LazyImg src={getAllImages(selectedProduct)[modalImgIdx]||selectedProduct.img} alt={selectedProduct.name} fit="contain"/>
+                {!!selectedProduct.discount&&selectedProduct.discount>0&&<DiscountBadge percent={selectedProduct.discount} issuper={isSuperOffer(selectedProduct.discount)}/>}
               </div>
-            )}
-            <h2 style={{fontSize:18,fontWeight:900,margin:"0 0 0.35rem",color:C.accent}}>{selectedProduct.name}</h2>
-            {selectedProduct.description&&<p style={{fontSize:13,color:"#555",margin:"0 0 0.65rem",lineHeight:1.6}}>{selectedProduct.description}</p>}
-            {selectedProduct.discount&&selectedProduct.discount>0?(
-              <div style={{display:"flex",alignItems:"baseline",gap:10,marginBottom:"1.5rem",flexWrap:"wrap"}}>
-                <p style={{fontSize:24,fontWeight:900,margin:0,color:"#ffd43b"}}>{fmtPrice(getFinalPrice(selectedProduct))}</p>
-                <p style={{fontSize:15,margin:0,color:"#555",textDecoration:"line-through"}}>{fmtPrice(selectedProduct.price)}</p>
-              </div>
-            ):(
-              <p style={{fontSize:24,fontWeight:900,margin:"0 0 1.5rem",color:C.accent}}>{fmtPrice(selectedProduct.price)}</p>
-            )}
-            <div style={{display:"flex",alignItems:"center",border:`1px solid ${C.border}`,width:"fit-content",marginBottom:"1rem",borderRadius:8}}>
-              <button onClick={()=>setModalQty(Math.max(1,modalQty-1))} style={S.qtyBtn}>−</button>
-              <span style={{padding:"0 1rem",fontSize:16,color:C.text,fontWeight:700}}>{modalQty}</span>
-              <button onClick={()=>setModalQty(modalQty+1)} style={S.qtyBtn}>+</button>
+              {getAllImages(selectedProduct).length>1&&(
+                <div className="ts" style={{display:"flex",gap:"0.5rem",overflowX:"auto",marginBottom:"1.1rem",WebkitOverflowScrolling:"touch"}}>
+                  {getAllImages(selectedProduct).map((src,i)=>(
+                    <button key={i} onClick={()=>setModalImgIdx(i)} style={{flexShrink:0,width:56,height:56,borderRadius:8,overflow:"hidden",padding:0,cursor:"pointer",background:"#0a0a0a",border:`2px solid ${modalImgIdx===i?"#fff":"transparent"}`,WebkitTapHighlightColor:"transparent"}}>
+                      <img src={optImg(src,120)} alt="" style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <h2 style={{fontSize:18,fontWeight:900,margin:"0 0 0.35rem",color:C.accent}}>{selectedProduct.name}</h2>
+              {selectedProduct.code&&<p style={{fontSize:10,color:"#333",margin:"0 0 0.5rem",fontFamily:"monospace",letterSpacing:1}}>Código: {selectedProduct.code}</p>}
+              {selectedProduct.description&&<p style={{fontSize:13,color:"#555",margin:"0 0 0.65rem",lineHeight:1.6}}>{selectedProduct.description}</p>}
+              {selectedProduct.discount&&selectedProduct.discount>0?(
+                <div style={{display:"flex",alignItems:"baseline",gap:10,marginBottom:"1.25rem",flexWrap:"wrap"}}>
+                  <p style={{fontSize:24,fontWeight:900,margin:0,color:isSuperOffer(selectedProduct.discount)?"#ff5555":"#ffd43b"}}>{fmtPrice(getFinalPrice(selectedProduct))}</p>
+                  <p style={{fontSize:15,margin:0,color:"#555",textDecoration:"line-through"}}>{fmtPrice(selectedProduct.price)}</p>
+                </div>
+              ):(
+                <p style={{fontSize:24,fontWeight:900,margin:"0 0 1.25rem",color:C.accent}}>{fmtPrice(selectedProduct.price)}</p>
+              )}
+              {modalSuggestions.length>0&&(
+                <div style={{marginTop:"0.5rem",paddingTop:"1.25rem",borderTop:`1px solid ${C.border}`,paddingBottom:"1.5rem"}}>
+                  <p style={{fontSize:10,fontWeight:800,letterSpacing:2,color:"#555",margin:"0 0 0.85rem"}}>TAMBIÉN TE PUEDE INTERESAR</p>
+                  <HRow products={modalSuggestions} onSelect={switchModalProduct} onBuyNow={switchModalProduct} fmtPrice={fmtPrice}/>
+                </div>
+              )}
             </div>
-            <button onClick={()=>addToCart(selectedProduct,modalQty)} style={{...S.darkBtn,width:"100%",justifyContent:"center",fontSize:12,padding:"1.05rem",borderRadius:10}}>AGREGAR AL CARRITO</button>
-            {modalSuggestions.length>0&&(
-              <div style={{marginTop:"2rem",paddingTop:"1.5rem",borderTop:`1px solid ${C.border}`}}>
-                <p style={{fontSize:10,fontWeight:800,letterSpacing:2,color:"#555",margin:"0 0 0.85rem"}}>TAMBIÉN TE PUEDE INTERESAR</p>
-                <HRow products={modalSuggestions} onSelect={switchModalProduct} onBuyNow={switchModalProduct} fmtPrice={fmtPrice}/>
+            <div style={{flexShrink:0,padding:"1rem 1.5rem 1.5rem",background:"#111",borderTop:"1px solid #1e1e1e",display:"flex",alignItems:"center",gap:"0.75rem",boxShadow:"0 -8px 24px rgba(0,0,0,0.4)"}}>
+              <div style={{display:"flex",alignItems:"center",border:`1px solid ${C.border}`,borderRadius:8,flexShrink:0}}>
+                <button onClick={()=>setModalQty(Math.max(1,modalQty-1))} style={S.qtyBtn}>−</button>
+                <span style={{padding:"0 0.85rem",fontSize:16,color:C.text,fontWeight:700}}>{modalQty}</span>
+                <button onClick={()=>setModalQty(modalQty+1)} style={S.qtyBtn}>+</button>
               </div>
-            )}
+              <button onClick={()=>addToCart(selectedProduct,modalQty)} style={{...S.darkBtn,flex:1,justifyContent:"center",fontSize:12,padding:"1.05rem",borderRadius:10}}>AGREGAR AL CARRITO</button>
+            </div>
           </div>
         </div>
       )}
