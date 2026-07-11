@@ -1033,6 +1033,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   // ─── URL ↔ ESTADO: cada apartado con su propio link + back/forward sin trabarse ──
   const isPoppingRef = useRef(false);
   const selectedProductRef = useRef<Product|null>(null);
+  const modalPushedRef = useRef(false);
   useEffect(()=>{selectedProductRef.current=selectedProduct;},[selectedProduct]);
   useEffect(()=>{
     if(typeof window==="undefined")return;
@@ -1046,6 +1047,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
     const onPopState=()=>{
       isPoppingRef.current=true;
       if(selectedProductRef.current){
+        modalPushedRef.current=false;
         setSel(null);
         setTimeout(()=>{isPoppingRef.current=false;},0);
         return;
@@ -1236,11 +1238,13 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   const totalItems=useMemo(()=>cart.reduce((s,i)=>s+i.qty,0),[cart]);
   const totalPrice=useMemo(()=>cart.reduce((s,i)=>s+i.product.price*i.qty,0),[cart]);
 
+  const closeProdModal=useCallback(()=>{if(modalPushedRef.current)window.history.back();else setSel(null);},[]);
+
   const addToCart=useCallback((product:Product,qty:number)=>{
     setCart(prev=>{const ex=prev.find(i=>i.product.id===product.id);return ex?prev.map(i=>i.product.id===product.id?{...i,qty:i.qty+qty}:i):[...prev,{product,qty}];});
-    setSel(null);setAddedProduct(product);
+    closeProdModal();setAddedProduct(product);
     trackAddToCart(product,qty,currentUser?.email);
-  },[currentUser?.email]);
+  },[currentUser?.email,closeProdModal]);
 
   const updQty=useCallback((id:string,d:number)=>setCart(prev=>prev.map(i=>i.product.id===id?{...i,qty:i.qty+d}:i).filter(i=>i.qty>0)),[]);
 
@@ -1432,7 +1436,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   const stickyTop=navH-1;
   const TABS=[{id:"fokus" as MainView,l:"FOKUS"},{id:"shop" as MainView,l:"TIENDA"},{id:"comunidad" as MainView,l:"COMUNIDAD"},{id:"grabados" as MainView,l:"GRABADOS"}];
 
-  const openProd=useCallback((p:Product)=>{setSel(p);setModalQty(1);trackViewContent(p,currentUser?.email);},[currentUser?.email]);
+  const openProd=useCallback((p:Product)=>{setSel(p);setModalQty(1);trackViewContent(p,currentUser?.email);window.history.pushState({fokusModal:true},"",window.location.href);modalPushedRef.current=true;},[currentUser?.email]);
   const userReady=currentUser!==undefined;
 
   if(isTY&&orderSnap){
@@ -2060,7 +2064,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
 
       {/* PRODUCT MODAL */}
       {selectedProduct&&(
-        <div onClick={()=>setSel(null)} style={{position:"fixed",inset:0,zIndex:400,background:"rgba(0,0,0,0.88)",display:"flex",alignItems:"flex-end",justifyContent:"center",animation:"fadeIn 0.18s ease"}}>
+        <div onClick={closeProdModal} style={{position:"fixed",inset:0,zIndex:400,background:"rgba(0,0,0,0.88)",display:"flex",alignItems:"flex-end",justifyContent:"center",animation:"fadeIn 0.18s ease"}}>
           <div onClick={e=>e.stopPropagation()} style={{background:"#111",width:"100%",maxWidth:520,borderRadius:"18px 18px 0 0",padding:"1.5rem 1.5rem 2rem",maxHeight:"92vh",overflowY:"auto",animation:"slideUp 0.28s cubic-bezier(0.25,0.46,0.45,0.94)",border:"1px solid #1e1e1e",borderBottom:"none"}}>
             <div style={{width:36,height:3,background:"#222",borderRadius:2,margin:"0 auto 1rem"}}/>
             <div style={{background:"#0a0a0a",aspectRatio:"3/2",overflow:"hidden",marginBottom:"1.1rem",borderRadius:12}}>
