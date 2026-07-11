@@ -470,7 +470,7 @@ function PwdInput({value,onChange,placeholder,onKeyDown,autoComplete}:{value:str
 }
 
 // ─── LAZY IMAGE ───────────────────────────────────────────────────────────────
-const LazyImg=memo(function LazyImg({src,alt}:{src:string;alt:string}){
+const LazyImg=memo(function LazyImg({src,alt,fit="cover"}:{src:string;alt:string;fit?:"cover"|"contain"}){
   const[loaded,setLoaded]=useState(false);
   const[inView,setInView]=useState(false);
   const ref=useRef<HTMLDivElement>(null);
@@ -483,13 +483,13 @@ const LazyImg=memo(function LazyImg({src,alt}:{src:string;alt:string}){
     <div ref={ref} style={{position:"relative",width:"100%",height:"100%",pointerEvents:"none"}}>
       {!loaded&&<div style={{position:"absolute",inset:0,background:"#161616"}}/>}
       {inView&&<img
-        src={optImg(src,400)}
+        src={optImg(src,600)}
         alt={alt}
         loading="lazy"
         decoding="async"
         onLoad={()=>setLoaded(true)}
         style={{
-          width:"100%",height:"100%",objectFit:"cover",display:"block",
+          width:"100%",height:"100%",objectFit:fit,display:"block",
           opacity:loaded?1:0,
           transition:"opacity 0.2s ease",
           pointerEvents:"none",
@@ -1382,6 +1382,10 @@ const couponDiscountAmount=useMemo(()=>{
   return getFinalPrice(item.product)*item.qty*(appliedCoupon.discountPercent/100);
 },[appliedCoupon,cart,totalPriceBeforeCoupon]);
 const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmount),[totalPriceBeforeCoupon,couponDiscountAmount]);
+  const modalSuggestions=useMemo(()=>{
+    if(!selectedProduct)return[];
+    return products.filter(p=>p.category===selectedProduct.category&&p.id!==selectedProduct.id&&p.active!==false);
+  },[selectedProduct,products]);
 
   const closeProdModal=useCallback(()=>{if(modalPushedRef.current)window.history.back();else setSel(null);},[]);
 
@@ -1662,6 +1666,13 @@ useEffect(()=>{if(adminSec==="coupons"){loadCoupons();if(!couponCode)setCouponCo
   const TABS=[{id:"fokus" as MainView,l:"FOKUS"},{id:"shop" as MainView,l:"TIENDA"},{id:"comunidad" as MainView,l:"COMUNIDAD"},{id:"grabados" as MainView,l:"GRABADOS"}];
 
   const openProd=useCallback((p:Product)=>{setSel(p);setModalQty(1);trackViewContent(p,currentUser?.email);window.history.pushState({fokusModal:true},"",productPath(p));modalPushedRef.current=true;},[currentUser?.email]);
+  const switchModalProduct=useCallback((p:Product)=>{
+    setSel(p);setModalQty(1);setModalImgIdx(0);trackViewContent(p,currentUser?.email);
+    const path=productPath(p);
+    if(modalPushedRef.current)window.history.replaceState({fokusModal:true},"",path);
+    else{window.history.pushState({fokusModal:true},"",path);modalPushedRef.current=true;}
+  },[currentUser?.email]);
+  const modalBuyNow=useCallback((p:Product)=>{closeProdModal();handleBuyNow(p);},[closeProdModal,handleBuyNow]);
   const userReady=currentUser!==undefined;
 
   if(isTY&&orderSnap){
@@ -2450,8 +2461,8 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
         <div onClick={closeProdModal} style={{position:"fixed",inset:0,zIndex:400,background:"rgba(0,0,0,0.88)",display:"flex",alignItems:"flex-end",justifyContent:"center",animation:"fadeIn 0.18s ease"}}>
           <div onClick={e=>e.stopPropagation()} style={{background:"#111",width:"100%",maxWidth:520,borderRadius:"18px 18px 0 0",padding:"1.5rem 1.5rem 2rem",maxHeight:"92vh",overflowY:"auto",animation:"slideUp 0.28s cubic-bezier(0.25,0.46,0.45,0.94)",border:"1px solid #1e1e1e",borderBottom:"none"}}>
             <div style={{width:36,height:3,background:"#222",borderRadius:2,margin:"0 auto 1rem"}}/>
-            <div style={{background:"#0a0a0a",aspectRatio:"3/2",overflow:"hidden",marginBottom:"0.6rem",borderRadius:12,position:"relative"}}>
-              <LazyImg src={getAllImages(selectedProduct)[modalImgIdx]||selectedProduct.img} alt={selectedProduct.name}/>
+            <div style={{background:"#0a0a0a",aspectRatio:"1/1",overflow:"hidden",marginBottom:"0.6rem",borderRadius:12,position:"relative"}}>
+              <LazyImg src={getAllImages(selectedProduct)[modalImgIdx]||selectedProduct.img} alt={selectedProduct.name} fit="contain"/>
               {!!selectedProduct.discount&&selectedProduct.discount>0&&<DiscountBadge percent={selectedProduct.discount}/>}
             </div>
             {getAllImages(selectedProduct).length>1&&(
@@ -2479,6 +2490,12 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
               <button onClick={()=>setModalQty(modalQty+1)} style={S.qtyBtn}>+</button>
             </div>
             <button onClick={()=>addToCart(selectedProduct,modalQty)} style={{...S.darkBtn,width:"100%",justifyContent:"center",fontSize:12,padding:"1.05rem",borderRadius:10}}>AGREGAR AL CARRITO</button>
+            {modalSuggestions.length>0&&(
+              <div style={{marginTop:"2rem",paddingTop:"1.5rem",borderTop:`1px solid ${C.border}`}}>
+                <p style={{fontSize:10,fontWeight:800,letterSpacing:2,color:"#555",margin:"0 0 0.85rem"}}>TAMBIÉN TE PUEDE INTERESAR</p>
+                <HRow products={modalSuggestions} onSelect={switchModalProduct} onBuyNow={modalBuyNow} fmtPrice={fmtPrice}/>
+              </div>
+            )}
           </div>
         </div>
       )}
