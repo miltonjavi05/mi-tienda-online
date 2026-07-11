@@ -2509,4 +2509,4 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
       {!isAdmin&&<DraggableWA/>}
     </div>
   );
-}   
+}    
