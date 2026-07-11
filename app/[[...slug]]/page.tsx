@@ -1391,9 +1391,9 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
 
   const addToCart=useCallback((product:Product,qty:number)=>{
     setCart(prev=>{const ex=prev.find(i=>i.product.id===product.id);return ex?prev.map(i=>i.product.id===product.id?{...i,qty:i.qty+qty}:i):[...prev,{product,qty}];});
-    closeProdModal();setAddedProduct(product);
+    closeProdModal();setMainView("cart");
     trackAddToCart(product,qty,currentUser?.email);
-  },[currentUser?.email,closeProdModal]);
+  },[currentUser?.email,closeProdModal,setMainView]);
 
   const updQty=useCallback((id:string,d:number)=>setCart(prev=>prev.map(i=>i.product.id===id?{...i,qty:i.qty+d}:i).filter(i=>i.qty>0)),[]);
 
@@ -2041,6 +2041,13 @@ useEffect(()=>{if(adminSec==="coupons"){loadCoupons();if(!couponCode)setCouponCo
             </div>
           </div>
 
+          {/* ── BOTÓN PREMIUM: SEGUIR COMPRANDO ── */}
+          <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={{position:"relative",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",gap:"0.65rem",width:"100%",background:"linear-gradient(155deg,rgba(255,255,255,0.16) 0%,rgba(20,20,20,0.94) 45%,rgba(10,10,10,0.98) 100%)",color:"#fff",border:"1px solid rgba(255,255,255,0.25)",padding:"1.05rem",fontSize:11,fontWeight:900,letterSpacing:2.8,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",borderRadius:12,marginBottom:"1.25rem",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.18), inset 0 0 0 1px rgba(255,255,255,0.07), 0 10px 28px rgba(0,0,0,0.55)"}}>
+            <span style={{position:"absolute",inset:0,background:"linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.12) 50%,transparent 100%)",backgroundSize:"200% 100%",animation:"badgeShimmer 3s ease infinite",pointerEvents:"none"}}/>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{position:"relative",flexShrink:0}}><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
+            <span style={{position:"relative"}}>SEGUIR COMPRANDO</span>
+          </button>
+
           {/* ── CUPÓN DE DESCUENTO ── */}
           <div style={{background:"linear-gradient(135deg,#141410 0%,#0a0a08 100%)",borderRadius:12,border:`1px solid ${appliedCoupon?"#3a3520":C.border}`,marginBottom:"1.25rem",padding:"1.1rem",position:"relative",overflow:"hidden"}}>
             <div style={{position:"absolute",top:0,left:0,right:0,height:1,background:"linear-gradient(90deg,transparent,rgba(255,212,59,0.25),transparent)"}}/>
@@ -2158,11 +2165,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
             </button>
 
             <div style={{display:"flex",justifyContent:"center",gap:"1.5rem",marginTop:"1rem",marginBottom:"0.25rem",flexWrap:"wrap"}}>{[{i:"🔒",t:"Pago seguro"},{i:"📦",t:"Envío a todo el país"},{i:"⭐",t:"3.000+ clientes"}].map(({i,t})=>(<div key={t} style={{display:"flex",alignItems:"center",gap:4}}><span style={{fontSize:10}}>{i}</span><span style={{fontSize:9,color:"#333",fontWeight:700,letterSpacing:0.5}}>{t.toUpperCase()}</span></div>))}</div>
-              <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.5rem",width:"100%",marginTop:"0.5rem",background:"#111",color:"#888",border:"1px solid #2a2a2a",padding:"0.85rem",fontSize:10,fontWeight:800,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",borderRadius:10}}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
-              SEGUIR COMPRANDO
-            </button>
-          </div>
+              </div>
         </>
       )}
     </div>
