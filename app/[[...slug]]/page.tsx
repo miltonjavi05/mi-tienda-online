@@ -951,7 +951,10 @@ const ThankYouView=memo(function ThankYouView({order,onBack,currentUser}:{order:
 // ══════════════════════════════════════════════════════════════════════════════
 export default function Home() {
   const pathname = usePathname();
-  const initialRoute = useMemo(()=>pathToShopState(pathname||"/"),[]); // solo la primera vez, evita el flash de "FOKUS"
+  const initialRoute = useMemo(()=>{
+    if(pathname&&pathname.startsWith("/producto/"))return{view:"shop" as MainView,filter:"TODO" as ShopFilter};
+    return pathToShopState(pathname||"/");
+  },[]); // solo la primera vez, evita el flash de "FOKUS"
   const[mainView,setMainViewRaw]   = useState<MainView>(initialRoute.view);
   const[shopFilter,setShopFilter]  = useState<ShopFilter>(initialRoute.filter);
   const[lentesOpen,setLentesOpen]  = useState(initialRoute.filter==="LENTES"||(LENTES_SUBCATS as readonly string[]).includes(initialRoute.filter));
