@@ -1049,10 +1049,12 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   const isPoppingRef = useRef(false);
   const selectedProductRef = useRef<Product|null>(null);
   const modalPushedRef = useRef(false);
+  const pendingProductDeepLinkRef = useRef(typeof window!=="undefined"&&window.location.pathname.startsWith("/producto/"));
   useEffect(()=>{selectedProductRef.current=selectedProduct;},[selectedProduct]);
   useEffect(()=>{
     if(typeof window==="undefined")return;
     if(isPoppingRef.current){isPoppingRef.current=false;return;}
+    if(pendingProductDeepLinkRef.current)return;
     if(mainView==="thankyou")return;
     const path = mainView==="shop" ? shopFilterToPath(shopFilter) : (BASE_PATHS[mainView] || "/");
     if(window.location.pathname!==path)window.history.pushState({},"",path);
@@ -1244,12 +1246,12 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   useEffect(()=>{
     if(typeof window==="undefined")return;
     if(deepLinkHandled.current)return;
-    if(!products.length)return;
     const id=productIdFromPath(window.location.pathname);
-    if(!id)return;
+    if(!id){pendingProductDeepLinkRef.current=false;return;}
+    if(!products.length)return;
     deepLinkHandled.current=true;
     const prod=products.find(p=>p.id===id);
-    if(!prod)return;
+    if(!prod){pendingProductDeepLinkRef.current=false;return;}
     const filter:ShopFilter=(ALL_SHOP_CATS as readonly string[]).includes(prod.category)?(prod.category as ShopFilter):"TODO";
     const shopPath=shopFilterToPath(filter);
     window.history.replaceState({},"",shopPath);
@@ -1261,6 +1263,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
     setSel(prod);
     setModalQty(1);
     trackViewContent(prod,currentUser?.email);
+    pendingProductDeepLinkRef.current=false;
   },[products,currentUser?.email]);
 
   const handleProfilePhoto=useCallback(async(e:React.ChangeEvent<HTMLInputElement>)=>{const file=e.target.files?.[0];if(!file||!currentUser)return;setPhotoLoading(true);try{const url=await uploadImg(file);let idToken=currentUser.idToken;if(!idToken){const rt=localStorage.getItem("fokus_refresh");if(rt){const res=await refreshIdToken(rt);if(res)idToken=res.idToken;}}await fsSaveUser(currentUser.uid,{photoURL:url},idToken).catch(()=>{});setCurrentUser(prev=>{if(!prev)return prev;const u={...prev,photoURL:url,idToken};localStorage.setItem("fokus_user",JSON.stringify(u));return u;});}catch(err){console.error("Error subiendo foto:",err);}finally{setPhotoLoading(false);if(photoInputRef.current)photoInputRef.current.value="";};},[currentUser]);
