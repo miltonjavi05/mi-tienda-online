@@ -425,6 +425,21 @@ function pathToShopState(path: string): { view: MainView; filter: ShopFilter } {
   return { view:"fokus", filter:"TODO" };
 }
 
+function slugify(text:string):string{
+  return text.toString().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
+}
+function productPath(p:Product):string{
+  const slug=slugify(p.name);
+  return `/producto/${slug?slug+"-":""}${p.id}`;
+}
+function productIdFromPath(path:string):string|null{
+  if(!path.startsWith("/producto/"))return null;
+  const rest=path.slice("/producto/".length);
+  if(!rest)return null;
+  const parts=rest.split("-");
+  return parts[parts.length-1]||null;
+}
+
 function PwdInput({value,onChange,placeholder,onKeyDown,autoComplete}:{value:string;onChange:(v:string)=>void;placeholder:string;onKeyDown?:(e:React.KeyboardEvent)=>void;autoComplete?:string;}){
   const[show,setShow]=useState(false);
   return(<div style={{position:"relative",display:"flex",alignItems:"center"}}><input type={show?"text":"password"} placeholder={placeholder} value={value} onChange={e=>onChange(e.target.value)} onKeyDown={onKeyDown} autoComplete={autoComplete} style={{...S.input,paddingRight:"2.8rem"}}/><button type="button" onClick={()=>setShow(s=>!s)} style={{position:"absolute",right:10,background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",padding:4,WebkitTapHighlightColor:"transparent"}} tabIndex={-1}>{show?<IcEyeOff s={18} c="#666"/>:<IcEye s={18} c="#666"/>}</button></div>);
@@ -1225,6 +1240,29 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
     }
   }, []);
 
+  const deepLinkHandled = useRef(false);
+  useEffect(()=>{
+    if(typeof window==="undefined")return;
+    if(deepLinkHandled.current)return;
+    if(!products.length)return;
+    const id=productIdFromPath(window.location.pathname);
+    if(!id)return;
+    deepLinkHandled.current=true;
+    const prod=products.find(p=>p.id===id);
+    if(!prod)return;
+    const filter:ShopFilter=(ALL_SHOP_CATS as readonly string[]).includes(prod.category)?(prod.category as ShopFilter):"TODO";
+    const shopPath=shopFilterToPath(filter);
+    window.history.replaceState({},"",shopPath);
+    window.history.pushState({fokusModal:true},"",productPath(prod));
+    modalPushedRef.current=true;
+    setMainViewRaw("shop");
+    setShopFilter(filter);
+    setLentesOpen(filter==="LENTES"||(LENTES_SUBCATS as readonly string[]).includes(filter));
+    setSel(prod);
+    setModalQty(1);
+    trackViewContent(prod,currentUser?.email);
+  },[products,currentUser?.email]);
+
   const handleProfilePhoto=useCallback(async(e:React.ChangeEvent<HTMLInputElement>)=>{const file=e.target.files?.[0];if(!file||!currentUser)return;setPhotoLoading(true);try{const url=await uploadImg(file);let idToken=currentUser.idToken;if(!idToken){const rt=localStorage.getItem("fokus_refresh");if(rt){const res=await refreshIdToken(rt);if(res)idToken=res.idToken;}}await fsSaveUser(currentUser.uid,{photoURL:url},idToken).catch(()=>{});setCurrentUser(prev=>{if(!prev)return prev;const u={...prev,photoURL:url,idToken};localStorage.setItem("fokus_user",JSON.stringify(u));return u;});}catch(err){console.error("Error subiendo foto:",err);}finally{setPhotoLoading(false);if(photoInputRef.current)photoInputRef.current.value="";};},[currentUser]);
 
   const handleSaveName=useCallback(async()=>{if(!newName.trim()||!currentUser)return;setNameLoading(true);const updated:UserData={...currentUser,displayName:newName.trim()};setCurrentUser(updated);setEditingName(false);setNameLoading(false);},[currentUser,newName]);
@@ -1436,7 +1474,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   const stickyTop=navH-1;
   const TABS=[{id:"fokus" as MainView,l:"FOKUS"},{id:"shop" as MainView,l:"TIENDA"},{id:"comunidad" as MainView,l:"COMUNIDAD"},{id:"grabados" as MainView,l:"GRABADOS"}];
 
-  const openProd=useCallback((p:Product)=>{setSel(p);setModalQty(1);trackViewContent(p,currentUser?.email);window.history.pushState({fokusModal:true},"",window.location.href);modalPushedRef.current=true;},[currentUser?.email]);
+  const openProd=useCallback((p:Product)=>{setSel(p);setModalQty(1);trackViewContent(p,currentUser?.email);window.history.pushState({fokusModal:true},"",productPath(p));modalPushedRef.current=true;},[currentUser?.email]);
   const userReady=currentUser!==undefined;
 
   if(isTY&&orderSnap){
