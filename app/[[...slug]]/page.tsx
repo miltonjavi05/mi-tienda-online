@@ -951,8 +951,9 @@ const ThankYouView=memo(function ThankYouView({order,onBack,currentUser}:{order:
 // ══════════════════════════════════════════════════════════════════════════════
 export default function Home() {
   const pathname = usePathname();
+  const isProductDeepLink = useMemo(()=>!!pathname&&pathname.startsWith("/producto/"),[]); // se calcula igual en servidor y cliente
   const initialRoute = useMemo(()=>{
-    if(pathname&&pathname.startsWith("/producto/"))return{view:"shop" as MainView,filter:"TODO" as ShopFilter};
+    if(isProductDeepLink)return{view:"shop" as MainView,filter:"TODO" as ShopFilter};
     return pathToShopState(pathname||"/");
   },[]); // solo la primera vez, evita el flash de "FOKUS"
   const[mainView,setMainViewRaw]   = useState<MainView>(initialRoute.view);
@@ -1052,8 +1053,8 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   const isPoppingRef = useRef(false);
   const selectedProductRef = useRef<Product|null>(null);
   const modalPushedRef = useRef(false);
-  const pendingProductDeepLinkRef = useRef(typeof window!=="undefined"&&window.location.pathname.startsWith("/producto/"));
-  const[deepLinkPending,setDeepLinkPending]=useState(typeof window!=="undefined"&&window.location.pathname.startsWith("/producto/"));
+  const pendingProductDeepLinkRef = useRef(isProductDeepLink);
+  const[deepLinkPending,setDeepLinkPending]=useState(isProductDeepLink);
   useEffect(()=>{selectedProductRef.current=selectedProduct;},[selectedProduct]);
   useEffect(()=>{
     if(typeof window==="undefined")return;
