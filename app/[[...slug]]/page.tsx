@@ -279,7 +279,7 @@ const DiscountBadge=memo(function DiscountBadge({percent,issuper}:{percent:numbe
 });
 const GalleryBadge=memo(function GalleryBadge(){
   return(
-    <div style={{position:"absolute",bottom:8,right:8,zIndex:2,background:"rgba(0,0,0,0.65)",backdropFilter:"blur(6px)",WebkitBackdropFilter:"blur(6px)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:20,padding:"3px 8px",display:"flex",alignItems:"center",gap:4}}>
+    <div style={{position:"absolute",top:8,right:8,zIndex:2,background:"rgba(0,0,0,0.65)",backdropFilter:"blur(6px)",WebkitBackdropFilter:"blur(6px)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:20,padding:"3px 8px",display:"flex",alignItems:"center",gap:4}}>
       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><rect x="3" y="3" width="18" height="14" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
       <span style={{fontSize:9,color:"#fff",fontWeight:800}}>FOTOS</span>
     </div>
@@ -989,7 +989,7 @@ const ARow=memo(function ARow({p,editing,onEdit,onDel,onDragStart,onDragOver,onD
 });
 
 // ─── THANK YOU VIEW ───────────────────────────────────────────────────────────
-const ThankYouView=memo(function ThankYouView({order,onBack,currentUser}:{order:OrderSnapshot;onBack:()=>void;currentUser:UserData|null|undefined;}){
+const ThankYouView=memo(function ThankYouView({order,onBack,currentUser,getRealUsdValue}:{order:OrderSnapshot;onBack:()=>void;currentUser:UserData|null|undefined;getRealUsdValue:(nominalUsd:number,payMethodId?:string)=>number;}){
   const canvasRef=useRef<HTMLCanvasElement>(null);
   const fired=useRef(false);
   const[phase,setPhase]=useState(0);
@@ -1020,7 +1020,7 @@ const ThankYouView=memo(function ThankYouView({order,onBack,currentUser}:{order:
         {order.comprobanteUrl&&(<div style={{...fade(0.1),display:"flex",alignItems:"center",gap:"0.6rem",background:"rgba(76,175,80,0.05)",border:"1px solid rgba(76,175,80,0.12)",borderRadius:10,padding:"0.7rem 1rem",marginBottom:"0.85rem"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg><p style={{margin:0,fontSize:12,color:"#3a7a3a",fontWeight:700}}>Comprobante de pago recibido ✓</p></div>)}
         <div style={{...fade(0.12),height:1,background:"linear-gradient(90deg,transparent,#191919,transparent)",margin:"1.1rem 0"}}/>
         <div style={{...fade(0.15)}}>
-          <a href={order.waUrl} target="_blank" rel="noreferrer" data-fokus-tracked="true" onClick={()=>{if(fired.current)return;fired.current=true;const roundedTotal=parseFloat(order.total.toFixed(2));const orderState=order.deliveryInfo.estado||(order.deliveryInfo.zone==="naguanagua"||order.deliveryInfo.zone==="valencia"?"Carabobo":undefined);if(roundedTotal>0){trackPurchase(order.orderId,roundedTotal,order.items,currentUser?.email,order.deliveryInfo.telefono||undefined,orderState);const orderCategory=[...new Set(order.items.map(i=>i.product.category))].join(", ");fsAddToCollection("manual_sales",{orderId:order.orderId,source:"web",name:currentUser?.displayName||order.deliveryInfo.nombre||"Cliente Web",email:currentUser?.email||"",phone:order.deliveryInfo.telefono||"",product:order.items.map(i=>`${i.product.name} x${i.qty}`).join(", "),category:orderCategory,amount:roundedTotal,payMethod:PAYMENT_METHODS.find(m=>m.id===order.payMethod)?.name||order.payMethod||"",state:orderState||"",notes:"Compra desde la web",createdAt:Date.now()}).catch(()=>{});}}} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.65rem",background:"#25D366",color:"#fff",padding:"1rem 1.25rem",borderRadius:12,textDecoration:"none",fontSize:12,fontWeight:900,letterSpacing:1.5,marginBottom:"0.65rem",boxShadow:"0 8px 24px rgba(37,211,102,0.18)",WebkitTapHighlightColor:"transparent"}}><IcWA s={18} c="#fff"/>ENVIAR PEDIDO POR WHATSAPP →</a>
+          <a href={order.waUrl} target="_blank" rel="noreferrer" data-fokus-tracked="true" onClick={()=>{if(fired.current)return;fired.current=true;const nominalTotal=parseFloat(order.total.toFixed(2));const realTotal=parseFloat(getRealUsdValue(nominalTotal,order.payMethod).toFixed(2));const orderState=order.deliveryInfo.estado||(order.deliveryInfo.zone==="naguanagua"||order.deliveryInfo.zone==="valencia"?"Carabobo":undefined);if(realTotal>0){trackPurchase(order.orderId,realTotal,order.items,currentUser?.email,order.deliveryInfo.telefono||undefined,orderState);const orderCategory=[...new Set(order.items.map(i=>i.product.category))].join(", ");fsAddToCollection("manual_sales",{orderId:order.orderId,source:"web",name:currentUser?.displayName||order.deliveryInfo.nombre||"Cliente Web",email:currentUser?.email||"",phone:order.deliveryInfo.telefono||"",product:order.items.map(i=>`${i.product.name} x${i.qty}`).join(", "),category:orderCategory,amount:realTotal,payMethod:PAYMENT_METHODS.find(m=>m.id===order.payMethod)?.name||order.payMethod||"",state:orderState||"",notes:"Compra desde la web",createdAt:Date.now()}).catch(()=>{});}}} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.65rem",background:"#25D366",color:"#fff",padding:"1rem 1.25rem",borderRadius:12,textDecoration:"none",fontSize:12,fontWeight:900,letterSpacing:1.5,marginBottom:"0.65rem",boxShadow:"0 8px 24px rgba(37,211,102,0.18)",WebkitTapHighlightColor:"transparent"}}><IcWA s={18} c="#fff"/>ENVIAR PEDIDO POR WHATSAPP →</a>
           <p style={{textAlign:"center",fontSize:10,color:"#2a2a2a",margin:"0 0 1rem",lineHeight:1.6}}>Toca para abrir WhatsApp con tu pedido listo para enviar</p>
           <button onClick={onBack} style={{display:"flex",alignItems:"center",justifyContent:"center",width:"100%",background:"transparent",color:"#333",border:"1px solid #1a1a1a",padding:"0.8rem 1rem",borderRadius:12,fontSize:10,fontWeight:800,letterSpacing:2,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>SEGUIR COMPRANDO</button>
         </div>
@@ -1072,11 +1072,39 @@ const[couponCheckErr,setCouponCheckErr]=useState("");  const[products,setProduct
 const[copiedPay,setCopiedPay]=useState(false);
 const photoInputRef              = useRef<HTMLInputElement>(null);
 const[bcvRate,setBcvRate]        = useState<number|null>(null);
+const[binanceRate,setBinanceRate]= useState<number|null>(null);
 const[showBs,setShowBs]          = useState(true);
 const[rateLoading,setRateLoading]= useState(false);
 const BCV_CACHE_KEY = "fokus_bcv_rate";
 const BCV_CACHE_TIME = "fokus_bcv_time";
 const BCV_TTL = 6 * 60 * 60 * 1000; // 6 horas en ms
+const BINANCE_CACHE_KEY = "fokus_binance_rate";
+const BINANCE_CACHE_TIME = "fokus_binance_time";
+
+const fetchBinanceRate = useCallback(async (force = false) => {
+  if (!force) {
+    try {
+      const cached = localStorage.getItem(BINANCE_CACHE_KEY);
+      const cachedTime = localStorage.getItem(BINANCE_CACHE_TIME);
+      if (cached && cachedTime && Date.now() - Number(cachedTime) < BCV_TTL) {
+        const parsed = parseFloat(cached);
+        if (parsed > 0) { setBinanceRate(parsed); return; }
+      }
+    } catch { /* silent */ }
+  }
+  try {
+    const r = await fetch("https://ve.dolarapi.com/v1/dolares/bitcoin");
+    const d = await r.json();
+    const parsed = parseFloat(d.promedio ?? 0);
+    if (parsed > 0) {
+      setBinanceRate(parsed);
+      try {
+        localStorage.setItem(BINANCE_CACHE_KEY, String(parsed));
+        localStorage.setItem(BINANCE_CACHE_TIME, String(Date.now()));
+      } catch { /* silent */ }
+    }
+  } catch { /* silencioso */ }
+}, []);
 
 const fetchBcvRate = useCallback(async (force = false) => {
   if (!force) {
@@ -1125,6 +1153,12 @@ const fetchBcvRate = useCallback(async (force = false) => {
   }
 }, []);
 const fmtPrice=useCallback((usd:number)=>{if(showBs&&bcvRate){const bs=usd*bcvRate;return"Bs. "+Math.round(bs).toLocaleString("es-VE");}return"$"+usd.toFixed(2);},[showBs,bcvRate]);
+  const BS_PAY_METHODS=useMemo(()=>new Set(["pagomovil_bv","pagomovil_ba"]),[]);
+  const getRealUsdValue=useCallback((nominalUsd:number,payMethodId?:string)=>{
+    if(!payMethodId||!BS_PAY_METHODS.has(payMethodId)||!bcvRate||!binanceRate)return nominalUsd;
+    const bsAmount=nominalUsd*bcvRate;
+    return bsAmount/binanceRate;
+  },[bcvRate,binanceRate,BS_PAY_METHODS]);
   const setMainView=useCallback((v:MainView)=>{setMainViewRaw(v);scrollTop();},[]);
   const payMethodRef=useRef<HTMLDivElement>(null);
 const comprobanteRef=useRef<HTMLDivElement>(null);
@@ -1253,6 +1287,7 @@ const[couponsLoading,setCouponsLoading]=useState(false);
   const[saleState,setSaleState]=useState("");
   const[saleNotes,setSaleNotes]=useState("");
   const[saleSendMeta,setSaleSendMeta]=useState(true);
+  const[saleIsBs,setSaleIsBs]=useState(false);
   const[saleLoading,setSaleLoading]=useState(false);
   const[saleErr,setSaleErr]=useState("");
   const[saleOk,setSaleOk]=useState("");
@@ -1292,10 +1327,12 @@ const couponsLoaded=useRef(false);
 
   useEffect(() => {
   fetchBcvRate();
+  fetchBinanceRate();
 
   // Actualiza cada 6 horas mientras la pestaña está abierta
   const interval = setInterval(() => {
     fetchBcvRate(true); // force = true para ignorar caché
+    fetchBinanceRate(true);
   }, 6 * 60 * 60 * 1000);
 
   // También actualiza cuando el usuario vuelve a la pestaña
@@ -1599,7 +1636,7 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     await loadProducts(true);
   };
 
-  const resetSaleForm=()=>{setSaleName("");setSaleEmail("");setSalePhone("");setSaleProduct("");setSaleCategory("");setSaleAmount("");setSalePayMethod("");setSaleState("");setSaleNotes("");setSaleSendMeta(true);setSaleErr("");setSaleOk("");};
+  const resetSaleForm=()=>{setSaleName("");setSaleEmail("");setSalePhone("");setSaleProduct("");setSaleCategory("");setSaleAmount("");setSalePayMethod("");setSaleState("");setSaleNotes("");setSaleSendMeta(true);setSaleIsBs(false);setSaleErr("");setSaleOk("");};
 
   const submitManualSale=async()=>{
     setSaleErr("");setSaleOk("");
@@ -1609,7 +1646,8 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     setSaleLoading(true);
     try{
       const orderId=`FKS-WA-${Date.now().toString(36).toUpperCase()}`;
-      const roundedTotal=parseFloat(amountNum.toFixed(2));
+      const realAmount=saleIsBs&&bcvRate&&binanceRate?(amountNum*bcvRate)/binanceRate:amountNum;
+      const roundedTotal=parseFloat(realAmount.toFixed(2));
       if(saleSendMeta){
         const eventId=genEventId();
         const normalizedPhone=salePhone.trim()?normalizeVEPhone(salePhone):"";
@@ -1743,7 +1781,7 @@ useEffect(()=>{if(adminSec==="coupons"){loadCoupons();if(!couponCode)setCouponCo
     return(
       <>
         <style>{GLOBAL_CSS}</style>
-        <ThankYouView order={orderSnap} onBack={()=>{setOrderSnap(null);setMainView("shop");setShopFilter("TODO");}} currentUser={currentUser}/>
+        <ThankYouView order={orderSnap} onBack={()=>{setOrderSnap(null);setMainView("shop");setShopFilter("TODO");}} currentUser={currentUser} getRealUsdValue={getRealUsdValue}/>
       </>
     );
   }
@@ -2345,6 +2383,10 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   <button onClick={()=>setSaleSendMeta(v=>!v)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:saleSendMeta?"#0d1e0d":"#1a1a0d",border:`1px solid ${saleSendMeta?"#2a4a2a":"#4a4a2a"}`,borderRadius:10,padding:"0.75rem 1rem",cursor:"pointer",fontFamily:"inherit",textAlign:"left",WebkitTapHighlightColor:"transparent"}}>
                     <div><p style={{margin:"0 0 2px",fontSize:12,fontWeight:800,color:saleSendMeta?"#4caf50":"#ffd43b"}}>{saleSendMeta?"📤 Se enviará a Meta (CAPI)":"📋 Solo registro interno (no se envía a Meta)"}</p><p style={{margin:0,fontSize:10,color:"#666"}}>{saleSendMeta?"Cuenta como conversión de Purchase en Eventos Manager":"Útil para ventas hechas fuera de tus campañas, o ya reportadas antes"}</p></div>
                     <div style={{width:40,height:22,borderRadius:20,background:saleSendMeta?"#4caf50":"#333",position:"relative",flexShrink:0,transition:"background 0.2s"}}><div style={{position:"absolute",top:2,left:saleSendMeta?20:2,width:18,height:18,borderRadius:"50%",background:"#fff",transition:"left 0.2s"}}/></div>
+                  </button>
+                  <button onClick={()=>setSaleIsBs(v=>!v)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:saleIsBs?"#1a1608":"#111",border:`1px solid ${saleIsBs?"#3a2f10":"#222"}`,borderRadius:10,padding:"0.75rem 1rem",cursor:"pointer",fontFamily:"inherit",textAlign:"left",WebkitTapHighlightColor:"transparent"}}>
+                    <div><p style={{margin:"0 0 2px",fontSize:12,fontWeight:800,color:saleIsBs?"#ffd43b":"#888"}}>{saleIsBs?"💱 Pagado en Bolívares (se convierte a valor real USDT)":"💵 Pagado directo en USD/USDT (sin conversión)"}</p><p style={{margin:0,fontSize:10,color:"#666"}}>{saleIsBs?"El monto se recalcula con la tasa Binance antes de guardarse":"Usa esto si el cliente pagó en Pago Móvil o efectivo en bolívares"}</p></div>
+                    <div style={{width:40,height:22,borderRadius:20,background:saleIsBs?"#ffd43b":"#333",position:"relative",flexShrink:0,transition:"background 0.2s"}}><div style={{position:"absolute",top:2,left:saleIsBs?20:2,width:18,height:18,borderRadius:"50%",background:saleIsBs?"#080808":"#fff",transition:"left 0.2s"}}/></div>
                   </button>
                   <input placeholder="Nombre del cliente" value={saleName} onChange={e=>setSaleName(e.target.value)} style={S.input}/>
                   <input placeholder={saleSendMeta?"Correo del cliente (recomendado)":"Correo del cliente (opcional)"} type="email" value={saleEmail} onChange={e=>setSaleEmail(e.target.value)} style={S.input}/>
