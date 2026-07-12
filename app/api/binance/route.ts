@@ -1,39 +1,39 @@
+async function fetchWithTimeout(url: string, ms = 4000): Promise<any> {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), ms);
+  try {
+    const r = await fetch(url, { cache: "no-store", signal: controller.signal });
+    if (!r.ok) throw new Error("bad status");
+    return await r.json();
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+function extractRate(d: any): number {
+  const v = parseFloat(d?.promedio ?? d?.venta ?? d?.compra ?? d?.price ?? d?.monitors?.usd?.price ?? 0);
+  return isNaN(v) ? 0 : v;
+}
+
 export async function GET() {
-  const sources: Array<() => Promise<number>> = [
-    async () => {
-      const r = await fetch("https://ve.dolarapi.com/v1/dolares/binance", { cache: "no-store" });
-      if (!r.ok) return 0;
-      const d = await r.json();
-      return parseFloat(d.promedio ?? d.venta ?? d.compra ?? 0);
-    },
-    async () => {
-      const r = await fetch("https://ve.dolarapi.com/v1/dolares/bitcoin", { cache: "no-store" });
-      if (!r.ok) return 0;
-      const d = await r.json();
-      return parseFloat(d.promedio ?? d.venta ?? d.compra ?? 0);
-    },
-    async () => {
-      const r = await fetch("https://pydolarvenezuela-api.vercel.app/api/v1/dollar?page=binance", { cache: "no-store" });
-      if (!r.ok) return 0;
-      const d = await r.json();
-      return parseFloat(d.price ?? d.monitors?.usd?.price ?? 0);
-    },
-    async () => {
-      const r = await fetch("https://pydolarve.org/api/v1/dollar?page=binance", { cache: "no-store" });
-      if (!r.ok) return 0;
-      const d = await r.json();
-      return parseFloat(d.price ?? d.monitors?.usd?.price ?? 0);
-    },
+  const urls = [
+    "https://ve.dolarapi.com/v1/dolares/binance",
+    "https://ve.dolarapi.com/v1/dolares/bitcoin",
+    "https://pydolarvenezuela-api.vercel.app/api/v1/dollar?page=binance",
+    "https://pydolarve.org/api/v1/dollar?page=binance",
   ];
 
-  for (const getRate of sources) {
-    try {
-      const rate = await getRate();
-      if (rate > 0) return Response.json({ rate });
-    } catch {
-      /* intenta la siguiente fuente */
-    }
-  }
+  const attempts = urls.map(async (url) => {
+    const data = await fetchWithTimeout(url, 4000);
+    const rate = extractRate(data);
+    if (rate > 0) return rate;
+    throw new Error("sin tasa válida");
+  });
 
-  return Response.json({ rate: 0 }, { status: 200 });
+  try {
+    const rate = await Promise.any(attempts);
+    return Response.json({ rate });
+  } catch {
+    return Response.json({ rate: 0 }, { status: 200 });
+  }
 }
