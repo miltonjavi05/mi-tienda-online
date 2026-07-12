@@ -1054,6 +1054,8 @@ export default function Home() {
   const[commentName,setCommentName]=useState("");
   const[commentText,setCommentText]=useState("");
   const[commentSending,setCommentSending]=useState(false);
+  const[commentErr,setCommentErr]=useState("");
+  const[commentOk,setCommentOk]=useState(false);
   const[menuOpen,setMenuOpen]      = useState(false);
   const[searchOpen,setSearchOpen]  = useState(false);
   const[searchQuery,setSearchQuery]= useState("");
@@ -1496,6 +1498,8 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
     if(selectedProduct){
       setCommentName("");
       setCommentText("");
+      setCommentErr("");
+      setCommentOk(false);
       loadProductComments(selectedProduct.id);
     }else{
       setProductComments([]);
@@ -1506,14 +1510,18 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
     if(!selectedProduct)return;
     if(!commentName.trim()||!commentText.trim())return;
     setCommentSending(true);
+    setCommentErr("");
+    setCommentOk(false);
     try{
       const createdAt=Date.now();
       await fsAddToCollection("product_comments",{productId:selectedProduct.id,productName:selectedProduct.name,name:commentName.trim(),comment:commentText.trim(),createdAt});
       setProductComments(prev=>[{id:"tmp_"+createdAt,productId:selectedProduct.id,productName:selectedProduct.name,name:commentName.trim(),comment:commentText.trim(),createdAt},...prev]);
       setCommentName("");
       setCommentText("");
-    }catch{
-      /* silencioso */
+      setCommentOk(true);
+      setTimeout(()=>setCommentOk(false),3500);
+    }catch(err){
+      setCommentErr(err instanceof Error&&err.message.toLowerCase().includes("permission")?"No se pudo publicar: falta permiso en las reglas de Firestore para 'product_comments'.":"No se pudo publicar el comentario. Intenta de nuevo.");
     }finally{
       setCommentSending(false);
     }
@@ -2801,6 +2809,8 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   <input placeholder="Tu nombre *" value={commentName} onChange={e=>setCommentName(e.target.value)} style={S.input}/>
                   <textarea placeholder="Escribe tu comentario sobre este producto..." value={commentText} onChange={e=>setCommentText(e.target.value)} rows={2} style={{...S.input,resize:"vertical" as const,lineHeight:1.6,minHeight:60}}/>
                   <button onClick={submitProductComment} disabled={!commentName.trim()||!commentText.trim()||commentSending} style={{...S.darkBtn,justifyContent:"center",borderRadius:8,fontSize:11,opacity:(!commentName.trim()||!commentText.trim()||commentSending)?0.5:1,cursor:(!commentName.trim()||!commentText.trim()||commentSending)?"not-allowed":"pointer"}}>{commentSending?"Publicando...":"PUBLICAR COMENTARIO"}</button>
+                  {commentErr&&<p style={{margin:0,fontSize:11,color:"#ff8888",background:"#1e0808",borderRadius:8,padding:"0.5rem 0.75rem"}}>{commentErr}</p>}
+                  {commentOk&&<p style={{margin:0,fontSize:11,color:"#4caf50",background:"#081e0e",borderRadius:8,padding:"0.5rem 0.75rem"}}>✓ Comentario publicado, ya es visible para todos</p>}
                 </div>
                 {commentsLoading?(
                   <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"0.5rem"}}>Cargando comentarios…</p>
