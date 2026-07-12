@@ -1338,7 +1338,8 @@ const couponsLoaded=useRef(false);
   // También actualiza cuando el usuario vuelve a la pestaña
   const onVisibility = () => {
     if (document.visibilityState === "visible") {
-      fetchBcvRate(); // respeta el caché, solo actualiza si ya expiró
+      fetchBcvRate();     // respeta el caché, solo actualiza si ya expiró
+      fetchBinanceRate(); // idem para la tasa Binance/USDT
     }
   };
   document.addEventListener("visibilitychange", onVisibility);

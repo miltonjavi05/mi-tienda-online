@@ -1,19 +1,39 @@
 export async function GET() {
-  try {
-    const r = await fetch("https://ve.dolarapi.com/v1/dolares/bitcoin", { cache: "no-store" });
-    if (r.ok) {
+  const sources: Array<() => Promise<number>> = [
+    async () => {
+      const r = await fetch("https://ve.dolarapi.com/v1/dolares/binance", { cache: "no-store" });
+      if (!r.ok) return 0;
       const d = await r.json();
-      const rate = parseFloat(d.promedio ?? d.venta ?? d.compra ?? 0);
+      return parseFloat(d.promedio ?? d.venta ?? d.compra ?? 0);
+    },
+    async () => {
+      const r = await fetch("https://ve.dolarapi.com/v1/dolares/bitcoin", { cache: "no-store" });
+      if (!r.ok) return 0;
+      const d = await r.json();
+      return parseFloat(d.promedio ?? d.venta ?? d.compra ?? 0);
+    },
+    async () => {
+      const r = await fetch("https://pydolarvenezuela-api.vercel.app/api/v1/dollar?page=binance", { cache: "no-store" });
+      if (!r.ok) return 0;
+      const d = await r.json();
+      return parseFloat(d.price ?? d.monitors?.usd?.price ?? 0);
+    },
+    async () => {
+      const r = await fetch("https://pydolarve.org/api/v1/dollar?page=binance", { cache: "no-store" });
+      if (!r.ok) return 0;
+      const d = await r.json();
+      return parseFloat(d.price ?? d.monitors?.usd?.price ?? 0);
+    },
+  ];
+
+  for (const getRate of sources) {
+    try {
+      const rate = await getRate();
       if (rate > 0) return Response.json({ rate });
+    } catch {
+      /* intenta la siguiente fuente */
     }
-  } catch {}
-  try {
-    const r2 = await fetch("https://pydolarvenezuela-api.vercel.app/api/v1/dollar?page=binance", { cache: "no-store" });
-    if (r2.ok) {
-      const d2 = await r2.json();
-      const rate2 = parseFloat(d2.price ?? d2.monitors?.usd?.price ?? 0);
-      if (rate2 > 0) return Response.json({ rate: rate2 });
-    }
-  } catch {}
+  }
+
   return Response.json({ rate: 0 }, { status: 200 });
 }
