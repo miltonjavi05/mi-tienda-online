@@ -1093,9 +1093,9 @@ const fetchBinanceRate = useCallback(async (force = false) => {
     } catch { /* silent */ }
   }
   try {
-    const r = await fetch("https://ve.dolarapi.com/v1/dolares/bitcoin");
+    const r = await fetch("/api/binance");
     const d = await r.json();
-    const parsed = parseFloat(d.promedio ?? 0);
+    const parsed = parseFloat(d.rate ?? 0);
     if (parsed > 0) {
       setBinanceRate(parsed);
       try {
