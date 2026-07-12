@@ -32,6 +32,7 @@ const META_PIXEL_ID = "840893159040582";
 // ─── CACHE CONFIG ─────────────────────────────────────────────────────────────
 const PRODUCTS_CACHE_KEY  = "fokus_products_v3";
 const PRODUCTS_CACHE_TIME = "fokus_products_time_v3";
+const PRODUCTS_VERSION_KEY= "fokus_products_version";
 const CACHE_TTL_MS        = 2 * 60 * 60 * 1000;
 
 function getCachedProducts(): Product[] | null {
@@ -58,6 +59,7 @@ function invalidateProductsCache(): void {
     sessionStorage.removeItem("fokus_products_v2");
     sessionStorage.removeItem("fokus_products_time_v2");
   } catch { /* silent */ }
+  fsBumpProductsVersion();
 }
 
 const SOCIAL = {
@@ -244,6 +246,21 @@ function fromFs(f:FsVal):unknown{if("stringValue" in f)return f.stringValue;if("
 interface FsDoc{name:string;fields:Record<string,FsVal>;}
 function docToProduct(doc:FsDoc):Product{const f=doc.fields||{};const rawImages=fromFs(f.images??{nullValue:null}) as string[]|null;const id=doc.name.split("/").pop() as string;return{id,name:fromFs(f.name??{nullValue:null}) as string||"",category:((fromFs(f.category??{nullValue:null}) as string)||"").toUpperCase(),price:fromFs(f.price??{nullValue:null}) as number||0,img:fromFs(f.img??{nullValue:null}) as string||"",description:fromFs(f.description??{nullValue:null}) as string||"",createdAt:fromFs(f.createdAt??{nullValue:null}) as number||0,order:fromFs(f.order??{nullValue:null}) as number||0,active:f.active!==undefined?(fromFs(f.active) as boolean):true,discount:fromFs(f.discount??{nullValue:null}) as number||0,images:Array.isArray(rawImages)?rawImages:[],code:(fromFs(f.code??{nullValue:null}) as string)||("FK-"+id.slice(-6).toUpperCase()),bestseller:f.bestseller!==undefined?(fromFs(f.bestseller) as boolean):false};}
 async function fsGetAll():Promise<Product[]>{const r=await fetch(`${fsBase()}/products?pageSize=300`);if(!r.ok)throw new Error(await r.text());const d=await r.json() as{documents?:FsDoc[]};return(d.documents||[]).map(docToProduct);}
+async function fsGetProductsVersion():Promise<number|null>{
+  try{
+    const r=await fetch(`${fsBase()}/meta/products_version`);
+    if(!r.ok)return null;
+    const d=await r.json() as FsDoc;
+    const v=fromFs(d.fields?.updatedAt??{nullValue:null}) as number|null;
+    return typeof v==="number"?v:null;
+  }catch{return null;}
+}
+async function fsBumpProductsVersion():Promise<void>{
+  try{
+    const fields={updatedAt:toFs(Date.now())};
+    await fetch(`${fsBase()}/meta/products_version?updateMask.fieldPaths=updatedAt`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({fields})});
+  }catch{ /* silent */ }
+}
 async function fsAdd(p:Omit<Product,"id">):Promise<void>{const fields=Object.fromEntries(Object.entries({...p,createdAt:Date.now()}).map(([k,v])=>[k,toFs(v)]));const r=await fetch(`${fsBase()}/products`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fields})});if(!r.ok)throw new Error(await r.text());}
 async function fsUpdate(id:string,p:Partial<Omit<Product,"id">>):Promise<void>{const fields=Object.fromEntries(Object.entries(p).map(([k,v])=>[k,toFs(v)]));const mask=Object.keys(p).map(k=>`updateMask.fieldPaths=${encodeURIComponent(k)}`).join("&");const r=await fetch(`${fsBase()}/products/${id}?${mask}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({fields})});if(!r.ok)throw new Error(await r.text());}
 async function fsDelete(id:string):Promise<void>{await fetch(`${fsBase()}/products/${id}`,{method:"DELETE"});}
@@ -1396,9 +1413,13 @@ const couponsLoaded=useRef(false);
     if (productsAlreadyLoaded.current && !forceRefresh) return;
     setLoading(true);
     try {
+      const serverVersion = await fsGetProductsVersion();
       if (!forceRefresh) {
         const cached = getCachedProducts();
-        if (cached && cached.length > 0) {
+        let cachedVersion: string | null = null;
+        try { cachedVersion = localStorage.getItem(PRODUCTS_VERSION_KEY); } catch { /* silent */ }
+        const versionMatches = serverVersion === null || cachedVersion === String(serverVersion);
+        if (cached && cached.length > 0 && versionMatches) {
           setProducts(cached);
           productsAlreadyLoaded.current = true;
           setLoading(false);
@@ -1409,6 +1430,7 @@ const couponsLoaded=useRef(false);
       const sorted = d.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
       const final = sorted.length > 0 ? sorted : DEMO;
       setCachedProducts(final);
+      if (serverVersion !== null) { try { localStorage.setItem(PRODUCTS_VERSION_KEY, String(serverVersion)); } catch { /* silent */ } }
       setProducts(final);
       productsAlreadyLoaded.current = true;
     } catch {
