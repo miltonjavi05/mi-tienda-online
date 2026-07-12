@@ -1128,6 +1128,7 @@ const fmtPrice=useCallback((usd:number)=>{if(showBs&&bcvRate){const bs=usd*bcvRa
   const setMainView=useCallback((v:MainView)=>{setMainViewRaw(v);scrollTop();},[]);
   const payMethodRef=useRef<HTMLDivElement>(null);
 const comprobanteRef=useRef<HTMLDivElement>(null);
+const payDetailsRef=useRef<HTMLDivElement>(null);
 const otroAutoScrolled=useRef(false);
 const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",cedula:"",telefono:"",agencia:"",direccion:"",estado:""});
 
@@ -2191,7 +2192,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
               </div>
               <p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#333",marginBottom:"0.75rem"}}>MÉTODO DE PAGO</p>
               <div style={{display:"flex",flexDirection:"column",gap:"0.45rem"}}>
-                {PAYMENT_METHODS.map(pm=>(<button key={pm.id} className="pc2" onClick={()=>{setPayMethod(pm.id);setTimeout(()=>comprobanteRef.current?.scrollIntoView({behavior:"smooth",block:"center"}),300);}} style={{display:"flex",alignItems:"center",gap:"0.85rem",background:payMethod===pm.id?"#fff":"#111",color:payMethod===pm.id?"#080808":C.text,border:`1px solid ${payMethod===pm.id?"#fff":"#1e1e1e"}`,borderRadius:10,padding:"0.8rem 1rem",textAlign:"left",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",transition:"all 0.15s"}}><span style={{fontSize:18}}>{pm.icon}</span><div><p style={{margin:0,fontSize:13,fontWeight:700}}>{pm.name}</p><p style={{margin:0,fontSize:10,opacity:0.5,marginTop:1}}>{pm.detail}</p></div>{payMethod===pm.id&&<span style={{marginLeft:"auto",fontSize:14,fontWeight:700}}>✓</span>}</button>))}
+                {PAYMENT_METHODS.map(pm=>(<button key={pm.id} className="pc2" onClick={()=>{setPayMethod(pm.id);setTimeout(()=>payDetailsRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),300);}} style={{display:"flex",alignItems:"center",gap:"0.85rem",background:payMethod===pm.id?"#fff":"#111",color:payMethod===pm.id?"#080808":C.text,border:`1px solid ${payMethod===pm.id?"#fff":"#1e1e1e"}`,borderRadius:10,padding:"0.8rem 1rem",textAlign:"left",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",transition:"all 0.15s"}}><span style={{fontSize:18}}>{pm.icon}</span><div><p style={{margin:0,fontSize:13,fontWeight:700}}>{pm.name}</p><p style={{margin:0,fontSize:10,opacity:0.5,marginTop:1}}>{pm.detail}</p></div>{payMethod===pm.id&&<span style={{marginLeft:"auto",fontSize:14,fontWeight:700}}>✓</span>}</button>))}
               </div>
             </div>
 
@@ -2200,7 +2201,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
               const isBs=pm.id==="pagomovil_bv"||pm.id==="pagomovil_ba";
               const amountLabel=isBs?(bcvRate?`Bs. ${Math.round(totalPrice*bcvRate).toLocaleString("es-VE")}`:"Cargando tasa…"):`$${totalPrice.toFixed(2)}`;
               return(
-                <div style={{marginTop:"1rem",background:"linear-gradient(135deg,#141410 0%,#0a0a0a 100%)",borderRadius:14,border:"2px solid #3a3520",overflow:"hidden",boxShadow:"0 8px 28px rgba(255,212,59,0.08), inset 0 1px 0 rgba(255,255,255,0.05)"}}>
+                <div ref={payDetailsRef} style={{marginTop:"1rem",background:"linear-gradient(135deg,#141410 0%,#0a0a0a 100%)",borderRadius:14,border:"2px solid #3a3520",overflow:"hidden",boxShadow:"0 8px 28px rgba(255,212,59,0.08), inset 0 1px 0 rgba(255,255,255,0.05)",scrollMarginTop:`${navH+12}px`}}>
                   <div style={{padding:"0.7rem 1.1rem",borderBottom:"1px solid #2a2a1a",display:"flex",alignItems:"center",gap:"0.6rem",background:"rgba(255,212,59,0.05)"}}>
                     <span style={{fontSize:17}}>{pm.icon}</span>
                     <p style={{fontSize:10,fontWeight:900,letterSpacing:2.5,color:"#ffd43b",margin:0}}>DATOS DE PAGO — {pm.name.toUpperCase()}</p>
