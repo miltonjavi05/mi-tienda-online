@@ -1271,10 +1271,10 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   const[adminEmail,setAdminEmail]  =useState("");
   const[adminPwd,setAdminPwd]      =useState("");
   const[adminErr,setAdminErr]      =useState("");
-  const[adminSec,setAdminSec]=useState<"menu"|"products"|"sales"|"stats"|"coupons"|"lookup"|"comments"|"bulkedit">("menu");
+  const[adminSec,setAdminSec]=useState<"menu"|"products"|"sales"|"stats"|"coupons"|"lookup"|"comments"|"bulkedit"|"bulkadd">("menu");
   const adminSecRef=useRef(adminSec);
   useEffect(()=>{adminSecRef.current=adminSec;},[adminSec]);
-  const enterAdminSec=useCallback((sec:"products"|"sales"|"stats"|"coupons"|"lookup"|"comments"|"bulkedit")=>{
+  const enterAdminSec=useCallback((sec:"products"|"sales"|"stats"|"coupons"|"lookup"|"comments"|"bulkedit"|"bulkadd")=>{
     try{window.history.pushState({adminSec:sec},"","/admin");}catch{}
     setAdminSec(sec);
   },[]);
@@ -1324,6 +1324,16 @@ const[bulkErr,setBulkErr]=useState("");
 const[bulkOk,setBulkOk]=useState("");
 const[bulkPasteText,setBulkPasteText]=useState("");
 const[bulkPasteMsg,setBulkPasteMsg]=useState("");
+const[bulkAddCat,setBulkAddCat]=useState("COLLARES");
+const[bulkAddImages,setBulkAddImages]=useState<string[]>([]);
+const[bulkAddUploading,setBulkAddUploading]=useState(false);
+const[bulkAddText,setBulkAddText]=useState("");
+const[bulkAddParsed,setBulkAddParsed]=useState<{name:string;description:string;price:string}[]>([]);
+const[bulkAddParseMsg,setBulkAddParseMsg]=useState("");
+const[bulkAddSaving,setBulkAddSaving]=useState(false);
+const[bulkAddErr,setBulkAddErr]=useState("");
+const[bulkAddOk,setBulkAddOk]=useState("");
+const bulkAddFileRef=useRef<HTMLInputElement>(null);
   const[adminSearch,setAdminSearch]=useState("");
   const[lookupCode,setLookupCode]=useState("");
   const[saleName,setSaleName]=useState("");
@@ -1888,6 +1898,70 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
   },[bulkDrafts,products,loadProducts]);
 
   useEffect(()=>{if(adminSec==="bulkedit"){loadBulkDrafts(bulkCat);setBulkPasteText("");setBulkPasteMsg("");}},[adminSec,bulkCat,loadBulkDrafts]);
+useEffect(()=>{if(adminSec==="bulkadd"){setBulkAddText("");setBulkAddParsed([]);setBulkAddParseMsg("");setBulkAddErr("");setBulkAddOk("");}},[adminSec]);
+
+const onBulkAddFilesChange=useCallback(async(e:React.ChangeEvent<HTMLInputElement>)=>{
+  const files=Array.from(e.target.files||[]);
+  if(!files.length)return;
+  setBulkAddUploading(true);
+  try{
+    const urls=await Promise.all(files.map(f=>uploadImg(f)));
+    setBulkAddImages(prev=>[...prev,...urls]);
+  }catch{setBulkAddErr("Error subiendo alguna de las fotos.");}
+  finally{setBulkAddUploading(false);if(bulkAddFileRef.current)bulkAddFileRef.current.value="";}
+},[]);
+const removeBulkAddImage=useCallback((idx:number)=>setBulkAddImages(prev=>prev.filter((_,i)=>i!==idx)),[]);
+const moveBulkAddImage=useCallback((idx:number,dir:-1|1)=>{setBulkAddImages(prev=>{const arr=[...prev];const ni=idx+dir;if(ni<0||ni>=arr.length)return prev;[arr[idx],arr[ni]]=[arr[ni],arr[idx]];return arr;});},[]);
+
+const parseBulkAddText=useCallback(()=>{
+  const blocks=bulkAddText.split(/\n\s*\n/).map(b=>b.trim()).filter(Boolean);
+  if(!blocks.length){setBulkAddParseMsg("Pega el texto con nombre, descripción y precio de cada producto.");return;}
+  const parsed=blocks.map(block=>{
+    const lines=block.split("\n").map(l=>l.trim()).filter(Boolean);
+    if(!lines.length)return{name:"",description:"",price:""};
+    const name=lines[0].replace(/^t[íi]tulo\s*:\s*/i,"").replace(/^nombre\s*:\s*/i,"").trim();
+    const lastLine=lines[lines.length-1];
+    const priceMatch=lastLine.match(/(\d+[.,]?\d*)/);
+    const looksLikePrice=lines.length>1&&!!priceMatch;
+    const price=looksLikePrice&&priceMatch?priceMatch[1].replace(",","."):"";
+    const descLines=looksLikePrice?lines.slice(1,-1):lines.slice(1);
+    const description=descLines.map(l=>l.replace(/^descripci[óo]n\s*:\s*/i,"").replace(/^precio\s*:\s*/i,"")).join(" ").trim();
+    return{name,description,price};
+  });
+  setBulkAddParsed(parsed);
+  setBulkAddParseMsg(`✓ Se detectaron ${parsed.length} producto(s). Revisa los campos antes de guardar.`);
+},[bulkAddText]);
+
+const updateBulkAddParsed=useCallback((idx:number,field:"name"|"description"|"price",value:string)=>{
+  setBulkAddParsed(prev=>prev.map((p,i)=>i===idx?{...p,[field]:value}:p));
+},[]);
+
+const saveBulkAddProducts=useCallback(async()=>{
+  setBulkAddErr("");setBulkAddOk("");
+  if(!bulkAddImages.length){setBulkAddErr("Sube al menos una foto.");return;}
+  if(!bulkAddParsed.length){setBulkAddErr("Pega y aplica el texto de los productos primero.");return;}
+  const count=Math.min(bulkAddImages.length,bulkAddParsed.length);
+  setBulkAddSaving(true);
+  try{
+    let created=0;
+    for(let i=0;i<count;i++){
+      const item=bulkAddParsed[i];
+      const price=parseFloat(item.price);
+      if(!item.name.trim()||!price||price<=0)continue;
+      await fsAdd({name:item.name.trim(),description:item.description.trim(),price,category:bulkAddCat.toUpperCase(),img:bulkAddImages[i],active:true,discount:0,images:[],code:"FK-"+(Date.now()+i).toString(36).slice(-6).toUpperCase()});
+      created++;
+    }
+    invalidateProductsCache();
+    productsAlreadyLoaded.current=false;
+    await loadProducts(true);
+    setBulkAddOk(`✓ ${created} producto(s) creado(s) correctamente`);
+    setBulkAddImages([]);setBulkAddText("");setBulkAddParsed([]);setBulkAddParseMsg("");
+  }catch(err){
+    setBulkAddErr("Error al guardar: "+(err instanceof Error?err.message:"desconocido"));
+  }finally{
+    setBulkAddSaving(false);
+  }
+},[bulkAddImages,bulkAddParsed,bulkAddCat,loadProducts]);
   useEffect(()=>{if(adminSec==="stats")loadStats();},[adminSec,loadStats]);
 useEffect(()=>{if(adminSec==="coupons"){loadCoupons();if(!couponCode)setCouponCode(generateCouponCode());}},[adminSec,loadCoupons]);
 useEffect(()=>{if(adminSec==="comments")loadAllComments();},[adminSec,loadAllComments]);
@@ -2524,7 +2598,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
         <main className="pv" style={{paddingTop:NAV_H,background:"#060606",minHeight:"100vh"}}>
           <div style={{maxWidth:720,margin:"0 auto",padding:"2rem 1rem 4rem"}}>
             {!adminLogged&&(<div style={{background:"#111",borderRadius:14,padding:"2.5rem 2rem",maxWidth:380,margin:"2rem auto",border:"1px solid #1a1a1a",animation:"slideUp 0.3s ease"}}><h1 style={{color:"#fff",fontSize:20,fontWeight:900,marginBottom:"1.5rem",textAlign:"center",letterSpacing:2}}>ADMIN</h1><div style={{display:"flex",flexDirection:"column",gap:"0.85rem"}}><input type="email" placeholder="Correo" value={adminEmail} onChange={e=>setAdminEmail(e.target.value)} style={S.input}/><PwdInput placeholder="Contraseña" value={adminPwd} onChange={setAdminPwd} onKeyDown={e=>e.key==="Enter"&&doLogin()} autoComplete="current-password"/>{adminErr&&<p style={{color:"#ff5555",fontSize:12,margin:0,background:"#1e0a0a",padding:"0.6rem 1rem",borderRadius:8}}>{adminErr}</p>}<button onClick={doLogin} style={S.adminBtn}>Entrar</button><button onClick={doLogout} style={{...S.adminBtn,background:"transparent",color:"#333",marginTop:4}}>← Volver</button></div></div>)}
-            {adminLogged&&adminSec==="menu"&&(<div style={{background:"#111",borderRadius:14,padding:"2.5rem 2rem",maxWidth:380,margin:"2rem auto",border:"1px solid #1a1a1a",animation:"slideUp 0.3s ease"}}><h1 style={{color:"#fff",fontSize:18,fontWeight:900,marginBottom:"0.4rem",textAlign:"center",letterSpacing:2}}>PANEL</h1><p style={{color:"#333",fontSize:12,textAlign:"center",marginBottom:"2rem",letterSpacing:1}}>Selecciona una opción</p><div style={{display:"flex",flexDirection:"column",gap:"0.65rem"}}><button onClick={()=>enterAdminSec("products")} style={S.adminBtn}>📦 Gestionar productos</button><button onClick={()=>enterAdminSec("bulkedit")} style={S.adminBtn}>✏️ Edición masiva de textos</button><button onClick={()=>enterAdminSec("sales")} style={S.adminBtn}>💰 Registrar venta manual</button><button onClick={()=>enterAdminSec("stats")} style={S.adminBtn}>📊 Ver estadísticas</button><button onClick={()=>enterAdminSec("coupons")} style={{...S.adminBtn,background:"linear-gradient(135deg,#fff 0%,#ccc 100%)"}}>🎟️ Cupones de descuento</button><button onClick={()=>enterAdminSec("lookup")} style={S.adminBtn}>🔍 Buscar por código</button><button onClick={()=>enterAdminSec("comments")} style={S.adminBtn}>💬 Comentarios de productos</button><button onClick={doLogout} style={{...S.adminBtn,background:"transparent",color:"#ff5555",border:"none",marginTop:8,letterSpacing:1}}>Cerrar sesión</button></div></div>)}
+            {adminLogged&&adminSec==="menu"&&(<div style={{background:"#111",borderRadius:14,padding:"2.5rem 2rem",maxWidth:380,margin:"2rem auto",border:"1px solid #1a1a1a",animation:"slideUp 0.3s ease"}}><h1 style={{color:"#fff",fontSize:18,fontWeight:900,marginBottom:"0.4rem",textAlign:"center",letterSpacing:2}}>PANEL</h1><p style={{color:"#333",fontSize:12,textAlign:"center",marginBottom:"2rem",letterSpacing:1}}>Selecciona una opción</p><div style={{display:"flex",flexDirection:"column",gap:"0.65rem"}}><button onClick={()=>enterAdminSec("products")} style={S.adminBtn}>📦 Gestionar productos</button><button onClick={()=>enterAdminSec("bulkedit")} style={S.adminBtn}>✏️ Edición masiva de textos</button><button onClick={()=>enterAdminSec("bulkadd")} style={S.adminBtn}>🖼️ Agregar productos masivo</button><button onClick={()=>enterAdminSec("sales")} style={S.adminBtn}>💰 Registrar venta manual</button><button onClick={()=>enterAdminSec("stats")} style={S.adminBtn}>📊 Ver estadísticas</button><button onClick={()=>enterAdminSec("coupons")} style={{...S.adminBtn,background:"linear-gradient(135deg,#fff 0%,#ccc 100%)"}}>🎟️ Cupones de descuento</button><button onClick={()=>enterAdminSec("lookup")} style={S.adminBtn}>🔍 Buscar por código</button><button onClick={()=>enterAdminSec("comments")} style={S.adminBtn}>💬 Comentarios de productos</button><button onClick={doLogout} style={{...S.adminBtn,background:"transparent",color:"#ff5555",border:"none",marginTop:8,letterSpacing:1}}>Cerrar sesión</button></div></div>)}
             {adminLogged&&adminSec==="products"&&(<>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem"}}><h1 style={{color:"#fff",fontSize:16,fontWeight:900,margin:0,letterSpacing:2}}>{editing?"EDITAR PRODUCTO":"PRODUCTOS"}</h1><button onClick={()=>{exitAdminSec();resetForm();}} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:12,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>← MENÚ</button></div>
               <div ref={formRef} style={{background:"#111",borderRadius:12,padding:"1.5rem",marginBottom:"1.25rem",border:editing?"1px solid #2a2a2a":"1px solid #1a1a1a"}}><p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 1.25rem"}}>{editing?`EDITANDO: ${editing.name}`:"NUEVO PRODUCTO"}</p><div style={{display:"flex",flexDirection:"column",gap:"0.8rem"}}><input placeholder="Nombre del producto *" value={fName} onChange={e=>setFName(e.target.value)} style={S.input}/><textarea placeholder="Descripción (opcional)" value={fDesc} onChange={e=>setFDesc(e.target.value)} rows={2} style={{...S.input,resize:"vertical" as any,lineHeight:1.6}}/><input placeholder="Precio en USD *" type="number" min="0" step="0.01" value={fPrice} onChange={e=>setFPrice(e.target.value)} style={S.input}/><select value={fCat} onChange={e=>setFCat(e.target.value)} style={{...S.input,appearance:"auto" as any}}><option value="">Selecciona categoría *</option><optgroup label="── LENTES">{LENTES_SUBCATS.map(s=><option key={s} value={s}>{catLabel(s)}</option>)}</optgroup><optgroup label="── OTROS">{SHOP_CATS.filter(c=>c!=="LENTES").map(c=><option key={c} value={c}>{catLabel(c)}</option>)}</optgroup></select><div style={{background:"#0e0e0e",borderRadius:8,padding:"1rem",border:"1px dashed #1e1e1e"}}><p style={{color:"#333",fontSize:9,letterSpacing:2,margin:"0 0 0.65rem",fontWeight:800}}>IMAGEN {!editing&&"*"}</p><input ref={fileRef} type="file" accept="image/*" onChange={onFileChange} style={{display:"none"}} id="fi"/><label htmlFor="fi" style={{display:"inline-flex",alignItems:"center",gap:"0.45rem",background:"#1a1a1a",color:"#888",padding:"0.55rem 1rem",borderRadius:8,cursor:"pointer",fontSize:12,border:"1px solid #222",fontFamily:"inherit"}}>📷 {fFile?"Cambiar":"Elegir foto"}</label>{fFile&&<span style={{color:"#444",fontSize:11,marginLeft:"0.65rem"}}>{fFile.name}</span>}{fPrev&&<div style={{marginTop:"0.65rem",width:80,height:80,borderRadius:8,overflow:"hidden",border:"1px solid #222"}}><img src={fPrev} alt="preview" style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/></div>}</div>
@@ -2899,6 +2973,67 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   <button onClick={saveBulkEdits} disabled={bulkSaving} style={{...S.adminBtn,marginTop:"1.25rem",opacity:bulkSaving?0.5:1,cursor:bulkSaving?"not-allowed":"pointer"}}>{bulkSaving?"Guardando...":"Guardar todos los cambios"}</button>
                 )}
               </div>
+            </>)}
+
+            {adminLogged&&adminSec==="bulkadd"&&(<>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem"}}><h1 style={{color:"#fff",fontSize:16,fontWeight:900,margin:0,letterSpacing:2}}>AGREGAR PRODUCTOS MASIVO</h1><button onClick={()=>exitAdminSec()} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:12,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>← MENÚ</button></div>
+              <div style={{background:"#111",borderRadius:14,padding:"1.25rem",border:"1px solid #1a1a1a",marginBottom:"1.25rem"}}>
+                <p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 0.85rem"}}>1. SELECCIONA LA CATEGORÍA</p>
+                <select value={bulkAddCat} onChange={e=>setBulkAddCat(e.target.value)} style={{...S.input,appearance:"auto" as any}}>
+                  <optgroup label="── LENTES">{LENTES_SUBCATS.map(s=><option key={s} value={s}>{catLabel(s)}</option>)}</optgroup>
+                  <optgroup label="── OTROS">{SHOP_CATS.filter(c=>c!=="LENTES").map(c=><option key={c} value={c}>{catLabel(c)}</option>)}</optgroup>
+                </select>
+              </div>
+              <div style={{background:"#111",borderRadius:14,padding:"1.25rem",border:"1px solid #1a1a1a",marginBottom:"1.25rem"}}>
+                <p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 0.85rem"}}>2. SUBE LAS FOTOS EN ORDEN ({bulkAddImages.length})</p>
+                <input ref={bulkAddFileRef} type="file" accept="image/*" multiple onChange={onBulkAddFilesChange} style={{display:"none"}} id="badd-files"/>
+                <label htmlFor="badd-files" style={{display:"inline-flex",alignItems:"center",gap:"0.45rem",background:"#1a1a1a",color:"#888",padding:"0.6rem 1.1rem",borderRadius:8,cursor:bulkAddUploading?"not-allowed":"pointer",fontSize:12,border:"1px solid #222",fontFamily:"inherit",opacity:bulkAddUploading?0.5:1}}>{bulkAddUploading?"Subiendo…":"📷 Agregar fotos"}</label>
+                {bulkAddImages.length>0&&(
+                  <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap",marginTop:"0.85rem"}}>
+                    {bulkAddImages.map((url,i)=>(
+                      <div key={i} style={{position:"relative",width:70,height:70,borderRadius:8,overflow:"hidden",border:"1px solid #222"}}>
+                        <img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/>
+                        <span style={{position:"absolute",bottom:2,left:2,background:"rgba(0,0,0,0.8)",color:"#fff",fontSize:9,fontWeight:800,padding:"1px 5px",borderRadius:5}}>#{i+1}</span>
+                        <button type="button" onClick={()=>removeBulkAddImage(i)} style={{position:"absolute",top:2,right:2,background:"rgba(0,0,0,0.75)",border:"none",borderRadius:"50%",width:16,height:16,color:"#ff6666",fontSize:10,lineHeight:1,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+                        <div style={{position:"absolute",top:2,left:2,display:"flex",gap:2}}>
+                          {i>0&&<button type="button" onClick={()=>moveBulkAddImage(i,-1)} style={{background:"rgba(0,0,0,0.75)",border:"none",borderRadius:4,width:16,height:16,color:"#fff",fontSize:9,lineHeight:1,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>◀</button>}
+                          {i<bulkAddImages.length-1&&<button type="button" onClick={()=>moveBulkAddImage(i,1)} style={{background:"rgba(0,0,0,0.75)",border:"none",borderRadius:4,width:16,height:16,color:"#fff",fontSize:9,lineHeight:1,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>▶</button>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <p style={{color:"#2a2a2a",fontSize:9,margin:"0.6rem 0 0",lineHeight:1.5}}>El orden de las fotos debe coincidir con el orden de los productos que pegues abajo. Usa ◀ ▶ para reordenar.</p>
+              </div>
+              <div style={{background:"linear-gradient(135deg,#141410 0%,#0e0e0e 100%)",borderRadius:14,padding:"1.25rem",border:"1px solid #2a2a1a",marginBottom:"1.25rem"}}>
+                <p style={{color:"#ffd43b",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 0.5rem"}}>3. PEGA NOMBRE, DESCRIPCIÓN Y PRECIO DE CADA PRODUCTO</p>
+                <p style={{color:"#666",fontSize:11,margin:"0 0 0.85rem",lineHeight:1.6}}>Un bloque por producto, en el mismo orden que las fotos. Primera línea = nombre, última línea = precio (solo el número), líneas del medio = descripción. Separa cada producto con una línea en blanco.</p>
+                <textarea value={bulkAddText} onChange={e=>setBulkAddText(e.target.value)} rows={10} placeholder={"Collar As de Picas\nDije de as de picas en acero inoxidable, doble cadena...\n18\n\nCollar Triángulos Minimalista\nDiseño geométrico de triángulos entrelazados...\n15\n\n(sigue con el resto en el mismo orden que las fotos)"} style={{...S.input,fontSize:12,lineHeight:1.6,resize:"vertical" as const,fontFamily:"monospace"}}/>
+                <button onClick={parseBulkAddText} style={{...S.adminBtn,marginTop:"0.85rem",background:"linear-gradient(135deg,#ffd43b 0%,#c99a1f 100%)"}}>Repartir en los campos de abajo</button>
+                {bulkAddParseMsg&&<p style={{margin:"0.75rem 0 0",fontSize:11,color:"#ffd43b",lineHeight:1.6}}>{bulkAddParseMsg}</p>}
+              </div>
+              {bulkAddParsed.length>0&&(
+                <div style={{background:"#111",borderRadius:14,padding:"1.25rem",border:"1px solid #1a1a1a",marginBottom:"1.25rem"}}>
+                  <p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 1rem"}}>4. REVISA Y CONFIRMA ({bulkAddParsed.length})</p>
+                  <div style={{display:"flex",flexDirection:"column",gap:"1rem"}}>
+                    {bulkAddParsed.map((item,i)=>(
+                      <div key={i} style={{display:"flex",gap:"0.85rem",background:"#0c0c0c",border:"1px solid #1a1a1a",borderRadius:10,padding:"0.85rem"}}>
+                        <div style={{width:56,height:56,borderRadius:8,overflow:"hidden",flexShrink:0,background:"#161616",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                          {bulkAddImages[i]?<img src={optImg(bulkAddImages[i],120)} alt="" style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/>:<span style={{fontSize:9,color:"#333"}}>Sin foto</span>}
+                        </div>
+                        <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",gap:"0.5rem"}}>
+                          <input value={item.name} onChange={e=>updateBulkAddParsed(i,"name",e.target.value)} style={{...S.input,fontSize:12,padding:"0.55rem 0.75rem"}} placeholder="Nombre del producto"/>
+                          <textarea value={item.description} onChange={e=>updateBulkAddParsed(i,"description",e.target.value)} rows={2} style={{...S.input,fontSize:12,padding:"0.55rem 0.75rem",resize:"vertical" as const,lineHeight:1.5}} placeholder="Descripción"/>
+                          <input value={item.price} onChange={e=>updateBulkAddParsed(i,"price",e.target.value)} type="number" min="0" step="0.01" style={{...S.input,fontSize:12,padding:"0.55rem 0.75rem"}} placeholder="Precio en USD"/>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {bulkAddErr&&<div style={{color:"#ff5555",fontSize:12,background:"#1e0808",padding:"0.65rem 1rem",borderRadius:8,marginTop:"1rem"}}>{bulkAddErr}</div>}
+                  {bulkAddOk&&<div style={{color:"#55cc77",fontSize:12,background:"#081e0e",padding:"0.65rem 1rem",borderRadius:8,marginTop:"1rem"}}>{bulkAddOk}</div>}
+                  <button onClick={saveBulkAddProducts} disabled={bulkAddSaving} style={{...S.adminBtn,marginTop:"1.25rem",opacity:bulkAddSaving?0.5:1,cursor:bulkAddSaving?"not-allowed":"pointer"}}>{bulkAddSaving?"Creando productos...":`Crear ${Math.min(bulkAddImages.length,bulkAddParsed.length)} producto(s)`}</button>
+                </div>
+              )}
             </>)}
 
             {adminLogged&&adminSec==="comments"&&(<>
