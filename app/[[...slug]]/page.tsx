@@ -104,7 +104,7 @@ interface CartItem { product:Product; qty:number; }
 interface UserData { uid:string; email:string; displayName:string; createdAt:number; photoURL?:string; idToken?:string; }
 interface Coupon { id:string; code:string; type:"general"|"product"|"category"; productId?:string; productName?:string; category?:string; discountPercent:number; durationHours:number; createdAt:number; expiresAt:number; active:boolean; }
 interface OrderSnapshot { items:CartItem[]; total:number; payMethod:string; deliveryInfo:DeliveryInfo; comprobanteUrl:string; waUrl:string; orderId:string; couponCode?:string; couponDiscount?:number; }
-interface ProductComment { id:string; productId:string; productName:string; name:string; comment:string; createdAt:number; }
+interface ProductComment { id:string; productId:string; productName:string; name:string; comment:string; stars:number; createdAt:number; }
 
 type MainView = "fokus"|"shop"|"comunidad"|"grabados"|"cart"|"admin"|"account"|"thankyou";
 type ShopFilter = typeof ALL_SHOP_CATS[number]|"TODO"|typeof LENTES_SUBCATS[number];
@@ -251,7 +251,7 @@ async function fsUpdateDoc(collection:string,id:string,p:Record<string,unknown>)
 async function fsDeleteDoc(collection:string,id:string):Promise<void>{await fetch(`${fsBase()}/${collection}/${id}`,{method:"DELETE"});}
 async function fsAddToCollection(collection:string,data:Record<string,unknown>):Promise<void>{const fields=Object.fromEntries(Object.entries(data).map(([k,v])=>[k,toFs(v as unknown)]));const r=await fetch(`${fsBase()}/${collection}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fields})});if(!r.ok)throw new Error(await r.text());}
 async function fsGetCollection(collection:string,pageSize=300):Promise<Array<Record<string,unknown>&{id:string}>>{const r=await fetch(`${fsBase()}/${collection}?pageSize=${pageSize}`);if(!r.ok)throw new Error(await r.text());const d=await r.json() as{documents?:FsDoc[]};return(d.documents||[]).map(doc=>{const fields=doc.fields||{};const obj:Record<string,unknown>={};Object.entries(fields).forEach(([k,v])=>{obj[k]=fromFs(v);});return{...obj,id:doc.name.split("/").pop() as string};});}
-async function fsSaveUser(uid:string,data:Record<string,unknown>,idToken?:string):Promise<void>{const fields=Object.fromEntries(Object.entries(data).map(([k,v])=>[k,toFs(v as unknown)]));const mask=Object.keys(data).map(k=>`updateMask.fieldPaths=${encodeURIComponent(k)}`).join("&");const headers:Record<string,string>={"Content-Type":"application/json"};if(idToken)headers["Authorization"]=`Bearer ${idToken}`;await fetch(`${fsBase()}/users/${uid}?${mask}`,{method:"PATCH",headers,body:JSON.stringify({fields})}).catch(()=>{});}
+async function fsSaveUser(uid:string,data:Record<string,unknown>,idToken?:string):Promise<void>{const fields=Object.fromEntries(Object.entries(data).map(([k,v])=>[k,toFs(v as unknown)]));const mask=Object.keys(data).map(k=>`updateMask.fieldPaths=${encodeURIComponent(k)}`).join("&");const headers:Record<string,string>={"Content-Type":"application/json"};if(idToken)headers["Authorization"]=`Bearer ${idToken}`;const r=await fetch(`${fsBase()}/users/${uid}?${mask}`,{method:"PATCH",headers,body:JSON.stringify({fields})});if(!r.ok)throw new Error(await r.text());}
 async function refreshIdToken(refreshToken:string):Promise<{idToken:string;localId:string}|null>{try{const r=await fetch(`https://securetoken.googleapis.com/v1/token?key=${FIREBASE_CONFIG.apiKey}`,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:`grant_type=refresh_token&refresh_token=${encodeURIComponent(refreshToken)}`});const d=await r.json() as{id_token?:string;user_id?:string};if(!r.ok||!d.id_token)return null;return{idToken:d.id_token,localId:d.user_id!};}catch{return null;}}
 async function authSignUp(email:string,password:string,displayName:string):Promise<{idToken:string;localId:string;refreshToken:string}>{const r=await fetch(`${AUTH_BASE}:signUp?key=${FIREBASE_CONFIG.apiKey}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password,returnSecureToken:true})});const d=await r.json() as{idToken?:string;localId?:string;refreshToken?:string;error?:{message:string}};if(!r.ok||d.error)throw new Error(d.error?.message||"Error al registrar");await fetch(`${AUTH_BASE}:update?key=${FIREBASE_CONFIG.apiKey}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({idToken:d.idToken,displayName,returnSecureToken:false})});return{idToken:d.idToken!,localId:d.localId!,refreshToken:d.refreshToken!};}
 async function authSignIn(email:string,password:string):Promise<{idToken:string;localId:string;displayName:string;refreshToken:string}>{const r=await fetch(`${AUTH_BASE}:signInWithPassword?key=${FIREBASE_CONFIG.apiKey}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password,returnSecureToken:true})});const d=await r.json() as{idToken?:string;localId?:string;displayName?:string;refreshToken?:string;error?:{message:string}};if(!r.ok||d.error)throw new Error(d.error?.message||"Error al iniciar sesión");return{idToken:d.idToken!,localId:d.localId!,displayName:d.displayName||"",refreshToken:d.refreshToken!};}
@@ -427,6 +427,18 @@ const IcCamera=memo(({s=16,c="#fff"}:{s?:number;c?:string})=>(<svg width={s} hei
 const IcEdit=memo(({s=16,c="#fff"}:{s?:number;c?:string})=>(<svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>));IcEdit.displayName="IcEdit";
 const IcCheck=memo(({s=16,c="#fff"}:{s?:number;c?:string})=>(<svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>));IcCheck.displayName="IcCheck";
 const IcUpload=memo(({s=18,c="#fff"}:{s?:number;c?:string})=>(<svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg>));IcUpload.displayName="IcUpload";
+const IcStar=memo(({s=14,filled=false}:{s?:number;filled?:boolean})=>(<svg width={s} height={s} viewBox="0 0 24 24" fill={filled?"#fff":"none"} stroke={filled?"#fff":"#3a3a3a"} strokeWidth="1.5" strokeLinejoin="round"><path d="M12 2l2.9 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l7.1-1.01z"/></svg>));IcStar.displayName="IcStar";
+const StarRow=memo(function StarRow({value,onChange,size=15}:{value:number;onChange?:(n:number)=>void;size?:number}){
+  return(
+    <div style={{display:"flex",gap:3}}>
+      {[1,2,3,4,5].map(n=>(
+        <button key={n} type="button" onClick={onChange?()=>onChange(n):undefined} disabled={!onChange} style={{background:"none",border:"none",padding:2,cursor:onChange?"pointer":"default",WebkitTapHighlightColor:"transparent",display:"flex"}}>
+          <IcStar s={size} filled={n<=value}/>
+        </button>
+      ))}
+    </div>
+  );
+});
 
 function catLabel(cat:string):string{const m:Record<string,string>={"LENTES·FOTOCROMATICOS":"Fotocromaticos","LENTES·ANTI-LUZ-AZUL":"Anti Luz Azul","LENTES·SOL":"De Sol","LENTES·MOTORIZADOS":"Para Motos"};return m[cat]??(cat[0]+cat.slice(1).toLowerCase());}
 function scrollTop(){window.scrollTo({top:0,behavior:"instant" as ScrollBehavior});}
@@ -1053,6 +1065,7 @@ export default function Home() {
   const[commentsLoading,setCommentsLoading]=useState(false);
   const[commentName,setCommentName]=useState("");
   const[commentText,setCommentText]=useState("");
+  const[commentStars,setCommentStars]=useState(5);
   const[commentSending,setCommentSending]=useState(false);
   const[commentErr,setCommentErr]=useState("");
   const[commentOk,setCommentOk]=useState(false);
@@ -1076,6 +1089,7 @@ const[couponCheckErr,setCouponCheckErr]=useState("");  const[products,setProduct
   const[newName,setNewName]        = useState("");
   const[nameLoading,setNameLoading]= useState(false);
   const[photoLoading,setPhotoLoading]=useState(false);
+  const[photoErr,setPhotoErr]=useState("");
   const[showReviewModal,setShowReviewModal]=useState(false);
 const[copiedPay,setCopiedPay]=useState(false);
 const photoInputRef              = useRef<HTMLInputElement>(null);
@@ -1450,7 +1464,26 @@ const couponsLoaded=useRef(false);
     setDeepLinkPending(false);
   },[products,currentUser?.email]);
 
-  const handleProfilePhoto=useCallback(async(e:React.ChangeEvent<HTMLInputElement>)=>{const file=e.target.files?.[0];if(!file||!currentUser)return;setPhotoLoading(true);try{const url=await uploadImg(file);let idToken=currentUser.idToken;if(!idToken){const rt=localStorage.getItem("fokus_refresh");if(rt){const res=await refreshIdToken(rt);if(res)idToken=res.idToken;}}await fsSaveUser(currentUser.uid,{photoURL:url},idToken).catch(()=>{});setCurrentUser(prev=>{if(!prev)return prev;const u={...prev,photoURL:url,idToken};localStorage.setItem("fokus_user",JSON.stringify(u));return u;});}catch(err){console.error("Error subiendo foto:",err);}finally{setPhotoLoading(false);if(photoInputRef.current)photoInputRef.current.value="";};},[currentUser]);
+  const handleProfilePhoto=useCallback(async(e:React.ChangeEvent<HTMLInputElement>)=>{
+    const file=e.target.files?.[0];
+    if(!file||!currentUser)return;
+    setPhotoLoading(true);
+    setPhotoErr("");
+    try{
+      const url=await uploadImg(file);
+      let idToken=currentUser.idToken;
+      const rt=localStorage.getItem("fokus_refresh");
+      if(rt){const res=await refreshIdToken(rt);if(res)idToken=res.idToken;}
+      await fsSaveUser(currentUser.uid,{photoURL:url},idToken);
+      setCurrentUser(prev=>{if(!prev)return prev;const u={...prev,photoURL:url,idToken};localStorage.setItem("fokus_user",JSON.stringify(u));return u;});
+    }catch(err){
+      console.error("Error subiendo foto:",err);
+      setPhotoErr("No se pudo guardar la foto. Verifica tu conexión e intenta de nuevo.");
+    }finally{
+      setPhotoLoading(false);
+      if(photoInputRef.current)photoInputRef.current.value="";
+    }
+  },[currentUser]);
 
   const handleSaveName=useCallback(async()=>{if(!newName.trim()||!currentUser)return;setNameLoading(true);const updated:UserData={...currentUser,displayName:newName.trim()};setCurrentUser(updated);setEditingName(false);setNameLoading(false);},[currentUser,newName]);
 
@@ -1479,12 +1512,13 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
     if(!selectedProduct)return[];
     return products.filter(p=>p.category===selectedProduct.category&&p.id!==selectedProduct.id&&p.active!==false);
   },[selectedProduct,products]);
+  const avgRating=useMemo(()=>productComments.length?productComments.reduce((s,c)=>s+(c.stars||5),0)/productComments.length:0,[productComments]);
 
   const loadProductComments=useCallback(async(productId:string)=>{
     setCommentsLoading(true);
     try{
       const all=await fsGetCollection("product_comments",300);
-      const filtered=all.filter(c=>c.productId===productId).map(c=>({id:c.id,productId:(c.productId as string)||"",productName:(c.productName as string)||"",name:(c.name as string)||"",comment:(c.comment as string)||"",createdAt:Number(c.createdAt)||0})) as ProductComment[];
+      const filtered=all.filter(c=>c.productId===productId).map(c=>({id:c.id,productId:(c.productId as string)||"",productName:(c.productName as string)||"",name:(c.name as string)||"",comment:(c.comment as string)||"",stars:Number(c.stars)||5,createdAt:Number(c.createdAt)||0})) as ProductComment[];
       filtered.sort((a,b)=>b.createdAt-a.createdAt);
       setProductComments(filtered);
     }catch{
@@ -1498,6 +1532,7 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
     if(selectedProduct){
       setCommentName("");
       setCommentText("");
+      setCommentStars(5);
       setCommentErr("");
       setCommentOk(false);
       loadProductComments(selectedProduct.id);
@@ -1514,10 +1549,11 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
     setCommentOk(false);
     try{
       const createdAt=Date.now();
-      await fsAddToCollection("product_comments",{productId:selectedProduct.id,productName:selectedProduct.name,name:commentName.trim(),comment:commentText.trim(),createdAt});
-      setProductComments(prev=>[{id:"tmp_"+createdAt,productId:selectedProduct.id,productName:selectedProduct.name,name:commentName.trim(),comment:commentText.trim(),createdAt},...prev]);
+      await fsAddToCollection("product_comments",{productId:selectedProduct.id,productName:selectedProduct.name,name:commentName.trim(),comment:commentText.trim(),stars:commentStars,createdAt});
+      setProductComments(prev=>[{id:"tmp_"+createdAt,productId:selectedProduct.id,productName:selectedProduct.name,name:commentName.trim(),comment:commentText.trim(),stars:commentStars,createdAt},...prev]);
       setCommentName("");
       setCommentText("");
+      setCommentStars(5);
       setCommentOk(true);
       setTimeout(()=>setCommentOk(false),3500);
     }catch(err){
@@ -1525,7 +1561,7 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
     }finally{
       setCommentSending(false);
     }
-  },[selectedProduct,commentName,commentText]);
+  },[selectedProduct,commentName,commentText,commentStars]);
 
   const closeProdModal=useCallback(()=>{if(modalPushedRef.current)window.history.back();else setSel(null);},[]);
 
@@ -1750,7 +1786,7 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     setAllCommentsLoading(true);
     try{
       const raw=await fsGetCollection("product_comments",300);
-      const list:ProductComment[]=raw.map(r=>({id:r.id,productId:(r.productId as string)||"",productName:(r.productName as string)||"",name:(r.name as string)||"",comment:(r.comment as string)||"",createdAt:Number(r.createdAt)||0}));
+      const list:ProductComment[]=raw.map(r=>({id:r.id,productId:(r.productId as string)||"",productName:(r.productName as string)||"",name:(r.name as string)||"",comment:(r.comment as string)||"",stars:Number(r.stars)||5,createdAt:Number(r.createdAt)||0}));
       list.sort((a,b)=>b.createdAt-a.createdAt);
       setAllComments(list);
       allCommentsLoaded.current=true;
@@ -2155,6 +2191,8 @@ useEffect(()=>{if(adminSec==="comments")loadAllComments();},[adminSec,loadAllCom
                   <p style={{fontSize:10,color:"#2a2a2a",margin:0,letterSpacing:0.5}}>Miembro desde {new Date(currentUser.createdAt).toLocaleDateString("es-VE",{year:"numeric",month:"long"})}</p>
                 </div>
               </div>
+              {photoErr&&<p style={{margin:"0 0 0.5rem",fontSize:11,color:"#ff8888",background:"#1e0808",borderRadius:8,padding:"0.5rem 0.75rem"}}>{photoErr}</p>}
+              <p style={{fontSize:10,color:"#2a2a2a",margin:0,lineHeight:1.6}}>Tu foto se guarda en tu cuenta y estará disponible cada vez que inicies sesión, desde cualquier dispositivo.</p>
             </div>
             <button onClick={()=>{setCurrentUser(null);setMainView("fokus");}} style={{...S.darkBtn,background:"transparent",color:"#cc3333",border:"1px solid #2a1515",borderRadius:8,width:"100%",justifyContent:"center",fontSize:12}}>Cerrar sesión</button>
           </div>
@@ -2756,6 +2794,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2,flexWrap:"wrap"}}>
                             <span style={{fontSize:12,fontWeight:800,color:"#ccc"}}>{c.name}</span>
+                            <StarRow value={c.stars||5} size={10}/>
                             <span style={{fontSize:9,color:"#333"}}>· {c.productName||"Producto eliminado"}</span>
                             <span style={{fontSize:9,color:"#2a2a2a"}}>· {new Date(c.createdAt).toLocaleDateString("es-VE",{day:"2-digit",month:"short",year:"numeric"})}</span>
                           </div>
@@ -2804,27 +2843,41 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
               ):(
                 <p style={{fontSize:24,fontWeight:900,margin:"0 0 1.25rem",color:C.accent}}>{fmtPrice(selectedProduct.price)}</p>
               )}
-              <div style={{marginTop:"0.25rem",paddingTop:"1.1rem",borderTop:`1px solid ${C.border}`,paddingBottom:"1rem"}}>
-                <p style={{fontSize:10,fontWeight:800,letterSpacing:2,color:"#555",margin:"0 0 0.85rem"}}>COMENTARIOS{productComments.length>0?` (${productComments.length})`:""}</p>
-                <div style={{display:"flex",flexDirection:"column",gap:"0.6rem",marginBottom:"1rem"}}>
-                  <input placeholder="Tu nombre *" value={commentName} onChange={e=>setCommentName(e.target.value)} style={S.input}/>
-                  <textarea placeholder="Escribe tu comentario sobre este producto..." value={commentText} onChange={e=>setCommentText(e.target.value)} rows={2} style={{...S.input,resize:"vertical" as const,lineHeight:1.6,minHeight:60}}/>
-                  <button onClick={submitProductComment} disabled={!commentName.trim()||!commentText.trim()||commentSending} style={{...S.darkBtn,justifyContent:"center",borderRadius:8,fontSize:11,opacity:(!commentName.trim()||!commentText.trim()||commentSending)?0.5:1,cursor:(!commentName.trim()||!commentText.trim()||commentSending)?"not-allowed":"pointer"}}>{commentSending?"Publicando...":"PUBLICAR COMENTARIO"}</button>
-                  {commentErr&&<p style={{margin:0,fontSize:11,color:"#ff8888",background:"#1e0808",borderRadius:8,padding:"0.5rem 0.75rem"}}>{commentErr}</p>}
-                  {commentOk&&<p style={{margin:0,fontSize:11,color:"#4caf50",background:"#081e0e",borderRadius:8,padding:"0.5rem 0.75rem"}}>✓ Comentario publicado, ya es visible para todos</p>}
+              <div style={{marginTop:"0.25rem",paddingTop:"1.25rem",borderTop:`1px solid ${C.border}`,paddingBottom:"1rem"}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"1rem"}}>
+                  <p style={{fontSize:10,fontWeight:800,letterSpacing:2,color:"#555",margin:0}}>RESEÑAS{productComments.length>0?` (${productComments.length})`:""}</p>
+                  {productComments.length>0&&(
+                    <div style={{display:"flex",alignItems:"center",gap:6}}>
+                      <StarRow value={Math.round(avgRating)} size={12}/>
+                      <span style={{fontSize:11,fontWeight:800,color:"#fff"}}>{avgRating.toFixed(1)}</span>
+                    </div>
+                  )}
+                </div>
+                <div style={{background:"linear-gradient(160deg,#141414 0%,#0c0c0c 100%)",border:"1px solid #1e1e1e",borderRadius:14,padding:"1.1rem",marginBottom:"1.1rem",position:"relative",overflow:"hidden"}}>
+                  <div style={{position:"absolute",top:0,left:0,right:0,height:1,background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.12),transparent)"}}/>
+                  <p style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#444",margin:"0 0 0.6rem"}}>TU CALIFICACIÓN</p>
+                  <div style={{marginBottom:"0.85rem"}}><StarRow value={commentStars} onChange={setCommentStars} size={22}/></div>
+                  <div style={{display:"flex",flexDirection:"column",gap:"0.6rem"}}>
+                    <input placeholder="Tu nombre *" value={commentName} onChange={e=>setCommentName(e.target.value)} style={S.input}/>
+                    <textarea placeholder="Escribe tu comentario sobre este producto..." value={commentText} onChange={e=>setCommentText(e.target.value)} rows={2} style={{...S.input,resize:"vertical" as const,lineHeight:1.6,minHeight:60}}/>
+                    <button onClick={submitProductComment} disabled={!commentName.trim()||!commentText.trim()||commentSending} style={{...S.darkBtn,justifyContent:"center",borderRadius:8,fontSize:11,opacity:(!commentName.trim()||!commentText.trim()||commentSending)?0.5:1,cursor:(!commentName.trim()||!commentText.trim()||commentSending)?"not-allowed":"pointer"}}>{commentSending?"Publicando...":"PUBLICAR RESEÑA"}</button>
+                    {commentErr&&<p style={{margin:0,fontSize:11,color:"#ff8888",background:"#1e0808",borderRadius:8,padding:"0.5rem 0.75rem"}}>{commentErr}</p>}
+                    {commentOk&&<p style={{margin:0,fontSize:11,color:"#4caf50",background:"#081e0e",borderRadius:8,padding:"0.5rem 0.75rem"}}>✓ Reseña publicada, ya es visible para todos</p>}
+                  </div>
                 </div>
                 {commentsLoading?(
-                  <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"0.5rem"}}>Cargando comentarios…</p>
+                  <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"0.5rem"}}>Cargando reseñas…</p>
                 ):productComments.length===0?(
-                  <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"0.5rem"}}>Sé el primero en comentar este producto.</p>
+                  <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"0.5rem"}}>Sé el primero en dejar una reseña de este producto.</p>
                 ):(
                   <div style={{display:"flex",flexDirection:"column",gap:"0.65rem"}}>
                     {productComments.map(c=>(
-                      <div key={c.id} style={{background:"#0e0e0e",border:`1px solid ${C.border}`,borderRadius:10,padding:"0.75rem 0.9rem"}}>
-                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"3px"}}>
-                          <span style={{fontSize:12,fontWeight:800,color:"#ccc"}}>{c.name}</span>
+                      <div key={c.id} style={{background:"#0e0e0e",border:`1px solid ${C.border}`,borderRadius:12,padding:"0.85rem 1rem"}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"5px"}}>
+                          <span style={{fontSize:12,fontWeight:800,color:"#ddd"}}>{c.name}</span>
                           <span style={{fontSize:9,color:"#333"}}>{new Date(c.createdAt).toLocaleDateString("es-VE",{day:"2-digit",month:"short"})}</span>
                         </div>
+                        <div style={{marginBottom:"5px"}}><StarRow value={c.stars||5} size={11}/></div>
                         <p style={{margin:0,fontSize:12,color:"#888",lineHeight:1.6}}>{c.comment}</p>
                       </div>
                     ))}
