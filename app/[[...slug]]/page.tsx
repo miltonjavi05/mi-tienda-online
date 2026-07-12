@@ -61,7 +61,7 @@ function invalidateProductsCache(): void {
 }
 
 const SOCIAL = {
-  whatsapp:  `https://wa.me/${WHATSAPP_NUMBER}?TEXT=${ENCODEURICOMPONENT("HOLA! VI SU TIENDA FOKUS Y QUIERO MÁS INFORMACIÓN 🖤")}`,
+  whatsapp:  `https://wa.me/${WHATSAPP_NUMBER}?TEXT=${encodeURIComponent("HOLA! VI SU TIENDA FOKUS Y QUIERO MÁS INFORMACIÓN 🖤")}`,
   instagram: "https://www.instagram.com/fokus_accesorios?igsh=eGNiNHZmczUwY3Np",
   facebook:  "https://www.facebook.com/share/14d2kQuHQ3y/?mibextid=wwXIfr",
   tiktok:    "https://www.tiktok.com/@fokus_accesorios?_r=1&_t=ZS-95NNWYzuIxV",
@@ -2333,6 +2333,8 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   <div className="admin-list">{usedCats.map(cat=>{const cp=products.filter(p=>p.category===cat&&(adminSearch===""||p.name.toLowerCase().includes(adminSearch.toLowerCase())));if(!cp.length)return null;return(<div key={cat} style={{marginBottom:"1.1rem"}}><div style={{display:"flex",alignItems:"center",gap:"0.5rem",padding:"0.4rem 0",marginBottom:"0.35rem",borderBottom:"1px solid #1a1a1a"}}><span style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#333"}}>{catLabel(cat).toUpperCase()}</span><span style={{fontSize:9,color:"#2a2a2a",background:"#1a1a1a",padding:"1px 6px",borderRadius:10}}>{cp.length}</span></div>{cp.map(p=>(<div key={p.id} data-rowid={p.id}><ARow p={p} editing={editing} onEdit={startEdit} onDel={delProd} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} isDragging={dragId===p.id} isOver={overId===p.id&&dragId!==p.id} onTouchStart={handleTouchDragStart} onTouchMove={handleTouchDragMove} onTouchEnd={handleTouchDragEnd} onToggleActive={toggleProductActive} onToggleDiscount={promptDiscount} onToggleBestseller={toggleProductBestseller}/></div>))}</div>);})}</div>
                 ):(
                   <div className="admin-list" style={{display:"flex",flexDirection:"column",gap:2}}>{adminProds.map(p=>(<div key={p.id} data-rowid={p.id}><ARow p={p} editing={editing} onEdit={startEdit} onDel={delProd} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} isDragging={dragId===p.id} isOver={overId===p.id&&dragId!==p.id} onTouchStart={handleTouchDragStart} onTouchMove={handleTouchDragMove} onTouchEnd={handleTouchDragEnd} onToggleActive={toggleProductActive} onToggleDiscount={promptDiscount} onToggleBestseller={toggleProductBestseller}/></div>))}{!adminProds.length&&<p style={{color:"#333",textAlign:"center",padding:"1.5rem",fontSize:12}}>Sin resultados</p>}</div>
+                )}
+              </div>
             </>)}
 
             {adminLogged&&adminSec==="sales"&&(<>
