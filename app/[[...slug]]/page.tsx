@@ -104,6 +104,7 @@ interface CartItem { product:Product; qty:number; }
 interface UserData { uid:string; email:string; displayName:string; createdAt:number; photoURL?:string; idToken?:string; }
 interface Coupon { id:string; code:string; type:"general"|"product"|"category"; productId?:string; productName?:string; category?:string; discountPercent:number; durationHours:number; createdAt:number; expiresAt:number; active:boolean; }
 interface OrderSnapshot { items:CartItem[]; total:number; payMethod:string; deliveryInfo:DeliveryInfo; comprobanteUrl:string; waUrl:string; orderId:string; couponCode?:string; couponDiscount?:number; }
+interface ProductComment { id:string; productId:string; productName:string; name:string; comment:string; createdAt:number; }
 
 type MainView = "fokus"|"shop"|"comunidad"|"grabados"|"cart"|"admin"|"account"|"thankyou";
 type ShopFilter = typeof ALL_SHOP_CATS[number]|"TODO"|typeof LENTES_SUBCATS[number];
@@ -1048,6 +1049,11 @@ export default function Home() {
   const[selectedProduct,setSel]    = useState<Product|null>(null);
   const[modalQty,setModalQty]      = useState(1);
   const[modalImgIdx,setModalImgIdx]= useState(0);
+  const[productComments,setProductComments]=useState<ProductComment[]>([]);
+  const[commentsLoading,setCommentsLoading]=useState(false);
+  const[commentName,setCommentName]=useState("");
+  const[commentText,setCommentText]=useState("");
+  const[commentSending,setCommentSending]=useState(false);
   const[menuOpen,setMenuOpen]      = useState(false);
   const[searchOpen,setSearchOpen]  = useState(false);
   const[searchQuery,setSearchQuery]= useState("");
@@ -1232,10 +1238,10 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   const[adminEmail,setAdminEmail]  =useState("");
   const[adminPwd,setAdminPwd]      =useState("");
   const[adminErr,setAdminErr]      =useState("");
-  const[adminSec,setAdminSec]=useState<"menu"|"products"|"sales"|"stats"|"coupons"|"lookup">("menu");
+  const[adminSec,setAdminSec]=useState<"menu"|"products"|"sales"|"stats"|"coupons"|"lookup"|"comments">("menu");
   const adminSecRef=useRef(adminSec);
   useEffect(()=>{adminSecRef.current=adminSec;},[adminSec]);
-  const enterAdminSec=useCallback((sec:"products"|"sales"|"stats"|"coupons"|"lookup")=>{
+  const enterAdminSec=useCallback((sec:"products"|"sales"|"stats"|"coupons"|"lookup"|"comments")=>{
     try{window.history.pushState({adminSec:sec},"","/admin");}catch{}
     setAdminSec(sec);
   },[]);
@@ -1275,6 +1281,9 @@ const[couponErr,setCouponErr]=useState("");
 const[couponOk,setCouponOk]=useState("");
 const[couponsList,setCouponsList]=useState<Coupon[]>([]);
 const[couponsLoading,setCouponsLoading]=useState(false);
+const[allComments,setAllComments]=useState<ProductComment[]>([]);
+const[allCommentsLoading,setAllCommentsLoading]=useState(false);
+const allCommentsLoaded=useRef(false);
   const[adminSearch,setAdminSearch]=useState("");
   const[lookupCode,setLookupCode]=useState("");
   const[saleName,setSaleName]=useState("");
@@ -1468,6 +1477,47 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
     if(!selectedProduct)return[];
     return products.filter(p=>p.category===selectedProduct.category&&p.id!==selectedProduct.id&&p.active!==false);
   },[selectedProduct,products]);
+
+  const loadProductComments=useCallback(async(productId:string)=>{
+    setCommentsLoading(true);
+    try{
+      const all=await fsGetCollection("product_comments",300);
+      const filtered=all.filter(c=>c.productId===productId).map(c=>({id:c.id,productId:(c.productId as string)||"",productName:(c.productName as string)||"",name:(c.name as string)||"",comment:(c.comment as string)||"",createdAt:Number(c.createdAt)||0})) as ProductComment[];
+      filtered.sort((a,b)=>b.createdAt-a.createdAt);
+      setProductComments(filtered);
+    }catch{
+      setProductComments([]);
+    }finally{
+      setCommentsLoading(false);
+    }
+  },[]);
+
+  useEffect(()=>{
+    if(selectedProduct){
+      setCommentName("");
+      setCommentText("");
+      loadProductComments(selectedProduct.id);
+    }else{
+      setProductComments([]);
+    }
+  },[selectedProduct?.id,loadProductComments]);
+
+  const submitProductComment=useCallback(async()=>{
+    if(!selectedProduct)return;
+    if(!commentName.trim()||!commentText.trim())return;
+    setCommentSending(true);
+    try{
+      const createdAt=Date.now();
+      await fsAddToCollection("product_comments",{productId:selectedProduct.id,productName:selectedProduct.name,name:commentName.trim(),comment:commentText.trim(),createdAt});
+      setProductComments(prev=>[{id:"tmp_"+createdAt,productId:selectedProduct.id,productName:selectedProduct.name,name:commentName.trim(),comment:commentText.trim(),createdAt},...prev]);
+      setCommentName("");
+      setCommentText("");
+    }catch{
+      /* silencioso */
+    }finally{
+      setCommentSending(false);
+    }
+  },[selectedProduct,commentName,commentText]);
 
   const closeProdModal=useCallback(()=>{if(modalPushedRef.current)window.history.back();else setSel(null);},[]);
 
@@ -1681,8 +1731,38 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     }
   },[]);
 
+  const deleteSale=useCallback(async(id:string)=>{
+    if(!confirm("¿Eliminar esta venta del panel? Esta acción no se puede deshacer."))return;
+    setSalesList(prev=>prev.filter(s=>s.id!==id));
+    try{await fsDeleteDoc("manual_sales",id);}catch{}
+  },[]);
+
+  const loadAllComments=useCallback(async(force=false)=>{
+    if(allCommentsLoaded.current&&!force)return;
+    setAllCommentsLoading(true);
+    try{
+      const raw=await fsGetCollection("product_comments",300);
+      const list:ProductComment[]=raw.map(r=>({id:r.id,productId:(r.productId as string)||"",productName:(r.productName as string)||"",name:(r.name as string)||"",comment:(r.comment as string)||"",createdAt:Number(r.createdAt)||0}));
+      list.sort((a,b)=>b.createdAt-a.createdAt);
+      setAllComments(list);
+      allCommentsLoaded.current=true;
+    }catch{
+      /* silencioso */
+    }finally{
+      setAllCommentsLoading(false);
+    }
+  },[]);
+
+  const deleteProductComment=useCallback(async(id:string)=>{
+    if(!confirm("¿Eliminar este comentario?"))return;
+    setAllComments(prev=>prev.filter(c=>c.id!==id));
+    setProductComments(prev=>prev.filter(c=>c.id!==id));
+    try{await fsDeleteDoc("product_comments",id);}catch{}
+  },[]);
+
   useEffect(()=>{if(adminSec==="stats")loadStats();},[adminSec,loadStats]);
 useEffect(()=>{if(adminSec==="coupons"){loadCoupons();if(!couponCode)setCouponCode(generateCouponCode());}},[adminSec,loadCoupons]);
+useEffect(()=>{if(adminSec==="comments")loadAllComments();},[adminSec,loadAllComments]);
 
   const handleDragStart=useCallback((id:string)=>setDragId(id),[]);
   const handleDragOver=useCallback((id:string)=>setOverId(id),[]);
@@ -2313,7 +2393,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
         <main className="pv" style={{paddingTop:NAV_H,background:"#060606",minHeight:"100vh"}}>
           <div style={{maxWidth:720,margin:"0 auto",padding:"2rem 1rem 4rem"}}>
             {!adminLogged&&(<div style={{background:"#111",borderRadius:14,padding:"2.5rem 2rem",maxWidth:380,margin:"2rem auto",border:"1px solid #1a1a1a",animation:"slideUp 0.3s ease"}}><h1 style={{color:"#fff",fontSize:20,fontWeight:900,marginBottom:"1.5rem",textAlign:"center",letterSpacing:2}}>ADMIN</h1><div style={{display:"flex",flexDirection:"column",gap:"0.85rem"}}><input type="email" placeholder="Correo" value={adminEmail} onChange={e=>setAdminEmail(e.target.value)} style={S.input}/><PwdInput placeholder="Contraseña" value={adminPwd} onChange={setAdminPwd} onKeyDown={e=>e.key==="Enter"&&doLogin()} autoComplete="current-password"/>{adminErr&&<p style={{color:"#ff5555",fontSize:12,margin:0,background:"#1e0a0a",padding:"0.6rem 1rem",borderRadius:8}}>{adminErr}</p>}<button onClick={doLogin} style={S.adminBtn}>Entrar</button><button onClick={doLogout} style={{...S.adminBtn,background:"transparent",color:"#333",marginTop:4}}>← Volver</button></div></div>)}
-            {adminLogged&&adminSec==="menu"&&(<div style={{background:"#111",borderRadius:14,padding:"2.5rem 2rem",maxWidth:380,margin:"2rem auto",border:"1px solid #1a1a1a",animation:"slideUp 0.3s ease"}}><h1 style={{color:"#fff",fontSize:18,fontWeight:900,marginBottom:"0.4rem",textAlign:"center",letterSpacing:2}}>PANEL</h1><p style={{color:"#333",fontSize:12,textAlign:"center",marginBottom:"2rem",letterSpacing:1}}>Selecciona una opción</p><div style={{display:"flex",flexDirection:"column",gap:"0.65rem"}}><button onClick={()=>enterAdminSec("products")} style={S.adminBtn}>📦 Gestionar productos</button><button onClick={()=>enterAdminSec("sales")} style={S.adminBtn}>💰 Registrar venta manual</button><button onClick={()=>enterAdminSec("stats")} style={S.adminBtn}>📊 Ver estadísticas</button><button onClick={()=>enterAdminSec("coupons")} style={{...S.adminBtn,background:"linear-gradient(135deg,#fff 0%,#ccc 100%)"}}>🎟️ Cupones de descuento</button><button onClick={()=>enterAdminSec("lookup")} style={S.adminBtn}>🔍 Buscar por código</button><button onClick={doLogout} style={{...S.adminBtn,background:"transparent",color:"#ff5555",border:"none",marginTop:8,letterSpacing:1}}>Cerrar sesión</button></div></div>)}
+            {adminLogged&&adminSec==="menu"&&(<div style={{background:"#111",borderRadius:14,padding:"2.5rem 2rem",maxWidth:380,margin:"2rem auto",border:"1px solid #1a1a1a",animation:"slideUp 0.3s ease"}}><h1 style={{color:"#fff",fontSize:18,fontWeight:900,marginBottom:"0.4rem",textAlign:"center",letterSpacing:2}}>PANEL</h1><p style={{color:"#333",fontSize:12,textAlign:"center",marginBottom:"2rem",letterSpacing:1}}>Selecciona una opción</p><div style={{display:"flex",flexDirection:"column",gap:"0.65rem"}}><button onClick={()=>enterAdminSec("products")} style={S.adminBtn}>📦 Gestionar productos</button><button onClick={()=>enterAdminSec("sales")} style={S.adminBtn}>💰 Registrar venta manual</button><button onClick={()=>enterAdminSec("stats")} style={S.adminBtn}>📊 Ver estadísticas</button><button onClick={()=>enterAdminSec("coupons")} style={{...S.adminBtn,background:"linear-gradient(135deg,#fff 0%,#ccc 100%)"}}>🎟️ Cupones de descuento</button><button onClick={()=>enterAdminSec("lookup")} style={S.adminBtn}>🔍 Buscar por código</button><button onClick={()=>enterAdminSec("comments")} style={S.adminBtn}>💬 Comentarios de productos</button><button onClick={doLogout} style={{...S.adminBtn,background:"transparent",color:"#ff5555",border:"none",marginTop:8,letterSpacing:1}}>Cerrar sesión</button></div></div>)}
             {adminLogged&&adminSec==="products"&&(<>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem"}}><h1 style={{color:"#fff",fontSize:16,fontWeight:900,margin:0,letterSpacing:2}}>{editing?"EDITAR PRODUCTO":"PRODUCTOS"}</h1><button onClick={()=>{exitAdminSec();resetForm();}} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:12,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>← MENÚ</button></div>
               <div ref={formRef} style={{background:"#111",borderRadius:12,padding:"1.5rem",marginBottom:"1.25rem",border:editing?"1px solid #2a2a2a":"1px solid #1a1a1a"}}><p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 1.25rem"}}>{editing?`EDITANDO: ${editing.name}`:"NUEVO PRODUCTO"}</p><div style={{display:"flex",flexDirection:"column",gap:"0.8rem"}}><input placeholder="Nombre del producto *" value={fName} onChange={e=>setFName(e.target.value)} style={S.input}/><textarea placeholder="Descripción (opcional)" value={fDesc} onChange={e=>setFDesc(e.target.value)} rows={2} style={{...S.input,resize:"vertical" as any,lineHeight:1.6}}/><input placeholder="Precio en USD *" type="number" min="0" step="0.01" value={fPrice} onChange={e=>setFPrice(e.target.value)} style={S.input}/><select value={fCat} onChange={e=>setFCat(e.target.value)} style={{...S.input,appearance:"auto" as any}}><option value="">Selecciona categoría *</option><optgroup label="── LENTES">{LENTES_SUBCATS.map(s=><option key={s} value={s}>{catLabel(s)}</option>)}</optgroup><optgroup label="── OTROS">{SHOP_CATS.filter(c=>c!=="LENTES").map(c=><option key={c} value={c}>{catLabel(c)}</option>)}</optgroup></select><div style={{background:"#0e0e0e",borderRadius:8,padding:"1rem",border:"1px dashed #1e1e1e"}}><p style={{color:"#333",fontSize:9,letterSpacing:2,margin:"0 0 0.65rem",fontWeight:800}}>IMAGEN {!editing&&"*"}</p><input ref={fileRef} type="file" accept="image/*" onChange={onFileChange} style={{display:"none"}} id="fi"/><label htmlFor="fi" style={{display:"inline-flex",alignItems:"center",gap:"0.45rem",background:"#1a1a1a",color:"#888",padding:"0.55rem 1rem",borderRadius:8,cursor:"pointer",fontSize:12,border:"1px solid #222",fontFamily:"inherit"}}>📷 {fFile?"Cambiar":"Elegir foto"}</label>{fFile&&<span style={{color:"#444",fontSize:11,marginLeft:"0.65rem"}}>{fFile.name}</span>}{fPrev&&<div style={{marginTop:"0.65rem",width:80,height:80,borderRadius:8,overflow:"hidden",border:"1px solid #222"}}><img src={fPrev} alt="preview" style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/></div>}</div>
@@ -2478,6 +2558,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                           <p style={{margin:0,fontSize:10,color:"#444"}}>{sale.createdAt?new Date(Number(sale.createdAt)).toLocaleString("es-VE",{dateStyle:"medium",timeStyle:"short"}):""} {sale.payMethod?`· ${sale.payMethod}`:""} {sale.category?`· ${catLabel(sale.category as string)}`:""} {sale.source?<span style={{color:sale.source==="web"?"#4dabf7":"#ffd43b",fontWeight:800}}>· {sale.source==="web"?"WEB":"MANUAL"}</span>:null}</p>
                         </div>
                         <span style={{fontSize:13,fontWeight:900,color:"#4caf50",flexShrink:0}}>${(Number(sale.amount)||0).toFixed(2)}</span>
+                        <button onClick={()=>deleteSale(sale.id)} style={{background:"none",color:"#cc3333",border:"1px solid #2a1515",padding:"0.3rem 0.55rem",borderRadius:6,cursor:"pointer",fontSize:10,fontFamily:"inherit",flexShrink:0,WebkitTapHighlightColor:"transparent"}}>✕</button>
                       </div>
                     ))}
                   </div>
@@ -2498,6 +2579,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                           <p style={{margin:0,fontSize:10,color:"#444"}}>{sale.createdAt?new Date(Number(sale.createdAt)).toLocaleString("es-VE",{dateStyle:"medium",timeStyle:"short"}):""} {sale.payMethod?`· ${sale.payMethod}`:""} {sale.category?`· ${catLabel(sale.category as string)}`:""} {sale.notes?`· ${sale.notes}`:""}</p>
                         </div>
                         <span style={{fontSize:13,fontWeight:900,color:"#c084fc",flexShrink:0}}>${(Number(sale.amount)||0).toFixed(2)}</span>
+                        <button onClick={()=>deleteSale(sale.id)} style={{background:"none",color:"#cc3333",border:"1px solid #2a1515",padding:"0.3rem 0.55rem",borderRadius:6,cursor:"pointer",fontSize:10,fontFamily:"inherit",flexShrink:0,WebkitTapHighlightColor:"transparent"}}>✕</button>
                       </div>
                     ))}
                   </div>
@@ -2646,6 +2728,37 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                 })()}
               </div>
             </>)}
+
+            {adminLogged&&adminSec==="comments"&&(<>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem"}}><h1 style={{color:"#fff",fontSize:16,fontWeight:900,margin:0,letterSpacing:2}}>COMENTARIOS DE PRODUCTOS</h1><button onClick={()=>exitAdminSec()} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:12,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>← MENÚ</button></div>
+              <div style={{background:"#111",borderRadius:14,padding:"1.25rem",border:"1px solid #1a1a1a"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1rem"}}>
+                  <p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2.5,margin:0}}>TODOS LOS COMENTARIOS ({allComments.length})</p>
+                  <button onClick={()=>loadAllComments(true)} disabled={allCommentsLoading} style={{background:"none",border:"1px solid #2a2a2a",color:"#888",padding:"0.3rem 0.7rem",borderRadius:8,cursor:allCommentsLoading?"not-allowed":"pointer",fontSize:10,fontFamily:"inherit",fontWeight:700}}>{allCommentsLoading?"…":"↻"}</button>
+                </div>
+                {allCommentsLoading&&!allComments.length?(
+                  <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"1.5rem"}}>Cargando…</p>
+                ):allComments.length===0?(
+                  <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"1.5rem"}}>Aún no hay comentarios de clientes</p>
+                ):(
+                  <div style={{display:"flex",flexDirection:"column",gap:"0.5rem"}}>
+                    {allComments.map(c=>(
+                      <div key={c.id} style={{display:"flex",alignItems:"flex-start",gap:"0.75rem",padding:"0.75rem",borderRadius:10,background:"#0c0c0c",border:"1px solid #1a1a1a"}}>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2,flexWrap:"wrap"}}>
+                            <span style={{fontSize:12,fontWeight:800,color:"#ccc"}}>{c.name}</span>
+                            <span style={{fontSize:9,color:"#333"}}>· {c.productName||"Producto eliminado"}</span>
+                            <span style={{fontSize:9,color:"#2a2a2a"}}>· {new Date(c.createdAt).toLocaleDateString("es-VE",{day:"2-digit",month:"short",year:"numeric"})}</span>
+                          </div>
+                          <p style={{margin:0,fontSize:12,color:"#888",lineHeight:1.6}}>{c.comment}</p>
+                        </div>
+                        <button onClick={()=>deleteProductComment(c.id)} style={{background:"none",color:"#cc3333",border:"1px solid #2a1515",padding:"0.3rem 0.65rem",borderRadius:6,cursor:"pointer",fontSize:10,fontFamily:"inherit",flexShrink:0,WebkitTapHighlightColor:"transparent"}}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>)}
           </div>
         </main>
       )}
@@ -2682,6 +2795,31 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
               ):(
                 <p style={{fontSize:24,fontWeight:900,margin:"0 0 1.25rem",color:C.accent}}>{fmtPrice(selectedProduct.price)}</p>
               )}
+              <div style={{marginTop:"0.25rem",paddingTop:"1.1rem",borderTop:`1px solid ${C.border}`,paddingBottom:"1rem"}}>
+                <p style={{fontSize:10,fontWeight:800,letterSpacing:2,color:"#555",margin:"0 0 0.85rem"}}>COMENTARIOS{productComments.length>0?` (${productComments.length})`:""}</p>
+                <div style={{display:"flex",flexDirection:"column",gap:"0.6rem",marginBottom:"1rem"}}>
+                  <input placeholder="Tu nombre *" value={commentName} onChange={e=>setCommentName(e.target.value)} style={S.input}/>
+                  <textarea placeholder="Escribe tu comentario sobre este producto..." value={commentText} onChange={e=>setCommentText(e.target.value)} rows={2} style={{...S.input,resize:"vertical" as const,lineHeight:1.6,minHeight:60}}/>
+                  <button onClick={submitProductComment} disabled={!commentName.trim()||!commentText.trim()||commentSending} style={{...S.darkBtn,justifyContent:"center",borderRadius:8,fontSize:11,opacity:(!commentName.trim()||!commentText.trim()||commentSending)?0.5:1,cursor:(!commentName.trim()||!commentText.trim()||commentSending)?"not-allowed":"pointer"}}>{commentSending?"Publicando...":"PUBLICAR COMENTARIO"}</button>
+                </div>
+                {commentsLoading?(
+                  <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"0.5rem"}}>Cargando comentarios…</p>
+                ):productComments.length===0?(
+                  <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"0.5rem"}}>Sé el primero en comentar este producto.</p>
+                ):(
+                  <div style={{display:"flex",flexDirection:"column",gap:"0.65rem"}}>
+                    {productComments.map(c=>(
+                      <div key={c.id} style={{background:"#0e0e0e",border:`1px solid ${C.border}`,borderRadius:10,padding:"0.75rem 0.9rem"}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"3px"}}>
+                          <span style={{fontSize:12,fontWeight:800,color:"#ccc"}}>{c.name}</span>
+                          <span style={{fontSize:9,color:"#333"}}>{new Date(c.createdAt).toLocaleDateString("es-VE",{day:"2-digit",month:"short"})}</span>
+                        </div>
+                        <p style={{margin:0,fontSize:12,color:"#888",lineHeight:1.6}}>{c.comment}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               {modalSuggestions.length>0&&(
                 <div style={{marginTop:"0.5rem",paddingTop:"1.25rem",borderTop:`1px solid ${C.border}`,paddingBottom:"1.5rem"}}>
                   <p style={{fontSize:10,fontWeight:800,letterSpacing:2,color:"#555",margin:"0 0 0.85rem"}}>TAMBIÉN TE PUEDE INTERESAR</p>
