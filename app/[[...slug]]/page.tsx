@@ -244,7 +244,7 @@ type FsVal=|{stringValue:string}|{doubleValue:number}|{integerValue:string}|{boo
 function toFs(v:unknown):FsVal{if(v===null||v===undefined)return{nullValue:null};if(typeof v==="string")return{stringValue:v};if(typeof v==="number")return{doubleValue:v};if(typeof v==="boolean")return{booleanValue:v};if(Array.isArray(v))return{arrayValue:{values:v.map(toFs)}};if(typeof v==="object")return{mapValue:{fields:Object.fromEntries(Object.entries(v as Record<string,unknown>).map(([k,val])=>[k,toFs(val)]))}};return{stringValue:String(v)};}
 function fromFs(f:FsVal):unknown{if("stringValue" in f)return f.stringValue;if("doubleValue" in f)return f.doubleValue;if("integerValue" in f)return Number(f.integerValue);if("booleanValue" in f)return f.booleanValue;if("nullValue" in f)return null;if("arrayValue" in f)return((f as{arrayValue:{values?:FsVal[]}}).arrayValue.values||[]).map(fromFs);if("mapValue" in f){const fields=(f as{mapValue:{fields?:Record<string,FsVal>}}).mapValue.fields||{};return Object.fromEntries(Object.entries(fields).map(([k,v])=>[k,fromFs(v)]));}return null;}
 interface FsDoc{name:string;fields:Record<string,FsVal>;}
-function docToProduct(doc:FsDoc):Product{const f=doc.fields||{};const rawImages=fromFs(f.images??{nullValue:null}) as string[]|null;const id=doc.name.split("/").pop() as string;return{id,name:fromFs(f.name??{nullValue:null}) as string||"",category:((fromFs(f.category??{nullValue:null}) as string)||"").toUpperCase(),price:fromFs(f.price??{nullValue:null}) as number||0,img:fromFs(f.img??{nullValue:null}) as string||"",description:fromFs(f.description??{nullValue:null}) as string||"",createdAt:fromFs(f.createdAt??{nullValue:null}) as number||0,order:fromFs(f.order??{nullValue:null}) as number||0,active:f.active!==undefined?(fromFs(f.active) as boolean):true,discount:fromFs(f.discount??{nullValue:null}) as number||0,images:Array.isArray(rawImages)?rawImages:[],code:(fromFs(f.code??{nullValue:null}) as string)||("FK-"+id.slice(-6).toUpperCase()),bestseller:f.bestseller!==undefined?(fromFs(f.bestseller) as boolean):false,stock:Number(fromFs(f.stock??{nullValue:null}))||0};}
+function docToProduct(doc:FsDoc):Product{const f=doc.fields||{};const rawImages=fromFs(f.images??{nullValue:null}) as string[]|null;const id=doc.name.split("/").pop() as string;return{id,name:fromFs(f.name??{nullValue:null}) as string||"",category:((fromFs(f.category??{nullValue:null}) as string)||"").toUpperCase(),price:fromFs(f.price??{nullValue:null}) as number||0,img:fromFs(f.img??{nullValue:null}) as string||"",description:fromFs(f.description??{nullValue:null}) as string||"",createdAt:fromFs(f.createdAt??{nullValue:null}) as number||0,order:fromFs(f.order??{nullValue:null}) as number||0,active:f.active!==undefined?(fromFs(f.active) as boolean):true,discount:fromFs(f.discount??{nullValue:null}) as number||0,images:Array.isArray(rawImages)?rawImages:[],code:(fromFs(f.code??{nullValue:null}) as string)||("FK-"+id.slice(-6).toUpperCase()),bestseller:f.bestseller!==undefined?(fromFs(f.bestseller) as boolean):false,stock:Number(fromFs(f.stock??{nullValue:null}))||1};}
 async function fsGetAll():Promise<Product[]>{const r=await fetch(`${fsBase()}/products?pageSize=300`);if(!r.ok)throw new Error(await r.text());const d=await r.json() as{documents?:FsDoc[]};return(d.documents||[]).map(docToProduct);}
 async function fsGetProductsVersion():Promise<number|null>{
   try{
@@ -1753,7 +1753,7 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     try{
       let imgUrl=fPrev;
       if(fFile)imgUrl=await uploadImg(fFile);
-      const data={name:fName.trim(),description:fDesc.trim(),price:parseFloat(fPrice),category:fCat.toUpperCase(),img:imgUrl,active:fActive,discount:fDiscount?Math.max(0,Math.min(95,parseFloat(fDiscount))):0,images:fGallery,code:fCode.trim()?fCode.trim().toUpperCase():("FK-"+Date.now().toString(36).slice(-6).toUpperCase()),stock:fStock!==""?Math.max(0,parseInt(fStock)||0):0};
+      const data={name:fName.trim(),description:fDesc.trim(),price:parseFloat(fPrice),category:fCat.toUpperCase(),img:imgUrl,active:fActive,discount:fDiscount?Math.max(0,Math.min(95,parseFloat(fDiscount))):0,images:fGallery,code:fCode.trim()?fCode.trim().toUpperCase():("FK-"+Date.now().toString(36).slice(-6).toUpperCase()),stock:fStock!==""?Math.max(0,parseInt(fStock)||0):1};
       if(editing){await fsUpdate(editing.id,data);setFOk("✓ Producto actualizado");}
       else{await fsAdd(data);setFOk("✓ Producto agregado");}
       invalidateProductsCache();
@@ -1951,7 +1951,7 @@ const saveBulkAddProducts=useCallback(async()=>{
       const item=bulkAddParsed[i];
       const price=parseFloat(item.price);
       if(!item.name.trim()||!price||price<=0)continue;
-      await fsAdd({name:item.name.trim(),description:item.description.trim(),price,category:bulkAddCat.toUpperCase(),img:bulkAddImages[i],active:true,discount:0,images:[],code:"FK-"+(Date.now()+i).toString(36).slice(-6).toUpperCase()});
+      await fsAdd({name:item.name.trim(),description:item.description.trim(),price,category:bulkAddCat.toUpperCase(),img:bulkAddImages[i],active:true,discount:0,images:[],code:"FK-"+(Date.now()+i).toString(36).slice(-6).toUpperCase(),stock:1});
       created++;
     }
     invalidateProductsCache();
