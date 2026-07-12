@@ -1977,10 +1977,11 @@ useEffect(()=>{if(adminSec==="comments")loadAllComments();},[adminSec,loadAllCom
 
             {/* ── ETIQUETA PREMIUM "ACCESORIOS PARA CABALLERO" ── */}
             <div style={{
-              display:"inline-flex",
+              display:"flex",
               alignItems:"center",
               gap:"0.55rem",
-              marginBottom:"1rem",
+              width:"fit-content",
+              margin:"0 auto 1rem",
               padding:"0.45rem 1.1rem 0.45rem 0.75rem",
               borderRadius:40,
               background:"linear-gradient(135deg,rgba(255,255,255,0.06) 0%,rgba(255,255,255,0.02) 100%)",
