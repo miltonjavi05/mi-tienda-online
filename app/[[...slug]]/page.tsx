@@ -61,7 +61,7 @@ function invalidateProductsCache(): void {
 }
 
 const SOCIAL = {
-  whatsapp:  `https://wa.me/${WHATSAPP_NUMBER}`,
+  whatsapp:  `https://wa.me/${WHATSAPP_NUMBER}?TEXT=${ENCODEURICOMPONENT("HOLA! VI SU TIENDA FOKUS Y QUIERO MÁS INFORMACIÓN 🖤")}`,
   instagram: "https://www.instagram.com/fokus_accesorios?igsh=eGNiNHZmczUwY3Np",
   facebook:  "https://www.facebook.com/share/14d2kQuHQ3y/?mibextid=wwXIfr",
   tiktok:    "https://www.tiktok.com/@fokus_accesorios?_r=1&_t=ZS-95NNWYzuIxV",
@@ -73,8 +73,8 @@ const VENEZUELA_STATES = [
   "Trujillo","Vargas","Yaracuy","Zulia",
 ];
 const PAYMENT_METHODS = [
-  { id:"pagomovil_bv", icon:"🏦", name:"Pago Móvil – Banco de Venezuela", detail:"Tlf: 04243005733 · C.I: 28442429" },
-  { id:"pagomovil_ba", icon:"🏦", name:"Pago Móvil – Bancamiga",          detail:"Tlf: 04243005733 · C.I: 28442429" },
+  { id:"pagomovil_bv", icon:"🏦", name:"Pago Móvil – Banco de Venezuela", bank:"Banco de Venezuela", ci:"C.I: 28442429", phone:"Tlf: 04243005733", detail:"Tlf: 04243005733 · C.I: 28442429" },
+  { id:"pagomovil_ba", icon:"🏦", name:"Pago Móvil – Bancamiga",          bank:"Bancamiga",          ci:"C.I: 28442429", phone:"Tlf: 04243005733", detail:"Tlf: 04243005733 · C.I: 28442429" },
   { id:"binance",      icon:"🟡", name:"Binance Pay",                     detail:"miltonjavi05@gmail.com" },
   { id:"zinli",        icon:"💳", name:"Zinli",                           detail:"miltonjavi05@gmail.com" },
 ];
@@ -102,7 +102,7 @@ interface DeliveryInfo { zone:string; nombre:string; cedula:string; telefono:str
 interface Product { id:string; name:string; category:string; price:number; img:string; description?:string; createdAt?:number; order?:number; active?:boolean; discount?:number; images?:string[]; code?:string; bestseller?:boolean; }
 interface CartItem { product:Product; qty:number; }
 interface UserData { uid:string; email:string; displayName:string; createdAt:number; photoURL?:string; idToken?:string; }
-interface Coupon { id:string; code:string; type:"general"|"product"; productId?:string; productName?:string; discountPercent:number; durationHours:number; createdAt:number; expiresAt:number; active:boolean; }
+interface Coupon { id:string; code:string; type:"general"|"product"|"category"; productId?:string; productName?:string; category?:string; discountPercent:number; durationHours:number; createdAt:number; expiresAt:number; active:boolean; }
 interface OrderSnapshot { items:CartItem[]; total:number; payMethod:string; deliveryInfo:DeliveryInfo; comprobanteUrl:string; waUrl:string; orderId:string; couponCode?:string; couponDiscount?:number; }
 
 type MainView = "fokus"|"shop"|"comunidad"|"grabados"|"cart"|"admin"|"account"|"thankyou";
@@ -1229,9 +1229,11 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   const[fDiscount,setFDiscount]    =useState("");
   const[fCode,setFCode]            =useState("");
 const[couponCode,setCouponCode]  =useState("");
-const[couponType,setCouponType]  =useState<"general"|"product">("general");
+const[couponType,setCouponType]  =useState<"general"|"product"|"category">("general");
 const[couponProductId,setCouponProductId]=useState("");
 const[couponProductSearch,setCouponProductSearch]=useState("");
+const[couponProductCatFilter,setCouponProductCatFilter]=useState("ALL");
+const[couponCategory,setCouponCategory]=useState("");
 const[couponDiscount,setCouponDiscount]=useState("");
 const[couponHours,setCouponHours]=useState("24");
 const[couponLoading,setCouponLoading]=useState(false);
@@ -1414,6 +1416,11 @@ const couponsLoaded=useRef(false);
 const couponDiscountAmount=useMemo(()=>{
   if(!appliedCoupon)return 0;
   if(appliedCoupon.type==="general")return totalPriceBeforeCoupon*(appliedCoupon.discountPercent/100);
+  if(appliedCoupon.type==="category"){
+    const catItems=cart.filter(i=>i.product.category===appliedCoupon.category);
+    const catTotal=catItems.reduce((s,i)=>s+getFinalPrice(i.product)*i.qty,0);
+    return catTotal*(appliedCoupon.discountPercent/100);
+  }
   const item=cart.find(i=>i.product.id===appliedCoupon.productId);
   if(!item)return 0;
   return getFinalPrice(item.product)*item.qty*(appliedCoupon.discountPercent/100);
@@ -1477,7 +1484,7 @@ const loadCoupons=useCallback(async(force=false)=>{
   setCouponsLoading(true);
   try{
     const raw=await fsGetCollection("coupons",100);
-    const list:Coupon[]=raw.map(r=>({id:r.id,code:(r.code as string)||"",type:((r.type as string)==="product"?"product":"general"),productId:(r.productId as string)||"",productName:(r.productName as string)||"",discountPercent:Number(r.discountPercent)||0,durationHours:Number(r.durationHours)||0,createdAt:Number(r.createdAt)||0,expiresAt:Number(r.expiresAt)||0,active:r.active!==false}));
+    const list:Coupon[]=raw.map(r=>({id:r.id,code:(r.code as string)||"",type:((r.type as string)==="product"?"product":(r.type as string)==="category"?"category":"general"),productId:(r.productId as string)||"",productName:(r.productName as string)||"",category:(r.category as string)||"",discountPercent:Number(r.discountPercent)||0,durationHours:Number(r.durationHours)||0,createdAt:Number(r.createdAt)||0,expiresAt:Number(r.expiresAt)||0,active:r.active!==false}));
     list.sort((a,b)=>b.createdAt-a.createdAt);
     setCouponsList(list);
     couponsLoaded.current=true;
@@ -1485,7 +1492,7 @@ const loadCoupons=useCallback(async(force=false)=>{
   finally{setCouponsLoading(false);}
 },[]);
 
-const resetCouponForm=()=>{setCouponCode(generateCouponCode());setCouponType("general");setCouponProductId("");setCouponProductSearch("");setCouponDiscount("");setCouponHours("24");setCouponErr("");setCouponOk("");};
+const resetCouponForm=()=>{setCouponCode(generateCouponCode());setCouponType("general");setCouponProductId("");setCouponProductSearch("");setCouponProductCatFilter("ALL");setCouponCategory("");setCouponDiscount("");setCouponHours("24");setCouponErr("");setCouponOk("");};
 
 const submitCoupon=async()=>{
   setCouponErr("");setCouponOk("");
@@ -1495,11 +1502,12 @@ const submitCoupon=async()=>{
   if(!disc||disc<=0||disc>95){setCouponErr("El descuento debe ser entre 1 y 95%.");return;}
   if(!hours||hours<=0){setCouponErr("Ingresa la duración en horas.");return;}
   if(couponType==="product"&&!couponProductId){setCouponErr("Selecciona el producto para este cupón.");return;}
+  if(couponType==="category"&&!couponCategory){setCouponErr("Selecciona la sección de accesorios para este cupón.");return;}
   setCouponLoading(true);
   try{
     const now=Date.now();
     const prod=couponType==="product"?products.find(p=>p.id===couponProductId):null;
-    await fsAddToCollection("coupons",{code:couponCode.trim().toUpperCase(),type:couponType,productId:couponType==="product"?couponProductId:"",productName:prod?prod.name:"",discountPercent:Math.min(95,disc),durationHours:hours,createdAt:now,expiresAt:now+hours*3600000,active:true});
+    await fsAddToCollection("coupons",{code:couponCode.trim().toUpperCase(),type:couponType,productId:couponType==="product"?couponProductId:"",productName:prod?prod.name:"",category:couponType==="category"?couponCategory:"",discountPercent:Math.min(95,disc),durationHours:hours,createdAt:now,expiresAt:now+hours*3600000,active:true});
     setCouponOk("✓ Cupón creado correctamente");
     couponsLoaded.current=false;
     await loadCoupons(true);
@@ -1543,13 +1551,18 @@ const applyCouponCode=useCallback(async()=>{
     const active=found.active!==false;
     const expiresAt=Number(found.expiresAt)||0;
     if(!active||now>expiresAt){setCouponCheckErr("Este cupón ha expirado.");setAppliedCoupon(null);return;}
-    const type=(found.type as string)==="product"?"product":"general";
+    const type=(found.type as string)==="product"?"product":(found.type as string)==="category"?"category":"general";
     if(type==="product"){
       const pid=(found.productId as string)||"";
       const inCart=cart.some(i=>i.product.id===pid);
       if(!inCart){setCouponCheckErr(`Este cupón solo aplica para "${found.productName||"un producto específico"}". Agrégalo al carrito.`);setAppliedCoupon(null);return;}
     }
-    setAppliedCoupon({id:found.id,code:(found.code as string)||"",type,productId:(found.productId as string)||"",productName:(found.productName as string)||"",discountPercent:Number(found.discountPercent)||0,durationHours:Number(found.durationHours)||0,createdAt:Number(found.createdAt)||0,expiresAt,active:true});
+    if(type==="category"){
+      const catg=(found.category as string)||"";
+      const inCart=cart.some(i=>i.product.category===catg);
+      if(!inCart){setCouponCheckErr(`Este cupón solo aplica para la sección "${catLabel(catg)}". Agrega un artículo de esa sección al carrito.`);setAppliedCoupon(null);return;}
+    }
+    setAppliedCoupon({id:found.id,code:(found.code as string)||"",type,productId:(found.productId as string)||"",productName:(found.productName as string)||"",category:(found.category as string)||"",discountPercent:Number(found.discountPercent)||0,durationHours:Number(found.durationHours)||0,createdAt:Number(found.createdAt)||0,expiresAt,active:true});
     setCouponCheckErr("");
   }catch{setCouponCheckErr("Error al validar el cupón. Intenta de nuevo.");}
   finally{setCouponCheckLoading(false);}
@@ -2112,7 +2125,7 @@ useEffect(()=>{if(adminSec==="coupons"){loadCoupons();if(!couponCode)setCouponCo
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:"0.75rem",background:"rgba(255,212,59,0.08)",border:"1px solid rgba(255,212,59,0.25)",borderRadius:10,padding:"0.7rem 0.9rem"}}>
                 <div>
                   <p style={{margin:"0 0 2px",fontSize:13,fontWeight:800,color:"#ffd43b",letterSpacing:1,fontFamily:"monospace"}}>{appliedCoupon.code}</p>
-                  <p style={{margin:0,fontSize:10,color:"#888"}}>-{appliedCoupon.discountPercent}% {appliedCoupon.type==="general"?"en todo el pedido":`en ${appliedCoupon.productName||"el producto"}`}</p>
+                  <p style={{margin:0,fontSize:10,color:"#888"}}>-{appliedCoupon.discountPercent}% {appliedCoupon.type==="general"?"en todo el pedido":appliedCoupon.type==="category"?`en la sección ${catLabel(appliedCoupon.category||"")}`:`en ${appliedCoupon.productName||"el producto"}`}</p>
                   <p style={{margin:"3px 0 0",fontSize:10,color:"#ff8888",display:"flex",alignItems:"center",gap:4}}>⏳ Expira en {formatTimeLeft(appliedCoupon.expiresAt)}</p>
                 </div>
                 <button onClick={removeCoupon} style={{background:"none",border:"1px solid rgba(255,255,255,0.15)",color:"#888",borderRadius:8,padding:"0.4rem 0.75rem",cursor:"pointer",fontSize:10,fontFamily:"inherit",fontWeight:700}}>Quitar</button>
@@ -2215,7 +2228,15 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                       <p style={{margin:"0 0 3px",fontSize:9,fontWeight:800,letterSpacing:2,color:"#555"}}>MONTO A PAGAR</p>
                       <p style={{margin:0,fontSize:24,fontWeight:900,color:"#ffd43b",letterSpacing:0.5,fontVariantNumeric:"tabular-nums"}}>{amountLabel}</p>
                     </div>
-                    <p style={{fontSize:18,color:"#fff",margin:"0 0 0.9rem",fontWeight:900,letterSpacing:0.6,lineHeight:1.5}}>{pm.detail}</p>
+                    {(pm as any).bank?(
+                      <div style={{marginBottom:"0.9rem"}}>
+                        <p style={{margin:"0 0 6px",fontSize:15,color:"#fff",fontWeight:900,letterSpacing:0.4,lineHeight:1.4}}>{(pm as any).bank}</p>
+                        <p style={{margin:"0 0 4px",fontSize:18,color:"#fff",fontWeight:900,letterSpacing:0.6,lineHeight:1.4}}>{(pm as any).ci}</p>
+                        <p style={{margin:0,fontSize:18,color:"#fff",fontWeight:900,letterSpacing:0.6,lineHeight:1.4}}>{(pm as any).phone}</p>
+                      </div>
+                    ):(
+                      <p style={{fontSize:18,color:"#fff",margin:"0 0 0.9rem",fontWeight:900,letterSpacing:0.6,lineHeight:1.5}}>{pm.detail}</p>
+                    )}
                     <button onClick={()=>{navigator.clipboard.writeText(pm.detail).catch(()=>{});setCopiedPay(true);setTimeout(()=>setCopiedPay(false),2000);}} style={{display:"inline-flex",alignItems:"center",gap:"0.4rem",background:copiedPay?"#0d1e0d":"#161616",border:`1px solid ${copiedPay?"#2a4a2a":"#2a2a2a"}`,color:copiedPay?"#4caf50":"#666",padding:"0.4rem 0.85rem",borderRadius:8,fontSize:10,fontWeight:800,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",marginBottom:"0.85rem",transition:"all 0.2s ease"}}>{copiedPay?<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>¡COPIADO!</>:<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>COPIAR DATOS</>}</button>
                     <p style={{fontSize:11,color:"#555",margin:0,lineHeight:1.7,borderTop:"1px solid #1a1a1a",paddingTop:"0.75rem"}}>Realiza el pago y sube tu comprobante abajo para continuar.</p>
                   </div>
@@ -2312,8 +2333,6 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   <div className="admin-list">{usedCats.map(cat=>{const cp=products.filter(p=>p.category===cat&&(adminSearch===""||p.name.toLowerCase().includes(adminSearch.toLowerCase())));if(!cp.length)return null;return(<div key={cat} style={{marginBottom:"1.1rem"}}><div style={{display:"flex",alignItems:"center",gap:"0.5rem",padding:"0.4rem 0",marginBottom:"0.35rem",borderBottom:"1px solid #1a1a1a"}}><span style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#333"}}>{catLabel(cat).toUpperCase()}</span><span style={{fontSize:9,color:"#2a2a2a",background:"#1a1a1a",padding:"1px 6px",borderRadius:10}}>{cp.length}</span></div>{cp.map(p=>(<div key={p.id} data-rowid={p.id}><ARow p={p} editing={editing} onEdit={startEdit} onDel={delProd} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} isDragging={dragId===p.id} isOver={overId===p.id&&dragId!==p.id} onTouchStart={handleTouchDragStart} onTouchMove={handleTouchDragMove} onTouchEnd={handleTouchDragEnd} onToggleActive={toggleProductActive} onToggleDiscount={promptDiscount} onToggleBestseller={toggleProductBestseller}/></div>))}</div>);})}</div>
                 ):(
                   <div className="admin-list" style={{display:"flex",flexDirection:"column",gap:2}}>{adminProds.map(p=>(<div key={p.id} data-rowid={p.id}><ARow p={p} editing={editing} onEdit={startEdit} onDel={delProd} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} isDragging={dragId===p.id} isOver={overId===p.id&&dragId!==p.id} onTouchStart={handleTouchDragStart} onTouchMove={handleTouchDragMove} onTouchEnd={handleTouchDragEnd} onToggleActive={toggleProductActive} onToggleDiscount={promptDiscount} onToggleBestseller={toggleProductBestseller}/></div>))}{!adminProds.length&&<p style={{color:"#333",textAlign:"center",padding:"1.5rem",fontSize:12}}>Sin resultados</p>}</div>
-                )}
-              </div>
             </>)}
 
             {adminLogged&&adminSec==="sales"&&(<>
@@ -2478,16 +2497,29 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                     <input placeholder="CÓDIGO" value={couponCode} onChange={e=>setCouponCode(e.target.value.toUpperCase())} style={{...S.input,flex:1,fontWeight:800,letterSpacing:2}}/>
                     <button type="button" onClick={()=>setCouponCode(generateCouponCode())} style={{background:"#1a1a1a",color:"#ccc",border:"1px solid #2a2a2a",borderRadius:8,padding:"0 1rem",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:800,flexShrink:0}}>🎲 GENERAR</button>
                   </div>
-                  <div style={{display:"flex",gap:"0.5rem"}}>
-                    <button type="button" onClick={()=>setCouponType("general")} style={{flex:1,background:couponType==="general"?"#fff":"#111",color:couponType==="general"?"#080808":"#666",border:`1px solid ${couponType==="general"?"#fff":"#222"}`,borderRadius:8,padding:"0.65rem",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:800,letterSpacing:0.5}}>🌐 GENERAL (TODO EL CARRITO)</button>
-                    <button type="button" onClick={()=>setCouponType("product")} style={{flex:1,background:couponType==="product"?"#fff":"#111",color:couponType==="product"?"#080808":"#666",border:`1px solid ${couponType==="product"?"#fff":"#222"}`,borderRadius:8,padding:"0.65rem",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:800,letterSpacing:0.5}}>🎯 PRODUCTO ESPECÍFICO</button>
+                  <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap"}}>
+                    <button type="button" onClick={()=>setCouponType("general")} style={{flex:1,minWidth:110,background:couponType==="general"?"#fff":"#111",color:couponType==="general"?"#080808":"#666",border:`1px solid ${couponType==="general"?"#fff":"#222"}`,borderRadius:8,padding:"0.65rem",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:800,letterSpacing:0.5}}>🌐 GENERAL</button>
+                    <button type="button" onClick={()=>setCouponType("category")} style={{flex:1,minWidth:110,background:couponType==="category"?"#fff":"#111",color:couponType==="category"?"#080808":"#666",border:`1px solid ${couponType==="category"?"#fff":"#222"}`,borderRadius:8,padding:"0.65rem",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:800,letterSpacing:0.5}}>🗂️ SECCIÓN</button>
+                    <button type="button" onClick={()=>setCouponType("product")} style={{flex:1,minWidth:110,background:couponType==="product"?"#fff":"#111",color:couponType==="product"?"#080808":"#666",border:`1px solid ${couponType==="product"?"#fff":"#222"}`,borderRadius:8,padding:"0.65rem",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:800,letterSpacing:0.5}}>🎯 PRODUCTO</button>
                   </div>
+                  {couponType==="category"&&(
+                    <select value={couponCategory} onChange={e=>setCouponCategory(e.target.value)} style={{...S.input,appearance:"auto" as any}}>
+                      <option value="">Selecciona la sección de accesorios *</option>
+                      <optgroup label="── LENTES">{LENTES_SUBCATS.map(s=><option key={s} value={s}>{catLabel(s)}</option>)}</optgroup>
+                      <optgroup label="── OTROS">{SHOP_CATS.filter(c=>c!=="LENTES").map(c=><option key={c} value={c}>{catLabel(c)}</option>)}</optgroup>
+                    </select>
+                  )}
                   {couponType==="product"&&(
                     <>
+                      <select value={couponProductCatFilter} onChange={e=>{setCouponProductCatFilter(e.target.value);setCouponProductId("");}} style={{...S.input,appearance:"auto" as any}}>
+                        <option value="ALL">Todas las secciones</option>
+                        <optgroup label="── LENTES">{LENTES_SUBCATS.map(s=><option key={s} value={s}>{catLabel(s)}</option>)}</optgroup>
+                        <optgroup label="── OTROS">{SHOP_CATS.filter(c=>c!=="LENTES").map(c=><option key={c} value={c}>{catLabel(c)}</option>)}</optgroup>
+                      </select>
                       <input placeholder="🔎 Buscar producto…" value={couponProductSearch} onChange={e=>setCouponProductSearch(e.target.value)} style={S.input}/>
                       <select value={couponProductId} onChange={e=>setCouponProductId(e.target.value)} style={{...S.input,appearance:"auto" as any}}>
                         <option value="">Selecciona el producto *</option>
-                        {products.filter(p=>p.name.toLowerCase().includes(couponProductSearch.toLowerCase())).map(p=><option key={p.id} value={p.id}>{p.name} — ${p.price.toFixed(2)}</option>)}
+                        {products.filter(p=>(couponProductCatFilter==="ALL"||p.category===couponProductCatFilter)&&p.name.toLowerCase().includes(couponProductSearch.toLowerCase())).map(p=><option key={p.id} value={p.id}>{p.name} — ${p.price.toFixed(2)}</option>)}
                       </select>
                     </>
                   )}
@@ -2522,11 +2554,11 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                       return(
                         <div key={c.id} style={{display:"flex",alignItems:"center",gap:"0.75rem",padding:"0.75rem",borderRadius:10,background:isLive?"linear-gradient(135deg,#141410 0%,#0d0d0a 100%)":"#0c0c0c",border:`1px solid ${isLive?"#3a3520":"#1a1a1a"}`}}>
                           <div style={{width:38,height:38,borderRadius:8,background:isLive?"linear-gradient(135deg,#ffd43b 0%,#c99a1f 100%)":"#1a1a1a",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                            <span style={{fontSize:15}}>{c.type==="general"?"🌐":"🎯"}</span>
+                            <span style={{fontSize:15}}>{c.type==="general"?"🌐":c.type==="category"?"🗂️":"🎯"}</span>
                           </div>
                           <div style={{flex:1,minWidth:0}}>
                             <p style={{margin:"0 0 2px",fontSize:12,fontWeight:800,color:"#fff",letterSpacing:1,fontFamily:"monospace"}}>{c.code} <span style={{color:"#ffd43b"}}>-{c.discountPercent}%</span></p>
-                            <p style={{margin:0,fontSize:10,color:"#555"}}>{c.type==="general"?"Aplica a todo el carrito":`Solo: ${c.productName||"producto"}`} {isLive?`· quedan ${hLeft}h ${mLeft}m`:expired?"· expirado":"· desactivado"}</p>
+                            <p style={{margin:0,fontSize:10,color:"#555"}}>{c.type==="general"?"Aplica a todo el carrito":c.type==="category"?`Sección: ${catLabel(c.category||"")}`:`Solo: ${c.productName||"producto"}`} {isLive?`· quedan ${hLeft}h ${mLeft}m`:expired?"· expirado":"· desactivado"}</p>
                           </div>
                           <span style={{fontSize:9,fontWeight:800,letterSpacing:1,padding:"3px 8px",borderRadius:20,background:isLive?"#0d1e0d":"#1e0d0d",color:isLive?"#4caf50":"#ff6666",flexShrink:0}}>{isLive?"ACTIVO":expired?"EXPIRADO":"PAUSADO"}</span>
                           <div style={{display:"flex",gap:"0.3rem",flexShrink:0}}>
