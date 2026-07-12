@@ -61,7 +61,7 @@ function invalidateProductsCache(): void {
 }
 
 const SOCIAL = {
-  whatsapp:  `https://wa.me/${WHATSAPP_NUMBER}?TEXT=${encodeURIComponent("HOLA! VI SU TIENDA FOKUS Y QUIERO MÁS INFORMACIÓN 🖤")}`,
+  whatsapp:  `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent("Hola! Vi su tienda Fokus y quiero más información 🖤")}`,
   instagram: "https://www.instagram.com/fokus_accesorios?igsh=eGNiNHZmczUwY3Np",
   facebook:  "https://www.facebook.com/share/14d2kQuHQ3y/?mibextid=wwXIfr",
   tiktok:    "https://www.tiktok.com/@fokus_accesorios?_r=1&_t=ZS-95NNWYzuIxV",
@@ -287,8 +287,8 @@ const GalleryBadge=memo(function GalleryBadge(){
 });
 const BestsellerBadge=memo(function BestsellerBadge(){
   return(
-    <div style={{position:"absolute",top:8,right:8,zIndex:3,display:"flex",alignItems:"center",gap:4,background:"linear-gradient(135deg,#fff6d8 0%,#ffd43b 35%,#c99a1f 75%,#8a6a10 100%)",color:"#3a2a00",padding:"4px 9px 4px 7px",borderRadius:20,fontSize:9,fontWeight:900,letterSpacing:0.5,boxShadow:"0 4px 16px rgba(255,212,59,0.5), inset 0 1px 0 rgba(255,255,255,0.8)",border:"1px solid rgba(255,255,255,0.6)"}}>
-      <svg width="10" height="10" viewBox="0 0 24 24" fill="#3a2a00"><path d="M5 16L3 5l5.5 4L12 3l3.5 6L21 5l-2 11H5zm0 2h14v2H5v-2z"/></svg>
+    <div style={{position:"absolute",bottom:8,left:8,zIndex:3,display:"flex",alignItems:"center",gap:4,background:"linear-gradient(140deg,#2a2a2a 0%,#0a0a0a 55%,#000 100%)",color:"#fff",padding:"4px 9px 4px 7px",borderRadius:20,fontSize:9,fontWeight:900,letterSpacing:0.8,boxShadow:"0 4px 18px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.28), 0 0 0 1px rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.55)"}}>
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="#fff"><path d="M5 16L3 5l5.5 4L12 3l3.5 6L21 5l-2 11H5zm0 2h14v2H5v-2z"/></svg>
       MÁS VENDIDO
     </div>
   );
