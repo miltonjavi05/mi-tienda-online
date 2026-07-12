@@ -99,7 +99,7 @@ const DELIVERY_ZONES_MAP = new Map(DELIVERY_ZONES.map(z=>[z.id,z]));
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 interface DeliveryInfo { zone:string; nombre:string; cedula:string; telefono:string; agencia:string; direccion:string; estado:string; }
-interface Product { id:string; name:string; category:string; price:number; img:string; description?:string; createdAt?:number; order?:number; active?:boolean; discount?:number; images?:string[]; code?:string; }
+interface Product { id:string; name:string; category:string; price:number; img:string; description?:string; createdAt?:number; order?:number; active?:boolean; discount?:number; images?:string[]; code?:string; bestseller?:boolean; }
 interface CartItem { product:Product; qty:number; }
 interface UserData { uid:string; email:string; displayName:string; createdAt:number; photoURL?:string; idToken?:string; }
 interface Coupon { id:string; code:string; type:"general"|"product"; productId?:string; productName?:string; discountPercent:number; durationHours:number; createdAt:number; expiresAt:number; active:boolean; }
@@ -241,7 +241,7 @@ type FsVal=|{stringValue:string}|{doubleValue:number}|{integerValue:string}|{boo
 function toFs(v:unknown):FsVal{if(v===null||v===undefined)return{nullValue:null};if(typeof v==="string")return{stringValue:v};if(typeof v==="number")return{doubleValue:v};if(typeof v==="boolean")return{booleanValue:v};if(Array.isArray(v))return{arrayValue:{values:v.map(toFs)}};if(typeof v==="object")return{mapValue:{fields:Object.fromEntries(Object.entries(v as Record<string,unknown>).map(([k,val])=>[k,toFs(val)]))}};return{stringValue:String(v)};}
 function fromFs(f:FsVal):unknown{if("stringValue" in f)return f.stringValue;if("doubleValue" in f)return f.doubleValue;if("integerValue" in f)return Number(f.integerValue);if("booleanValue" in f)return f.booleanValue;if("nullValue" in f)return null;if("arrayValue" in f)return((f as{arrayValue:{values?:FsVal[]}}).arrayValue.values||[]).map(fromFs);if("mapValue" in f){const fields=(f as{mapValue:{fields?:Record<string,FsVal>}}).mapValue.fields||{};return Object.fromEntries(Object.entries(fields).map(([k,v])=>[k,fromFs(v)]));}return null;}
 interface FsDoc{name:string;fields:Record<string,FsVal>;}
-function docToProduct(doc:FsDoc):Product{const f=doc.fields||{};const rawImages=fromFs(f.images??{nullValue:null}) as string[]|null;const id=doc.name.split("/").pop() as string;return{id,name:fromFs(f.name??{nullValue:null}) as string||"",category:((fromFs(f.category??{nullValue:null}) as string)||"").toUpperCase(),price:fromFs(f.price??{nullValue:null}) as number||0,img:fromFs(f.img??{nullValue:null}) as string||"",description:fromFs(f.description??{nullValue:null}) as string||"",createdAt:fromFs(f.createdAt??{nullValue:null}) as number||0,order:fromFs(f.order??{nullValue:null}) as number||0,active:f.active!==undefined?(fromFs(f.active) as boolean):true,discount:fromFs(f.discount??{nullValue:null}) as number||0,images:Array.isArray(rawImages)?rawImages:[],code:(fromFs(f.code??{nullValue:null}) as string)||("FK-"+id.slice(-6).toUpperCase())};}
+function docToProduct(doc:FsDoc):Product{const f=doc.fields||{};const rawImages=fromFs(f.images??{nullValue:null}) as string[]|null;const id=doc.name.split("/").pop() as string;return{id,name:fromFs(f.name??{nullValue:null}) as string||"",category:((fromFs(f.category??{nullValue:null}) as string)||"").toUpperCase(),price:fromFs(f.price??{nullValue:null}) as number||0,img:fromFs(f.img??{nullValue:null}) as string||"",description:fromFs(f.description??{nullValue:null}) as string||"",createdAt:fromFs(f.createdAt??{nullValue:null}) as number||0,order:fromFs(f.order??{nullValue:null}) as number||0,active:f.active!==undefined?(fromFs(f.active) as boolean):true,discount:fromFs(f.discount??{nullValue:null}) as number||0,images:Array.isArray(rawImages)?rawImages:[],code:(fromFs(f.code??{nullValue:null}) as string)||("FK-"+id.slice(-6).toUpperCase()),bestseller:f.bestseller!==undefined?(fromFs(f.bestseller) as boolean):false};}
 async function fsGetAll():Promise<Product[]>{const r=await fetch(`${fsBase()}/products?pageSize=300`);if(!r.ok)throw new Error(await r.text());const d=await r.json() as{documents?:FsDoc[]};return(d.documents||[]).map(docToProduct);}
 async function fsAdd(p:Omit<Product,"id">):Promise<void>{const fields=Object.fromEntries(Object.entries({...p,createdAt:Date.now()}).map(([k,v])=>[k,toFs(v)]));const r=await fetch(`${fsBase()}/products`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fields})});if(!r.ok)throw new Error(await r.text());}
 async function fsUpdate(id:string,p:Partial<Omit<Product,"id">>):Promise<void>{const fields=Object.fromEntries(Object.entries(p).map(([k,v])=>[k,toFs(v)]));const mask=Object.keys(p).map(k=>`updateMask.fieldPaths=${encodeURIComponent(k)}`).join("&");const r=await fetch(`${fsBase()}/products/${id}?${mask}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({fields})});if(!r.ok)throw new Error(await r.text());}
@@ -282,6 +282,14 @@ const GalleryBadge=memo(function GalleryBadge(){
     <div style={{position:"absolute",bottom:8,right:8,zIndex:2,background:"rgba(0,0,0,0.65)",backdropFilter:"blur(6px)",WebkitBackdropFilter:"blur(6px)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:20,padding:"3px 8px",display:"flex",alignItems:"center",gap:4}}>
       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><rect x="3" y="3" width="18" height="14" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
       <span style={{fontSize:9,color:"#fff",fontWeight:800}}>FOTOS</span>
+    </div>
+  );
+});
+const BestsellerBadge=memo(function BestsellerBadge(){
+  return(
+    <div style={{position:"absolute",top:8,right:8,zIndex:3,display:"flex",alignItems:"center",gap:4,background:"linear-gradient(135deg,#fff6d8 0%,#ffd43b 35%,#c99a1f 75%,#8a6a10 100%)",color:"#3a2a00",padding:"4px 9px 4px 7px",borderRadius:20,fontSize:9,fontWeight:900,letterSpacing:0.5,boxShadow:"0 4px 16px rgba(255,212,59,0.5), inset 0 1px 0 rgba(255,255,255,0.8)",border:"1px solid rgba(255,255,255,0.6)"}}>
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="#3a2a00"><path d="M5 16L3 5l5.5 4L12 3l3.5 6L21 5l-2 11H5zm0 2h14v2H5v-2z"/></svg>
+      MÁS VENDIDO
     </div>
   );
 });
@@ -339,6 +347,8 @@ const GLOBAL_CSS = `
   @keyframes spin { to{transform:rotate(360deg)} }
   @keyframes tyCheck { from{stroke-dashoffset:40} to{stroke-dashoffset:0} }
   @keyframes badgeShimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+  @keyframes viewIn { 0%{opacity:0; transform:translateY(10px) scale(0.99); filter:blur(4px);} 60%{filter:blur(0px);} 100%{opacity:1; transform:translateY(0) scale(1); filter:blur(0);} }
+  .pv { animation: viewIn 0.5s cubic-bezier(0.16,1,0.3,1) both; will-change: transform, opacity; }
 
   /* ── ADMIN CAT SCROLL — rueda de mouse en desktop ── */
   .admin-cat-scroll {
@@ -476,6 +486,14 @@ function productIdFromPath(path:string):string|null{
   return parts[parts.length-1]||null;
 }
 function generateCouponCode():string{const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let s="FOKUS-";for(let i=0;i<5;i++)s+=chars[Math.floor(Math.random()*chars.length)];return s;}
+function formatTimeLeft(expiresAt:number):string{
+  const ms=expiresAt-Date.now();
+  if(ms<=0)return"Expirado";
+  const h=Math.floor(ms/3600000);
+  const m=Math.floor((ms%3600000)/60000);
+  if(h>=24){const d=Math.floor(h/24);const rh=h%24;return`${d}d ${rh}h`;}
+  return`${h}h ${m}m`;
+}
 
 function PwdInput({value,onChange,placeholder,onKeyDown,autoComplete}:{value:string;onChange:(v:string)=>void;placeholder:string;onKeyDown?:(e:React.KeyboardEvent)=>void;autoComplete?:string;}){
   const[show,setShow]=useState(false);
@@ -552,6 +570,7 @@ const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,fmtPrice}:
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
         {!!product.discount&&product.discount>0&&<DiscountBadge percent={product.discount} issuper={isSuperOffer(product.discount)}/>}
+        {product.bestseller&&<BestsellerBadge/>}
         {getAllImages(product).length>1&&<GalleryBadge/>}
       </div>
       <div onClick={onClick} style={{marginBottom:"0.5rem",flex:1}}>
@@ -585,7 +604,8 @@ const HCard=memo(function HCard({product,onClick,onBuyNow,fmtPrice}:{product:Pro
       <div onClick={onClick} style={{background:"#111",width:152,height:152,overflow:"hidden",marginBottom:"0.55rem",borderRadius:10,position:"relative",cursor:"pointer"}}>
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
-        {!!product.discount&&product.discount>0&&<DiscountBadge percent={product.discount}/>}
+        {!!product.discount&&product.discount>0&&<DiscountBadge percent={product.discount} issuper={isSuperOffer(product.discount)}/>}
+        {product.bestseller&&<BestsellerBadge/>}
         {getAllImages(product).length>1&&<GalleryBadge/>}
       </div>
       <div onClick={onClick} style={{marginBottom:"0.5rem",cursor:"pointer",flex:1}}>
@@ -947,8 +967,8 @@ function UserAvatar({user,size=26}:{user:UserData;size?:number}){
 }
 
 // ─── ADMIN ROW ────────────────────────────────────────────────────────────────
-interface ARowProps{p:Product;editing:Product|null;onEdit:(p:Product)=>void;onDel:(id:string)=>void;onDragStart:(id:string)=>void;onDragOver:(id:string)=>void;onDragEnd:()=>void;isDragging:boolean;isOver:boolean;onTouchStart:(id:string,y:number)=>void;onTouchMove:(y:number,x:number)=>void;onTouchEnd:()=>void;onToggleActive:(p:Product)=>void;onToggleDiscount:(p:Product)=>void;}
-const ARow=memo(function ARow({p,editing,onEdit,onDel,onDragStart,onDragOver,onDragEnd,isDragging,isOver,onTouchStart,onTouchMove,onTouchEnd,onToggleActive,onToggleDiscount}:ARowProps){
+interface ARowProps{p:Product;editing:Product|null;onEdit:(p:Product)=>void;onDel:(id:string)=>void;onDragStart:(id:string)=>void;onDragOver:(id:string)=>void;onDragEnd:()=>void;isDragging:boolean;isOver:boolean;onTouchStart:(id:string,y:number)=>void;onTouchMove:(y:number,x:number)=>void;onTouchEnd:()=>void;onToggleActive:(p:Product)=>void;onToggleDiscount:(p:Product)=>void;onToggleBestseller:(p:Product)=>void;}
+const ARow=memo(function ARow({p,editing,onEdit,onDel,onDragStart,onDragOver,onDragEnd,isDragging,isOver,onTouchStart,onTouchMove,onTouchEnd,onToggleActive,onToggleDiscount,onToggleBestseller}:ARowProps){
   return(
     <div draggable onDragStart={()=>onDragStart(p.id)} onDragOver={e=>{e.preventDefault();onDragOver(p.id);}} onDragEnd={onDragEnd} data-rowid={p.id} className="ar" style={{display:"flex",alignItems:"center",gap:"0.75rem",padding:"0.6rem 0.65rem",borderRadius:8,background:isOver?"#1e1e1e":editing?.id===p.id?"#1a1a1a":"transparent",opacity:isDragging?0.4:1,border:isOver?"1px dashed #3a3a3a":"1px solid transparent",transition:"opacity 0.15s, background 0.15s, border 0.15s",cursor:"default",userSelect:"none",WebkitUserSelect:"none"}}>
       <div onTouchStart={e=>{e.stopPropagation();const t=e.touches[0];onTouchStart(p.id,t.clientY);}} onTouchMove={e=>{e.stopPropagation();e.preventDefault();const t=e.touches[0];onTouchMove(t.clientY,t.clientX);}} onTouchEnd={e=>{e.stopPropagation();onTouchEnd();}} style={{cursor:"grab",flexShrink:0,padding:"6px 8px",color:"#444",display:"flex",alignItems:"center",touchAction:"none",WebkitTapHighlightColor:"transparent",userSelect:"none",WebkitUserSelect:"none",WebkitTouchCallout:"none"} as React.CSSProperties}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="8" cy="6" r="1.2" fill="currentColor"/><circle cx="16" cy="6" r="1.2" fill="currentColor"/><circle cx="8" cy="12" r="1.2" fill="currentColor"/><circle cx="16" cy="12" r="1.2" fill="currentColor"/><circle cx="8" cy="18" r="1.2" fill="currentColor"/><circle cx="16" cy="18" r="1.2" fill="currentColor"/></svg></div>
@@ -960,6 +980,7 @@ const ARow=memo(function ARow({p,editing,onEdit,onDel,onDragStart,onDragOver,onD
       <div style={{display:"flex",gap:"0.3rem",flexShrink:0,flexWrap:"wrap",justifyContent:"flex-end",maxWidth:170}}>
         <button onClick={()=>onToggleActive(p)} title={p.active===false?"Mostrar en tienda":"Ocultar (agotado)"} style={{background:p.active===false?"#1e0d0d":"#0d1e0d",color:p.active===false?"#ff8888":"#4caf50",border:`1px solid ${p.active===false?"#3a1515":"#1a3a1a"}`,padding:"0.3rem 0.5rem",borderRadius:6,cursor:"pointer",fontSize:10,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>{p.active===false?"👁️‍🗨️":"👁️"}</button>
         <button onClick={()=>onToggleDiscount(p)} title="Configurar oferta" style={{background:p.discount?"#1a1608":"#1a1a1a",color:p.discount?"#ffd43b":"#888",border:`1px solid ${p.discount?"#3a2f10":"#222"}`,padding:"0.3rem 0.55rem",borderRadius:6,cursor:"pointer",fontSize:10,fontFamily:"inherit",fontWeight:700,WebkitTapHighlightColor:"transparent"}}>🏷️{p.discount?` -${p.discount}%`:""}</button>
+        <button onClick={()=>onToggleBestseller(p)} title="Marcar como más vendido" style={{background:p.bestseller?"linear-gradient(135deg,#ffd43b,#c99a1f)":"#1a1a1a",color:p.bestseller?"#3a2a00":"#888",border:`1px solid ${p.bestseller?"#c99a1f":"#222"}`,padding:"0.3rem 0.55rem",borderRadius:6,cursor:"pointer",fontSize:10,fontFamily:"inherit",fontWeight:800,WebkitTapHighlightColor:"transparent"}}>🏆</button>
         <button onClick={()=>onEdit(p)} style={{background:"#1a1a1a",color:"#888",border:"1px solid #222",padding:"0.3rem 0.65rem",borderRadius:6,cursor:"pointer",fontSize:10,fontFamily:"inherit",fontWeight:700,WebkitTapHighlightColor:"transparent"}}>Editar</button>
         <button onClick={()=>onDel(p.id)} style={{background:"none",color:"#cc3333",border:"1px solid #2a1515",padding:"0.3rem 0.65rem",borderRadius:6,cursor:"pointer",fontSize:10,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>✕</button>
       </div>
@@ -1408,6 +1429,7 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
     setCart(prev=>{const ex=prev.find(i=>i.product.id===product.id);return ex?prev.map(i=>i.product.id===product.id?{...i,qty:i.qty+qty}:i):[...prev,{product,qty}];});
     closeProdModal();setMainView("cart");
     trackAddToCart(product,qty,currentUser?.email);
+    requestAnimationFrame(()=>{scrollTop();setTimeout(scrollTop,60);setTimeout(scrollTop,220);});
   },[currentUser?.email,closeProdModal,setMainView]);
 
   const updQty=useCallback((id:string,d:number)=>setCart(prev=>prev.map(i=>i.product.id===id?{...i,qty:i.qty+d}:i).filter(i=>i.qty>0)),[]);
@@ -1444,8 +1466,10 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
   const onGalleryFilesChange=async(e:React.ChangeEvent<HTMLInputElement>)=>{const files=Array.from(e.target.files||[]);if(!files.length)return;setFGalleryUploading(true);try{const urls=await Promise.all(files.map(f=>uploadImg(f)));setFGallery(prev=>[...prev,...urls]);}catch{setFErr("Error subiendo alguna de las fotos adicionales.");}finally{setFGalleryUploading(false);if(galleryFileRef.current)galleryFileRef.current.value="";}};
   const makeGalleryImageMain=(idx:number)=>{setFGallery(prevGal=>{const url=prevGal[idx];const newGal=[...prevGal];newGal.splice(idx,1);if(fPrev)newGal.push(fPrev);setFPrev(url);setFFile(null);return newGal;});};
   const removeGalleryImage=(idx:number)=>setFGallery(prev=>prev.filter((_,i)=>i!==idx));
+  const moveGalleryImage=(idx:number,dir:-1|1)=>{setFGallery(prev=>{const arr=[...prev];const ni=idx+dir;if(ni<0||ni>=arr.length)return prev;[arr[idx],arr[ni]]=[arr[ni],arr[idx]];return arr;});};
   const toggleProductActive=async(p:Product)=>{const newActive=p.active===false;setProducts(prev=>{const upd=prev.map(x=>x.id===p.id?{...x,active:newActive}:x);setCachedProducts(upd);return upd;});try{await fsUpdate(p.id,{active:newActive});invalidateProductsCache();}catch{}};
   const promptDiscount=async(p:Product)=>{const current=p.discount&&p.discount>0?String(p.discount):"";const input=window.prompt(`Descuento para "${p.name}" (0-95). Deja vacío o 0 para quitar la oferta:`,current);if(input===null)return;const val=Math.max(0,Math.min(95,parseFloat(input)||0));setProducts(prev=>{const upd=prev.map(x=>x.id===p.id?{...x,discount:val}:x);setCachedProducts(upd);return upd;});try{await fsUpdate(p.id,{discount:val});invalidateProductsCache();}catch{}};
+  const toggleProductBestseller=async(p:Product)=>{const newBestseller=!p.bestseller;setProducts(prev=>{const upd=prev.map(x=>x.id===p.id?{...x,bestseller:newBestseller}:x);setCachedProducts(upd);return upd;});try{await fsUpdate(p.id,{bestseller:newBestseller});invalidateProductsCache();}catch{}};
 
 const loadCoupons=useCallback(async(force=false)=>{
   if(couponsLoaded.current&&!force)return;
@@ -1493,6 +1517,17 @@ const deleteCoupon=async(id:string)=>{
   if(!confirm("¿Eliminar este cupón?"))return;
   setCouponsList(prev=>prev.filter(c=>c.id!==id));
   try{await fsDeleteDoc("coupons",id);}catch{}
+};
+
+const extendCoupon=async(c:Coupon)=>{
+  const input=window.prompt(`¿Cuántas horas quieres agregar al cupón ${c.code}?`,"24");
+  if(input===null)return;
+  const extraHours=parseFloat(input);
+  if(!extraHours||extraHours<=0)return;
+  const base=Math.max(Date.now(),c.expiresAt);
+  const newExpiresAt=base+extraHours*3600000;
+  setCouponsList(prev=>prev.map(x=>x.id===c.id?{...x,expiresAt:newExpiresAt,active:true}:x));
+  try{await fsUpdateDoc("coupons",c.id,{expiresAt:newExpiresAt,active:true});}catch{}
 };
 
 const applyCouponCode=useCallback(async()=>{
@@ -1795,7 +1830,7 @@ useEffect(()=>{if(adminSec==="coupons"){loadCoupons();if(!couponCode)setCouponCo
 
       {/* ── HOME ── */}
       {mainView==="fokus"&&(
-        <main style={{paddingTop:navH,background:C.bg}}>
+        <main className="pv" style={{paddingTop:navH,background:C.bg}}>
           <div style={{maxWidth:760,margin:"0 auto",padding:"4rem 1.5rem 0",textAlign:"center",animation:"slideUp 0.5s ease"}}>
             <div style={{marginBottom:"2rem"}}><img src="/favicon.png" alt="Fokus" width={64} height={64} style={{objectFit:"contain",filter:"brightness(1.1)",pointerEvents:"none"}} draggable={false}/></div>
 
@@ -1853,7 +1888,7 @@ useEffect(()=>{if(adminSec==="coupons"){loadCoupons();if(!couponCode)setCouponCo
 
       {/* TIENDA */}
       {isShop&&(
-        <main style={{paddingTop:navH,background:C.bg}}>
+        <main className="pv" style={{paddingTop:navH,background:C.bg}}>
           
       <div style={{position:"sticky",top:stickyTop,zIndex:100,background:"rgba(8,8,8,0.97)",borderBottom:`1px solid ${C.border}`,backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)"}}>
             <NativeTabs
@@ -1912,7 +1947,7 @@ useEffect(()=>{if(adminSec==="coupons"){loadCoupons();if(!couponCode)setCouponCo
 
       {/* COMUNIDAD */}
       {mainView==="comunidad"&&(
-        <main style={{paddingTop:navH,background:C.bg}}>
+        <main className="pv" style={{paddingTop:navH,background:C.bg}}>
           <div style={{maxWidth:680,margin:"0 auto",padding:"3rem 1.5rem 0",textAlign:"center",animation:"slideUp 0.4s ease"}}>
             <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:20,padding:"0.35rem 1rem",marginBottom:"1.25rem"}}><div style={{width:6,height:6,borderRadius:"50%",background:"#4caf50",flexShrink:0,boxShadow:"0 0 0 3px rgba(76,175,80,0.2)",animation:"pulseRing 2s infinite"}}/><span style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#4caf50"}}>CLIENTES REALES</span></div>
             <h2 style={{fontSize:28,fontWeight:900,letterSpacing:4,marginBottom:"0.75rem",color:C.accent,lineHeight:1.1}}>COMUNIDAD<br/>FOKUS</h2>
@@ -1946,12 +1981,12 @@ useEffect(()=>{if(adminSec==="coupons"){loadCoupons();if(!couponCode)setCouponCo
         </main>
       )}
 
-      {mainView==="grabados"&&(<main style={{paddingTop:navH,background:C.bg}}><div style={{maxWidth:680,margin:"0 auto",padding:"3rem 1.5rem 0",textAlign:"center",animation:"slideUp 0.4s ease"}}><div style={{display:"inline-flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:20,padding:"0.35rem 1rem",marginBottom:"1.25rem"}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg><span style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"rgba(255,255,255,0.4)"}}>PERSONALIZACIÓN EXCLUSIVA</span></div><h2 style={{fontSize:28,fontWeight:900,letterSpacing:4,marginBottom:"0.5rem",color:C.accent,lineHeight:1.1}}>GRABADOS<br/>LÁSER</h2><p style={{color:"#444",fontSize:13,lineHeight:1.8,maxWidth:360,margin:"0 auto 1rem"}}>Personalizamos tu accesorio con tu nombre, iniciales, fecha o diseño especial. Único, como tú.</p><div style={{display:"flex",justifyContent:"center",gap:"2rem",marginBottom:"2.5rem",flexWrap:"wrap"}}>{[{n:"Relojes",i:"⌚"},{n:"Pulseras",i:"📿"},{n:"Collares",i:"✝️"},{n:"Billeteras",i:"👜"}].map(({n,i})=>(<div key={n} style={{textAlign:"center",background:"rgba(255,255,255,0.03)",border:"1px solid #1a1a1a",borderRadius:10,padding:"0.6rem 1rem"}}><p style={{margin:0,fontSize:18}}>{i}</p><p style={{margin:"3px 0 0",fontSize:9,color:"#444",letterSpacing:1.5,fontWeight:700}}>{n.toUpperCase()}</p></div>))}</div></div><div style={{maxWidth:900,margin:"0 auto",padding:"0 1rem 5rem"}}><div className="cg" style={{display:"grid",gap:"0.75rem",gridTemplateColumns:"repeat(2,1fr)"}}>{[{img:"/grabados/photo_1.jpg",caption:"Billetera grabada con nombre"},{img:"/grabados/photo_2.jpg",caption:"Pulsera con iniciales"},{img:"/grabados/photo_3.jpg",caption:"Pulsera personalizada"},{img:"/grabados/photo_4.jpg",caption:"Collares con nombres y fechas"}].map((item,i)=>(<div key={i} style={{borderRadius:14,overflow:"hidden",background:"#0d0d0d",border:"1px solid #1a1a1a",position:"relative",aspectRatio:"1",cursor:"pointer"}} className="cc"><img src={item.img} alt={item.caption} loading="lazy" style={{width:"100%",height:"100%",objectFit:"cover",display:"block",pointerEvents:"none"} as React.CSSProperties} draggable={false}/><div style={{position:"absolute",inset:0,background:"linear-gradient(to top,rgba(0,0,0,0.7) 0%,transparent 60%)",pointerEvents:"none"}}/><p style={{position:"absolute",bottom:10,left:12,right:12,margin:0,fontSize:11,fontWeight:700,color:"#fff",lineHeight:1.3}}>{item.caption}</p></div>))}</div><div style={{marginTop:"2rem",background:"linear-gradient(135deg,#0f0f0f 0%,#111 100%)",borderRadius:16,border:"1px solid #1e1e1e",padding:"1.75rem 1.5rem",textAlign:"center"}}><p style={{fontSize:9,fontWeight:800,letterSpacing:3,color:"#333",margin:"0 0 0.5rem"}}>¿QUIERES EL TUYO?</p><h3 style={{fontSize:18,fontWeight:900,color:C.accent,margin:"0 0 0.5rem",letterSpacing:1}}>Pide tu grabado personalizado</h3><p style={{fontSize:12,color:"#444",lineHeight:1.7,margin:"0 0 1.25rem"}}>Escríbenos por WhatsApp con el accesorio que quieres grabar y el texto o diseño que deseas.</p><a href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent("Hola! Quiero solicitar un GRABADO LÁSER personalizado ✨\n\nAccesorio a grabar: \nTexto / diseño que deseo grabar: \n\n¿Podrían darme información sobre precios y tiempo de entrega?")}`} onClick={()=>trackLeadWhatsApp("grabados_contacto")} target="_blank" rel="noreferrer" data-fokus-tracked="true" style={{display:"inline-flex",alignItems:"center",gap:"0.65rem",background:"#25D366",color:"#fff",padding:"0.95rem 1.75rem",borderRadius:10,textDecoration:"none",fontSize:12,fontWeight:900,letterSpacing:1.5,WebkitTapHighlightColor:"transparent"}}><svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>PEDIR GRABADO →</a></div></div><Footer setMainView={setMainView} setShopFilter={setShopFilter}/></main>)}{lightboxIdx!==null&&(<CommunityLightbox post={COMMUNITY_POSTS[lightboxIdx]} onClose={()=>setLightboxIdx(null)} onPrev={()=>setLightboxIdx(i=>i!==null?Math.max(0,i-1):0)} onNext={()=>setLightboxIdx(i=>i!==null?Math.min(COMMUNITY_POSTS.length-1,i+1):0)} hasPrev={lightboxIdx>0} hasNext={lightboxIdx<COMMUNITY_POSTS.length-1}/>)}
+      {mainView==="grabados"&&(<main className="pv" style={{paddingTop:navH,background:C.bg}}><div style={{maxWidth:680,margin:"0 auto",padding:"3rem 1.5rem 0",textAlign:"center",animation:"slideUp 0.4s ease"}}><div style={{display:"inline-flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:20,padding:"0.35rem 1rem",marginBottom:"1.25rem"}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg><span style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"rgba(255,255,255,0.4)"}}>PERSONALIZACIÓN EXCLUSIVA</span></div><h2 style={{fontSize:28,fontWeight:900,letterSpacing:4,marginBottom:"0.5rem",color:C.accent,lineHeight:1.1}}>GRABADOS<br/>LÁSER</h2><p style={{color:"#444",fontSize:13,lineHeight:1.8,maxWidth:360,margin:"0 auto 1rem"}}>Personalizamos tu accesorio con tu nombre, iniciales, fecha o diseño especial. Único, como tú.</p><div style={{display:"flex",justifyContent:"center",gap:"2rem",marginBottom:"2.5rem",flexWrap:"wrap"}}>{[{n:"Relojes",i:"⌚"},{n:"Pulseras",i:"📿"},{n:"Collares",i:"✝️"},{n:"Billeteras",i:"👜"}].map(({n,i})=>(<div key={n} style={{textAlign:"center",background:"rgba(255,255,255,0.03)",border:"1px solid #1a1a1a",borderRadius:10,padding:"0.6rem 1rem"}}><p style={{margin:0,fontSize:18}}>{i}</p><p style={{margin:"3px 0 0",fontSize:9,color:"#444",letterSpacing:1.5,fontWeight:700}}>{n.toUpperCase()}</p></div>))}</div></div><div style={{maxWidth:900,margin:"0 auto",padding:"0 1rem 5rem"}}><div className="cg" style={{display:"grid",gap:"0.75rem",gridTemplateColumns:"repeat(2,1fr)"}}>{[{img:"/grabados/photo_1.jpg",caption:"Billetera grabada con nombre"},{img:"/grabados/photo_2.jpg",caption:"Pulsera con iniciales"},{img:"/grabados/photo_3.jpg",caption:"Pulsera personalizada"},{img:"/grabados/photo_4.jpg",caption:"Collares con nombres y fechas"}].map((item,i)=>(<div key={i} style={{borderRadius:14,overflow:"hidden",background:"#0d0d0d",border:"1px solid #1a1a1a",position:"relative",aspectRatio:"1",cursor:"pointer"}} className="cc"><img src={item.img} alt={item.caption} loading="lazy" style={{width:"100%",height:"100%",objectFit:"cover",display:"block",pointerEvents:"none"} as React.CSSProperties} draggable={false}/><div style={{position:"absolute",inset:0,background:"linear-gradient(to top,rgba(0,0,0,0.7) 0%,transparent 60%)",pointerEvents:"none"}}/><p style={{position:"absolute",bottom:10,left:12,right:12,margin:0,fontSize:11,fontWeight:700,color:"#fff",lineHeight:1.3}}>{item.caption}</p></div>))}</div><div style={{marginTop:"2rem",background:"linear-gradient(135deg,#0f0f0f 0%,#111 100%)",borderRadius:16,border:"1px solid #1e1e1e",padding:"1.75rem 1.5rem",textAlign:"center"}}><p style={{fontSize:9,fontWeight:800,letterSpacing:3,color:"#333",margin:"0 0 0.5rem"}}>¿QUIERES EL TUYO?</p><h3 style={{fontSize:18,fontWeight:900,color:C.accent,margin:"0 0 0.5rem",letterSpacing:1}}>Pide tu grabado personalizado</h3><p style={{fontSize:12,color:"#444",lineHeight:1.7,margin:"0 0 1.25rem"}}>Escríbenos por WhatsApp con el accesorio que quieres grabar y el texto o diseño que deseas.</p><a href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent("Hola! Quiero solicitar un GRABADO LÁSER personalizado ✨\n\nAccesorio a grabar: \nTexto / diseño que deseo grabar: \n\n¿Podrían darme información sobre precios y tiempo de entrega?")}`} onClick={()=>trackLeadWhatsApp("grabados_contacto")} target="_blank" rel="noreferrer" data-fokus-tracked="true" style={{display:"inline-flex",alignItems:"center",gap:"0.65rem",background:"#25D366",color:"#fff",padding:"0.95rem 1.75rem",borderRadius:10,textDecoration:"none",fontSize:12,fontWeight:900,letterSpacing:1.5,WebkitTapHighlightColor:"transparent"}}><svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>PEDIR GRABADO →</a></div></div><Footer setMainView={setMainView} setShopFilter={setShopFilter}/></main>)}{lightboxIdx!==null&&(<CommunityLightbox post={COMMUNITY_POSTS[lightboxIdx]} onClose={()=>setLightboxIdx(null)} onPrev={()=>setLightboxIdx(i=>i!==null?Math.max(0,i-1):0)} onNext={()=>setLightboxIdx(i=>i!==null?Math.min(COMMUNITY_POSTS.length-1,i+1):0)} hasPrev={lightboxIdx>0} hasNext={lightboxIdx<COMMUNITY_POSTS.length-1}/>)}
       {showReviewModal&&<ReviewModal onClose={()=>setShowReviewModal(false)}/>}
 
       {/* ACCOUNT */}
       {mainView==="account"&&userReady&&currentUser&&(
-        <main style={{paddingTop:navH,background:C.bg}}>
+        <main className="pv" style={{paddingTop:navH,background:C.bg}}>
           <div style={{maxWidth:480,margin:"0 auto",padding:"2rem 1.25rem 5rem",animation:"slideUp 0.3s ease"}}>
             <h1 style={{fontSize:11,fontWeight:800,letterSpacing:3,marginBottom:"2rem",color:"#444"}}>MI CUENTA</h1>
             <div style={{background:"#111",borderRadius:16,padding:"1.75rem 1.5rem",border:"1px solid #1a1a1a",marginBottom:"1rem"}}>
@@ -1986,7 +2021,7 @@ useEffect(()=>{if(adminSec==="coupons"){loadCoupons();if(!couponCode)setCouponCo
 
       {/* CARRITO */}
 {isCart&&(
-  <main style={{paddingTop:navH,background:C.bg}}>
+  <main className="pv" style={{paddingTop:navH,background:C.bg}}>
     <div style={{maxWidth:680,margin:"0 auto",padding:"2rem 1rem 5rem",animation:"fadeIn 0.25s ease"}}>
       <h1 style={{fontSize:11,fontWeight:800,letterSpacing:3,marginBottom:"1rem",color:"#444"}}>CARRITO DE COMPRAS</h1>
       <div style={{display:"flex",alignItems:"center",gap:0,marginBottom:"1.75rem"}}>
@@ -2077,6 +2112,7 @@ useEffect(()=>{if(adminSec==="coupons"){loadCoupons();if(!couponCode)setCouponCo
                 <div>
                   <p style={{margin:"0 0 2px",fontSize:13,fontWeight:800,color:"#ffd43b",letterSpacing:1,fontFamily:"monospace"}}>{appliedCoupon.code}</p>
                   <p style={{margin:0,fontSize:10,color:"#888"}}>-{appliedCoupon.discountPercent}% {appliedCoupon.type==="general"?"en todo el pedido":`en ${appliedCoupon.productName||"el producto"}`}</p>
+                  <p style={{margin:"3px 0 0",fontSize:10,color:"#ff8888",display:"flex",alignItems:"center",gap:4}}>⏳ Expira en {formatTimeLeft(appliedCoupon.expiresAt)}</p>
                 </div>
                 <button onClick={removeCoupon} style={{background:"none",border:"1px solid rgba(255,255,255,0.15)",color:"#888",borderRadius:8,padding:"0.4rem 0.75rem",cursor:"pointer",fontSize:10,fontFamily:"inherit",fontWeight:700}}>Quitar</button>
               </div>
@@ -2159,8 +2195,32 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
               </div>
             </div>
 
-            {payMethod&&(()=>{const pm=PAYMENT_METHODS.find(m=>m.id===payMethod)!;return(<div style={{marginTop:"1rem",background:"linear-gradient(135deg,#0d0d0d 0%,#0a0a0a 100%)",borderRadius:12,border:"1px solid #2a2a2a",overflow:"hidden"}}><div style={{padding:"0.6rem 1rem",borderBottom:"1px solid #1a1a1a",display:"flex",alignItems:"center",gap:"0.5rem",background:"rgba(255,255,255,0.02)"}}><span style={{fontSize:15}}>{pm.icon}</span><p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#444",margin:0}}>DATOS DE PAGO — {pm.name.toUpperCase()}</p></div><div style={{padding:"1rem 1.1rem"}}><div style={{display:"flex",alignItems:"center",gap:6,background:"rgba(76,175,80,0.06)",border:"1px solid rgba(76,175,80,0.15)",borderRadius:8,padding:"0.5rem 0.75rem",marginBottom:"0.65rem"}}><span style={{fontSize:11}}>✓</span><p style={{margin:0,fontSize:10,color:"#4caf50",fontWeight:700}}>Más de 3.000 clientes ya pagaron por este método</p></div>
-                <p style={{fontSize:16,color:"#fff",margin:"0 0 0.85rem",fontWeight:800,letterSpacing:0.5,lineHeight:1.5}}>{pm.detail}</p><button onClick={()=>{navigator.clipboard.writeText(pm.detail).catch(()=>{});setCopiedPay(true);setTimeout(()=>setCopiedPay(false),2000);}} style={{display:"inline-flex",alignItems:"center",gap:"0.4rem",background:copiedPay?"#0d1e0d":"#161616",border:`1px solid ${copiedPay?"#2a4a2a":"#2a2a2a"}`,color:copiedPay?"#4caf50":"#666",padding:"0.4rem 0.85rem",borderRadius:8,fontSize:10,fontWeight:800,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",marginBottom:"0.85rem",transition:"all 0.2s ease"}}>{copiedPay?<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>¡COPIADO!</>:<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>COPIAR DATOS</>}</button><p style={{fontSize:11,color:"#444",margin:0,lineHeight:1.7,borderTop:"1px solid #1a1a1a",paddingTop:"0.75rem"}}>Realiza el pago y sube tu comprobante abajo para continuar.</p></div></div>);})()}
+            {payMethod&&(()=>{
+              const pm=PAYMENT_METHODS.find(m=>m.id===payMethod)!;
+              const isBs=pm.id==="pagomovil_bv"||pm.id==="pagomovil_ba";
+              const amountLabel=isBs?(bcvRate?`Bs. ${Math.round(totalPrice*bcvRate).toLocaleString("es-VE")}`:"Cargando tasa…"):`$${totalPrice.toFixed(2)}`;
+              return(
+                <div style={{marginTop:"1rem",background:"linear-gradient(135deg,#141410 0%,#0a0a0a 100%)",borderRadius:14,border:"2px solid #3a3520",overflow:"hidden",boxShadow:"0 8px 28px rgba(255,212,59,0.08), inset 0 1px 0 rgba(255,255,255,0.05)"}}>
+                  <div style={{padding:"0.7rem 1.1rem",borderBottom:"1px solid #2a2a1a",display:"flex",alignItems:"center",gap:"0.6rem",background:"rgba(255,212,59,0.05)"}}>
+                    <span style={{fontSize:17}}>{pm.icon}</span>
+                    <p style={{fontSize:10,fontWeight:900,letterSpacing:2.5,color:"#ffd43b",margin:0}}>DATOS DE PAGO — {pm.name.toUpperCase()}</p>
+                  </div>
+                  <div style={{padding:"1.1rem 1.2rem"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6,background:"rgba(76,175,80,0.08)",border:"1px solid rgba(76,175,80,0.2)",borderRadius:8,padding:"0.5rem 0.75rem",marginBottom:"0.75rem"}}>
+                      <span style={{fontSize:11}}>✓</span>
+                      <p style={{margin:0,fontSize:10,color:"#4caf50",fontWeight:700}}>Más de 3.000 clientes ya pagaron por este método</p>
+                    </div>
+                    <div style={{background:"#0a0a0a",border:"1px solid #2a2a2a",borderRadius:10,padding:"0.9rem 1rem",marginBottom:"0.85rem"}}>
+                      <p style={{margin:"0 0 3px",fontSize:9,fontWeight:800,letterSpacing:2,color:"#555"}}>MONTO A PAGAR</p>
+                      <p style={{margin:0,fontSize:24,fontWeight:900,color:"#ffd43b",letterSpacing:0.5,fontVariantNumeric:"tabular-nums"}}>{amountLabel}</p>
+                    </div>
+                    <p style={{fontSize:18,color:"#fff",margin:"0 0 0.9rem",fontWeight:900,letterSpacing:0.6,lineHeight:1.5}}>{pm.detail}</p>
+                    <button onClick={()=>{navigator.clipboard.writeText(pm.detail).catch(()=>{});setCopiedPay(true);setTimeout(()=>setCopiedPay(false),2000);}} style={{display:"inline-flex",alignItems:"center",gap:"0.4rem",background:copiedPay?"#0d1e0d":"#161616",border:`1px solid ${copiedPay?"#2a4a2a":"#2a2a2a"}`,color:copiedPay?"#4caf50":"#666",padding:"0.4rem 0.85rem",borderRadius:8,fontSize:10,fontWeight:800,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",marginBottom:"0.85rem",transition:"all 0.2s ease"}}>{copiedPay?<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>¡COPIADO!</>:<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>COPIAR DATOS</>}</button>
+                    <p style={{fontSize:11,color:"#555",margin:0,lineHeight:1.7,borderTop:"1px solid #1a1a1a",paddingTop:"0.75rem"}}>Realiza el pago y sube tu comprobante abajo para continuar.</p>
+                  </div>
+                </div>
+              );
+            })()}
 
             <div ref={comprobanteRef}>
               {payMethod&&<ComprobanteUpload url={comprobanteUrl} onUrl={setComprobante}/>}
@@ -2189,7 +2249,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
 
       {/* ── ADMIN ── */}
       {isAdmin&&(
-        <main style={{paddingTop:NAV_H,background:"#060606",minHeight:"100vh"}}>
+        <main className="pv" style={{paddingTop:NAV_H,background:"#060606",minHeight:"100vh"}}>
           <div style={{maxWidth:720,margin:"0 auto",padding:"2rem 1rem 4rem"}}>
             {!adminLogged&&(<div style={{background:"#111",borderRadius:14,padding:"2.5rem 2rem",maxWidth:380,margin:"2rem auto",border:"1px solid #1a1a1a",animation:"slideUp 0.3s ease"}}><h1 style={{color:"#fff",fontSize:20,fontWeight:900,marginBottom:"1.5rem",textAlign:"center",letterSpacing:2}}>ADMIN</h1><div style={{display:"flex",flexDirection:"column",gap:"0.85rem"}}><input type="email" placeholder="Correo" value={adminEmail} onChange={e=>setAdminEmail(e.target.value)} style={S.input}/><PwdInput placeholder="Contraseña" value={adminPwd} onChange={setAdminPwd} onKeyDown={e=>e.key==="Enter"&&doLogin()} autoComplete="current-password"/>{adminErr&&<p style={{color:"#ff5555",fontSize:12,margin:0,background:"#1e0a0a",padding:"0.6rem 1rem",borderRadius:8}}>{adminErr}</p>}<button onClick={doLogin} style={S.adminBtn}>Entrar</button><button onClick={doLogout} style={{...S.adminBtn,background:"transparent",color:"#333",marginTop:4}}>← Volver</button></div></div>)}
             {adminLogged&&adminSec==="menu"&&(<div style={{background:"#111",borderRadius:14,padding:"2.5rem 2rem",maxWidth:380,margin:"2rem auto",border:"1px solid #1a1a1a",animation:"slideUp 0.3s ease"}}><h1 style={{color:"#fff",fontSize:18,fontWeight:900,marginBottom:"0.4rem",textAlign:"center",letterSpacing:2}}>PANEL</h1><p style={{color:"#333",fontSize:12,textAlign:"center",marginBottom:"2rem",letterSpacing:1}}>Selecciona una opción</p><div style={{display:"flex",flexDirection:"column",gap:"0.65rem"}}><button onClick={()=>enterAdminSec("products")} style={S.adminBtn}>📦 Gestionar productos</button><button onClick={()=>enterAdminSec("sales")} style={S.adminBtn}>💰 Registrar venta manual</button><button onClick={()=>enterAdminSec("stats")} style={S.adminBtn}>📊 Ver estadísticas</button><button onClick={()=>enterAdminSec("coupons")} style={{...S.adminBtn,background:"linear-gradient(135deg,#fff 0%,#ccc 100%)"}}>🎟️ Cupones de descuento</button><button onClick={()=>enterAdminSec("lookup")} style={S.adminBtn}>🔍 Buscar por código</button><button onClick={doLogout} style={{...S.adminBtn,background:"transparent",color:"#ff5555",border:"none",marginTop:8,letterSpacing:1}}>Cerrar sesión</button></div></div>)}
@@ -2207,6 +2267,10 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
           <img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/>
           <button type="button" onClick={()=>makeGalleryImageMain(i)} title="Hacer principal" style={{position:"absolute",bottom:2,left:2,background:"rgba(0,0,0,0.75)",border:"none",borderRadius:5,color:"#ffd43b",fontSize:9,padding:"2px 4px",cursor:"pointer"}}>★</button>
           <button type="button" onClick={()=>removeGalleryImage(i)} title="Quitar" style={{position:"absolute",top:2,right:2,background:"rgba(0,0,0,0.75)",border:"none",borderRadius:"50%",width:16,height:16,color:"#ff6666",fontSize:10,lineHeight:1,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+          <div style={{position:"absolute",top:2,left:2,display:"flex",gap:2}}>
+            {i>0&&<button type="button" onClick={()=>moveGalleryImage(i,-1)} title="Mover izquierda" style={{background:"rgba(0,0,0,0.75)",border:"none",borderRadius:4,width:16,height:16,color:"#fff",fontSize:9,lineHeight:1,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>◀</button>}
+            {i<fGallery.length-1&&<button type="button" onClick={()=>moveGalleryImage(i,1)} title="Mover derecha" style={{background:"rgba(0,0,0,0.75)",border:"none",borderRadius:4,width:16,height:16,color:"#fff",fontSize:9,lineHeight:1,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>▶</button>}
+          </div>
         </div>
       ))}
     </div>
@@ -2244,9 +2308,9 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   {["ALL",...usedCats].map(cat=>{const a=adminCat===cat;const n=cat==="ALL"?products.length:products.filter(p=>p.category===cat).length;return(<button key={cat} className="pl" onClick={()=>setAdminCat(cat)} style={{background:a?"#fff":"#161616",color:a?"#080808":"#555",border:`1px solid ${a?"#fff":"#222"}`,padding:"0.3rem 0.7rem",borderRadius:20,fontSize:9,fontWeight:800,letterSpacing:1,fontFamily:"inherit",flexShrink:0,WebkitTapHighlightColor:"transparent",cursor:"pointer",whiteSpace:"nowrap",transition:"all 0.12s ease"}}>{cat==="ALL"?"TODOS":catLabel(cat).toUpperCase()} · {n}</button>);})}</div>
 
                 {adminCat==="ALL"?(
-                  <div className="admin-list">{usedCats.map(cat=>{const cp=products.filter(p=>p.category===cat&&(adminSearch===""||p.name.toLowerCase().includes(adminSearch.toLowerCase())));if(!cp.length)return null;return(<div key={cat} style={{marginBottom:"1.1rem"}}><div style={{display:"flex",alignItems:"center",gap:"0.5rem",padding:"0.4rem 0",marginBottom:"0.35rem",borderBottom:"1px solid #1a1a1a"}}><span style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#333"}}>{catLabel(cat).toUpperCase()}</span><span style={{fontSize:9,color:"#2a2a2a",background:"#1a1a1a",padding:"1px 6px",borderRadius:10}}>{cp.length}</span></div>{cp.map(p=>(<div key={p.id} data-rowid={p.id}><ARow p={p} editing={editing} onEdit={startEdit} onDel={delProd} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} isDragging={dragId===p.id} isOver={overId===p.id&&dragId!==p.id} onTouchStart={handleTouchDragStart} onTouchMove={handleTouchDragMove} onTouchEnd={handleTouchDragEnd} onToggleActive={toggleProductActive} onToggleDiscount={promptDiscount}/></div>))}</div>);})}</div>
+                  <div className="admin-list">{usedCats.map(cat=>{const cp=products.filter(p=>p.category===cat&&(adminSearch===""||p.name.toLowerCase().includes(adminSearch.toLowerCase())));if(!cp.length)return null;return(<div key={cat} style={{marginBottom:"1.1rem"}}><div style={{display:"flex",alignItems:"center",gap:"0.5rem",padding:"0.4rem 0",marginBottom:"0.35rem",borderBottom:"1px solid #1a1a1a"}}><span style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#333"}}>{catLabel(cat).toUpperCase()}</span><span style={{fontSize:9,color:"#2a2a2a",background:"#1a1a1a",padding:"1px 6px",borderRadius:10}}>{cp.length}</span></div>{cp.map(p=>(<div key={p.id} data-rowid={p.id}><ARow p={p} editing={editing} onEdit={startEdit} onDel={delProd} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} isDragging={dragId===p.id} isOver={overId===p.id&&dragId!==p.id} onTouchStart={handleTouchDragStart} onTouchMove={handleTouchDragMove} onTouchEnd={handleTouchDragEnd} onToggleActive={toggleProductActive} onToggleDiscount={promptDiscount} onToggleBestseller={toggleProductBestseller}/></div>))}</div>);})}</div>
                 ):(
-                  <div className="admin-list" style={{display:"flex",flexDirection:"column",gap:2}}>{adminProds.map(p=>(<div key={p.id} data-rowid={p.id}><ARow p={p} editing={editing} onEdit={startEdit} onDel={delProd} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} isDragging={dragId===p.id} isOver={overId===p.id&&dragId!==p.id} onTouchStart={handleTouchDragStart} onTouchMove={handleTouchDragMove} onTouchEnd={handleTouchDragEnd} onToggleActive={toggleProductActive} onToggleDiscount={promptDiscount}/></div>))}{!adminProds.length&&<p style={{color:"#333",textAlign:"center",padding:"1.5rem",fontSize:12}}>Sin resultados</p>}</div>
+                  <div className="admin-list" style={{display:"flex",flexDirection:"column",gap:2}}>{adminProds.map(p=>(<div key={p.id} data-rowid={p.id}><ARow p={p} editing={editing} onEdit={startEdit} onDel={delProd} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} isDragging={dragId===p.id} isOver={overId===p.id&&dragId!==p.id} onTouchStart={handleTouchDragStart} onTouchMove={handleTouchDragMove} onTouchEnd={handleTouchDragEnd} onToggleActive={toggleProductActive} onToggleDiscount={promptDiscount} onToggleBestseller={toggleProductBestseller}/></div>))}{!adminProds.length&&<p style={{color:"#333",textAlign:"center",padding:"1.5rem",fontSize:12}}>Sin resultados</p>}</div>
                 )}
               </div>
             </>)}
@@ -2465,6 +2529,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                           </div>
                           <span style={{fontSize:9,fontWeight:800,letterSpacing:1,padding:"3px 8px",borderRadius:20,background:isLive?"#0d1e0d":"#1e0d0d",color:isLive?"#4caf50":"#ff6666",flexShrink:0}}>{isLive?"ACTIVO":expired?"EXPIRADO":"PAUSADO"}</span>
                           <div style={{display:"flex",gap:"0.3rem",flexShrink:0}}>
+                            <button onClick={()=>extendCoupon(c)} title="Alargar vigencia" style={{background:"#0d1a2a",color:"#4dabf7",border:"1px solid #1a3a5a",padding:"0.3rem 0.5rem",borderRadius:6,cursor:"pointer",fontSize:11,fontFamily:"inherit"}}>⏱️+</button>
                             <button onClick={()=>toggleCouponActive(c)} title={c.active?"Pausar":"Reactivar"} style={{background:"#1a1a1a",color:"#888",border:"1px solid #222",padding:"0.3rem 0.5rem",borderRadius:6,cursor:"pointer",fontSize:11,fontFamily:"inherit"}}>{c.active?"⏸️":"▶️"}</button>
                             <button onClick={()=>deleteCoupon(c.id)} style={{background:"none",color:"#cc3333",border:"1px solid #2a1515",padding:"0.3rem 0.55rem",borderRadius:6,cursor:"pointer",fontSize:11,fontFamily:"inherit"}}>✕</button>
                           </div>
