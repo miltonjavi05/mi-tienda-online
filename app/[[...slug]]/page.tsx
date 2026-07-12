@@ -1254,10 +1254,10 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   const[adminEmail,setAdminEmail]  =useState("");
   const[adminPwd,setAdminPwd]      =useState("");
   const[adminErr,setAdminErr]      =useState("");
-  const[adminSec,setAdminSec]=useState<"menu"|"products"|"sales"|"stats"|"coupons"|"lookup"|"comments">("menu");
+  const[adminSec,setAdminSec]=useState<"menu"|"products"|"sales"|"stats"|"coupons"|"lookup"|"comments"|"bulkedit">("menu");
   const adminSecRef=useRef(adminSec);
   useEffect(()=>{adminSecRef.current=adminSec;},[adminSec]);
-  const enterAdminSec=useCallback((sec:"products"|"sales"|"stats"|"coupons"|"lookup"|"comments")=>{
+  const enterAdminSec=useCallback((sec:"products"|"sales"|"stats"|"coupons"|"lookup"|"comments"|"bulkedit")=>{
     try{window.history.pushState({adminSec:sec},"","/admin");}catch{}
     setAdminSec(sec);
   },[]);
@@ -1300,6 +1300,13 @@ const[couponsLoading,setCouponsLoading]=useState(false);
 const[allComments,setAllComments]=useState<ProductComment[]>([]);
 const[allCommentsLoading,setAllCommentsLoading]=useState(false);
 const allCommentsLoaded=useRef(false);
+const[bulkCat,setBulkCat]=useState("COLLARES");
+const[bulkDrafts,setBulkDrafts]=useState<Record<string,{name:string;description:string}>>({});
+const[bulkSaving,setBulkSaving]=useState(false);
+const[bulkErr,setBulkErr]=useState("");
+const[bulkOk,setBulkOk]=useState("");
+const[bulkPasteText,setBulkPasteText]=useState("");
+const[bulkPasteMsg,setBulkPasteMsg]=useState("");
   const[adminSearch,setAdminSearch]=useState("");
   const[lookupCode,setLookupCode]=useState("");
   const[saleName,setSaleName]=useState("");
@@ -1804,6 +1811,61 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     try{await fsDeleteDoc("product_comments",id);}catch{}
   },[]);
 
+  const loadBulkDrafts=useCallback((cat:string)=>{
+    const map:Record<string,{name:string;description:string}>={};
+    products.filter(p=>p.category===cat).forEach(p=>{map[p.id]={name:p.name,description:p.description||""};});
+    setBulkDrafts(map);
+  },[products]);
+
+  const applyBulkPaste=useCallback(()=>{
+    const catProducts=products.filter(p=>p.category===bulkCat);
+    if(!catProducts.length){setBulkPasteMsg("No hay productos en esta categoría.");return;}
+    const blocks=bulkPasteText.split(/\n\s*\n/).map(b=>b.trim()).filter(Boolean);
+    if(!blocks.length){setBulkPasteMsg("Pega el texto con título y descripción de cada producto.");return;}
+    const next={...bulkDrafts};
+    let applied=0;
+    blocks.forEach((block,i)=>{
+      const prod=catProducts[i];
+      if(!prod)return;
+      const lines=block.split("\n").map(l=>l.trim()).filter(Boolean);
+      if(!lines.length)return;
+      const title=lines[0].replace(/^t[íi]tulo\s*:\s*/i,"").trim();
+      const descLines=lines.slice(1).map(l=>l.replace(/^descripci[óo]n\s*:\s*/i,""));
+      const description=descLines.join(" ").trim();
+      next[prod.id]={name:title,description};
+      applied++;
+    });
+    setBulkDrafts(next);
+    setBulkPasteMsg(applied<catProducts.length?`✓ Se aplicaron ${applied} de ${catProducts.length} productos. Revisa los campos antes de guardar — faltan bloques para el resto.`:`✓ Se aplicaron los ${applied} productos. Revisa los campos y luego guarda.`);
+  },[bulkPasteText,bulkCat,products,bulkDrafts]);
+
+  const saveBulkEdits=useCallback(async()=>{
+    setBulkErr("");setBulkOk("");setBulkSaving(true);
+    let saved=0;
+    try{
+      for(const[id,draft] of Object.entries(bulkDrafts)){
+        const orig=products.find(p=>p.id===id);
+        if(!orig)continue;
+        const nameTrim=draft.name.trim();
+        const descTrim=draft.description.trim();
+        if(!nameTrim)continue;
+        if(nameTrim!==orig.name||descTrim!==(orig.description||"")){
+          await fsUpdate(id,{name:nameTrim,description:descTrim});
+          saved++;
+        }
+      }
+      invalidateProductsCache();
+      productsAlreadyLoaded.current=false;
+      await loadProducts(true);
+      setBulkOk(saved>0?`✓ ${saved} producto(s) actualizados correctamente`:"No había cambios que guardar");
+    }catch(err){
+      setBulkErr("Error al guardar: "+(err instanceof Error?err.message:"desconocido"));
+    }finally{
+      setBulkSaving(false);
+    }
+  },[bulkDrafts,products,loadProducts]);
+
+  useEffect(()=>{if(adminSec==="bulkedit"){loadBulkDrafts(bulkCat);setBulkPasteText("");setBulkPasteMsg("");}},[adminSec,bulkCat,loadBulkDrafts]);
   useEffect(()=>{if(adminSec==="stats")loadStats();},[adminSec,loadStats]);
 useEffect(()=>{if(adminSec==="coupons"){loadCoupons();if(!couponCode)setCouponCode(generateCouponCode());}},[adminSec,loadCoupons]);
 useEffect(()=>{if(adminSec==="comments")loadAllComments();},[adminSec,loadAllComments]);
@@ -2440,7 +2502,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
         <main className="pv" style={{paddingTop:NAV_H,background:"#060606",minHeight:"100vh"}}>
           <div style={{maxWidth:720,margin:"0 auto",padding:"2rem 1rem 4rem"}}>
             {!adminLogged&&(<div style={{background:"#111",borderRadius:14,padding:"2.5rem 2rem",maxWidth:380,margin:"2rem auto",border:"1px solid #1a1a1a",animation:"slideUp 0.3s ease"}}><h1 style={{color:"#fff",fontSize:20,fontWeight:900,marginBottom:"1.5rem",textAlign:"center",letterSpacing:2}}>ADMIN</h1><div style={{display:"flex",flexDirection:"column",gap:"0.85rem"}}><input type="email" placeholder="Correo" value={adminEmail} onChange={e=>setAdminEmail(e.target.value)} style={S.input}/><PwdInput placeholder="Contraseña" value={adminPwd} onChange={setAdminPwd} onKeyDown={e=>e.key==="Enter"&&doLogin()} autoComplete="current-password"/>{adminErr&&<p style={{color:"#ff5555",fontSize:12,margin:0,background:"#1e0a0a",padding:"0.6rem 1rem",borderRadius:8}}>{adminErr}</p>}<button onClick={doLogin} style={S.adminBtn}>Entrar</button><button onClick={doLogout} style={{...S.adminBtn,background:"transparent",color:"#333",marginTop:4}}>← Volver</button></div></div>)}
-            {adminLogged&&adminSec==="menu"&&(<div style={{background:"#111",borderRadius:14,padding:"2.5rem 2rem",maxWidth:380,margin:"2rem auto",border:"1px solid #1a1a1a",animation:"slideUp 0.3s ease"}}><h1 style={{color:"#fff",fontSize:18,fontWeight:900,marginBottom:"0.4rem",textAlign:"center",letterSpacing:2}}>PANEL</h1><p style={{color:"#333",fontSize:12,textAlign:"center",marginBottom:"2rem",letterSpacing:1}}>Selecciona una opción</p><div style={{display:"flex",flexDirection:"column",gap:"0.65rem"}}><button onClick={()=>enterAdminSec("products")} style={S.adminBtn}>📦 Gestionar productos</button><button onClick={()=>enterAdminSec("sales")} style={S.adminBtn}>💰 Registrar venta manual</button><button onClick={()=>enterAdminSec("stats")} style={S.adminBtn}>📊 Ver estadísticas</button><button onClick={()=>enterAdminSec("coupons")} style={{...S.adminBtn,background:"linear-gradient(135deg,#fff 0%,#ccc 100%)"}}>🎟️ Cupones de descuento</button><button onClick={()=>enterAdminSec("lookup")} style={S.adminBtn}>🔍 Buscar por código</button><button onClick={()=>enterAdminSec("comments")} style={S.adminBtn}>💬 Comentarios de productos</button><button onClick={doLogout} style={{...S.adminBtn,background:"transparent",color:"#ff5555",border:"none",marginTop:8,letterSpacing:1}}>Cerrar sesión</button></div></div>)}
+            {adminLogged&&adminSec==="menu"&&(<div style={{background:"#111",borderRadius:14,padding:"2.5rem 2rem",maxWidth:380,margin:"2rem auto",border:"1px solid #1a1a1a",animation:"slideUp 0.3s ease"}}><h1 style={{color:"#fff",fontSize:18,fontWeight:900,marginBottom:"0.4rem",textAlign:"center",letterSpacing:2}}>PANEL</h1><p style={{color:"#333",fontSize:12,textAlign:"center",marginBottom:"2rem",letterSpacing:1}}>Selecciona una opción</p><div style={{display:"flex",flexDirection:"column",gap:"0.65rem"}}><button onClick={()=>enterAdminSec("products")} style={S.adminBtn}>📦 Gestionar productos</button><button onClick={()=>enterAdminSec("bulkedit")} style={S.adminBtn}>✏️ Edición masiva de textos</button><button onClick={()=>enterAdminSec("sales")} style={S.adminBtn}>💰 Registrar venta manual</button><button onClick={()=>enterAdminSec("stats")} style={S.adminBtn}>📊 Ver estadísticas</button><button onClick={()=>enterAdminSec("coupons")} style={{...S.adminBtn,background:"linear-gradient(135deg,#fff 0%,#ccc 100%)"}}>🎟️ Cupones de descuento</button><button onClick={()=>enterAdminSec("lookup")} style={S.adminBtn}>🔍 Buscar por código</button><button onClick={()=>enterAdminSec("comments")} style={S.adminBtn}>💬 Comentarios de productos</button><button onClick={doLogout} style={{...S.adminBtn,background:"transparent",color:"#ff5555",border:"none",marginTop:8,letterSpacing:1}}>Cerrar sesión</button></div></div>)}
             {adminLogged&&adminSec==="products"&&(<>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem"}}><h1 style={{color:"#fff",fontSize:16,fontWeight:900,margin:0,letterSpacing:2}}>{editing?"EDITAR PRODUCTO":"PRODUCTOS"}</h1><button onClick={()=>{exitAdminSec();resetForm();}} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:12,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>← MENÚ</button></div>
               <div ref={formRef} style={{background:"#111",borderRadius:12,padding:"1.5rem",marginBottom:"1.25rem",border:editing?"1px solid #2a2a2a":"1px solid #1a1a1a"}}><p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 1.25rem"}}>{editing?`EDITANDO: ${editing.name}`:"NUEVO PRODUCTO"}</p><div style={{display:"flex",flexDirection:"column",gap:"0.8rem"}}><input placeholder="Nombre del producto *" value={fName} onChange={e=>setFName(e.target.value)} style={S.input}/><textarea placeholder="Descripción (opcional)" value={fDesc} onChange={e=>setFDesc(e.target.value)} rows={2} style={{...S.input,resize:"vertical" as any,lineHeight:1.6}}/><input placeholder="Precio en USD *" type="number" min="0" step="0.01" value={fPrice} onChange={e=>setFPrice(e.target.value)} style={S.input}/><select value={fCat} onChange={e=>setFCat(e.target.value)} style={{...S.input,appearance:"auto" as any}}><option value="">Selecciona categoría *</option><optgroup label="── LENTES">{LENTES_SUBCATS.map(s=><option key={s} value={s}>{catLabel(s)}</option>)}</optgroup><optgroup label="── OTROS">{SHOP_CATS.filter(c=>c!=="LENTES").map(c=><option key={c} value={c}>{catLabel(c)}</option>)}</optgroup></select><div style={{background:"#0e0e0e",borderRadius:8,padding:"1rem",border:"1px dashed #1e1e1e"}}><p style={{color:"#333",fontSize:9,letterSpacing:2,margin:"0 0 0.65rem",fontWeight:800}}>IMAGEN {!editing&&"*"}</p><input ref={fileRef} type="file" accept="image/*" onChange={onFileChange} style={{display:"none"}} id="fi"/><label htmlFor="fi" style={{display:"inline-flex",alignItems:"center",gap:"0.45rem",background:"#1a1a1a",color:"#888",padding:"0.55rem 1rem",borderRadius:8,cursor:"pointer",fontSize:12,border:"1px solid #222",fontFamily:"inherit"}}>📷 {fFile?"Cambiar":"Elegir foto"}</label>{fFile&&<span style={{color:"#444",fontSize:11,marginLeft:"0.65rem"}}>{fFile.name}</span>}{fPrev&&<div style={{marginTop:"0.65rem",width:80,height:80,borderRadius:8,overflow:"hidden",border:"1px solid #222"}}><img src={fPrev} alt="preview" style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/></div>}</div>
@@ -2773,6 +2835,47 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                     </div>
                   );
                 })()}
+              </div>
+            </>)}
+
+            {adminLogged&&adminSec==="bulkedit"&&(<>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem"}}><h1 style={{color:"#fff",fontSize:16,fontWeight:900,margin:0,letterSpacing:2}}>EDICIÓN MASIVA</h1><button onClick={()=>exitAdminSec()} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:12,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>← MENÚ</button></div>
+              <div style={{background:"#111",borderRadius:14,padding:"1.25rem",border:"1px solid #1a1a1a",marginBottom:"1.25rem"}}>
+                <p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 0.85rem"}}>SELECCIONA LA CATEGORÍA A EDITAR</p>
+                <select value={bulkCat} onChange={e=>{setBulkCat(e.target.value);setBulkOk("");setBulkErr("");}} style={{...S.input,appearance:"auto" as any}}>
+                  <optgroup label="── LENTES">{LENTES_SUBCATS.map(s=><option key={s} value={s}>{catLabel(s)}</option>)}</optgroup>
+                  <optgroup label="── OTROS">{SHOP_CATS.filter(c=>c!=="LENTES").map(c=><option key={c} value={c}>{catLabel(c)}</option>)}</optgroup>
+                </select>
+              </div>
+              <div style={{background:"linear-gradient(135deg,#141410 0%,#0e0e0e 100%)",borderRadius:14,padding:"1.25rem",border:"1px solid #2a2a1a",marginBottom:"1.25rem"}}>
+                <p style={{color:"#ffd43b",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 0.5rem"}}>📋 PEGAR TODO DE UNA VEZ</p>
+                <p style={{color:"#666",fontSize:11,margin:"0 0 0.85rem",lineHeight:1.6}}>Pega un bloque por producto, en el mismo orden en que aparecen abajo. Primera línea = título, siguientes líneas = descripción. Separa cada producto con una línea en blanco.</p>
+                <textarea value={bulkPasteText} onChange={e=>setBulkPasteText(e.target.value)} rows={8} placeholder={"Collar As de Picas\nDije de as de picas en acero inoxidable, doble cadena...\n\nCollar Triángulos Minimalista\nDiseño geométrico de triángulos entrelazados...\n\n(sigue con el resto en el mismo orden)"} style={{...S.input,fontSize:12,lineHeight:1.6,resize:"vertical" as const,fontFamily:"monospace"}}/>
+                <button onClick={applyBulkPaste} style={{...S.adminBtn,marginTop:"0.85rem",background:"linear-gradient(135deg,#ffd43b 0%,#c99a1f 100%)"}}>Repartir en los campos de abajo</button>
+                {bulkPasteMsg&&<p style={{margin:"0.75rem 0 0",fontSize:11,color:"#ffd43b",lineHeight:1.6}}>{bulkPasteMsg}</p>}
+              </div>
+              <div style={{background:"#111",borderRadius:14,padding:"1.25rem",border:"1px solid #1a1a1a"}}>
+                <p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 1rem"}}>{catLabel(bulkCat).toUpperCase()} ({Object.keys(bulkDrafts).length})</p>
+                {Object.keys(bulkDrafts).length===0?(
+                  <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"1.5rem"}}>No hay productos en esta categoría</p>
+                ):(
+                  <div style={{display:"flex",flexDirection:"column",gap:"1rem"}}>
+                    {products.filter(p=>p.category===bulkCat).map(p=>(
+                      <div key={p.id} style={{display:"flex",gap:"0.85rem",background:"#0c0c0c",border:"1px solid #1a1a1a",borderRadius:10,padding:"0.85rem"}}>
+                        <img src={optImg(p.img,120)} alt={p.name} style={{width:56,height:56,objectFit:"cover",borderRadius:8,flexShrink:0}} draggable={false}/>
+                        <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",gap:"0.5rem"}}>
+                          <input value={bulkDrafts[p.id]?.name??p.name} onChange={e=>setBulkDrafts(prev=>({...prev,[p.id]:{name:e.target.value,description:prev[p.id]?.description??(p.description||"")}}))} style={{...S.input,fontSize:12,padding:"0.55rem 0.75rem"}} placeholder="Título del producto"/>
+                          <textarea value={bulkDrafts[p.id]?.description??(p.description||"")} onChange={e=>setBulkDrafts(prev=>({...prev,[p.id]:{name:prev[p.id]?.name??p.name,description:e.target.value}}))} rows={2} style={{...S.input,fontSize:12,padding:"0.55rem 0.75rem",resize:"vertical" as const,lineHeight:1.5}} placeholder="Descripción del producto"/>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {bulkErr&&<div style={{color:"#ff5555",fontSize:12,background:"#1e0808",padding:"0.65rem 1rem",borderRadius:8,marginTop:"1rem"}}>{bulkErr}</div>}
+                {bulkOk&&<div style={{color:"#55cc77",fontSize:12,background:"#081e0e",padding:"0.65rem 1rem",borderRadius:8,marginTop:"1rem"}}>{bulkOk}</div>}
+                {Object.keys(bulkDrafts).length>0&&(
+                  <button onClick={saveBulkEdits} disabled={bulkSaving} style={{...S.adminBtn,marginTop:"1.25rem",opacity:bulkSaving?0.5:1,cursor:bulkSaving?"not-allowed":"pointer"}}>{bulkSaving?"Guardando...":"Guardar todos los cambios"}</button>
+                )}
               </div>
             </>)}
 
