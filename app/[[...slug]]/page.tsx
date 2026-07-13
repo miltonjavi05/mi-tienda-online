@@ -107,6 +107,7 @@ interface UserData { uid:string; email:string; displayName:string; createdAt:num
 interface Coupon { id:string; code:string; type:"general"|"product"|"category"; productId?:string; productName?:string; category?:string; discountPercent:number; durationHours:number; createdAt:number; expiresAt:number; active:boolean; }
 interface OrderSnapshot { items:CartItem[]; total:number; payMethod:string; deliveryInfo:DeliveryInfo; comprobanteUrl:string; waUrl:string; orderId:string; couponCode?:string; couponDiscount?:number; }
 interface ProductComment { id:string; productId:string; productName:string; name:string; comment:string; stars:number; createdAt:number; }
+interface AgendaClient { id:string; name:string; phone:string; product:string; totalAmount:number; paidAmount:number; deliveryDate:string; status:"abono"|"pagado"; notes:string; createdAt:number; }
 
 type MainView = "fokus"|"shop"|"comunidad"|"grabados"|"cart"|"admin"|"account"|"thankyou";
 type ShopFilter = typeof ALL_SHOP_CATS[number]|"TODO"|typeof LENTES_SUBCATS[number];
@@ -1272,10 +1273,10 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   const[adminEmail,setAdminEmail]  =useState("");
   const[adminPwd,setAdminPwd]      =useState("");
   const[adminErr,setAdminErr]      =useState("");
-  const[adminSec,setAdminSec]=useState<"menu"|"products"|"sales"|"stats"|"coupons"|"lookup"|"comments"|"bulkedit"|"bulkadd"|"inventory">("menu");
+  const[adminSec,setAdminSec]=useState<"menu"|"products"|"sales"|"stats"|"coupons"|"lookup"|"comments"|"bulkedit"|"bulkadd"|"inventory"|"agenda">("menu");
   const adminSecRef=useRef(adminSec);
   useEffect(()=>{adminSecRef.current=adminSec;},[adminSec]);
-  const enterAdminSec=useCallback((sec:"products"|"sales"|"stats"|"coupons"|"lookup"|"comments"|"bulkedit"|"bulkadd"|"inventory")=>{
+  const enterAdminSec=useCallback((sec:"products"|"sales"|"stats"|"coupons"|"lookup"|"comments"|"bulkedit"|"bulkadd"|"inventory"|"agenda")=>{
     try{window.history.pushState({adminSec:sec},"","/admin");}catch{}
     setAdminSec(sec);
   },[]);
@@ -1319,7 +1320,7 @@ const[couponsLoading,setCouponsLoading]=useState(false);
 const[allComments,setAllComments]=useState<ProductComment[]>([]);
 const[allCommentsLoading,setAllCommentsLoading]=useState(false);
 const allCommentsLoaded=useRef(false);
-const[commentsDateFilter,setCommentsDateFilter]=useState<"all"|"7d"|"30d"|"90d">("all");
+const[commentsDateFilter,setCommentsDateFilter]=useState<"all"|"hoy"|"7d"|"30d"|"90d">("all");
 const[bulkCat,setBulkCat]=useState("COLLARES");
 const[bulkDrafts,setBulkDrafts]=useState<Record<string,{name:string;description:string}>>({});
 const[bulkSaving,setBulkSaving]=useState(false);
@@ -1353,6 +1354,21 @@ const bulkAddFileRef=useRef<HTMLInputElement>(null);
   const[saleLoading,setSaleLoading]=useState(false);
   const[saleErr,setSaleErr]=useState("");
   const[saleOk,setSaleOk]=useState("");
+const[agendaName,setAgendaName]=useState("");
+const[agendaPhone,setAgendaPhone]=useState("");
+const[agendaProduct,setAgendaProduct]=useState("");
+const[agendaTotal,setAgendaTotal]=useState("");
+const[agendaPaid,setAgendaPaid]=useState("");
+const[agendaDate,setAgendaDate]=useState("");
+const[agendaStatus,setAgendaStatus]=useState<"abono"|"pagado">("abono");
+const[agendaNotes,setAgendaNotes]=useState("");
+const[agendaSaving,setAgendaSaving]=useState(false);
+const[agendaErr,setAgendaErr]=useState("");
+const[agendaOk,setAgendaOk]=useState("");
+const[agendaList,setAgendaList]=useState<AgendaClient[]>([]);
+const[agendaLoading,setAgendaLoading]=useState(false);
+const agendaLoaded=useRef(false);
+const[agendaFilter,setAgendaFilter]=useState<"todos"|"abono"|"pagado">("todos");
   const[salesList,setSalesList]=useState<Array<Record<string,unknown>&{id:string}>>([]);
   const[leadsList,setLeadsList]=useState<Array<Record<string,unknown>&{id:string}>>([]);
   const[statsLoading,setStatsLoading]=useState(false);
@@ -1824,6 +1840,50 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     try{await fsDeleteDoc("manual_sales",id);}catch{}
   },[]);
 
+  const resetAgendaForm=()=>{setAgendaName("");setAgendaPhone("");setAgendaProduct("");setAgendaTotal("");setAgendaPaid("");setAgendaDate("");setAgendaStatus("abono");setAgendaNotes("");setAgendaErr("");setAgendaOk("");};
+
+  const loadAgenda=useCallback(async(force=false)=>{
+    if(agendaLoaded.current&&!force)return;
+    setAgendaLoading(true);
+    try{
+      const raw=await fsGetCollection("client_agenda",200);
+      const list:AgendaClient[]=raw.map(r=>({id:r.id,name:(r.name as string)||"",phone:(r.phone as string)||"",product:(r.product as string)||"",totalAmount:Number(r.totalAmount)||0,paidAmount:Number(r.paidAmount)||0,deliveryDate:(r.deliveryDate as string)||"",status:((r.status as string)==="pagado"?"pagado":"abono"),notes:(r.notes as string)||"",createdAt:Number(r.createdAt)||0}));
+      list.sort((a,b)=>(a.deliveryDate||"9999").localeCompare(b.deliveryDate||"9999"));
+      setAgendaList(list);
+      agendaLoaded.current=true;
+    }catch{ /* silencioso */ }
+    finally{setAgendaLoading(false);}
+  },[]);
+
+  const submitAgendaClient=async()=>{
+    setAgendaErr("");setAgendaOk("");
+    if(!agendaName.trim()){setAgendaErr("Ingresa el nombre del cliente.");return;}
+    if(!agendaDate){setAgendaErr("Selecciona la fecha de entrega.");return;}
+    setAgendaSaving(true);
+    try{
+      await fsAddToCollection("client_agenda",{name:agendaName.trim(),phone:agendaPhone.trim(),product:agendaProduct.trim(),totalAmount:parseFloat(agendaTotal)||0,paidAmount:parseFloat(agendaPaid)||0,deliveryDate:agendaDate,status:agendaStatus,notes:agendaNotes.trim(),createdAt:Date.now()});
+      setAgendaOk("✓ Cliente agendado correctamente");
+      agendaLoaded.current=false;
+      await loadAgenda(true);
+      setTimeout(resetAgendaForm,1600);
+    }catch(err){setAgendaErr("Error: "+(err instanceof Error?err.message:"desconocido"));}
+    finally{setAgendaSaving(false);}
+  };
+
+  const toggleAgendaStatus=async(c:AgendaClient)=>{
+    const newStatus=c.status==="abono"?"pagado":"abono";
+    setAgendaList(prev=>prev.map(x=>x.id===c.id?{...x,status:newStatus}:x));
+    try{await fsUpdateDoc("client_agenda",c.id,{status:newStatus});}catch{}
+  };
+
+  const deleteAgendaClient=useCallback(async(id:string)=>{
+    if(!confirm("¿Eliminar este cliente de la agenda?"))return;
+    setAgendaList(prev=>prev.filter(c=>c.id!==id));
+    try{await fsDeleteDoc("client_agenda",id);}catch{}
+  },[]);
+
+  const filteredAgenda=useMemo(()=>agendaFilter==="todos"?agendaList:agendaList.filter(c=>c.status===agendaFilter),[agendaList,agendaFilter]);
+
   const loadAllComments=useCallback(async(force=false)=>{
     if(allCommentsLoaded.current&&!force)return;
     setAllCommentsLoading(true);
@@ -1974,6 +2034,7 @@ const saveBulkAddProducts=useCallback(async()=>{
   }
 },[bulkAddImages,bulkAddParsed,bulkAddCat,loadProducts]);
   useEffect(()=>{if(adminSec==="stats")loadStats();},[adminSec,loadStats]);
+useEffect(()=>{if(adminSec==="agenda")loadAgenda();},[adminSec,loadAgenda]);
 useEffect(()=>{if(adminSec==="coupons"){loadCoupons();if(!couponCode)setCouponCode(generateCouponCode());}},[adminSec,loadCoupons]);
 useEffect(()=>{if(adminSec==="comments")loadAllComments();},[adminSec,loadAllComments]);
 
@@ -2022,7 +2083,7 @@ const invProds=useMemo(()=>{let l=products;if(invCat!=="ALL")l=l.filter(p=>p.cat
 const inventoryStats=useMemo(()=>{const totalUnits=products.reduce((s,p)=>s+(p.stock??0),0);const outOfStock=products.filter(p=>(p.stock??0)===0).length;const lowStock=products.filter(p=>(p.stock??0)>0&&(p.stock??0)<=5).length;return{totalUnits,outOfStock,lowStock};},[products]);
 const commentsPeriodCutoff=useMemo(()=>{
   if(commentsDateFilter==="all")return 0;
-  const daysBack=commentsDateFilter==="7d"?7:commentsDateFilter==="30d"?30:90;
+  const daysBack=commentsDateFilter==="hoy"?1:commentsDateFilter==="7d"?7:commentsDateFilter==="30d"?30:90;
   const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-(daysBack-1));
   return d.getTime();
 },[commentsDateFilter]);
@@ -2623,7 +2684,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
         <main className="pv" style={{paddingTop:NAV_H,background:"#060606",minHeight:"100vh"}}>
           <div style={{maxWidth:720,margin:"0 auto",padding:"2rem 1rem 4rem"}}>
             {!adminLogged&&(<div style={{background:"#111",borderRadius:14,padding:"2.5rem 2rem",maxWidth:380,margin:"2rem auto",border:"1px solid #1a1a1a",animation:"slideUp 0.3s ease"}}><h1 style={{color:"#fff",fontSize:20,fontWeight:900,marginBottom:"1.5rem",textAlign:"center",letterSpacing:2}}>ADMIN</h1><div style={{display:"flex",flexDirection:"column",gap:"0.85rem"}}><input type="email" placeholder="Correo" value={adminEmail} onChange={e=>setAdminEmail(e.target.value)} style={S.input}/><PwdInput placeholder="Contraseña" value={adminPwd} onChange={setAdminPwd} onKeyDown={e=>e.key==="Enter"&&doLogin()} autoComplete="current-password"/>{adminErr&&<p style={{color:"#ff5555",fontSize:12,margin:0,background:"#1e0a0a",padding:"0.6rem 1rem",borderRadius:8}}>{adminErr}</p>}<button onClick={doLogin} style={S.adminBtn}>Entrar</button><button onClick={doLogout} style={{...S.adminBtn,background:"transparent",color:"#333",marginTop:4}}>← Volver</button></div></div>)}
-            {adminLogged&&adminSec==="menu"&&(<div style={{background:"#111",borderRadius:14,padding:"2.5rem 2rem",maxWidth:380,margin:"2rem auto",border:"1px solid #1a1a1a",animation:"slideUp 0.3s ease"}}><h1 style={{color:"#fff",fontSize:18,fontWeight:900,marginBottom:"0.4rem",textAlign:"center",letterSpacing:2}}>PANEL</h1><p style={{color:"#333",fontSize:12,textAlign:"center",marginBottom:"2rem",letterSpacing:1}}>Selecciona una opción</p><div style={{display:"flex",flexDirection:"column",gap:"0.65rem"}}><button onClick={()=>enterAdminSec("products")} style={S.adminBtn}>📦 Gestionar productos</button><button onClick={()=>enterAdminSec("inventory")} style={S.adminBtn}>📊 Inventario / Stock</button><button onClick={()=>enterAdminSec("bulkedit")} style={S.adminBtn}>✏️ Edición masiva de textos</button><button onClick={()=>enterAdminSec("bulkadd")} style={S.adminBtn}>🖼️ Agregar productos masivo</button><button onClick={()=>enterAdminSec("sales")} style={S.adminBtn}>💰 Registrar venta manual</button><button onClick={()=>enterAdminSec("stats")} style={S.adminBtn}>📊 Ver estadísticas</button><button onClick={()=>enterAdminSec("coupons")} style={{...S.adminBtn,background:"linear-gradient(135deg,#fff 0%,#ccc 100%)"}}>🎟️ Cupones de descuento</button><button onClick={()=>enterAdminSec("lookup")} style={S.adminBtn}>🔍 Buscar por código</button><button onClick={()=>enterAdminSec("comments")} style={S.adminBtn}>💬 Comentarios de productos</button><button onClick={doLogout} style={{...S.adminBtn,background:"transparent",color:"#ff5555",border:"none",marginTop:8,letterSpacing:1}}>Cerrar sesión</button></div></div>)}
+            {adminLogged&&adminSec==="menu"&&(<div style={{background:"#111",borderRadius:14,padding:"2.5rem 2rem",maxWidth:380,margin:"2rem auto",border:"1px solid #1a1a1a",animation:"slideUp 0.3s ease"}}><h1 style={{color:"#fff",fontSize:18,fontWeight:900,marginBottom:"0.4rem",textAlign:"center",letterSpacing:2}}>PANEL</h1><p style={{color:"#333",fontSize:12,textAlign:"center",marginBottom:"2rem",letterSpacing:1}}>Selecciona una opción</p><div style={{display:"flex",flexDirection:"column",gap:"0.65rem"}}><button onClick={()=>enterAdminSec("products")} style={S.adminBtn}>📦 Gestionar productos</button><button onClick={()=>enterAdminSec("inventory")} style={S.adminBtn}>📊 Inventario / Stock</button><button onClick={()=>enterAdminSec("bulkedit")} style={S.adminBtn}>✏️ Edición masiva de textos</button><button onClick={()=>enterAdminSec("bulkadd")} style={S.adminBtn}>🖼️ Agregar productos masivo</button><button onClick={()=>enterAdminSec("sales")} style={S.adminBtn}>💰 Registrar venta manual</button><button onClick={()=>enterAdminSec("agenda")} style={S.adminBtn}>📅 Agendar clientes</button><button onClick={()=>enterAdminSec("stats")} style={S.adminBtn}>📊 Ver estadísticas</button><button onClick={()=>enterAdminSec("coupons")} style={{...S.adminBtn,background:"linear-gradient(135deg,#fff 0%,#ccc 100%)"}}>🎟️ Cupones de descuento</button><button onClick={()=>enterAdminSec("lookup")} style={S.adminBtn}>🔍 Buscar por código</button><button onClick={()=>enterAdminSec("comments")} style={S.adminBtn}>💬 Comentarios de productos</button><button onClick={doLogout} style={{...S.adminBtn,background:"transparent",color:"#ff5555",border:"none",marginTop:8,letterSpacing:1}}>Cerrar sesión</button></div></div>)}
             {adminLogged&&adminSec==="products"&&(<>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem"}}><h1 style={{color:"#fff",fontSize:16,fontWeight:900,margin:0,letterSpacing:2}}>{editing?"EDITAR PRODUCTO":"PRODUCTOS"}</h1><button onClick={()=>{exitAdminSec();resetForm();}} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:12,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>← MENÚ</button></div>
               <div ref={formRef} style={{background:"#111",borderRadius:12,padding:"1.5rem",marginBottom:"1.25rem",border:editing?"1px solid #2a2a2a":"1px solid #1a1a1a"}}><p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 1.25rem"}}>{editing?`EDITANDO: ${editing.name}`:"NUEVO PRODUCTO"}</p><div style={{display:"flex",flexDirection:"column",gap:"0.8rem"}}><input placeholder="Nombre del producto *" value={fName} onChange={e=>setFName(e.target.value)} style={S.input}/><textarea placeholder="Descripción (opcional)" value={fDesc} onChange={e=>setFDesc(e.target.value)} rows={2} style={{...S.input,resize:"vertical" as any,lineHeight:1.6}}/><input placeholder="Precio en USD *" type="number" min="0" step="0.01" value={fPrice} onChange={e=>setFPrice(e.target.value)} style={S.input}/><select value={fCat} onChange={e=>setFCat(e.target.value)} style={{...S.input,appearance:"auto" as any}}><option value="">Selecciona categoría *</option><optgroup label="── LENTES">{LENTES_SUBCATS.map(s=><option key={s} value={s}>{catLabel(s)}</option>)}</optgroup><optgroup label="── OTROS">{SHOP_CATS.filter(c=>c!=="LENTES").map(c=><option key={c} value={c}>{catLabel(c)}</option>)}</optgroup></select><div style={{background:"#0e0e0e",borderRadius:8,padding:"1rem",border:"1px dashed #1e1e1e"}}><p style={{color:"#333",fontSize:9,letterSpacing:2,margin:"0 0 0.65rem",fontWeight:800}}>IMAGEN {!editing&&"*"}</p><input ref={fileRef} type="file" accept="image/*" onChange={onFileChange} style={{display:"none"}} id="fi"/><label htmlFor="fi" style={{display:"inline-flex",alignItems:"center",gap:"0.45rem",background:"#1a1a1a",color:"#888",padding:"0.55rem 1rem",borderRadius:8,cursor:"pointer",fontSize:12,border:"1px solid #222",fontFamily:"inherit"}}>📷 {fFile?"Cambiar":"Elegir foto"}</label>{fFile&&<span style={{color:"#444",fontSize:11,marginLeft:"0.65rem"}}>{fFile.name}</span>}{fPrev&&<div style={{marginTop:"0.65rem",width:80,height:80,borderRadius:8,overflow:"hidden",border:"1px solid #222"}}><img src={fPrev} alt="preview" style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/></div>}</div>
@@ -2716,6 +2777,74 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   {saleOk&&<div style={{color:"#55cc77",fontSize:12,background:"#081e0e",padding:"0.65rem 1rem",borderRadius:8}}>{saleOk}</div>}
                   <button onClick={submitManualSale} disabled={saleLoading} style={{...S.adminBtn,opacity:saleLoading?0.4:1,cursor:saleLoading?"not-allowed":"pointer"}}>{saleLoading?"Registrando...":(saleSendMeta?"Registrar venta y enviar a Meta":"Registrar venta (solo interno)")}</button>
                 </div>
+              </div>
+            </>)}
+
+            {adminLogged&&adminSec==="agenda"&&(<>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem"}}><h1 style={{color:"#fff",fontSize:16,fontWeight:900,margin:0,letterSpacing:2}}>AGENDAR CLIENTES</h1><button onClick={()=>exitAdminSec()} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:12,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>← MENÚ</button></div>
+              <div style={{background:"#111",borderRadius:12,padding:"1.5rem",border:"1px solid #1a1a1a",marginBottom:"1.25rem"}}>
+                <p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 1.25rem"}}>PARA CLIENTES CON INICIAL CUBIERTA (FALTA PAGO) O YA PAGADOS PENDIENTES DE ENTREGA</p>
+                <div style={{display:"flex",flexDirection:"column",gap:"0.8rem"}}>
+                  <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap"}}>
+                    <button onClick={()=>setAgendaStatus("abono")} style={{flex:1,minWidth:150,background:agendaStatus==="abono"?"#fff":"#111",color:agendaStatus==="abono"?"#080808":"#666",border:`1px solid ${agendaStatus==="abono"?"#fff":"#222"}`,borderRadius:8,padding:"0.65rem",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:800}}>💰 INICIAL CUBIERTA (FALTA PAGO)</button>
+                    <button onClick={()=>setAgendaStatus("pagado")} style={{flex:1,minWidth:150,background:agendaStatus==="pagado"?"#fff":"#111",color:agendaStatus==="pagado"?"#080808":"#666",border:`1px solid ${agendaStatus==="pagado"?"#fff":"#222"}`,borderRadius:8,padding:"0.65rem",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:800}}>✅ PAGADO (PENDIENTE ENTREGA)</button>
+                  </div>
+                  <input placeholder="Nombre del cliente *" value={agendaName} onChange={e=>setAgendaName(e.target.value)} style={S.input}/>
+                  <input placeholder="Teléfono" value={agendaPhone} onChange={e=>setAgendaPhone(e.target.value)} style={S.input}/>
+                  <input placeholder="Producto(s)" value={agendaProduct} onChange={e=>setAgendaProduct(e.target.value)} style={S.input}/>
+                  <div style={{display:"flex",gap:"0.6rem"}}>
+                    <input placeholder="Monto total en USD" type="number" min="0" step="0.01" value={agendaTotal} onChange={e=>setAgendaTotal(e.target.value)} style={{...S.input,flex:1}}/>
+                    <input placeholder="Monto abonado / inicial" type="number" min="0" step="0.01" value={agendaPaid} onChange={e=>setAgendaPaid(e.target.value)} style={{...S.input,flex:1}}/>
+                  </div>
+                  <div>
+                    <p style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#333",margin:"0 0 0.4rem"}}>FECHA DE ENTREGA *</p>
+                    <input type="date" value={agendaDate} onChange={e=>setAgendaDate(e.target.value)} style={{...S.input,appearance:"auto" as any}}/>
+                  </div>
+                  <textarea placeholder="Notas (opcional)" value={agendaNotes} onChange={e=>setAgendaNotes(e.target.value)} rows={2} style={{...S.input,resize:"vertical" as any,lineHeight:1.6}}/>
+                  {agendaErr&&<div style={{color:"#ff5555",fontSize:12,background:"#1e0808",padding:"0.65rem 1rem",borderRadius:8}}>{agendaErr}</div>}
+                  {agendaOk&&<div style={{color:"#55cc77",fontSize:12,background:"#081e0e",padding:"0.65rem 1rem",borderRadius:8}}>{agendaOk}</div>}
+                  <button onClick={submitAgendaClient} disabled={agendaSaving} style={{...S.adminBtn,opacity:agendaSaving?0.4:1,cursor:agendaSaving?"not-allowed":"pointer"}}>{agendaSaving?"Guardando...":"Agendar cliente"}</button>
+                </div>
+              </div>
+              <div style={{background:"#111",borderRadius:12,padding:"1.5rem",border:"1px solid #1a1a1a"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1rem"}}>
+                  <p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2,margin:0}}>CLIENTES AGENDADOS ({filteredAgenda.length})</p>
+                  <button onClick={()=>loadAgenda(true)} disabled={agendaLoading} style={{background:"none",border:"1px solid #2a2a2a",color:"#888",padding:"0.3rem 0.7rem",borderRadius:8,cursor:agendaLoading?"not-allowed":"pointer",fontSize:10,fontFamily:"inherit",fontWeight:700}}>{agendaLoading?"…":"↻"}</button>
+                </div>
+                <div style={{display:"flex",gap:"0.4rem",marginBottom:"1rem",flexWrap:"wrap"}}>
+                  {[{id:"todos" as const,l:"TODOS"},{id:"abono" as const,l:"CON INICIAL"},{id:"pagado" as const,l:"PAGADOS"}].map(f=>(
+                    <button key={f.id} onClick={()=>setAgendaFilter(f.id)} style={{background:agendaFilter===f.id?"#fff":"#161616",color:agendaFilter===f.id?"#080808":"#666",border:`1px solid ${agendaFilter===f.id?"#fff":"#222"}`,padding:"0.3rem 0.75rem",borderRadius:20,fontSize:9,fontWeight:800,letterSpacing:0.5,cursor:"pointer",fontFamily:"inherit"}}>{f.l}</button>
+                  ))}
+                </div>
+                {agendaLoading&&!filteredAgenda.length?(
+                  <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"1.5rem"}}>Cargando…</p>
+                ):filteredAgenda.length===0?(
+                  <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"1.5rem"}}>No hay clientes agendados</p>
+                ):(
+                  <div style={{display:"flex",flexDirection:"column",gap:"0.5rem"}}>
+                    {filteredAgenda.map(c=>{
+                      const todayStr=new Date().toISOString().slice(0,10);
+                      const isToday=c.deliveryDate===todayStr;
+                      const remaining=Math.max(0,c.totalAmount-c.paidAmount);
+                      return(
+                        <div key={c.id} style={{display:"flex",alignItems:"center",gap:"0.75rem",padding:"0.75rem",borderRadius:10,background:isToday?"linear-gradient(135deg,#1a1608 0%,#0d0d0a 100%)":"#0c0c0c",border:`1px solid ${isToday?"#3a2f10":"#1a1a1a"}`}}>
+                          <div style={{width:38,height:38,borderRadius:8,background:c.status==="pagado"?"#0d1e0d":"#1a1608",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                            <span style={{fontSize:15}}>{c.status==="pagado"?"✅":"💰"}</span>
+                          </div>
+                          <div style={{flex:1,minWidth:0}}>
+                            <p style={{margin:"0 0 2px",fontSize:12,fontWeight:800,color:"#fff"}}>{c.name} {c.phone&&<span style={{color:"#555",fontWeight:600}}>· {c.phone}</span>}</p>
+                            <p style={{margin:0,fontSize:10,color:"#666"}}>{c.product||"Sin producto especificado"} {c.status==="abono"&&remaining>0?`· Falta $${remaining.toFixed(2)}`:""}</p>
+                            <p style={{margin:"2px 0 0",fontSize:10,fontWeight:800,color:isToday?"#ffd43b":"#4dabf7"}}>{isToday?"📅 HOY":"📅"} {c.deliveryDate||"Sin fecha"} {c.notes?`· ${c.notes}`:""}</p>
+                          </div>
+                          <div style={{display:"flex",gap:"0.3rem",flexShrink:0}}>
+                            <button onClick={()=>toggleAgendaStatus(c)} title="Cambiar estado" style={{background:"#1a1a1a",color:"#888",border:"1px solid #222",padding:"0.3rem 0.55rem",borderRadius:6,cursor:"pointer",fontSize:10,fontFamily:"inherit",fontWeight:700}}>🔄</button>
+                            <button onClick={()=>deleteAgendaClient(c.id)} style={{background:"none",color:"#cc3333",border:"1px solid #2a1515",padding:"0.3rem 0.55rem",borderRadius:6,cursor:"pointer",fontSize:10,fontFamily:"inherit"}}>✕</button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </>)}
 
@@ -3108,7 +3237,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   <button onClick={()=>loadAllComments(true)} disabled={allCommentsLoading} style={{background:"none",border:"1px solid #2a2a2a",color:"#888",padding:"0.3rem 0.7rem",borderRadius:8,cursor:allCommentsLoading?"not-allowed":"pointer",fontSize:10,fontFamily:"inherit",fontWeight:700}}>{allCommentsLoading?"…":"↻"}</button>
                 </div>
                 <div style={{display:"flex",gap:"0.4rem",marginBottom:"1rem",flexWrap:"wrap"}}>
-                  {[{id:"all" as const,l:"TODO"},{id:"7d" as const,l:"7 DÍAS"},{id:"30d" as const,l:"30 DÍAS"},{id:"90d" as const,l:"90 DÍAS"}].map(p=>(
+                  {[{id:"hoy" as const,l:"HOY"},{id:"all" as const,l:"TODO"},{id:"7d" as const,l:"7 DÍAS"},{id:"30d" as const,l:"30 DÍAS"},{id:"90d" as const,l:"90 DÍAS"}].map(p=>(
                     <button key={p.id} onClick={()=>setCommentsDateFilter(p.id)} style={{background:commentsDateFilter===p.id?"#fff":"#161616",color:commentsDateFilter===p.id?"#080808":"#666",border:`1px solid ${commentsDateFilter===p.id?"#fff":"#222"}`,padding:"0.3rem 0.75rem",borderRadius:20,fontSize:9,fontWeight:800,letterSpacing:1,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>{p.l}</button>
                   ))}
                 </div>
