@@ -1067,7 +1067,7 @@ const ThankYouView=memo(function ThankYouView({order,onBack,currentUser,getRealU
 // ══════════════════════════════════════════════════════════════════════════════
 export default function Home() {
   const pathname = usePathname();
-  const isProductDeepLink = useMemo(()=>!!pathname&&pathname.startsWith("/producto/"),[]); // se calcula igual en servidor y cliente
+  const[isProductDeepLink,setIsProductDeepLink]=useState(()=>!!pathname&&pathname.startsWith("/producto/")); // se recalcula: se reactiva al navegar por la tienda sin necesidad de recargar
   const initialRoute = useMemo(()=>{
     if(isProductDeepLink)return{view:"shop" as MainView,filter:"TODO" as ShopFilter};
     return pathToShopState(pathname||"/");
@@ -1199,7 +1199,7 @@ const fmtPrice=useCallback((usd:number)=>{if(showBs&&bcvRate){const bs=usd*bcvRa
     const bsAmount=nominalUsd*bcvRate;
     return bsAmount/binanceRate;
   },[bcvRate,binanceRate,BS_PAY_METHODS]);
-  const setMainView=useCallback((v:MainView)=>{setMainViewRaw(v);scrollTop();},[]);
+  const setMainView=useCallback((v:MainView)=>{setMainViewRaw(v);setIsProductDeepLink(false);scrollTop();},[]);
   const payMethodRef=useRef<HTMLDivElement>(null);
 const comprobanteRef=useRef<HTMLDivElement>(null);
 const payDetailsRef=useRef<HTMLDivElement>(null);
@@ -1319,6 +1319,7 @@ const[couponsLoading,setCouponsLoading]=useState(false);
 const[allComments,setAllComments]=useState<ProductComment[]>([]);
 const[allCommentsLoading,setAllCommentsLoading]=useState(false);
 const allCommentsLoaded=useRef(false);
+const[commentsDateFilter,setCommentsDateFilter]=useState<"all"|"7d"|"30d"|"90d">("all");
 const[bulkCat,setBulkCat]=useState("COLLARES");
 const[bulkDrafts,setBulkDrafts]=useState<Record<string,{name:string;description:string}>>({});
 const[bulkSaving,setBulkSaving]=useState(false);
@@ -1330,7 +1331,7 @@ const[bulkAddCat,setBulkAddCat]=useState("COLLARES");
 const[bulkAddImages,setBulkAddImages]=useState<string[]>([]);
 const[bulkAddUploading,setBulkAddUploading]=useState(false);
 const[bulkAddText,setBulkAddText]=useState("");
-const[bulkAddParsed,setBulkAddParsed]=useState<{name:string;description:string;price:string}[]>([]);
+const[bulkAddParsed,setBulkAddParsed]=useState<{name:string;description:string;price:string;stock:string}[]>([]);
 const[bulkAddParseMsg,setBulkAddParseMsg]=useState("");
 const[bulkAddSaving,setBulkAddSaving]=useState(false);
 const[bulkAddErr,setBulkAddErr]=useState("");
@@ -1918,24 +1919,30 @@ const moveBulkAddImage=useCallback((idx:number,dir:-1|1)=>{setBulkAddImages(prev
 
 const parseBulkAddText=useCallback(()=>{
   const blocks=bulkAddText.split(/\n\s*\n/).map(b=>b.trim()).filter(Boolean);
-  if(!blocks.length){setBulkAddParseMsg("Pega el texto con nombre, descripción y precio de cada producto.");return;}
+  if(!blocks.length){setBulkAddParseMsg("Pega el texto con nombre, descripción, precio y stock de cada producto.");return;}
   const parsed=blocks.map(block=>{
     const lines=block.split("\n").map(l=>l.trim()).filter(Boolean);
-    if(!lines.length)return{name:"",description:"",price:""};
+    if(!lines.length)return{name:"",description:"",price:"",stock:"1"};
     const name=lines[0].replace(/^t[íi]tulo\s*:\s*/i,"").replace(/^nombre\s*:\s*/i,"").trim();
-    const lastLine=lines[lines.length-1];
-    const priceMatch=lastLine.match(/(\d+[.,]?\d*)/);
-    const looksLikePrice=lines.length>1&&!!priceMatch;
-    const price=looksLikePrice&&priceMatch?priceMatch[1].replace(",","."):"";
-    const descLines=looksLikePrice?lines.slice(1,-1):lines.slice(1);
-    const description=descLines.map(l=>l.replace(/^descripci[óo]n\s*:\s*/i,"").replace(/^precio\s*:\s*/i,"")).join(" ").trim();
-    return{name,description,price};
+    let rest=lines.slice(1);
+    let price="";
+    let stock="1";
+    if(rest.length>=2&&/^\d+$/.test(rest[rest.length-1])&&/(\d+[.,]?\d*)/.test(rest[rest.length-2])){
+      stock=rest[rest.length-1];
+      price=(rest[rest.length-2].match(/(\d+[.,]?\d*)/)as RegExpMatchArray)[1].replace(",",".");
+      rest=rest.slice(0,-2);
+    }else if(rest.length>=1&&rest.length>1&&/(\d+[.,]?\d*)/.test(rest[rest.length-1])){
+      price=(rest[rest.length-1].match(/(\d+[.,]?\d*)/)as RegExpMatchArray)[1].replace(",",".");
+      rest=rest.slice(0,-1);
+    }
+    const description=rest.map(l=>l.replace(/^descripci[óo]n\s*:\s*/i,"").replace(/^precio\s*:\s*/i,"").replace(/^stock\s*:\s*/i,"")).join(" ").trim();
+    return{name,description,price,stock};
   });
   setBulkAddParsed(parsed);
   setBulkAddParseMsg(`✓ Se detectaron ${parsed.length} producto(s). Revisa los campos antes de guardar.`);
 },[bulkAddText]);
 
-const updateBulkAddParsed=useCallback((idx:number,field:"name"|"description"|"price",value:string)=>{
+const updateBulkAddParsed=useCallback((idx:number,field:"name"|"description"|"price"|"stock",value:string)=>{
   setBulkAddParsed(prev=>prev.map((p,i)=>i===idx?{...p,[field]:value}:p));
 },[]);
 
@@ -1951,7 +1958,8 @@ const saveBulkAddProducts=useCallback(async()=>{
       const item=bulkAddParsed[i];
       const price=parseFloat(item.price);
       if(!item.name.trim()||!price||price<=0)continue;
-      await fsAdd({name:item.name.trim(),description:item.description.trim(),price,category:bulkAddCat.toUpperCase(),img:bulkAddImages[i],active:true,discount:0,images:[],code:"FK-"+(Date.now()+i).toString(36).slice(-6).toUpperCase(),stock:1});
+      const stockVal=item.stock!==""&&!isNaN(parseInt(item.stock))?Math.max(0,parseInt(item.stock)):1;
+      await fsAdd({name:item.name.trim(),description:item.description.trim(),price,category:bulkAddCat.toUpperCase(),img:bulkAddImages[i],active:true,discount:0,images:[],code:"FK-"+(Date.now()+i).toString(36).slice(-6).toUpperCase(),stock:stockVal});
       created++;
     }
     invalidateProductsCache();
@@ -2009,8 +2017,16 @@ useEffect(()=>{if(adminSec==="comments")loadAllComments();},[adminSec,loadAllCom
   const usedCats=useMemo(()=>[...new Set(products.map(p=>p.category))].sort(),[products]);
 const[invSearch,setInvSearch]=useState("");
 const[invCat,setInvCat]=useState("ALL");
-const invProds=useMemo(()=>{let l=products;if(invCat!=="ALL")l=l.filter(p=>p.category===invCat);if(invSearch!=="")l=l.filter(p=>p.name.toLowerCase().includes(invSearch.toLowerCase())||(p.code||"").toLowerCase().includes(invSearch.toLowerCase()));return[...l].sort((a,b)=>(a.stock??0)-(b.stock??0));},[products,invCat,invSearch]);
+const[invOnlyOut,setInvOnlyOut]=useState(false);
+const invProds=useMemo(()=>{let l=products;if(invCat!=="ALL")l=l.filter(p=>p.category===invCat);if(invOnlyOut)l=l.filter(p=>(p.stock??0)===0);if(invSearch!=="")l=l.filter(p=>p.name.toLowerCase().includes(invSearch.toLowerCase())||(p.code||"").toLowerCase().includes(invSearch.toLowerCase()));return[...l].sort((a,b)=>(a.stock??0)-(b.stock??0));},[products,invCat,invSearch,invOnlyOut]);
 const inventoryStats=useMemo(()=>{const totalUnits=products.reduce((s,p)=>s+(p.stock??0),0);const outOfStock=products.filter(p=>(p.stock??0)===0).length;const lowStock=products.filter(p=>(p.stock??0)>0&&(p.stock??0)<=5).length;return{totalUnits,outOfStock,lowStock};},[products]);
+const commentsPeriodCutoff=useMemo(()=>{
+  if(commentsDateFilter==="all")return 0;
+  const daysBack=commentsDateFilter==="7d"?7:commentsDateFilter==="30d"?30:90;
+  const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-(daysBack-1));
+  return d.getTime();
+},[commentsDateFilter]);
+const filteredComments=useMemo(()=>allComments.filter(c=>c.createdAt>=commentsPeriodCutoff),[allComments,commentsPeriodCutoff]);
 
   const periodCutoff=useMemo(()=>{
     if(statsPeriod==="all")return 0;
@@ -2437,11 +2453,13 @@ const inventoryStats=useMemo(()=>{const totalUnits=products.reduce((s,p)=>s+(p.s
           </div>
 
           {/* ── BOTÓN PREMIUM: SEGUIR COMPRANDO ── */}
+          {!isProductDeepLink&&(
           <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={{position:"relative",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",gap:"0.65rem",width:"100%",background:"linear-gradient(155deg,rgba(255,255,255,0.16) 0%,rgba(20,20,20,0.94) 45%,rgba(10,10,10,0.98) 100%)",color:"#fff",border:"1px solid rgba(255,255,255,0.25)",padding:"1.05rem",fontSize:11,fontWeight:900,letterSpacing:2.8,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",borderRadius:12,marginBottom:"1.25rem",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.18), inset 0 0 0 1px rgba(255,255,255,0.07), 0 10px 28px rgba(0,0,0,0.55)"}}>
             <span style={{position:"absolute",inset:0,background:"linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.12) 50%,transparent 100%)",backgroundSize:"200% 100%",animation:"badgeShimmer 3s ease infinite",pointerEvents:"none"}}/>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{position:"relative",flexShrink:0}}><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
             <span style={{position:"relative"}}>SEGUIR COMPRANDO</span>
           </button>
+          )}
 
           {/* ── CUPÓN DE DESCUENTO ── */}
           <div style={{background:"linear-gradient(135deg,#141410 0%,#0a0a08 100%)",borderRadius:12,border:`1px solid ${appliedCoupon?"#3a3520":C.border}`,marginBottom:"1.25rem",padding:"1.1rem",position:"relative",overflow:"hidden"}}>
@@ -2926,6 +2944,10 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
               </div>
               <div style={{background:"#111",borderRadius:12,padding:"1.5rem",border:"1px solid #1a1a1a"}}>
                 <input placeholder="Buscar por nombre o código…" value={invSearch} onChange={e=>setInvSearch(e.target.value)} style={{...S.input,marginBottom:"0.75rem"}}/>
+                <button onClick={()=>setInvOnlyOut(v=>!v)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",width:"100%",background:invOnlyOut?"#1e0d0d":"#111",border:`1px solid ${invOnlyOut?"#3a1515":"#222"}`,borderRadius:8,padding:"0.65rem 0.9rem",cursor:"pointer",fontFamily:"inherit",marginBottom:"0.75rem",WebkitTapHighlightColor:"transparent"}}>
+                  <span style={{fontSize:11,fontWeight:800,color:invOnlyOut?"#ff8888":"#888"}}>{invOnlyOut?"👁️‍🗨️ MOSTRANDO SOLO AGOTADOS":"Mostrar solo agotados (stock 0)"}</span>
+                  <div style={{width:34,height:20,borderRadius:20,background:invOnlyOut?"#cc3333":"#333",position:"relative",flexShrink:0,transition:"background 0.2s"}}><div style={{position:"absolute",top:2,left:invOnlyOut?16:2,width:16,height:16,borderRadius:"50%",background:"#fff",transition:"left 0.2s"}}/></div>
+                </button>
                 <div className="admin-cat-scroll" style={{display:"flex",gap:"0.35rem",overflowX:"auto",paddingBottom:"0.75rem",marginBottom:"0.5rem",WebkitOverflowScrolling:"touch",touchAction:"pan-x"}}>
                   {["ALL",...usedCats].map(cat=>{const a=invCat===cat;return(<button key={cat} onClick={()=>setInvCat(cat)} style={{background:a?"#fff":"#161616",color:a?"#080808":"#555",border:`1px solid ${a?"#fff":"#222"}`,padding:"0.3rem 0.7rem",borderRadius:20,fontSize:9,fontWeight:800,letterSpacing:1,fontFamily:"inherit",flexShrink:0,cursor:"pointer",whiteSpace:"nowrap"}}>{cat==="ALL"?"TODOS":catLabel(cat).toUpperCase()}</button>);})}
                 </div>
@@ -3045,9 +3067,9 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                 <p style={{color:"#2a2a2a",fontSize:9,margin:"0.6rem 0 0",lineHeight:1.5}}>El orden de las fotos debe coincidir con el orden de los productos que pegues abajo. Usa ◀ ▶ para reordenar.</p>
               </div>
               <div style={{background:"linear-gradient(135deg,#141410 0%,#0e0e0e 100%)",borderRadius:14,padding:"1.25rem",border:"1px solid #2a2a1a",marginBottom:"1.25rem"}}>
-                <p style={{color:"#ffd43b",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 0.5rem"}}>3. PEGA NOMBRE, DESCRIPCIÓN Y PRECIO DE CADA PRODUCTO</p>
-                <p style={{color:"#666",fontSize:11,margin:"0 0 0.85rem",lineHeight:1.6}}>Un bloque por producto, en el mismo orden que las fotos. Primera línea = nombre, última línea = precio (solo el número), líneas del medio = descripción. Separa cada producto con una línea en blanco.</p>
-                <textarea value={bulkAddText} onChange={e=>setBulkAddText(e.target.value)} rows={10} placeholder={"Collar As de Picas\nDije de as de picas en acero inoxidable, doble cadena...\n18\n\nCollar Triángulos Minimalista\nDiseño geométrico de triángulos entrelazados...\n15\n\n(sigue con el resto en el mismo orden que las fotos)"} style={{...S.input,fontSize:12,lineHeight:1.6,resize:"vertical" as const,fontFamily:"monospace"}}/>
+                <p style={{color:"#ffd43b",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 0.5rem"}}>3. PEGA NOMBRE, DESCRIPCIÓN, PRECIO Y STOCK DE CADA PRODUCTO</p>
+                <p style={{color:"#666",fontSize:11,margin:"0 0 0.85rem",lineHeight:1.6}}>Un bloque por producto, en el mismo orden que las fotos. Primera línea = nombre, luego la descripción, penúltima línea = precio, última línea = stock (opcional, si no lo pones se asigna 1 por defecto). Separa cada producto con una línea en blanco.</p>
+                <textarea value={bulkAddText} onChange={e=>setBulkAddText(e.target.value)} rows={10} placeholder={"Collar As de Picas\nDije de as de picas en acero inoxidable, doble cadena...\n18\n10\n\nCollar Triángulos Minimalista\nDiseño geométrico de triángulos entrelazados...\n15\n5\n\n(precio y luego stock, uno por línea; si no pones stock se asigna 1 por defecto)"} style={{...S.input,fontSize:12,lineHeight:1.6,resize:"vertical" as const,fontFamily:"monospace"}}/>
                 <button onClick={parseBulkAddText} style={{...S.adminBtn,marginTop:"0.85rem",background:"linear-gradient(135deg,#ffd43b 0%,#c99a1f 100%)"}}>Repartir en los campos de abajo</button>
                 {bulkAddParseMsg&&<p style={{margin:"0.75rem 0 0",fontSize:11,color:"#ffd43b",lineHeight:1.6}}>{bulkAddParseMsg}</p>}
               </div>
@@ -3063,7 +3085,10 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                         <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",gap:"0.5rem"}}>
                           <input value={item.name} onChange={e=>updateBulkAddParsed(i,"name",e.target.value)} style={{...S.input,fontSize:12,padding:"0.55rem 0.75rem"}} placeholder="Nombre del producto"/>
                           <textarea value={item.description} onChange={e=>updateBulkAddParsed(i,"description",e.target.value)} rows={2} style={{...S.input,fontSize:12,padding:"0.55rem 0.75rem",resize:"vertical" as const,lineHeight:1.5}} placeholder="Descripción"/>
-                          <input value={item.price} onChange={e=>updateBulkAddParsed(i,"price",e.target.value)} type="number" min="0" step="0.01" style={{...S.input,fontSize:12,padding:"0.55rem 0.75rem"}} placeholder="Precio en USD"/>
+                          <div style={{display:"flex",gap:"0.5rem"}}>
+                            <input value={item.price} onChange={e=>updateBulkAddParsed(i,"price",e.target.value)} type="number" min="0" step="0.01" style={{...S.input,fontSize:12,padding:"0.55rem 0.75rem",flex:1}} placeholder="Precio en USD"/>
+                            <input value={item.stock} onChange={e=>updateBulkAddParsed(i,"stock",e.target.value)} type="number" min="0" step="1" style={{...S.input,fontSize:12,padding:"0.55rem 0.75rem",flex:1}} placeholder="Stock (1 por defecto)"/>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -3078,17 +3103,22 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
             {adminLogged&&adminSec==="comments"&&(<>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem"}}><h1 style={{color:"#fff",fontSize:16,fontWeight:900,margin:0,letterSpacing:2}}>COMENTARIOS DE PRODUCTOS</h1><button onClick={()=>exitAdminSec()} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:12,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>← MENÚ</button></div>
               <div style={{background:"#111",borderRadius:14,padding:"1.25rem",border:"1px solid #1a1a1a"}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1rem"}}>
-                  <p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2.5,margin:0}}>TODOS LOS COMENTARIOS ({allComments.length})</p>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.75rem"}}>
+                  <p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2.5,margin:0}}>TODOS LOS COMENTARIOS ({filteredComments.length})</p>
                   <button onClick={()=>loadAllComments(true)} disabled={allCommentsLoading} style={{background:"none",border:"1px solid #2a2a2a",color:"#888",padding:"0.3rem 0.7rem",borderRadius:8,cursor:allCommentsLoading?"not-allowed":"pointer",fontSize:10,fontFamily:"inherit",fontWeight:700}}>{allCommentsLoading?"…":"↻"}</button>
                 </div>
-                {allCommentsLoading&&!allComments.length?(
+                <div style={{display:"flex",gap:"0.4rem",marginBottom:"1rem",flexWrap:"wrap"}}>
+                  {[{id:"all" as const,l:"TODO"},{id:"7d" as const,l:"7 DÍAS"},{id:"30d" as const,l:"30 DÍAS"},{id:"90d" as const,l:"90 DÍAS"}].map(p=>(
+                    <button key={p.id} onClick={()=>setCommentsDateFilter(p.id)} style={{background:commentsDateFilter===p.id?"#fff":"#161616",color:commentsDateFilter===p.id?"#080808":"#666",border:`1px solid ${commentsDateFilter===p.id?"#fff":"#222"}`,padding:"0.3rem 0.75rem",borderRadius:20,fontSize:9,fontWeight:800,letterSpacing:1,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>{p.l}</button>
+                  ))}
+                </div>
+                {allCommentsLoading&&!filteredComments.length?(
                   <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"1.5rem"}}>Cargando…</p>
-                ):allComments.length===0?(
-                  <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"1.5rem"}}>Aún no hay comentarios de clientes</p>
+                ):filteredComments.length===0?(
+                  <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"1.5rem"}}>No hay comentarios en este período</p>
                 ):(
                   <div style={{display:"flex",flexDirection:"column",gap:"0.5rem"}}>
-                    {allComments.map(c=>(
+                    {filteredComments.map(c=>(
                       <div key={c.id} style={{display:"flex",alignItems:"flex-start",gap:"0.75rem",padding:"0.75rem",borderRadius:10,background:"#0c0c0c",border:"1px solid #1a1a1a"}}>
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2,flexWrap:"wrap"}}>
