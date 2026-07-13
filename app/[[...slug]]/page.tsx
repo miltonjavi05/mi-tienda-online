@@ -1609,18 +1609,18 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
 
   const addToCart=useCallback((product:Product,qty:number)=>{
     setCart(prev=>{const ex=prev.find(i=>i.product.id===product.id);return ex?prev.map(i=>i.product.id===product.id?{...i,qty:i.qty+qty}:i):[...prev,{product,qty}];});
-    closeProdModal();setMainView("cart");
+    closeProdModal();setMainViewRaw("cart");
     trackAddToCart(product,qty,currentUser?.email);
     requestAnimationFrame(()=>{scrollTop();setTimeout(scrollTop,60);setTimeout(scrollTop,220);});
-  },[currentUser?.email,closeProdModal,setMainView]);
+  },[currentUser?.email,closeProdModal]);
 
   const updQty=useCallback((id:string,d:number)=>setCart(prev=>prev.map(i=>i.product.id===id?{...i,qty:i.qty+d}:i).filter(i=>i.qty>0)),[]);
 
   const handleBuyNow=useCallback((product:Product)=>{
     setCart([{product,qty:1}]);
     trackAddToCart(product,1,currentUser?.email);
-    setMainView("cart");
-  },[currentUser?.email,setMainView]);
+    setMainViewRaw("cart");scrollTop();
+  },[currentUser?.email]);
 
   const deliveryValid=useMemo(()=>{if(!deliveryInfo.zone)return false;if(deliveryInfo.zone==="otro")return!!(deliveryInfo.nombre&&deliveryInfo.cedula&&deliveryInfo.telefono&&deliveryInfo.agencia&&deliveryInfo.estado&&deliveryInfo.direccion);return true;},[deliveryInfo]);
   const canSendOrder=useMemo(()=>!!(payMethod&&deliveryValid&&comprobanteUrl),[payMethod,deliveryValid,comprobanteUrl]);
