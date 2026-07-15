@@ -101,7 +101,7 @@ const DELIVERY_ZONES_MAP = new Map(DELIVERY_ZONES.map(z=>[z.id,z]));
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 interface DeliveryInfo { zone:string; nombre:string; cedula:string; telefono:string; agencia:string; direccion:string; estado:string; }
-interface Product { id:string; name:string; category:string; price:number; img:string; description?:string; createdAt?:number; order?:number; active?:boolean; discount?:number; images?:string[]; code?:string; bestseller?:boolean; stock?:number; }
+interface Product { id:string; name:string; category:string; price:number; img:string; description?:string; createdAt?:number; order?:number; active?:boolean; discount?:number; images?:string[]; code?:string; bestseller?:boolean; stock?:number; variantGroup?:string; variantLabel?:string; urgencyTag?:"ultima"|"quedan2"|""; }
 interface CartItem { product:Product; qty:number; }
 interface UserData { uid:string; email:string; displayName:string; createdAt:number; photoURL?:string; idToken?:string; }
 interface Coupon { id:string; code:string; type:"general"|"product"|"category"; productId?:string; productName?:string; category?:string; discountPercent:number; durationHours:number; createdAt:number; expiresAt:number; active:boolean; }
@@ -245,7 +245,7 @@ type FsVal=|{stringValue:string}|{doubleValue:number}|{integerValue:string}|{boo
 function toFs(v:unknown):FsVal{if(v===null||v===undefined)return{nullValue:null};if(typeof v==="string")return{stringValue:v};if(typeof v==="number")return{doubleValue:v};if(typeof v==="boolean")return{booleanValue:v};if(Array.isArray(v))return{arrayValue:{values:v.map(toFs)}};if(typeof v==="object")return{mapValue:{fields:Object.fromEntries(Object.entries(v as Record<string,unknown>).map(([k,val])=>[k,toFs(val)]))}};return{stringValue:String(v)};}
 function fromFs(f:FsVal):unknown{if("stringValue" in f)return f.stringValue;if("doubleValue" in f)return f.doubleValue;if("integerValue" in f)return Number(f.integerValue);if("booleanValue" in f)return f.booleanValue;if("nullValue" in f)return null;if("arrayValue" in f)return((f as{arrayValue:{values?:FsVal[]}}).arrayValue.values||[]).map(fromFs);if("mapValue" in f){const fields=(f as{mapValue:{fields?:Record<string,FsVal>}}).mapValue.fields||{};return Object.fromEntries(Object.entries(fields).map(([k,v])=>[k,fromFs(v)]));}return null;}
 interface FsDoc{name:string;fields:Record<string,FsVal>;}
-function docToProduct(doc:FsDoc):Product{const f=doc.fields||{};const rawImages=fromFs(f.images??{nullValue:null}) as string[]|null;const id=doc.name.split("/").pop() as string;return{id,name:fromFs(f.name??{nullValue:null}) as string||"",category:((fromFs(f.category??{nullValue:null}) as string)||"").toUpperCase(),price:fromFs(f.price??{nullValue:null}) as number||0,img:fromFs(f.img??{nullValue:null}) as string||"",description:fromFs(f.description??{nullValue:null}) as string||"",createdAt:fromFs(f.createdAt??{nullValue:null}) as number||0,order:fromFs(f.order??{nullValue:null}) as number||0,active:f.active!==undefined?(fromFs(f.active) as boolean):true,discount:fromFs(f.discount??{nullValue:null}) as number||0,images:Array.isArray(rawImages)?rawImages:[],code:(fromFs(f.code??{nullValue:null}) as string)||("FK-"+id.slice(-6).toUpperCase()),bestseller:f.bestseller!==undefined?(fromFs(f.bestseller) as boolean):false,stock:Number(fromFs(f.stock??{nullValue:null}))||1};}
+function docToProduct(doc:FsDoc):Product{const f=doc.fields||{};const rawImages=fromFs(f.images??{nullValue:null}) as string[]|null;const id=doc.name.split("/").pop() as string;return{id,name:fromFs(f.name??{nullValue:null}) as string||"",category:((fromFs(f.category??{nullValue:null}) as string)||"").toUpperCase(),price:fromFs(f.price??{nullValue:null}) as number||0,img:fromFs(f.img??{nullValue:null}) as string||"",description:fromFs(f.description??{nullValue:null}) as string||"",createdAt:fromFs(f.createdAt??{nullValue:null}) as number||0,order:fromFs(f.order??{nullValue:null}) as number||0,active:f.active!==undefined?(fromFs(f.active) as boolean):true,discount:fromFs(f.discount??{nullValue:null}) as number||0,images:Array.isArray(rawImages)?rawImages:[],code:(fromFs(f.code??{nullValue:null}) as string)||("FK-"+id.slice(-6).toUpperCase()),bestseller:f.bestseller!==undefined?(fromFs(f.bestseller) as boolean):false,stock:Number(fromFs(f.stock??{nullValue:null}))||1,variantGroup:(fromFs(f.variantGroup??{nullValue:null}) as string)||"",variantLabel:(fromFs(f.variantLabel??{nullValue:null}) as string)||"",urgencyTag:((fromFs(f.urgencyTag??{nullValue:null}) as string)||"") as Product["urgencyTag"]};}
 async function fsGetAll():Promise<Product[]>{const r=await fetch(`${fsBase()}/products?pageSize=300`);if(!r.ok)throw new Error(await r.text());const d=await r.json() as{documents?:FsDoc[]};return(d.documents||[]).map(docToProduct);}
 async function fsGetProductsVersion():Promise<number|null>{
   try{
@@ -275,6 +275,19 @@ async function authSignUp(email:string,password:string,displayName:string):Promi
 async function authSignIn(email:string,password:string):Promise<{idToken:string;localId:string;displayName:string;refreshToken:string}>{const r=await fetch(`${AUTH_BASE}:signInWithPassword?key=${FIREBASE_CONFIG.apiKey}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password,returnSecureToken:true})});const d=await r.json() as{idToken?:string;localId?:string;displayName?:string;refreshToken?:string;error?:{message:string}};if(!r.ok||d.error)throw new Error(d.error?.message||"Error al iniciar sesión");return{idToken:d.idToken!,localId:d.localId!,displayName:d.displayName||"",refreshToken:d.refreshToken!};}
 async function fsGetUser(uid:string):Promise<{photoURL:string}>{try{const r=await fetch(`${fsBase()}/users/${uid}`);if(!r.ok)return{photoURL:""};const d=await r.json() as FsDoc;return{photoURL:(fromFs(d.fields?.photoURL??{nullValue:null}) as string)||""};}catch{return{photoURL:""};}}
 async function uploadImg(file:File,preset=CLOUDINARY_PRESET):Promise<string>{const fd=new FormData();fd.append("file",file);fd.append("upload_preset",preset);const r=await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`,{method:"POST",body:fd});if(!r.ok)throw new Error("Error subiendo imagen");return((await r.json()) as{secure_url:string}).secure_url;}
+function loadXLSXLib():Promise<any>{
+  return new Promise((resolve,reject)=>{
+    if((window as any).XLSX){resolve((window as any).XLSX);return;}
+    const existing=document.getElementById("fokus-xlsx-lib");
+    if(existing){existing.addEventListener("load",()=>resolve((window as any).XLSX));existing.addEventListener("error",()=>reject(new Error("no se pudo cargar el lector de excel")));return;}
+    const script=document.createElement("script");
+    script.id="fokus-xlsx-lib";
+    script.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+    script.onload=()=>resolve((window as any).XLSX);
+    script.onerror=()=>reject(new Error("no se pudo cargar el lector de excel"));
+    document.head.appendChild(script);
+  });
+}
 function optImg(url:string,w=400):string{if(!url||!url.includes("cloudinary.com"))return url;return url.replace("/upload/",`/upload/w_${w},q_auto,f_webp,dpr_auto/`);}
 function getAllImages(p:Product):string[]{const extra=(p.images||[]).filter(u=>u&&u!==p.img);return[p.img,...extra].filter(Boolean);}
 function getFinalPrice(p:Product):number{if(p.discount&&p.discount>0)return p.price*(1-p.discount/100);return p.price;}
@@ -309,6 +322,16 @@ const BestsellerBadge=memo(function BestsellerBadge(){
     <div style={{position:"absolute",bottom:8,left:8,zIndex:3,display:"flex",alignItems:"center",gap:4,background:"linear-gradient(140deg,#2a2a2a 0%,#0a0a0a 55%,#000 100%)",color:"#fff",padding:"4px 9px 4px 7px",borderRadius:20,fontSize:9,fontWeight:900,letterSpacing:0.8,boxShadow:"0 4px 18px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.28), 0 0 0 1px rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.55)"}}>
       <svg width="10" height="10" viewBox="0 0 24 24" fill="#fff"><path d="M5 16L3 5l5.5 4L12 3l3.5 6L21 5l-2 11H5zm0 2h14v2H5v-2z"/></svg>
       MÁS VENDIDO
+    </div>
+  );
+});
+const StockUrgencyBadge=memo(function StockUrgencyBadge({tag}:{tag:"ultima"|"quedan2"|""}){
+  if(tag!=="ultima"&&tag!=="quedan2")return null;
+  const isLast=tag==="ultima";
+  return(
+    <div style={{position:"absolute",bottom:8,right:8,zIndex:3,display:"flex",alignItems:"center",gap:5,background:isLast?"linear-gradient(135deg,#ff3b3b 0%,#c0392b 55%,#7a0000 100%)":"linear-gradient(140deg,#2a2a2a 0%,#0a0a0a 55%,#000 100%)",color:"#fff",padding:"4px 9px 4px 7px",borderRadius:20,fontSize:9,fontWeight:900,letterSpacing:0.6,boxShadow:isLast?"0 4px 18px rgba(255,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.35)":"0 4px 18px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.28)",border:isLast?"1px solid rgba(255,255,255,0.5)":"1px solid rgba(255,255,255,0.55)",animation:isLast?"superPulse 1.6s ease infinite":"none",whiteSpace:"nowrap"}}>
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="#fff"><path d="M13 2L3 14h7l-1 8 11-14h-7l1-6z"/></svg>
+      {isLast?"ÚLTIMA UNIDAD":"¡QUEDAN 2!"}
     </div>
   );
 });
@@ -603,6 +626,7 @@ const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,fmtPrice}:
         {!!product.discount&&product.discount>0&&<DiscountBadge percent={product.discount} issuper={isSuperOffer(product.discount)}/>}
         {product.bestseller&&<BestsellerBadge/>}
         {getAllImages(product).length>1&&<GalleryBadge/>}
+        {!!product.urgencyTag&&<StockUrgencyBadge tag={product.urgencyTag}/>}
       </div>
       <div onClick={onClick} style={{marginBottom:"0.5rem",flex:1}}>
         <p style={{margin:"0 0 3px",fontSize:12,lineHeight:1.35,color:"#bbb",letterSpacing:0.2}}>{product.name}</p>
@@ -638,6 +662,7 @@ const HCard=memo(function HCard({product,onClick,onBuyNow,fmtPrice}:{product:Pro
         {!!product.discount&&product.discount>0&&<DiscountBadge percent={product.discount} issuper={isSuperOffer(product.discount)}/>}
         {product.bestseller&&<BestsellerBadge/>}
         {getAllImages(product).length>1&&<GalleryBadge/>}
+        {!!product.urgencyTag&&<StockUrgencyBadge tag={product.urgencyTag}/>}
       </div>
       <div onClick={onClick} style={{marginBottom:"0.5rem",cursor:"pointer",flex:1}}>
         <p style={{margin:"0 0 2px",fontSize:11,lineHeight:1.35,color:"#bbb",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{product.name}</p>
@@ -998,8 +1023,8 @@ function UserAvatar({user,size=26}:{user:UserData;size?:number}){
 }
 
 // ─── ADMIN ROW ────────────────────────────────────────────────────────────────
-interface ARowProps{p:Product;editing:Product|null;onEdit:(p:Product)=>void;onDel:(id:string)=>void;onDragStart:(id:string)=>void;onDragOver:(id:string)=>void;onDragEnd:()=>void;isDragging:boolean;isOver:boolean;onTouchStart:(id:string,y:number)=>void;onTouchMove:(y:number,x:number)=>void;onTouchEnd:()=>void;onToggleActive:(p:Product)=>void;onToggleDiscount:(p:Product)=>void;onToggleBestseller:(p:Product)=>void;onEditStock:(p:Product)=>void;}
-const ARow=memo(function ARow({p,editing,onEdit,onDel,onDragStart,onDragOver,onDragEnd,isDragging,isOver,onTouchStart,onTouchMove,onTouchEnd,onToggleActive,onToggleDiscount,onToggleBestseller,onEditStock}:ARowProps){
+interface ARowProps{p:Product;editing:Product|null;onEdit:(p:Product)=>void;onDel:(id:string)=>void;onDragStart:(id:string)=>void;onDragOver:(id:string)=>void;onDragEnd:()=>void;isDragging:boolean;isOver:boolean;onTouchStart:(id:string,y:number)=>void;onTouchMove:(y:number,x:number)=>void;onTouchEnd:()=>void;onToggleActive:(p:Product)=>void;onToggleDiscount:(p:Product)=>void;onToggleBestseller:(p:Product)=>void;onEditStock:(p:Product)=>void;onToggleUrgency:(p:Product,tag:"ultima"|"quedan2")=>void;}
+const ARow=memo(function ARow({p,editing,onEdit,onDel,onDragStart,onDragOver,onDragEnd,isDragging,isOver,onTouchStart,onTouchMove,onTouchEnd,onToggleActive,onToggleDiscount,onToggleBestseller,onEditStock,onToggleUrgency}:ARowProps){
   return(
     <div draggable onDragStart={()=>onDragStart(p.id)} onDragOver={e=>{e.preventDefault();onDragOver(p.id);}} onDragEnd={onDragEnd} data-rowid={p.id} className="ar" style={{display:"flex",alignItems:"center",gap:"0.75rem",padding:"0.6rem 0.65rem",borderRadius:8,background:isOver?"#1e1e1e":editing?.id===p.id?"#1a1a1a":"transparent",opacity:isDragging?0.4:1,border:isOver?"1px dashed #3a3a3a":"1px solid transparent",transition:"opacity 0.15s, background 0.15s, border 0.15s",cursor:"default",userSelect:"none",WebkitUserSelect:"none"}}>
       <div onTouchStart={e=>{e.stopPropagation();const t=e.touches[0];onTouchStart(p.id,t.clientY);}} onTouchMove={e=>{e.stopPropagation();e.preventDefault();const t=e.touches[0];onTouchMove(t.clientY,t.clientX);}} onTouchEnd={e=>{e.stopPropagation();onTouchEnd();}} style={{cursor:"grab",flexShrink:0,padding:"6px 8px",color:"#444",display:"flex",alignItems:"center",touchAction:"none",WebkitTapHighlightColor:"transparent",userSelect:"none",WebkitUserSelect:"none",WebkitTouchCallout:"none"} as React.CSSProperties}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="8" cy="6" r="1.2" fill="currentColor"/><circle cx="16" cy="6" r="1.2" fill="currentColor"/><circle cx="8" cy="12" r="1.2" fill="currentColor"/><circle cx="16" cy="12" r="1.2" fill="currentColor"/><circle cx="8" cy="18" r="1.2" fill="currentColor"/><circle cx="16" cy="18" r="1.2" fill="currentColor"/></svg></div>
@@ -1013,6 +1038,8 @@ const ARow=memo(function ARow({p,editing,onEdit,onDel,onDragStart,onDragOver,onD
         <button onClick={()=>onToggleActive(p)} title={p.active===false?"Mostrar en tienda":"Ocultar (agotado)"} style={{background:p.active===false?"#1e0d0d":"#0d1e0d",color:p.active===false?"#ff8888":"#4caf50",border:`1px solid ${p.active===false?"#3a1515":"#1a3a1a"}`,padding:"0.3rem 0.5rem",borderRadius:6,cursor:"pointer",fontSize:10,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>{p.active===false?"👁️‍🗨️":"👁️"}</button>
         <button onClick={()=>onToggleDiscount(p)} title="Configurar oferta" style={{background:p.discount?"#1a1608":"#1a1a1a",color:p.discount?"#ffd43b":"#888",border:`1px solid ${p.discount?"#3a2f10":"#222"}`,padding:"0.3rem 0.55rem",borderRadius:6,cursor:"pointer",fontSize:10,fontFamily:"inherit",fontWeight:700,WebkitTapHighlightColor:"transparent"}}>🏷️{p.discount?` -${p.discount}%`:""}</button>
         <button onClick={()=>onToggleBestseller(p)} title="Marcar como más vendido" style={{background:p.bestseller?"linear-gradient(135deg,#ffd43b,#c99a1f)":"#1a1a1a",color:p.bestseller?"#3a2a00":"#888",border:`1px solid ${p.bestseller?"#c99a1f":"#222"}`,padding:"0.3rem 0.55rem",borderRadius:6,cursor:"pointer",fontSize:10,fontFamily:"inherit",fontWeight:800,WebkitTapHighlightColor:"transparent"}}>🏆</button>
+        <button onClick={()=>onToggleUrgency(p,"ultima")} title="Marcar como última unidad" style={{background:p.urgencyTag==="ultima"?"linear-gradient(135deg,#ff3b3b,#7a0000)":"#1a1a1a",color:p.urgencyTag==="ultima"?"#fff":"#888",border:`1px solid ${p.urgencyTag==="ultima"?"#ff6666":"#222"}`,padding:"0.3rem 0.55rem",borderRadius:6,cursor:"pointer",fontSize:10,fontFamily:"inherit",fontWeight:800,WebkitTapHighlightColor:"transparent"}}>🔥1</button>
+        <button onClick={()=>onToggleUrgency(p,"quedan2")} title="Marcar como quedan 2 unidades" style={{background:p.urgencyTag==="quedan2"?"linear-gradient(135deg,#2a2a2a,#000)":"#1a1a1a",color:p.urgencyTag==="quedan2"?"#fff":"#888",border:`1px solid ${p.urgencyTag==="quedan2"?"#666":"#222"}`,padding:"0.3rem 0.55rem",borderRadius:6,cursor:"pointer",fontSize:10,fontFamily:"inherit",fontWeight:800,WebkitTapHighlightColor:"transparent"}}>🔥2</button>
         <button onClick={()=>onEdit(p)} style={{background:"#1a1a1a",color:"#888",border:"1px solid #222",padding:"0.3rem 0.65rem",borderRadius:6,cursor:"pointer",fontSize:10,fontFamily:"inherit",fontWeight:700,WebkitTapHighlightColor:"transparent"}}>Editar</button>
         <button onClick={()=>onDel(p.id)} style={{background:"none",color:"#cc3333",border:"1px solid #2a1515",padding:"0.3rem 0.65rem",borderRadius:6,cursor:"pointer",fontSize:10,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>✕</button>
       </div>
@@ -1304,6 +1331,8 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   const[fDiscount,setFDiscount]    =useState("");
   const[fCode,setFCode]            =useState("");
 const[fStock,setFStock]          =useState("1");
+const[fVariantGroup,setFVariantGroup]=useState("");
+const[fVariantLabel,setFVariantLabel]=useState("");
 const[couponCode,setCouponCode]  =useState("");
 const[couponType,setCouponType]  =useState<"general"|"product"|"category">("general");
 const[couponProductId,setCouponProductId]=useState("");
@@ -1332,7 +1361,8 @@ const[bulkAddCat,setBulkAddCat]=useState("COLLARES");
 const[bulkAddImages,setBulkAddImages]=useState<string[]>([]);
 const[bulkAddUploading,setBulkAddUploading]=useState(false);
 const[bulkAddText,setBulkAddText]=useState("");
-const[bulkAddParsed,setBulkAddParsed]=useState<{name:string;description:string;price:string;stock:string}[]>([]);
+const[bulkAddParsed,setBulkAddParsed]=useState<{name:string;description:string;price:string;stock:string;variantGroup:string;variantLabel:string}[]>([]);
+const bulkAddSpreadsheetRef=useRef<HTMLInputElement>(null);
 const[bulkAddParseMsg,setBulkAddParseMsg]=useState("");
 const[bulkAddSaving,setBulkAddSaving]=useState(false);
 const[bulkAddErr,setBulkAddErr]=useState("");
@@ -1570,6 +1600,10 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
     if(!selectedProduct)return[];
     return products.filter(p=>p.category===selectedProduct.category&&p.id!==selectedProduct.id&&p.active!==false);
   },[selectedProduct,products]);
+  const siblingVariants=useMemo(()=>{
+    if(!selectedProduct||!selectedProduct.variantGroup)return[];
+    return products.filter(p=>p.variantGroup===selectedProduct.variantGroup&&p.active!==false).sort((a,b)=>(a.order??0)-(b.order??0));
+  },[selectedProduct,products]);
   const avgRating=useMemo(()=>productComments.length?productComments.reduce((s,c)=>s+(c.stars||5),0)/productComments.length:0,[productComments]);
 
   const loadProductComments=useCallback(async(productId:string)=>{
@@ -1658,8 +1692,8 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
 
   const doLogin=()=>{if(adminEmail===ADMIN_EMAIL&&adminPwd===ADMIN_PASSWORD){setAdminLogged(true);setAdminErr("");setAdminSec("menu");}else setAdminErr("Credenciales incorrectas");};
   const doLogout=()=>{setAdminLogged(false);setAdminEmail("");setAdminPwd("");setMainView("fokus");if(typeof window!=="undefined")window.history.pushState("","","/");};
-  const resetForm=()=>{setEditing(null);setFName("");setFDesc("");setFPrice("");setFCat("");setFFile(null);setFPrev("");setFErr("");setFOk("");setFGallery([]);setFActive(true);setFDiscount("");setFCode("");setFStock("1");if(fileRef.current)fileRef.current.value="";};
-  const startEdit=(p:Product)=>{setEditing(p);setFName(p.name);setFDesc(p.description||"");setFPrice(String(p.price));setFCat(p.category);setFPrev(p.img);setFFile(null);setFGallery(p.images||[]);setFActive(p.active!==false);setFDiscount(p.discount&&p.discount>0?String(p.discount):"");setFCode(p.code||"");setFStock(p.stock!==undefined?String(p.stock):"0");setFErr("");setFOk("");if(fileRef.current)fileRef.current.value="";setTimeout(()=>formRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),50);};
+  const resetForm=()=>{setEditing(null);setFName("");setFDesc("");setFPrice("");setFCat("");setFFile(null);setFPrev("");setFErr("");setFOk("");setFGallery([]);setFActive(true);setFDiscount("");setFCode("");setFStock("1");setFVariantGroup("");setFVariantLabel("");if(fileRef.current)fileRef.current.value="";};
+  const startEdit=(p:Product)=>{setEditing(p);setFName(p.name);setFDesc(p.description||"");setFPrice(String(p.price));setFCat(p.category);setFPrev(p.img);setFFile(null);setFGallery(p.images||[]);setFActive(p.active!==false);setFDiscount(p.discount&&p.discount>0?String(p.discount):"");setFCode(p.code||"");setFStock(p.stock!==undefined?String(p.stock):"0");setFVariantGroup(p.variantGroup||"");setFVariantLabel(p.variantLabel||"");setFErr("");setFOk("");if(fileRef.current)fileRef.current.value="";setTimeout(()=>formRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),50);};
   const onFileChange=(e:React.ChangeEvent<HTMLInputElement>)=>{const file=e.target.files?.[0];if(!file)return;setFFile(file);const r=new FileReader();r.onload=ev=>setFPrev(ev.target?.result as string);r.readAsDataURL(file);};
   const onGalleryFilesChange=async(e:React.ChangeEvent<HTMLInputElement>)=>{const files=Array.from(e.target.files||[]);if(!files.length)return;setFGalleryUploading(true);try{const urls=await Promise.all(files.map(f=>uploadImg(f)));setFGallery(prev=>[...prev,...urls]);}catch{setFErr("Error subiendo alguna de las fotos adicionales.");}finally{setFGalleryUploading(false);if(galleryFileRef.current)galleryFileRef.current.value="";}};
   const makeGalleryImageMain=(idx:number)=>{setFGallery(prevGal=>{const url=prevGal[idx];const newGal=[...prevGal];newGal.splice(idx,1);if(fPrev)newGal.push(fPrev);setFPrev(url);setFFile(null);return newGal;});};
@@ -1669,6 +1703,7 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
   const promptDiscount=async(p:Product)=>{const current=p.discount&&p.discount>0?String(p.discount):"";const input=window.prompt(`Descuento para "${p.name}" (0-95). Deja vacío o 0 para quitar la oferta:`,current);if(input===null)return;const val=Math.max(0,Math.min(95,parseFloat(input)||0));setProducts(prev=>{const upd=prev.map(x=>x.id===p.id?{...x,discount:val}:x);setCachedProducts(upd);return upd;});try{await fsUpdate(p.id,{discount:val});invalidateProductsCache();}catch{}};
   const toggleProductBestseller=async(p:Product)=>{const newBestseller=!p.bestseller;setProducts(prev=>{const upd=prev.map(x=>x.id===p.id?{...x,bestseller:newBestseller}:x);setCachedProducts(upd);return upd;});try{await fsUpdate(p.id,{bestseller:newBestseller});invalidateProductsCache();}catch{}};
 const promptStock=async(p:Product)=>{const current=String(p.stock??0);const input=window.prompt(`Stock disponible para "${p.name}":`,current);if(input===null)return;const val=Math.max(0,parseInt(input)||0);setProducts(prev=>{const upd=prev.map(x=>x.id===p.id?{...x,stock:val}:x);setCachedProducts(upd);return upd;});try{await fsUpdate(p.id,{stock:val});invalidateProductsCache();}catch{}};
+const toggleUrgencyTag=async(p:Product,tag:"ultima"|"quedan2")=>{const newTag:Product["urgencyTag"]=p.urgencyTag===tag?"":tag;setProducts(prev=>{const upd=prev.map(x=>x.id===p.id?{...x,urgencyTag:newTag}:x);setCachedProducts(upd);return upd;});try{await fsUpdate(p.id,{urgencyTag:newTag});invalidateProductsCache();}catch{}};
 
 const loadCoupons=useCallback(async(force=false)=>{
   if(couponsLoaded.current&&!force)return;
@@ -1770,7 +1805,7 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     try{
       let imgUrl=fPrev;
       if(fFile)imgUrl=await uploadImg(fFile);
-      const data={name:fName.trim(),description:fDesc.trim(),price:parseFloat(fPrice),category:fCat.toUpperCase(),img:imgUrl,active:fActive,discount:fDiscount?Math.max(0,Math.min(95,parseFloat(fDiscount))):0,images:fGallery,code:fCode.trim()?fCode.trim().toUpperCase():("FK-"+Date.now().toString(36).slice(-6).toUpperCase()),stock:fStock!==""?Math.max(0,parseInt(fStock)||0):1};
+      const data={name:fName.trim(),description:fDesc.trim(),price:parseFloat(fPrice),category:fCat.toUpperCase(),img:imgUrl,active:fActive,discount:fDiscount?Math.max(0,Math.min(95,parseFloat(fDiscount))):0,images:fGallery,code:fCode.trim()?fCode.trim().toUpperCase():("FK-"+Date.now().toString(36).slice(-6).toUpperCase()),stock:fStock!==""?Math.max(0,parseInt(fStock)||0):1,variantGroup:fVariantGroup.trim(),variantLabel:fVariantLabel.trim()};
       if(editing){await fsUpdate(editing.id,data);setFOk("✓ Producto actualizado");}
       else{await fsAdd(data);setFOk("✓ Producto agregado");}
       invalidateProductsCache();
@@ -1974,6 +2009,45 @@ const onBulkAddFilesChange=useCallback(async(e:React.ChangeEvent<HTMLInputElemen
   }catch{setBulkAddErr("Error subiendo alguna de las fotos.");}
   finally{setBulkAddUploading(false);if(bulkAddFileRef.current)bulkAddFileRef.current.value="";}
 },[]);
+
+const handleBulkAddSpreadsheet=useCallback(async(e:React.ChangeEvent<HTMLInputElement>)=>{
+  const file=e.target.files?.[0];
+  if(!file)return;
+  setBulkAddErr("");setBulkAddParseMsg("Leyendo archivo…");
+  try{
+    const ext=file.name.split(".").pop()?.toLowerCase()||"";
+    let rows:string[][]=[];
+    if(ext==="xml"){
+      const text=await file.text();
+      const doc=new DOMParser().parseFromString(text,"application/xml");
+      const items=Array.from(doc.getElementsByTagName("producto"));
+      rows=items.map(it=>{
+        const get=(tag:string)=>it.getElementsByTagName(tag)[0]?.textContent?.trim()||"";
+        return[get("nombre"),get("descripcion"),get("precio"),get("stock"),get("grupoVariante"),get("colorVariante")];
+      });
+    }else if(ext==="csv"){
+      const text=await file.text();
+      rows=text.split(/\r?\n/).filter(l=>l.trim()!=="").map(l=>l.split(",").map(c=>c.trim().replace(/^"|"$/g,"")));
+      if(rows.length&&/nombre/i.test(rows[0][0]||""))rows=rows.slice(1);
+    }else{
+      const XLSX=await loadXLSXLib();
+      const buf=await file.arrayBuffer();
+      const wb=XLSX.read(buf,{type:"array"});
+      const sheet=wb.Sheets[wb.SheetNames[0]];
+      const data:any[][]=XLSX.utils.sheet_to_json(sheet,{header:1,defval:""});
+      rows=data.filter(r=>Array.isArray(r)&&r.some(c=>String(c).trim()!=="")).map(r=>r.map(c=>String(c).trim()));
+      if(rows.length&&/nombre/i.test(rows[0][0]||""))rows=rows.slice(1);
+    }
+    const parsed=rows.map(r=>({name:r[0]||"",description:r[1]||"",price:r[2]||"",stock:r[3]||"1",variantGroup:r[4]||"",variantLabel:r[5]||""}));
+    setBulkAddParsed(parsed);
+    setBulkAddParseMsg(parsed.length?`✓ Se detectaron ${parsed.length} producto(s) desde el archivo, en orden. Revisa los campos antes de guardar.`:"No se detectaron filas de productos en el archivo.");
+  }catch(err){
+    setBulkAddErr("Error al leer el archivo: "+(err instanceof Error?err.message:"desconocido"));
+    setBulkAddParseMsg("");
+  }finally{
+    if(bulkAddSpreadsheetRef.current)bulkAddSpreadsheetRef.current.value="";
+  }
+},[]);
 const removeBulkAddImage=useCallback((idx:number)=>setBulkAddImages(prev=>prev.filter((_,i)=>i!==idx)),[]);
 const moveBulkAddImage=useCallback((idx:number,dir:-1|1)=>{setBulkAddImages(prev=>{const arr=[...prev];const ni=idx+dir;if(ni<0||ni>=arr.length)return prev;[arr[idx],arr[ni]]=[arr[ni],arr[idx]];return arr;});},[]);
 
@@ -1982,7 +2056,7 @@ const parseBulkAddText=useCallback(()=>{
   if(!blocks.length){setBulkAddParseMsg("Pega el texto con nombre, descripción, precio y stock de cada producto.");return;}
   const parsed=blocks.map(block=>{
     const lines=block.split("\n").map(l=>l.trim()).filter(Boolean);
-    if(!lines.length)return{name:"",description:"",price:"",stock:"1"};
+    if(!lines.length)return{name:"",description:"",price:"",stock:"1",variantGroup:"",variantLabel:""};
     const name=lines[0].replace(/^t[íi]tulo\s*:\s*/i,"").replace(/^nombre\s*:\s*/i,"").trim();
     let rest=lines.slice(1);
     let price="";
@@ -1996,13 +2070,13 @@ const parseBulkAddText=useCallback(()=>{
       rest=rest.slice(0,-1);
     }
     const description=rest.map(l=>l.replace(/^descripci[óo]n\s*:\s*/i,"").replace(/^precio\s*:\s*/i,"").replace(/^stock\s*:\s*/i,"")).join(" ").trim();
-    return{name,description,price,stock};
+    return{name,description,price,stock,variantGroup:"",variantLabel:""};
   });
   setBulkAddParsed(parsed);
   setBulkAddParseMsg(`✓ Se detectaron ${parsed.length} producto(s). Revisa los campos antes de guardar.`);
 },[bulkAddText]);
 
-const updateBulkAddParsed=useCallback((idx:number,field:"name"|"description"|"price"|"stock",value:string)=>{
+const updateBulkAddParsed=useCallback((idx:number,field:"name"|"description"|"price"|"stock"|"variantGroup"|"variantLabel",value:string)=>{
   setBulkAddParsed(prev=>prev.map((p,i)=>i===idx?{...p,[field]:value}:p));
 },[]);
 
@@ -2019,7 +2093,7 @@ const saveBulkAddProducts=useCallback(async()=>{
       const price=parseFloat(item.price);
       if(!item.name.trim()||!price||price<=0)continue;
       const stockVal=item.stock!==""&&!isNaN(parseInt(item.stock))?Math.max(0,parseInt(item.stock)):1;
-      await fsAdd({name:item.name.trim(),description:item.description.trim(),price,category:bulkAddCat.toUpperCase(),img:bulkAddImages[i],active:true,discount:0,images:[],code:"FK-"+(Date.now()+i).toString(36).slice(-6).toUpperCase(),stock:stockVal});
+      await fsAdd({name:item.name.trim(),description:item.description.trim(),price,category:bulkAddCat.toUpperCase(),img:bulkAddImages[i],active:true,discount:0,images:[],code:"FK-"+(Date.now()+i).toString(36).slice(-6).toUpperCase(),stock:stockVal,variantGroup:(item.variantGroup||"").trim(),variantLabel:(item.variantLabel||"").trim()});
       created++;
     }
     invalidateProductsCache();
@@ -2729,6 +2803,13 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
 <div style={{background:"#0e0e0e",borderRadius:8,padding:"1rem",border:"1px dashed #1e1e1e"}}>
   <p style={{color:"#333",fontSize:9,letterSpacing:2,margin:"0 0 0.6rem",fontWeight:800}}>STOCK DISPONIBLE</p>
   <input placeholder="Cantidad en inventario" type="number" min="0" step="1" value={fStock} onChange={e=>setFStock(e.target.value)} style={S.input}/>
+  {(fStock==="1"||fStock==="2")&&<p style={{margin:"0.6rem 0 0",fontSize:11,color:fStock==="1"?"#ff5555":"#ffd43b",fontWeight:700}}>⚠️ El cliente verá el aviso de "{fStock==="1"?"Última unidad":"Quedan 2"}" en la tienda.</p>}
+</div>
+<div style={{background:"linear-gradient(135deg,#0a1420 0%,#0e0e0e 100%)",borderRadius:8,padding:"1rem",border:"1px solid #1a2a3a"}}>
+  <p style={{color:"#4dabf7",fontSize:9,letterSpacing:2,margin:"0 0 0.6rem",fontWeight:800}}>🎨 VARIACIONES DE COLOR (OPCIONAL)</p>
+  <p style={{color:"#555",fontSize:10,margin:"0 0 0.6rem",lineHeight:1.5}}>Si este modelo existe en más de un color, usa el mismo "Grupo" en cada variante para que el cliente pueda cambiar de color desde la ficha del producto.</p>
+  <input placeholder="Grupo del modelo (ej: RELOJ-NF56) — igual en todas sus variantes" value={fVariantGroup} onChange={e=>setFVariantGroup(e.target.value)} style={{...S.input,marginBottom:"0.6rem"}}/>
+  <input placeholder="Nombre de este color (ej: Rojo con Negro)" value={fVariantLabel} onChange={e=>setFVariantLabel(e.target.value)} style={S.input}/>
 </div>
 {fErr&&<div style={{color:"#ff5555",fontSize:12,background:"#1e0808",padding:"0.65rem 1rem",borderRadius:8}}>{fErr}</div>}{fOk&&<div style={{color:"#55cc77",fontSize:12,background:"#081e0e",padding:"0.65rem 1rem",borderRadius:8}}>{fOk}</div>}<div style={{display:"flex",gap:"0.65rem",flexWrap:"wrap"}}><button onClick={submitProduct} disabled={fLoad} style={{...S.adminBtn,flex:1,opacity:fLoad?0.4:1,cursor:fLoad?"not-allowed":"pointer"}}>{fLoad?"Subiendo...":(editing?"Guardar cambios":"Agregar producto")}</button>{editing&&<button onClick={resetForm} style={{...S.adminBtn,flex:"0 0 auto",width:"auto",padding:"0.8rem 1.1rem",background:"transparent",color:"#444",border:"1px solid #1e1e1e"}}>Cancelar</button>}</div></div></div>
               <div style={{background:"#111",borderRadius:12,padding:"1.5rem",border:"1px solid #1a1a1a"}}>
@@ -2744,9 +2825,9 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   {["ALL",...usedCats].map(cat=>{const a=adminCat===cat;const n=cat==="ALL"?products.length:products.filter(p=>p.category===cat).length;return(<button key={cat} className="pl" onClick={()=>setAdminCat(cat)} style={{background:a?"#fff":"#161616",color:a?"#080808":"#555",border:`1px solid ${a?"#fff":"#222"}`,padding:"0.3rem 0.7rem",borderRadius:20,fontSize:9,fontWeight:800,letterSpacing:1,fontFamily:"inherit",flexShrink:0,WebkitTapHighlightColor:"transparent",cursor:"pointer",whiteSpace:"nowrap",transition:"all 0.12s ease"}}>{cat==="ALL"?"TODOS":catLabel(cat).toUpperCase()} · {n}</button>);})}</div>
 
                 {adminCat==="ALL"?(
-                  <div className="admin-list">{usedCats.map(cat=>{const cp=products.filter(p=>p.category===cat&&(adminSearch===""||p.name.toLowerCase().includes(adminSearch.toLowerCase())));if(!cp.length)return null;return(<div key={cat} style={{marginBottom:"1.1rem"}}><div style={{display:"flex",alignItems:"center",gap:"0.5rem",padding:"0.4rem 0",marginBottom:"0.35rem",borderBottom:"1px solid #1a1a1a"}}><span style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#333"}}>{catLabel(cat).toUpperCase()}</span><span style={{fontSize:9,color:"#2a2a2a",background:"#1a1a1a",padding:"1px 6px",borderRadius:10}}>{cp.length}</span></div>{cp.map(p=>(<div key={p.id} data-rowid={p.id}><ARow p={p} editing={editing} onEdit={startEdit} onDel={delProd} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} isDragging={dragId===p.id} isOver={overId===p.id&&dragId!==p.id} onTouchStart={handleTouchDragStart} onTouchMove={handleTouchDragMove} onTouchEnd={handleTouchDragEnd} onToggleActive={toggleProductActive} onToggleDiscount={promptDiscount} onToggleBestseller={toggleProductBestseller} onEditStock={promptStock}/></div>))}</div>);})}</div>
+                  <div className="admin-list">{usedCats.map(cat=>{const cp=products.filter(p=>p.category===cat&&(adminSearch===""||p.name.toLowerCase().includes(adminSearch.toLowerCase())));if(!cp.length)return null;return(<div key={cat} style={{marginBottom:"1.1rem"}}><div style={{display:"flex",alignItems:"center",gap:"0.5rem",padding:"0.4rem 0",marginBottom:"0.35rem",borderBottom:"1px solid #1a1a1a"}}><span style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#333"}}>{catLabel(cat).toUpperCase()}</span><span style={{fontSize:9,color:"#2a2a2a",background:"#1a1a1a",padding:"1px 6px",borderRadius:10}}>{cp.length}</span></div>{cp.map(p=>(<div key={p.id} data-rowid={p.id}><ARow p={p} editing={editing} onEdit={startEdit} onDel={delProd} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} isDragging={dragId===p.id} isOver={overId===p.id&&dragId!==p.id} onTouchStart={handleTouchDragStart} onTouchMove={handleTouchDragMove} onTouchEnd={handleTouchDragEnd} onToggleActive={toggleProductActive} onToggleDiscount={promptDiscount} onToggleBestseller={toggleProductBestseller} onEditStock={promptStock} onToggleUrgency={toggleUrgencyTag}/></div>))}</div>);})}</div>
                 ):(
-                  <div className="admin-list" style={{display:"flex",flexDirection:"column",gap:2}}>{adminProds.map(p=>(<div key={p.id} data-rowid={p.id}><ARow p={p} editing={editing} onEdit={startEdit} onDel={delProd} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} isDragging={dragId===p.id} isOver={overId===p.id&&dragId!==p.id} onTouchStart={handleTouchDragStart} onTouchMove={handleTouchDragMove} onTouchEnd={handleTouchDragEnd} onToggleActive={toggleProductActive} onToggleDiscount={promptDiscount} onToggleBestseller={toggleProductBestseller} onEditStock={promptStock}/></div>))}{!adminProds.length&&<p style={{color:"#333",textAlign:"center",padding:"1.5rem",fontSize:12}}>Sin resultados</p>}</div>
+                  <div className="admin-list" style={{display:"flex",flexDirection:"column",gap:2}}>{adminProds.map(p=>(<div key={p.id} data-rowid={p.id}><ARow p={p} editing={editing} onEdit={startEdit} onDel={delProd} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} isDragging={dragId===p.id} isOver={overId===p.id&&dragId!==p.id} onTouchStart={handleTouchDragStart} onTouchMove={handleTouchDragMove} onTouchEnd={handleTouchDragEnd} onToggleActive={toggleProductActive} onToggleDiscount={promptDiscount} onToggleBestseller={toggleProductBestseller} onEditStock={promptStock} onToggleUrgency={toggleUrgencyTag}/></div>))}{!adminProds.length&&<p style={{color:"#333",textAlign:"center",padding:"1.5rem",fontSize:12}}>Sin resultados</p>}</div>
                 )}
               </div>
             </>)}
@@ -3195,13 +3276,22 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                 )}
                 <p style={{color:"#2a2a2a",fontSize:9,margin:"0.6rem 0 0",lineHeight:1.5}}>El orden de las fotos debe coincidir con el orden de los productos que pegues abajo. Usa ◀ ▶ para reordenar.</p>
               </div>
-              <div style={{background:"linear-gradient(135deg,#141410 0%,#0e0e0e 100%)",borderRadius:14,padding:"1.25rem",border:"1px solid #2a2a1a",marginBottom:"1.25rem"}}>
-                <p style={{color:"#ffd43b",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 0.5rem"}}>3. PEGA NOMBRE, DESCRIPCIÓN, PRECIO Y STOCK DE CADA PRODUCTO</p>
-                <p style={{color:"#666",fontSize:11,margin:"0 0 0.85rem",lineHeight:1.6}}>Un bloque por producto, en el mismo orden que las fotos. Primera línea = nombre, luego la descripción, penúltima línea = precio, última línea = stock (opcional, si no lo pones se asigna 1 por defecto). Separa cada producto con una línea en blanco.</p>
-                <textarea value={bulkAddText} onChange={e=>setBulkAddText(e.target.value)} rows={10} placeholder={"Collar As de Picas\nDije de as de picas en acero inoxidable, doble cadena...\n18\n10\n\nCollar Triángulos Minimalista\nDiseño geométrico de triángulos entrelazados...\n15\n5\n\n(precio y luego stock, uno por línea; si no pones stock se asigna 1 por defecto)"} style={{...S.input,fontSize:12,lineHeight:1.6,resize:"vertical" as const,fontFamily:"monospace"}}/>
-                <button onClick={parseBulkAddText} style={{...S.adminBtn,marginTop:"0.85rem",background:"linear-gradient(135deg,#ffd43b 0%,#c99a1f 100%)"}}>Repartir en los campos de abajo</button>
+              <div style={{background:"linear-gradient(135deg,#0a1420 0%,#0e0e0e 100%)",borderRadius:14,padding:"1.25rem",border:"1px solid #1a2a3a",marginBottom:"1rem"}}>
+                <p style={{color:"#4dabf7",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 0.5rem"}}>3. SUBE EL EXCEL O XML CON LOS PRODUCTOS (RECOMENDADO)</p>
+                <p style={{color:"#666",fontSize:11,margin:"0 0 0.85rem",lineHeight:1.6}}>Una fila/producto por línea, en el mismo orden que las fotos. Columnas: <strong style={{color:"#8ab4e8"}}>nombre, descripción, precio, stock, grupo de variante, color de variante</strong> (las dos últimas son opcionales). Acepta .xlsx, .xls, .csv o .xml.</p>
+                <input ref={bulkAddSpreadsheetRef} type="file" accept=".xlsx,.xls,.csv,.xml" onChange={handleBulkAddSpreadsheet} style={{display:"none"}} id="badd-spreadsheet"/>
+                <label htmlFor="badd-spreadsheet" style={{display:"inline-flex",alignItems:"center",gap:"0.5rem",background:"linear-gradient(135deg,#4dabf7 0%,#2a6bb0 100%)",color:"#fff",padding:"0.75rem 1.25rem",borderRadius:8,cursor:"pointer",fontSize:12,fontWeight:800,letterSpacing:1,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}><IcUpload s={16} c="#fff"/> SUBIR EXCEL / XML / CSV</label>
                 {bulkAddParseMsg&&<p style={{margin:"0.75rem 0 0",fontSize:11,color:"#ffd43b",lineHeight:1.6}}>{bulkAddParseMsg}</p>}
               </div>
+              <details style={{marginBottom:"1.25rem"}}>
+                <summary style={{color:"#555",fontSize:10,fontWeight:800,letterSpacing:1.5,cursor:"pointer",padding:"0.5rem 0"}}>¿Prefieres pegar el texto manualmente? Toca aquí</summary>
+                <div style={{background:"linear-gradient(135deg,#141410 0%,#0e0e0e 100%)",borderRadius:14,padding:"1.25rem",border:"1px solid #2a2a1a",marginTop:"0.5rem"}}>
+                  <p style={{color:"#ffd43b",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 0.5rem"}}>PEGA NOMBRE, DESCRIPCIÓN, PRECIO Y STOCK DE CADA PRODUCTO</p>
+                  <p style={{color:"#666",fontSize:11,margin:"0 0 0.85rem",lineHeight:1.6}}>Un bloque por producto, en el mismo orden que las fotos. Primera línea = nombre, luego la descripción, penúltima línea = precio, última línea = stock (opcional, si no lo pones se asigna 1 por defecto). Separa cada producto con una línea en blanco.</p>
+                  <textarea value={bulkAddText} onChange={e=>setBulkAddText(e.target.value)} rows={10} placeholder={"Collar As de Picas\nDije de as de picas en acero inoxidable, doble cadena...\n18\n10\n\nCollar Triángulos Minimalista\nDiseño geométrico de triángulos entrelazados...\n15\n5\n\n(precio y luego stock, uno por línea; si no pones stock se asigna 1 por defecto)"} style={{...S.input,fontSize:12,lineHeight:1.6,resize:"vertical" as const,fontFamily:"monospace"}}/>
+                  <button onClick={parseBulkAddText} style={{...S.adminBtn,marginTop:"0.85rem",background:"linear-gradient(135deg,#ffd43b 0%,#c99a1f 100%)"}}>Repartir en los campos de abajo</button>
+                </div>
+              </details>
               {bulkAddParsed.length>0&&(
                 <div style={{background:"#111",borderRadius:14,padding:"1.25rem",border:"1px solid #1a1a1a",marginBottom:"1.25rem"}}>
                   <p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 1rem"}}>4. REVISA Y CONFIRMA ({bulkAddParsed.length})</p>
@@ -3217,6 +3307,10 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                           <div style={{display:"flex",gap:"0.5rem"}}>
                             <input value={item.price} onChange={e=>updateBulkAddParsed(i,"price",e.target.value)} type="number" min="0" step="0.01" style={{...S.input,fontSize:12,padding:"0.55rem 0.75rem",flex:1}} placeholder="Precio en USD"/>
                             <input value={item.stock} onChange={e=>updateBulkAddParsed(i,"stock",e.target.value)} type="number" min="0" step="1" style={{...S.input,fontSize:12,padding:"0.55rem 0.75rem",flex:1}} placeholder="Stock (1 por defecto)"/>
+                          </div>
+                          <div style={{display:"flex",gap:"0.5rem"}}>
+                            <input value={item.variantGroup} onChange={e=>updateBulkAddParsed(i,"variantGroup",e.target.value)} style={{...S.input,fontSize:12,padding:"0.55rem 0.75rem",flex:1}} placeholder="Grupo de variante (opcional)"/>
+                            <input value={item.variantLabel} onChange={e=>updateBulkAddParsed(i,"variantLabel",e.target.value)} style={{...S.input,fontSize:12,padding:"0.55rem 0.75rem",flex:1}} placeholder="Color de esta variante (opcional)"/>
                           </div>
                         </div>
                       </div>
@@ -3300,6 +3394,26 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                 </div>
               ):(
                 <p style={{fontSize:24,fontWeight:900,margin:"0 0 1.25rem",color:C.accent}}>{fmtPrice(selectedProduct.price)}</p>
+              )}
+              {!!selectedProduct.urgencyTag&&(
+                <div style={{display:"flex",alignItems:"center",gap:8,background:selectedProduct.urgencyTag==="ultima"?"linear-gradient(135deg,rgba(255,59,59,0.14) 0%,rgba(122,0,0,0.08) 100%)":"linear-gradient(135deg,rgba(255,255,255,0.06) 0%,rgba(255,255,255,0.02) 100%)",border:`1px solid ${selectedProduct.urgencyTag==="ultima"?"rgba(255,59,59,0.4)":"rgba(255,255,255,0.15)"}`,borderRadius:10,padding:"0.65rem 0.9rem",marginBottom:"1.1rem"}}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill={selectedProduct.urgencyTag==="ultima"?"#ff5555":"#ffd43b"}><path d="M13 2L3 14h7l-1 8 11-14h-7l1-6z"/></svg>
+                  <p style={{margin:0,fontSize:12,fontWeight:800,color:selectedProduct.urgencyTag==="ultima"?"#ff5555":"#ffd43b",letterSpacing:0.3}}>{selectedProduct.urgencyTag==="ultima"?"¡Última unidad disponible!":"Solo quedan 2 unidades — se agota pronto"}</p>
+                </div>
+              )}
+              {siblingVariants.length>0&&(
+                <div style={{marginBottom:"1.25rem"}}>
+                  <p style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#555",margin:"0 0 0.6rem"}}>{siblingVariants.length>1?"COLORES DISPONIBLES":"COLOR"}</p>
+                  <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap"}}>
+                    {siblingVariants.map(v=>(
+                      <button key={v.id} onClick={()=>switchModalProduct(v)} style={{display:"flex",alignItems:"center",gap:6,background:v.id===selectedProduct.id?"#fff":"#161616",color:v.id===selectedProduct.id?"#080808":"#ccc",border:`1px solid ${v.id===selectedProduct.id?"#fff":"#2a2a2a"}`,borderRadius:20,padding:"0.35rem 0.85rem 0.35rem 0.35rem",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",transition:"all 0.15s ease"}}>
+                        <img src={optImg(v.img,60)} alt={v.variantLabel||v.name} style={{width:22,height:22,borderRadius:"50%",objectFit:"cover",flexShrink:0,border:"1px solid rgba(255,255,255,0.25)"}} draggable={false}/>
+                        <span style={{fontSize:11,fontWeight:700}}>{v.variantLabel||v.name}</span>
+                        {!!v.urgencyTag&&<span style={{width:6,height:6,borderRadius:"50%",background:v.urgencyTag==="ultima"?"#ff5555":"#ffd43b",flexShrink:0}}/>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               )}
               <div style={{marginTop:"0.25rem",paddingTop:"1.25rem",borderTop:`1px solid ${C.border}`,paddingBottom:"1rem"}}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"1rem"}}>
