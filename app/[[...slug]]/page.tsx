@@ -3498,24 +3498,12 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                     </div>
                   )}
                 </div>
-                <div style={{background:"linear-gradient(160deg,#141414 0%,#0c0c0c 100%)",border:"1px solid #1e1e1e",borderRadius:14,padding:"1.1rem",marginBottom:"1.1rem",position:"relative",overflow:"hidden"}}>
-                  <div style={{position:"absolute",top:0,left:0,right:0,height:1,background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.12),transparent)"}}/>
-                  <p style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#444",margin:"0 0 0.6rem"}}>TU CALIFICACIÓN</p>
-                  <div style={{marginBottom:"0.85rem"}}><StarRow value={commentStars} onChange={setCommentStars} size={22}/></div>
-                  <div style={{display:"flex",flexDirection:"column",gap:"0.6rem"}}>
-                    <input placeholder="Tu nombre *" value={commentName} onChange={e=>setCommentName(e.target.value)} style={S.input}/>
-                    <textarea placeholder="Escribe tu comentario sobre este producto..." value={commentText} onChange={e=>setCommentText(e.target.value)} rows={2} style={{...S.input,resize:"vertical" as const,lineHeight:1.6,minHeight:60}}/>
-                    <button onClick={submitProductComment} disabled={!commentName.trim()||!commentText.trim()||commentSending} style={{...S.darkBtn,justifyContent:"center",borderRadius:8,fontSize:11,opacity:(!commentName.trim()||!commentText.trim()||commentSending)?0.5:1,cursor:(!commentName.trim()||!commentText.trim()||commentSending)?"not-allowed":"pointer"}}>{commentSending?"Publicando...":"PUBLICAR RESEÑA"}</button>
-                    {commentErr&&<p style={{margin:0,fontSize:11,color:"#ff8888",background:"#1e0808",borderRadius:8,padding:"0.5rem 0.75rem"}}>{commentErr}</p>}
-                    {commentOk&&<p style={{margin:0,fontSize:11,color:"#4caf50",background:"#081e0e",borderRadius:8,padding:"0.5rem 0.75rem"}}>✓ Reseña publicada, ya es visible para todos</p>}
-                  </div>
-                </div>
                 {commentsLoading?(
                   <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"0.5rem"}}>Cargando reseñas…</p>
                 ):productComments.length===0?(
                   <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"0.5rem"}}>Sé el primero en dejar una reseña de este producto.</p>
                 ):(
-                  <div style={{display:"flex",flexDirection:"column",gap:"0.65rem"}}>
+                  <div style={{display:"flex",flexDirection:"column",gap:"0.65rem",marginBottom:"1.1rem"}}>
                     {productComments.map(c=>(
                       <div key={c.id} style={{background:"#0e0e0e",border:`1px solid ${C.border}`,borderRadius:12,padding:"0.85rem 1rem"}}>
                         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"5px"}}>
@@ -3528,6 +3516,18 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                     ))}
                   </div>
                 )}
+                <div style={{background:"linear-gradient(160deg,#141414 0%,#0c0c0c 100%)",border:"1px solid #1e1e1e",borderRadius:14,padding:"1.1rem",position:"relative",overflow:"hidden"}}>
+                  <div style={{position:"absolute",top:0,left:0,right:0,height:1,background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.12),transparent)"}}/>
+                  <p style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#444",margin:"0 0 0.6rem"}}>TU CALIFICACIÓN</p>
+                  <div style={{marginBottom:"0.85rem"}}><StarRow value={commentStars} onChange={setCommentStars} size={22}/></div>
+                  <div style={{display:"flex",flexDirection:"column",gap:"0.6rem"}}>
+                    <input placeholder="Tu nombre *" value={commentName} onChange={e=>setCommentName(e.target.value)} style={S.input}/>
+                    <textarea placeholder="Escribe tu comentario sobre este producto..." value={commentText} onChange={e=>setCommentText(e.target.value)} rows={2} style={{...S.input,resize:"vertical" as const,lineHeight:1.6,minHeight:60}}/>
+                    <button onClick={submitProductComment} disabled={!commentName.trim()||!commentText.trim()||commentSending} style={{...S.darkBtn,justifyContent:"center",borderRadius:8,fontSize:11,opacity:(!commentName.trim()||!commentText.trim()||commentSending)?0.5:1,cursor:(!commentName.trim()||!commentText.trim()||commentSending)?"not-allowed":"pointer"}}>{commentSending?"Publicando...":"PUBLICAR RESEÑA"}</button>
+                    {commentErr&&<p style={{margin:0,fontSize:11,color:"#ff8888",background:"#1e0808",borderRadius:8,padding:"0.5rem 0.75rem"}}>{commentErr}</p>}
+                    {commentOk&&<p style={{margin:0,fontSize:11,color:"#4caf50",background:"#081e0e",borderRadius:8,padding:"0.5rem 0.75rem"}}>✓ Reseña publicada, ya es visible para todos</p>}
+                  </div>
+                </div>
               </div>
               {modalSuggestions.length>0&&(
                 <div style={{marginTop:"0.5rem",paddingTop:"1.25rem",borderTop:`1px solid ${C.border}`,paddingBottom:"1.5rem"}}>
@@ -3535,6 +3535,9 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   <HRow products={modalSuggestions} onSelect={switchModalProduct} onBuyNow={switchModalProduct} fmtPrice={fmtPrice}/>
                 </div>
               )}
+              <div style={{marginTop:"1.5rem",marginLeft:"-1.5rem",marginRight:"-1.5rem"}}>
+                <Footer setMainView={setMainView} setShopFilter={setShopFilter}/>
+              </div>
             </div>
             <div style={{flexShrink:0,padding:"1rem 1.5rem 1.5rem",background:"#111",borderTop:"1px solid #1e1e1e",display:"flex",alignItems:"center",gap:"0.75rem",boxShadow:"0 -8px 24px rgba(0,0,0,0.4)"}}>
               <div style={{display:"flex",alignItems:"center",border:`1px solid ${C.border}`,borderRadius:8,flexShrink:0}}>
@@ -3551,7 +3554,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
       {addedProduct&&<AddedModal product={addedProduct} onClose={()=>setAddedProduct(null)} onGoCart={()=>{setAddedProduct(null);setMainView("cart");}} fmtPrice={fmtPrice}/>}
       {showAuth&&<AuthModal onClose={()=>setShowAuth(false)} onSuccess={u=>{setCurrentUser(u);setShowAuth(false);}}/>}
       {totalItems>0&&!isCart&&!isAdmin&&!isTY&&!selectedProduct&&<MiniCartBar totalItems={totalItems} totalPrice={totalPrice} fmtPrice={fmtPrice} onClick={()=>setMainView("cart")}/>}
-      {!isAdmin&&<DraggableWA/>}
+      {!isAdmin&&!selectedProduct&&<DraggableWA/>}
     </div>
   );
 }     
