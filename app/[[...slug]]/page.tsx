@@ -540,6 +540,7 @@ function productIdFromPath(path:string):string|null{
   return parts[parts.length-1]||null;
 }
 function generateCouponCode():string{const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let s="FOKUS-";for(let i=0;i<5;i++)s+=chars[Math.floor(Math.random()*chars.length)];return s;}
+function generateVariantGroupId():string{return "VG-"+Date.now().toString(36).toUpperCase()+"-"+Math.random().toString(36).slice(2,6).toUpperCase();}
 function formatTimeLeft(expiresAt:number):string{
   const ms=expiresAt-Date.now();
   if(ms<=0)return"Expirado";
@@ -1331,8 +1332,9 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   const[fDiscount,setFDiscount]    =useState("");
   const[fCode,setFCode]            =useState("");
 const[fStock,setFStock]          =useState("1");
-const[fVariantGroup,setFVariantGroup]=useState("");
-const[fVariantLabel,setFVariantLabel]=useState("");
+const[fVariantGroupId,setFVariantGroupId]=useState("");
+const[fColors,setFColors]=useState<{id?:string;label:string;img:string;uploading?:boolean}[]>([]);
+const colorFileRefs=useRef<Record<number,HTMLInputElement|null>>({});
 const[couponCode,setCouponCode]  =useState("");
 const[couponType,setCouponType]  =useState<"general"|"product"|"category">("general");
 const[couponProductId,setCouponProductId]=useState("");
@@ -1363,6 +1365,8 @@ const[bulkAddUploading,setBulkAddUploading]=useState(false);
 const[bulkAddText,setBulkAddText]=useState("");
 const[bulkAddParsed,setBulkAddParsed]=useState<{name:string;description:string;price:string;stock:string;variantGroup:string;variantLabel:string}[]>([]);
 const bulkAddSpreadsheetRef=useRef<HTMLInputElement>(null);
+const bulkEditSpreadsheetRef=useRef<HTMLInputElement>(null);
+const[bulkEditFileMsg,setBulkEditFileMsg]=useState("");
 const[bulkAddParseMsg,setBulkAddParseMsg]=useState("");
 const[bulkAddSaving,setBulkAddSaving]=useState(false);
 const[bulkAddErr,setBulkAddErr]=useState("");
@@ -1692,13 +1696,17 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
 
   const doLogin=()=>{if(adminEmail===ADMIN_EMAIL&&adminPwd===ADMIN_PASSWORD){setAdminLogged(true);setAdminErr("");setAdminSec("menu");}else setAdminErr("Credenciales incorrectas");};
   const doLogout=()=>{setAdminLogged(false);setAdminEmail("");setAdminPwd("");setMainView("fokus");if(typeof window!=="undefined")window.history.pushState("","","/");};
-  const resetForm=()=>{setEditing(null);setFName("");setFDesc("");setFPrice("");setFCat("");setFFile(null);setFPrev("");setFErr("");setFOk("");setFGallery([]);setFActive(true);setFDiscount("");setFCode("");setFStock("1");setFVariantGroup("");setFVariantLabel("");if(fileRef.current)fileRef.current.value="";};
-  const startEdit=(p:Product)=>{setEditing(p);setFName(p.name);setFDesc(p.description||"");setFPrice(String(p.price));setFCat(p.category);setFPrev(p.img);setFFile(null);setFGallery(p.images||[]);setFActive(p.active!==false);setFDiscount(p.discount&&p.discount>0?String(p.discount):"");setFCode(p.code||"");setFStock(p.stock!==undefined?String(p.stock):"0");setFVariantGroup(p.variantGroup||"");setFVariantLabel(p.variantLabel||"");setFErr("");setFOk("");if(fileRef.current)fileRef.current.value="";setTimeout(()=>formRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),50);};
+  const resetForm = () => {setEditing(null);setFName("");setFDesc("");setFPrice("");setFCat("");setFFile(null);setFPrev("");setFErr("");setFOk("");setFGallery([]);setFActive(true);setFDiscount("");setFCode("");setFStock("1");setFVariantGroupId("");setFColors([]);if(fileRef.current)fileRef.current.value="";};
+  const startEdit = (p:Product) => {setEditing(p);setFName(p.name);setFDesc(p.description||"");setFPrice(String(p.price));setFCat(p.category);setFPrev(p.img);setFFile(null);setFGallery(p.images||[]);setFActive(p.active!==false);setFDiscount(p.discount&&p.discount>0?String(p.discount):"");setFCode(p.code||"");setFStock(p.stock!==undefined?String(p.stock):"0");setFVariantGroupId(p.variantGroup||"");setFColors(p.variantGroup?products.filter(x=>x.variantGroup===p.variantGroup&&x.id!==p.id).map(x=>({id:x.id,label:x.variantLabel||"",img:x.img})):[]);setFErr("");setFOk("");if(fileRef.current)fileRef.current.value="";setTimeout(()=>formRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),50);};
   const onFileChange=(e:React.ChangeEvent<HTMLInputElement>)=>{const file=e.target.files?.[0];if(!file)return;setFFile(file);const r=new FileReader();r.onload=ev=>setFPrev(ev.target?.result as string);r.readAsDataURL(file);};
   const onGalleryFilesChange=async(e:React.ChangeEvent<HTMLInputElement>)=>{const files=Array.from(e.target.files||[]);if(!files.length)return;setFGalleryUploading(true);try{const urls=await Promise.all(files.map(f=>uploadImg(f)));setFGallery(prev=>[...prev,...urls]);}catch{setFErr("Error subiendo alguna de las fotos adicionales.");}finally{setFGalleryUploading(false);if(galleryFileRef.current)galleryFileRef.current.value="";}};
   const makeGalleryImageMain=(idx:number)=>{setFGallery(prevGal=>{const url=prevGal[idx];const newGal=[...prevGal];newGal.splice(idx,1);if(fPrev)newGal.push(fPrev);setFPrev(url);setFFile(null);return newGal;});};
   const removeGalleryImage=(idx:number)=>setFGallery(prev=>prev.filter((_,i)=>i!==idx));
   const moveGalleryImage=(idx:number,dir:-1|1)=>{setFGallery(prev=>{const arr=[...prev];const ni=idx+dir;if(ni<0||ni>=arr.length)return prev;[arr[idx],arr[ni]]=[arr[ni],arr[idx]];return arr;});};
+  const addColorRow=()=>{if(fColors.length===0&&!editing?.variantGroup&&!fVariantGroupId)setFVariantGroupId(generateVariantGroupId());setFColors(prev=>[...prev,{label:"",img:""}]);};
+  const updateColorLabel=(idx:number,label:string)=>setFColors(prev=>prev.map((c,i)=>i===idx?{...c,label}:c));
+  const removeColorRow=async(idx:number)=>{const row=fColors[idx];if(row.id){if(!confirm("¿Eliminar este color? Se borrará el producto asociado."))return;try{await fsDelete(row.id);invalidateProductsCache();}catch{}}setFColors(prev=>prev.filter((_,i)=>i!==idx));};
+  const onColorFileChange=async(idx:number,e:React.ChangeEvent<HTMLInputElement>)=>{const file=e.target.files?.[0];if(!file)return;setFColors(prev=>prev.map((c,i)=>i===idx?{...c,uploading:true}:c));try{const url=await uploadImg(file);setFColors(prev=>prev.map((c,i)=>i===idx?{...c,img:url,uploading:false}:c));}catch{setFColors(prev=>prev.map((c,i)=>i===idx?{...c,uploading:false}:c));}if(colorFileRefs.current[idx])colorFileRefs.current[idx]!.value="";};
   const toggleProductActive=async(p:Product)=>{const newActive=p.active===false;setProducts(prev=>{const upd=prev.map(x=>x.id===p.id?{...x,active:newActive}:x);setCachedProducts(upd);return upd;});try{await fsUpdate(p.id,{active:newActive});invalidateProductsCache();}catch{}};
   const promptDiscount=async(p:Product)=>{const current=p.discount&&p.discount>0?String(p.discount):"";const input=window.prompt(`Descuento para "${p.name}" (0-95). Deja vacío o 0 para quitar la oferta:`,current);if(input===null)return;const val=Math.max(0,Math.min(95,parseFloat(input)||0));setProducts(prev=>{const upd=prev.map(x=>x.id===p.id?{...x,discount:val}:x);setCachedProducts(upd);return upd;});try{await fsUpdate(p.id,{discount:val});invalidateProductsCache();}catch{}};
   const toggleProductBestseller=async(p:Product)=>{const newBestseller=!p.bestseller;setProducts(prev=>{const upd=prev.map(x=>x.id===p.id?{...x,bestseller:newBestseller}:x);setCachedProducts(upd);return upd;});try{await fsUpdate(p.id,{bestseller:newBestseller});invalidateProductsCache();}catch{}};
@@ -1796,18 +1804,28 @@ const applyCouponCode=useCallback(async()=>{
 
 const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");setCouponCheckErr("");},[]);
 
-  const submitProduct=async()=>{
+  const submitProduct = async () => {
     setFErr("");setFOk("");
     if(!fName.trim()||!fPrice||!fCat){setFErr("Nombre, precio y categoría son obligatorios.");return;}
     if(!editing&&!fFile){setFErr("Selecciona una imagen.");return;}
     if(!fbReady){setFErr("Firebase no configurado.");return;}
+    const incompleteColor=fColors.find(c=>(!!c.label.trim())!==(!!c.img));
+    if(incompleteColor){setFErr("Cada color adicional necesita nombre y foto.");return;}
+    const validColors=fColors.filter(c=>c.label.trim()&&c.img);
     setFLoad(true);
     try{
       let imgUrl=fPrev;
       if(fFile)imgUrl=await uploadImg(fFile);
-      const data={name:fName.trim(),description:fDesc.trim(),price:parseFloat(fPrice),category:fCat.toUpperCase(),img:imgUrl,active:fActive,discount:fDiscount?Math.max(0,Math.min(95,parseFloat(fDiscount))):0,images:fGallery,code:fCode.trim()?fCode.trim().toUpperCase():("FK-"+Date.now().toString(36).slice(-6).toUpperCase()),stock:fStock!==""?Math.max(0,parseInt(fStock)||0):1,variantGroup:fVariantGroup.trim(),variantLabel:fVariantLabel.trim()};
+      const groupId=editing?.variantGroup||fVariantGroupId||(validColors.length>0?generateVariantGroupId():"");
+      const data={name:fName.trim(),description:fDesc.trim(),price:parseFloat(fPrice),category:fCat.toUpperCase(),img:imgUrl,active:fActive,discount:fDiscount?Math.max(0,Math.min(95,parseFloat(fDiscount))):0,images:fGallery,code:fCode.trim()?fCode.trim().toUpperCase():("FK-"+Date.now().toString(36).slice(-6).toUpperCase()),stock:fStock!==""?Math.max(0,parseInt(fStock)||0):1,variantGroup:groupId,variantLabel:editing?.variantLabel||""};
       if(editing){await fsUpdate(editing.id,data);setFOk("✓ Producto actualizado");}
       else{await fsAdd(data);setFOk("✓ Producto agregado");}
+      for(let i=0;i<validColors.length;i++){
+        const c=validColors[i];
+        const colorData={name:fName.trim(),description:fDesc.trim(),price:parseFloat(fPrice),category:fCat.toUpperCase(),img:c.img,active:fActive,discount:fDiscount?Math.max(0,Math.min(95,parseFloat(fDiscount))):0,stock:fStock!==""?Math.max(0,parseInt(fStock)||0):1,variantGroup:groupId,variantLabel:c.label.trim()};
+        if(c.id)await fsUpdate(c.id,colorData);
+        else await fsAdd({...colorData,images:[],code:"FK-"+(Date.now()+i+1).toString(36).slice(-6).toUpperCase()});
+      }
       invalidateProductsCache();
       productsAlreadyLoaded.current = false;
       await loadProducts(true);
@@ -1948,6 +1966,45 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     setBulkDrafts(map);
   },[products]);
 
+  const handleBulkEditSpreadsheet=useCallback(async(e:React.ChangeEvent<HTMLInputElement>)=>{
+    const file=e.target.files?.[0];
+    if(!file)return;
+    const catProducts=products.filter(p=>p.category===bulkCat);
+    if(!catProducts.length){setBulkEditFileMsg("No hay productos en esta categoría.");if(bulkEditSpreadsheetRef.current)bulkEditSpreadsheetRef.current.value="";return;}
+    setBulkEditFileMsg("Leyendo archivo…");
+    try{
+      const ext=file.name.split(".").pop()?.toLowerCase()||"";
+      let rows:string[][]=[];
+      if(ext==="xml"){
+        const text=await file.text();
+        const doc=new DOMParser().parseFromString(text,"application/xml");
+        const items=Array.from(doc.getElementsByTagName("producto"));
+        rows=items.map(it=>{const get=(tag:string)=>it.getElementsByTagName(tag)[0]?.textContent?.trim()||"";return[get("nombre"),get("descripcion")];});
+      }else if(ext==="csv"){
+        const text=await file.text();
+        rows=text.split(/\r?\n/).filter(l=>l.trim()!=="").map(l=>l.split(",").map(c=>c.trim().replace(/^"|"$/g,"")));
+        if(rows.length&&/nombre/i.test(rows[0][0]||""))rows=rows.slice(1);
+      }else{
+        const XLSX=await loadXLSXLib();
+        const buf=await file.arrayBuffer();
+        const wb=XLSX.read(buf,{type:"array"});
+        const sheet=wb.Sheets[wb.SheetNames[0]];
+        const data:any[][]=XLSX.utils.sheet_to_json(sheet,{header:1,defval:""});
+        rows=data.filter(r=>Array.isArray(r)&&r.some(c=>String(c).trim()!=="")).map(r=>r.map(c=>String(c).trim()));
+        if(rows.length&&/nombre/i.test(rows[0][0]||""))rows=rows.slice(1);
+      }
+      const next={...bulkDrafts};
+      let applied=0;
+      rows.forEach((r,i)=>{const prod=catProducts[i];if(!prod)return;next[prod.id]={name:r[0]||prod.name,description:r[1]||""};applied++;});
+      setBulkDrafts(next);
+      setBulkEditFileMsg(applied<catProducts.length?`✓ Se aplicaron ${applied} de ${catProducts.length} productos desde el archivo. Revisa antes de guardar.`:`✓ Se aplicaron los ${applied} productos desde el archivo. Revisa y guarda.`);
+    }catch(err){
+      setBulkEditFileMsg("Error al leer el archivo: "+(err instanceof Error?err.message:"desconocido"));
+    }finally{
+      if(bulkEditSpreadsheetRef.current)bulkEditSpreadsheetRef.current.value="";
+    }
+  },[bulkCat,products,bulkDrafts]);
+
   const applyBulkPaste=useCallback(()=>{
     const catProducts=products.filter(p=>p.category===bulkCat);
     if(!catProducts.length){setBulkPasteMsg("No hay productos en esta categoría.");return;}
@@ -1996,7 +2053,7 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     }
   },[bulkDrafts,products,loadProducts]);
 
-  useEffect(()=>{if(adminSec==="bulkedit"){loadBulkDrafts(bulkCat);setBulkPasteText("");setBulkPasteMsg("");}},[adminSec,bulkCat,loadBulkDrafts]);
+  useEffect(()=>{if(adminSec==="bulkedit"){loadBulkDrafts(bulkCat);setBulkPasteText("");setBulkPasteMsg("");setBulkEditFileMsg("");}},[adminSec,bulkCat,loadBulkDrafts]);
 useEffect(()=>{if(adminSec==="bulkadd"){setBulkAddText("");setBulkAddParsed([]);setBulkAddParseMsg("");setBulkAddErr("");setBulkAddOk("");}},[adminSec]);
 
 const onBulkAddFilesChange=useCallback(async(e:React.ChangeEvent<HTMLInputElement>)=>{
@@ -2806,10 +2863,19 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
   {(fStock==="1"||fStock==="2")&&<p style={{margin:"0.6rem 0 0",fontSize:11,color:fStock==="1"?"#ff5555":"#ffd43b",fontWeight:700}}>⚠️ El cliente verá el aviso de "{fStock==="1"?"Última unidad":"Quedan 2"}" en la tienda.</p>}
 </div>
 <div style={{background:"linear-gradient(135deg,#0a1420 0%,#0e0e0e 100%)",borderRadius:8,padding:"1rem",border:"1px solid #1a2a3a"}}>
-  <p style={{color:"#4dabf7",fontSize:9,letterSpacing:2,margin:"0 0 0.6rem",fontWeight:800}}>🎨 VARIACIONES DE COLOR (OPCIONAL)</p>
-  <p style={{color:"#555",fontSize:10,margin:"0 0 0.6rem",lineHeight:1.5}}>Si este modelo existe en más de un color, usa el mismo "Grupo" en cada variante para que el cliente pueda cambiar de color desde la ficha del producto.</p>
-  <input placeholder="Grupo del modelo (ej: RELOJ-NF56) — igual en todas sus variantes" value={fVariantGroup} onChange={e=>setFVariantGroup(e.target.value)} style={{...S.input,marginBottom:"0.6rem"}}/>
-  <input placeholder="Nombre de este color (ej: Rojo con Negro)" value={fVariantLabel} onChange={e=>setFVariantLabel(e.target.value)} style={S.input}/>
+  <p style={{color:"#4dabf7",fontSize:9,letterSpacing:2,margin:"0 0 0.6rem",fontWeight:800}}>🎨 OTROS COLORES DE ESTE PRODUCTO (OPCIONAL)</p>
+  <p style={{color:"#555",fontSize:10,margin:"0 0 0.75rem",lineHeight:1.5}}>Agrega cada color adicional con su nombre y su foto. El cliente podrá cambiar de color desde la ficha del producto.</p>
+  {fColors.map((c,i)=>(
+    <div key={i} style={{display:"flex",alignItems:"center",gap:"0.5rem",marginBottom:"0.6rem",background:"#0e0e0e",border:"1px solid #1a1a1a",borderRadius:8,padding:"0.5rem"}}>
+      <input ref={el=>{colorFileRefs.current[i]=el;}} type="file" accept="image/*" onChange={e=>onColorFileChange(i,e)} style={{display:"none"}} id={`color-file-${i}`}/>
+      <label htmlFor={`color-file-${i}`} style={{width:44,height:44,borderRadius:6,overflow:"hidden",flexShrink:0,background:"#161616",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",border:"1px solid #222"}}>
+        {c.uploading?<div style={{width:12,height:12,border:"2px solid #333",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/>:c.img?<img src={c.img} alt="" style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/>:<IcCamera s={16} c="#555"/>}
+      </label>
+      <input placeholder="Nombre del color (ej: Rojo con Negro)" value={c.label} onChange={e=>updateColorLabel(i,e.target.value)} style={{...S.input,flex:1}}/>
+      <button type="button" onClick={()=>removeColorRow(i)} style={{background:"none",border:"1px solid #2a1515",color:"#cc3333",borderRadius:6,width:30,height:30,cursor:"pointer",flexShrink:0,fontSize:13}}>✕</button>
+    </div>
+  ))}
+  <button type="button" onClick={addColorRow} style={{background:"#1a1a1a",color:"#4dabf7",border:"1px solid #2a2a2a",borderRadius:8,padding:"0.55rem 1rem",cursor:"pointer",fontSize:11,fontWeight:800,fontFamily:"inherit"}}>+ AGREGAR COLOR</button>
 </div>
 {fErr&&<div style={{color:"#ff5555",fontSize:12,background:"#1e0808",padding:"0.65rem 1rem",borderRadius:8}}>{fErr}</div>}{fOk&&<div style={{color:"#55cc77",fontSize:12,background:"#081e0e",padding:"0.65rem 1rem",borderRadius:8}}>{fOk}</div>}<div style={{display:"flex",gap:"0.65rem",flexWrap:"wrap"}}><button onClick={submitProduct} disabled={fLoad} style={{...S.adminBtn,flex:1,opacity:fLoad?0.4:1,cursor:fLoad?"not-allowed":"pointer"}}>{fLoad?"Subiendo...":(editing?"Guardar cambios":"Agregar producto")}</button>{editing&&<button onClick={resetForm} style={{...S.adminBtn,flex:"0 0 auto",width:"auto",padding:"0.8rem 1.1rem",background:"transparent",color:"#444",border:"1px solid #1e1e1e"}}>Cancelar</button>}</div></div></div>
               <div style={{background:"#111",borderRadius:12,padding:"1.5rem",border:"1px solid #1a1a1a"}}>
@@ -3213,6 +3279,13 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   <optgroup label="── LENTES">{LENTES_SUBCATS.map(s=><option key={s} value={s}>{catLabel(s)}</option>)}</optgroup>
                   <optgroup label="── OTROS">{SHOP_CATS.filter(c=>c!=="LENTES").map(c=><option key={c} value={c}>{catLabel(c)}</option>)}</optgroup>
                 </select>
+              </div>
+              <div style={{background:"linear-gradient(135deg,#0a1420 0%,#0e0e0e 100%)",borderRadius:14,padding:"1.25rem",border:"1px solid #1a2a3a",marginBottom:"1.25rem"}}>
+                <p style={{color:"#4dabf7",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 0.5rem"}}>📤 SUBIR EXCEL / XML / CSV</p>
+                <p style={{color:"#666",fontSize:11,margin:"0 0 0.85rem",lineHeight:1.6}}>Columnas: nombre, descripción. Una fila por producto, en el mismo orden que aparecen abajo.</p>
+                <input ref={bulkEditSpreadsheetRef} type="file" accept=".xlsx,.xls,.csv,.xml" onChange={handleBulkEditSpreadsheet} style={{display:"none"}} id="bedit-spreadsheet"/>
+                <label htmlFor="bedit-spreadsheet" style={{display:"inline-flex",alignItems:"center",gap:"0.5rem",background:"linear-gradient(135deg,#4dabf7 0%,#2a6bb0 100%)",color:"#fff",padding:"0.75rem 1.25rem",borderRadius:8,cursor:"pointer",fontSize:12,fontWeight:800,letterSpacing:1,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}><IcUpload s={16} c="#fff"/> SUBIR ARCHIVO</label>
+                {bulkEditFileMsg&&<p style={{margin:"0.75rem 0 0",fontSize:11,color:"#4dabf7",lineHeight:1.6}}>{bulkEditFileMsg}</p>}
               </div>
               <div style={{background:"linear-gradient(135deg,#141410 0%,#0e0e0e 100%)",borderRadius:14,padding:"1.25rem",border:"1px solid #2a2a1a",marginBottom:"1.25rem"}}>
                 <p style={{color:"#ffd43b",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 0.5rem"}}>📋 PEGAR TODO DE UNA VEZ</p>
