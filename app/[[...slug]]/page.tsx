@@ -106,7 +106,7 @@ interface CartItem { product:Product; qty:number; }
 interface UserData { uid:string; email:string; displayName:string; createdAt:number; photoURL?:string; idToken?:string; }
 interface Coupon { id:string; code:string; type:"general"|"product"|"category"; productId?:string; productName?:string; category?:string; discountPercent:number; durationHours:number; createdAt:number; expiresAt:number; active:boolean; }
 interface OrderSnapshot { items:CartItem[]; total:number; payMethod:string; deliveryInfo:DeliveryInfo; comprobanteUrl:string; waUrl:string; orderId:string; couponCode?:string; couponDiscount?:number; }
-interface ProductComment { id:string; productId:string; productName:string; name:string; comment:string; stars:number; createdAt:number; }
+interface ProductComment { id:string; productId:string; productName:string; name:string; email?:string; comment:string; stars:number; createdAt:number; }
 interface AgendaClient { id:string; name:string; phone:string; product:string; totalAmount:number; paidAmount:number; deliveryDate:string; status:"abono"|"pagado"; notes:string; createdAt:number; }
 
 type MainView = "fokus"|"shop"|"comunidad"|"grabados"|"cart"|"admin"|"account"|"thankyou";
@@ -744,7 +744,23 @@ function DeliveryForm({info,onChange}:{info:DeliveryInfo;onChange:(i:DeliveryInf
   return(
     <div style={{display:"flex",flexDirection:"column",gap:"0.6rem"}}>
       <p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#333",margin:"0 0 0.25rem"}}>TIPO DE ENVIO</p>
-      {DELIVERY_ZONES.map(z=>(<button key={z.id} onClick={()=>upd("zone",z.id)} style={{display:"flex",alignItems:"center",gap:"0.75rem",background:info.zone===z.id?"#fff":"#111",color:info.zone===z.id?"#080808":C.text,border:`1px solid ${info.zone===z.id?"#fff":"#1e1e1e"}`,borderRadius:10,padding:"0.75rem 1rem",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",transition:"all 0.15s",textAlign:"left"}}>{z.id==="naguanagua"&&<span style={{fontSize:16}}>🏙️</span>}{z.id==="valencia"&&<span style={{fontSize:16}}>🌆</span>}{z.id==="otro"&&<IcTruck s={20} c={info.zone==="otro"?"#080808":"#fff"}/>}<span style={{fontSize:13,fontWeight:700}}>{z.label}</span>{info.zone===z.id&&<span style={{marginLeft:"auto",fontSize:14,fontWeight:700}}>✓</span>}</button>))}
+      {DELIVERY_ZONES.map(z=>{
+        const desc=z.id==="naguanagua"?"Entrega en la zona, sin costo adicional":z.id==="valencia"?"Entrega en Valencia con costo fijo de $3":"Envío por encomienda a cualquier estado del país";
+        return(
+        <button key={z.id} onClick={()=>upd("zone",z.id)} style={{display:"flex",alignItems:"center",gap:"0.85rem",background:info.zone===z.id?"#fff":"#111",color:info.zone===z.id?"#080808":C.text,border:`1px solid ${info.zone===z.id?"#fff":"#1e1e1e"}`,borderRadius:12,padding:"0.85rem 1rem",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",transition:"all 0.15s",textAlign:"left",boxShadow:info.zone===z.id?"0 4px 16px rgba(255,255,255,0.08)":"none"}}>
+          <div style={{width:36,height:36,borderRadius:9,background:info.zone===z.id?"rgba(8,8,8,0.06)":"rgba(255,255,255,0.04)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+            {z.id==="naguanagua"&&<span style={{fontSize:16}}>🏙️</span>}
+            {z.id==="valencia"&&<span style={{fontSize:16}}>🌆</span>}
+            {z.id==="otro"&&<IcTruck s={18} c={info.zone==="otro"?"#080808":"#fff"}/>}
+          </div>
+          <div style={{flex:1,minWidth:0}}>
+            <p style={{margin:0,fontSize:13,fontWeight:800}}>{z.label}</p>
+            <p style={{margin:"2px 0 0",fontSize:10,opacity:0.6,lineHeight:1.4}}>{desc}</p>
+          </div>
+          {info.zone===z.id&&<span style={{marginLeft:"auto",fontSize:14,fontWeight:700,flexShrink:0}}>✓</span>}
+        </button>
+        );
+      })}
       {info.zone==="otro"&&(
         <div style={{background:"#0a0a0a",borderRadius:10,padding:"1rem",border:"1px solid #1a1a1a",marginTop:"0.25rem",display:"flex",flexDirection:"column",gap:"0.65rem",animation:"slideUp 0.2s ease"}}>
           <p style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#333",margin:"0 0 0.25rem"}}>DATOS DE ENVÍO</p>
@@ -1111,6 +1127,7 @@ export default function Home() {
   const[productComments,setProductComments]=useState<ProductComment[]>([]);
   const[commentsLoading,setCommentsLoading]=useState(false);
   const[commentName,setCommentName]=useState("");
+  const[commentEmail,setCommentEmail]=useState("");
   const[commentText,setCommentText]=useState("");
   const[commentStars,setCommentStars]=useState(5);
   const[commentSending,setCommentSending]=useState(false);
@@ -1614,7 +1631,7 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
     setCommentsLoading(true);
     try{
       const all=await fsGetCollection("product_comments",300);
-      const filtered=all.filter(c=>c.productId===productId).map(c=>({id:c.id,productId:(c.productId as string)||"",productName:(c.productName as string)||"",name:(c.name as string)||"",comment:(c.comment as string)||"",stars:Number(c.stars)||5,createdAt:Number(c.createdAt)||0})) as ProductComment[];
+      const filtered=all.filter(c=>c.productId===productId).map(c=>({id:c.id,productId:(c.productId as string)||"",productName:(c.productName as string)||"",name:(c.name as string)||"",email:(c.email as string)||"",comment:(c.comment as string)||"",stars:Number(c.stars)||5,createdAt:Number(c.createdAt)||0})) as ProductComment[];
       filtered.sort((a,b)=>b.createdAt-a.createdAt);
       setProductComments(filtered);
     }catch{
@@ -1627,6 +1644,7 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
   useEffect(()=>{
     if(selectedProduct){
       setCommentName("");
+      setCommentEmail("");
       setCommentText("");
       setCommentStars(5);
       setCommentErr("");
@@ -1645,9 +1663,10 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
     setCommentOk(false);
     try{
       const createdAt=Date.now();
-      await fsAddToCollection("product_comments",{productId:selectedProduct.id,productName:selectedProduct.name,name:commentName.trim(),comment:commentText.trim(),stars:commentStars,createdAt});
-      setProductComments(prev=>[{id:"tmp_"+createdAt,productId:selectedProduct.id,productName:selectedProduct.name,name:commentName.trim(),comment:commentText.trim(),stars:commentStars,createdAt},...prev]);
+      await fsAddToCollection("product_comments",{productId:selectedProduct.id,productName:selectedProduct.name,name:commentName.trim(),email:commentEmail.trim(),comment:commentText.trim(),stars:commentStars,createdAt});
+      setProductComments(prev=>[{id:"tmp_"+createdAt,productId:selectedProduct.id,productName:selectedProduct.name,name:commentName.trim(),email:commentEmail.trim(),comment:commentText.trim(),stars:commentStars,createdAt},...prev]);
       setCommentName("");
+      setCommentEmail("");
       setCommentText("");
       setCommentStars(5);
       setCommentOk(true);
@@ -1657,7 +1676,7 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
     }finally{
       setCommentSending(false);
     }
-  },[selectedProduct,commentName,commentText,commentStars]);
+  },[selectedProduct,commentName,commentEmail,commentText,commentStars]);
 
   const closeProdModal=useCallback(()=>{if(modalPushedRef.current)window.history.back();else setSel(null);},[]);
 
@@ -2746,7 +2765,11 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
               </div>
               <p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#333",marginBottom:"0.75rem"}}>MÉTODO DE PAGO</p>
               <div style={{display:"flex",flexDirection:"column",gap:"0.45rem"}}>
-                {PAYMENT_METHODS.map(pm=>(<button key={pm.id} className="pc2" onClick={()=>{setPayMethod(pm.id);setTimeout(()=>payDetailsRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),300);}} style={{display:"flex",alignItems:"center",gap:"0.85rem",background:payMethod===pm.id?"#fff":"#111",color:payMethod===pm.id?"#080808":C.text,border:`1px solid ${payMethod===pm.id?"#fff":"#1e1e1e"}`,borderRadius:10,padding:"0.8rem 1rem",textAlign:"left",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",transition:"all 0.15s"}}><span style={{fontSize:18}}>{pm.icon}</span><div><p style={{margin:0,fontSize:13,fontWeight:700}}>{pm.name}</p><p style={{margin:0,fontSize:10,opacity:0.5,marginTop:1}}>{pm.detail}</p></div>{payMethod===pm.id&&<span style={{marginLeft:"auto",fontSize:14,fontWeight:700}}>✓</span>}</button>))}
+                {PAYMENT_METHODS.map(pm=>(<button key={pm.id} className="pc2" onClick={()=>{setPayMethod(pm.id);setTimeout(()=>payDetailsRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),300);}} style={{display:"flex",alignItems:"center",gap:"0.85rem",background:payMethod===pm.id?"#fff":"#111",color:payMethod===pm.id?"#080808":C.text,border:`1px solid ${payMethod===pm.id?"#fff":"#1e1e1e"}`,borderRadius:12,padding:"0.85rem 1rem",textAlign:"left",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",transition:"all 0.15s",boxShadow:payMethod===pm.id?"0 4px 16px rgba(255,255,255,0.08)":"none"}}>
+                  <div style={{width:36,height:36,borderRadius:9,background:payMethod===pm.id?"rgba(8,8,8,0.06)":"rgba(255,255,255,0.04)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:17}}>{pm.icon}</span></div>
+                  <div style={{flex:1,minWidth:0}}><p style={{margin:0,fontSize:13,fontWeight:800}}>{pm.name}</p><p style={{margin:"2px 0 0",fontSize:10,opacity:0.6,lineHeight:1.4}}>{pm.detail}</p></div>
+                  {payMethod===pm.id&&<span style={{marginLeft:"auto",fontSize:14,fontWeight:700,flexShrink:0}}>✓</span>}
+                </button>))}
               </div>
             </div>
 
@@ -3512,6 +3535,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                         </div>
                         <div style={{marginBottom:"5px"}}><StarRow value={c.stars||5} size={11}/></div>
                         <p style={{margin:0,fontSize:12,color:"#888",lineHeight:1.6}}>{c.comment}</p>
+                        {!!c.email&&<p style={{margin:"4px 0 0",fontSize:10,color:"#444"}}>{c.email}</p>}
                       </div>
                     ))}
                   </div>
@@ -3522,6 +3546,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   <div style={{marginBottom:"0.85rem"}}><StarRow value={commentStars} onChange={setCommentStars} size={22}/></div>
                   <div style={{display:"flex",flexDirection:"column",gap:"0.6rem"}}>
                     <input placeholder="Tu nombre *" value={commentName} onChange={e=>setCommentName(e.target.value)} style={S.input}/>
+                    <input placeholder="Tu correo (opcional)" type="email" value={commentEmail} onChange={e=>setCommentEmail(e.target.value)} style={S.input}/>
                     <textarea placeholder="Escribe tu comentario sobre este producto..." value={commentText} onChange={e=>setCommentText(e.target.value)} rows={2} style={{...S.input,resize:"vertical" as const,lineHeight:1.6,minHeight:60}}/>
                     <button onClick={submitProductComment} disabled={!commentName.trim()||!commentText.trim()||commentSending} style={{...S.darkBtn,justifyContent:"center",borderRadius:8,fontSize:11,opacity:(!commentName.trim()||!commentText.trim()||commentSending)?0.5:1,cursor:(!commentName.trim()||!commentText.trim()||commentSending)?"not-allowed":"pointer"}}>{commentSending?"Publicando...":"PUBLICAR RESEÑA"}</button>
                     {commentErr&&<p style={{margin:0,fontSize:11,color:"#ff8888",background:"#1e0808",borderRadius:8,padding:"0.5rem 0.75rem"}}>{commentErr}</p>}
@@ -3545,7 +3570,11 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                 <span style={{padding:"0 0.85rem",fontSize:16,color:C.text,fontWeight:700}}>{modalQty}</span>
                 <button onClick={()=>setModalQty(modalQty+1)} style={S.qtyBtn}>+</button>
               </div>
-              <button onClick={()=>addToCart(selectedProduct,modalQty)} style={{...S.darkBtn,flex:1,justifyContent:"center",fontSize:12,padding:"1.05rem",borderRadius:10}}>AGREGAR AL CARRITO</button>
+              <button onClick={()=>addToCart(selectedProduct,modalQty)} style={{position:"relative",overflow:"hidden",flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:"0.55rem",background:"linear-gradient(180deg,#ffffff 0%,#f0f0f0 100%)",color:"#080808",border:"none",fontSize:12,fontWeight:900,letterSpacing:2.5,padding:"1.05rem",borderRadius:12,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",boxShadow:"0 8px 24px rgba(255,255,255,0.18), inset 0 1px 0 rgba(255,255,255,0.9)"}}>
+                <span style={{position:"absolute",inset:0,background:"linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.55) 50%,transparent 100%)",backgroundSize:"200% 100%",animation:"badgeShimmer 2.8s ease infinite",pointerEvents:"none",mixBlendMode:"overlay" as any}}/>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#080808" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{position:"relative",flexShrink:0}}><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+                <span style={{position:"relative"}}>AGREGAR AL CARRITO</span>
+              </button>
             </div>
           </div>
         </div>
