@@ -453,6 +453,21 @@ const GLOBAL_CSS = `
     .fg { grid-template-columns: repeat(3,1fr) !important; }
     .cg { grid-template-columns: repeat(3,1fr) !important; }
   }
+
+  /* ── modal de producto: vista premium en escritorio ── */
+  @media(min-width:900px){
+    .pm-overlay { align-items: center !important; padding: 3rem 2rem !important; }
+    .pm-content { width: 100% !important; max-width: 1040px !important; max-height: 86vh !important; border-radius: 22px !important; box-shadow: 0 50px 120px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.05) !important; }
+    .pm-drag-handle { display: none !important; }
+    .pm-scroll { padding: 2.5rem 3rem 1rem !important; }
+    .pm-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 2.75rem !important; align-items: start !important; }
+    .pm-media-col { position: sticky !important; top: 0 !important; margin-bottom: 0 !important; }
+    .pm-main-image { border-radius: 16px !important; }
+    .pm-info-col { padding-top: 0.25rem !important; }
+    .pm-info-col h2 { font-size: 24px !important; }
+    .pm-footer-bar { padding: 1.25rem 3rem 1.75rem !important; }
+    .pm-footer-bar button { padding: 1.1rem !important; font-size: 13px !important; }
+  }
 `;
 
 // ─── SVG ICONS ────────────────────────────────────────────────────────────────
@@ -1657,7 +1672,11 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
 
   const submitProductComment=useCallback(async()=>{
     if(!selectedProduct)return;
-    if(!commentName.trim()||!commentText.trim())return;
+    if(!commentName.trim()||!commentText.trim()||!commentEmail.trim())return;
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(commentEmail.trim())){
+      setCommentErr("Ingresa un correo electrónico válido.");
+      return;
+    }
     setCommentSending(true);
     setCommentErr("");
     setCommentOk(false);
@@ -3461,25 +3480,29 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
 
       {/* PRODUCT MODAL */}
       {selectedProduct&&(
-        <div onClick={closeProdModal} style={{position:"fixed",inset:0,zIndex:400,background:"rgba(0,0,0,0.88)",display:"flex",alignItems:"flex-end",justifyContent:"center",animation:"fadeIn 0.18s ease"}}>
-          <div onClick={e=>e.stopPropagation()} style={{background:"#111",width:"100%",maxWidth:520,maxHeight:"92vh",borderRadius:"18px 18px 0 0",display:"flex",flexDirection:"column",animation:"slideUp 0.28s cubic-bezier(0.25,0.46,0.45,0.94)",border:"1px solid #1e1e1e",borderBottom:"none",overflow:"hidden"}}>
-            <div style={{padding:"1.5rem 1.5rem 0",flexShrink:0}}>
+        <div onClick={closeProdModal} className="pm-overlay" style={{position:"fixed",inset:0,zIndex:400,background:"rgba(0,0,0,0.88)",display:"flex",alignItems:"flex-end",justifyContent:"center",animation:"fadeIn 0.18s ease"}}>
+          <div onClick={e=>e.stopPropagation()} className="pm-content" style={{background:"#111",width:"100%",maxWidth:520,maxHeight:"92vh",borderRadius:"18px 18px 0 0",display:"flex",flexDirection:"column",animation:"slideUp 0.28s cubic-bezier(0.25,0.46,0.45,0.94)",border:"1px solid #1e1e1e",borderBottom:"none",overflow:"hidden"}}>
+            <div className="pm-drag-handle" style={{padding:"1.5rem 1.5rem 0",flexShrink:0}}>
               <div style={{width:36,height:3,background:"#222",borderRadius:2,margin:"0 auto 1rem"}}/>
             </div>
-            <div className="ts" style={{overflowY:"auto",WebkitOverflowScrolling:"touch",padding:"0 1.5rem",flex:1,minHeight:0}}>
-              <div style={{background:"#0a0a0a",aspectRatio:"1/1",overflow:"hidden",marginBottom:"0.6rem",borderRadius:12,position:"relative"}}>
-                <LazyImg src={getAllImages(selectedProduct)[modalImgIdx]||selectedProduct.img} alt={selectedProduct.name} fit="contain"/>
-                {!!selectedProduct.discount&&selectedProduct.discount>0&&<DiscountBadge percent={selectedProduct.discount} issuper={isSuperOffer(selectedProduct.discount)}/>}
-              </div>
-              {getAllImages(selectedProduct).length>1&&(
-                <div className="ts" style={{display:"flex",gap:"0.5rem",overflowX:"auto",marginBottom:"1.1rem",WebkitOverflowScrolling:"touch"}}>
-                  {getAllImages(selectedProduct).map((src,i)=>(
-                    <button key={i} onClick={()=>setModalImgIdx(i)} style={{flexShrink:0,width:56,height:56,borderRadius:8,overflow:"hidden",padding:0,cursor:"pointer",background:"#0a0a0a",border:`2px solid ${modalImgIdx===i?"#fff":"transparent"}`,WebkitTapHighlightColor:"transparent"}}>
-                      <img src={optImg(src,120)} alt="" style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/>
-                    </button>
-                  ))}
+            <div className="ts pm-scroll" style={{overflowY:"auto",WebkitOverflowScrolling:"touch",padding:"0 1.5rem",flex:1,minHeight:0}}>
+              <div className="pm-grid">
+                <div className="pm-media-col">
+                  <div className="pm-main-image" style={{background:"#0a0a0a",aspectRatio:"1/1",overflow:"hidden",marginBottom:"0.6rem",borderRadius:12,position:"relative"}}>
+                    <LazyImg src={getAllImages(selectedProduct)[modalImgIdx]||selectedProduct.img} alt={selectedProduct.name} fit="contain"/>
+                    {!!selectedProduct.discount&&selectedProduct.discount>0&&<DiscountBadge percent={selectedProduct.discount} issuper={isSuperOffer(selectedProduct.discount)}/>}
+                  </div>
+                  {getAllImages(selectedProduct).length>1&&(
+                    <div className="ts" style={{display:"flex",gap:"0.5rem",overflowX:"auto",marginBottom:"1.1rem",WebkitOverflowScrolling:"touch"}}>
+                      {getAllImages(selectedProduct).map((src,i)=>(
+                        <button key={i} onClick={()=>setModalImgIdx(i)} style={{flexShrink:0,width:56,height:56,borderRadius:8,overflow:"hidden",padding:0,cursor:"pointer",background:"#0a0a0a",border:`2px solid ${modalImgIdx===i?"#fff":"transparent"}`,WebkitTapHighlightColor:"transparent"}}>
+                          <img src={optImg(src,120)} alt="" style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
+                <div className="pm-info-col">
               <h2 style={{fontSize:18,fontWeight:900,margin:"0 0 0.35rem",color:C.accent}}>{selectedProduct.name}</h2>
               {selectedProduct.code&&<p style={{fontSize:10,color:"#333",margin:"0 0 0.5rem",fontFamily:"monospace",letterSpacing:1}}>Código: {selectedProduct.code}</p>}
               {selectedProduct.description&&<p style={{fontSize:13,color:"#555",margin:"0 0 0.65rem",lineHeight:1.6}}>{selectedProduct.description}</p>}
@@ -3511,6 +3534,8 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   </div>
                 </div>
               )}
+                </div>
+              </div>
               <div style={{marginTop:"0.25rem",paddingTop:"1.25rem",borderTop:`1px solid ${C.border}`,paddingBottom:"1rem"}}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"1rem"}}>
                   <p style={{fontSize:10,fontWeight:800,letterSpacing:2,color:"#555",margin:0}}>RESEÑAS{productComments.length>0?` (${productComments.length})`:""}</p>
@@ -3546,9 +3571,9 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   <div style={{marginBottom:"0.85rem"}}><StarRow value={commentStars} onChange={setCommentStars} size={22}/></div>
                   <div style={{display:"flex",flexDirection:"column",gap:"0.6rem"}}>
                     <input placeholder="Tu nombre *" value={commentName} onChange={e=>setCommentName(e.target.value)} style={S.input}/>
-                    <input placeholder="Tu correo (opcional)" type="email" value={commentEmail} onChange={e=>setCommentEmail(e.target.value)} style={S.input}/>
                     <textarea placeholder="Escribe tu comentario sobre este producto..." value={commentText} onChange={e=>setCommentText(e.target.value)} rows={2} style={{...S.input,resize:"vertical" as const,lineHeight:1.6,minHeight:60}}/>
-                    <button onClick={submitProductComment} disabled={!commentName.trim()||!commentText.trim()||commentSending} style={{...S.darkBtn,justifyContent:"center",borderRadius:8,fontSize:11,opacity:(!commentName.trim()||!commentText.trim()||commentSending)?0.5:1,cursor:(!commentName.trim()||!commentText.trim()||commentSending)?"not-allowed":"pointer"}}>{commentSending?"Publicando...":"PUBLICAR RESEÑA"}</button>
+                    <input placeholder="Tu correo electrónico *" type="email" value={commentEmail} onChange={e=>setCommentEmail(e.target.value)} style={S.input}/>
+                    <button onClick={submitProductComment} disabled={!commentName.trim()||!commentText.trim()||!commentEmail.trim()||commentSending} style={{...S.darkBtn,justifyContent:"center",borderRadius:8,fontSize:11,opacity:(!commentName.trim()||!commentText.trim()||!commentEmail.trim()||commentSending)?0.5:1,cursor:(!commentName.trim()||!commentText.trim()||!commentEmail.trim()||commentSending)?"not-allowed":"pointer"}}>{commentSending?"Publicando...":"PUBLICAR RESEÑA"}</button>
                     {commentErr&&<p style={{margin:0,fontSize:11,color:"#ff8888",background:"#1e0808",borderRadius:8,padding:"0.5rem 0.75rem"}}>{commentErr}</p>}
                     {commentOk&&<p style={{margin:0,fontSize:11,color:"#4caf50",background:"#081e0e",borderRadius:8,padding:"0.5rem 0.75rem"}}>✓ Reseña publicada, ya es visible para todos</p>}
                   </div>
@@ -3564,7 +3589,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                 <Footer setMainView={setMainView} setShopFilter={setShopFilter}/>
               </div>
             </div>
-            <div style={{flexShrink:0,padding:"1rem 1.5rem 1.5rem",background:"#111",borderTop:"1px solid #1e1e1e",display:"flex",alignItems:"center",gap:"0.75rem",boxShadow:"0 -8px 24px rgba(0,0,0,0.4)"}}>
+            <div className="pm-footer-bar" style={{flexShrink:0,padding:"1rem 1.5rem 1.5rem",background:"#111",borderTop:"1px solid #1e1e1e",display:"flex",alignItems:"center",gap:"0.75rem",boxShadow:"0 -8px 24px rgba(0,0,0,0.4)"}}>
               <div style={{display:"flex",alignItems:"center",border:`1px solid ${C.border}`,borderRadius:8,flexShrink:0}}>
                 <button onClick={()=>setModalQty(Math.max(1,modalQty-1))} style={S.qtyBtn}>−</button>
                 <span style={{padding:"0 0.85rem",fontSize:16,color:C.text,fontWeight:700}}>{modalQty}</span>
