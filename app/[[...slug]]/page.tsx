@@ -1478,6 +1478,8 @@ const[allComments,setAllComments]=useState<ProductComment[]>([]);
 const[allCommentsLoading,setAllCommentsLoading]=useState(false);
 const allCommentsLoaded=useRef(false);
 const[commentsDateFilter,setCommentsDateFilter]=useState<"all"|"hoy"|"7d"|"30d"|"90d">("all");
+const[commentsCatFilter,setCommentsCatFilter]=useState("ALL");
+const[commentsProductFilter,setCommentsProductFilter]=useState("ALL");
 const[acProductId,setAcProductId]=useState("");
 const[acProductSearch,setAcProductSearch]=useState("");
 const[acName,setAcName]=useState("Fokus");
@@ -2403,7 +2405,15 @@ const commentsPeriodCutoff=useMemo(()=>{
   const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-(daysBack-1));
   return d.getTime();
 },[commentsDateFilter]);
-const filteredComments=useMemo(()=>allComments.filter(c=>c.createdAt>=commentsPeriodCutoff),[allComments,commentsPeriodCutoff]);
+const filteredComments=useMemo(()=>allComments.filter(c=>{
+  if(c.createdAt<commentsPeriodCutoff)return false;
+  if(commentsProductFilter!=="ALL")return c.productId===commentsProductFilter;
+  if(commentsCatFilter!=="ALL"){
+    const prod=products.find(p=>p.id===c.productId);
+    if(!prod||prod.category!==commentsCatFilter)return false;
+  }
+  return true;
+}),[allComments,commentsPeriodCutoff,commentsCatFilter,commentsProductFilter,products]);
 
   const periodCutoff=useMemo(()=>{
     if(statsPeriod==="all")return 0;
@@ -3628,6 +3638,17 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   {[{id:"hoy" as const,l:"HOY"},{id:"all" as const,l:"TODO"},{id:"7d" as const,l:"7 DÍAS"},{id:"30d" as const,l:"30 DÍAS"},{id:"90d" as const,l:"90 DÍAS"}].map(p=>(
                     <button key={p.id} onClick={()=>setCommentsDateFilter(p.id)} style={{background:commentsDateFilter===p.id?"#fff":"#161616",color:commentsDateFilter===p.id?"#080808":"#666",border:`1px solid ${commentsDateFilter===p.id?"#fff":"#222"}`,padding:"0.3rem 0.75rem",borderRadius:20,fontSize:9,fontWeight:800,letterSpacing:1,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>{p.l}</button>
                   ))}
+                </div>
+                <div style={{display:"flex",gap:"0.5rem",marginBottom:"1rem",flexWrap:"wrap"}}>
+                  <select value={commentsCatFilter} onChange={e=>{setCommentsCatFilter(e.target.value);setCommentsProductFilter("ALL");}} style={{...S.input,flex:1,minWidth:160,appearance:"auto" as any}}>
+                    <option value="ALL">Todas las categorías</option>
+                    <optgroup label="── LENTES">{LENTES_SUBCATS.map(s=><option key={s} value={s}>{catLabel(s)}</option>)}</optgroup>
+                    <optgroup label="── OTROS">{SHOP_CATS.filter(c=>c!=="LENTES").map(c=><option key={c} value={c}>{catLabel(c)}</option>)}</optgroup>
+                  </select>
+                  <select value={commentsProductFilter} onChange={e=>setCommentsProductFilter(e.target.value)} style={{...S.input,flex:1,minWidth:160,appearance:"auto" as any}}>
+                    <option value="ALL">Todos los artículos</option>
+                    {products.filter(p=>commentsCatFilter==="ALL"||p.category===commentsCatFilter).map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
                 </div>
                 {allCommentsLoading&&!filteredComments.length?(
                   <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"1.5rem"}}>Cargando…</p>
