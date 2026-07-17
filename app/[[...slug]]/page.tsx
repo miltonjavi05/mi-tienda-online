@@ -1489,6 +1489,7 @@ const[acName,setAcName]=useState("Fokus");
 const[acStars,setAcStars]=useState(5);
 const[acText,setAcText]=useState("");
 const[acPhotoUrl,setAcPhotoUrl]=useState("");
+const[acFakeEmail,setAcFakeEmail]=useState("");
 const[acPhotoUploading,setAcPhotoUploading]=useState(false);
 const[acSaving,setAcSaving]=useState(false);
 const[acErr,setAcErr]=useState("");
@@ -2165,11 +2166,11 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     setAcSaving(true);
     try{
       const createdAt=Date.now();
-      await fsAddToCollection("product_comments",{productId:prod.id,productName:prod.name,name:acName.trim(),email:"",comment:acText.trim(),stars:acStars,createdAt,photoUrl:acPhotoUrl,isAdmin:false});
+      await fsAddToCollection("product_comments",{productId:prod.id,productName:prod.name,name:acName.trim(),email:acFakeEmail.trim(),comment:acText.trim(),stars:acStars,createdAt,photoUrl:acPhotoUrl,isAdmin:false});
       setAcOk("✓ Comentario publicado correctamente");
       allCommentsLoaded.current=false;
       await loadAllComments(true);
-      setAcText("");setAcPhotoUrl("");setAcStars(5);
+      setAcText("");setAcPhotoUrl("");setAcStars(5);setAcFakeEmail("");
       setTimeout(()=>setAcOk(""),2500);
     }catch(err){
       setAcErr("Error: "+(err instanceof Error?err.message:"desconocido"));
@@ -3662,6 +3663,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                     {products.filter(p=>(acCatFilter==="ALL"||p.category===acCatFilter)&&p.name.toLowerCase().includes(acProductSearch.toLowerCase())).map(p=><option key={p.id} value={p.id}>{p.name} — {catLabel(p.category)}</option>)}
                   </select>
                   <input placeholder="Nombre a mostrar" value={acName} onChange={e=>setAcName(e.target.value)} style={S.input}/>
+                  <input placeholder="Correo a mostrar (opcional)" value={acFakeEmail} onChange={e=>setAcFakeEmail(e.target.value)} style={S.input}/>
                   <div><StarRow value={acStars} onChange={setAcStars} size={20}/></div>
                   <textarea placeholder="Comentario *" value={acText} onChange={e=>setAcText(e.target.value)} rows={2} style={{...S.input,resize:"vertical" as const,lineHeight:1.6}}/>
                   <div>
