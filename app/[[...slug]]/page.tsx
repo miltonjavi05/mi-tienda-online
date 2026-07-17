@@ -17,6 +17,8 @@ const CLOUDINARY_PRESET = "fokus_products";
 const ADMIN_EMAIL    = process.env.NEXT_PUBLIC_ADMIN_EMAIL    || "miltonjavi05@gmail.com";
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "2844242900";
 const WHATSAPP_NUMBER = "584243005733";
+const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "TU_GOOGLE_CLIENT_ID.apps.googleusercontent.com";
+const FACEBOOK_APP_ID  = process.env.NEXT_PUBLIC_FACEBOOK_APP_ID  || "TU_FACEBOOK_APP_ID";
 if (typeof document !== "undefined") {
   document.addEventListener("click", (e:MouseEvent) => {
     const el = (e.target as HTMLElement).closest?.("a[href*='wa.me']");
@@ -101,12 +103,12 @@ const DELIVERY_ZONES_MAP = new Map(DELIVERY_ZONES.map(z=>[z.id,z]));
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 interface DeliveryInfo { zone:string; nombre:string; cedula:string; telefono:string; agencia:string; direccion:string; estado:string; }
-interface Product { id:string; name:string; category:string; price:number; img:string; description?:string; createdAt?:number; order?:number; active?:boolean; discount?:number; images?:string[]; code?:string; bestseller?:boolean; stock?:number; variantGroup?:string; variantLabel?:string; urgencyTag?:"ultima"|"quedan2"|""; }
+interface Product { id:string; name:string; category:string; price:number; img:string; description?:string; createdAt?:number; order?:number; active?:boolean; discount?:number; images?:string[]; code?:string; bestseller?:boolean; stock?:number; variantGroup?:string; variantLabel?:string; urgencyTag?:"ultima"|"quedan2"|""; unitsSold?:number; }
 interface CartItem { product:Product; qty:number; }
 interface UserData { uid:string; email:string; displayName:string; createdAt:number; photoURL?:string; idToken?:string; }
 interface Coupon { id:string; code:string; type:"general"|"product"|"category"; productId?:string; productName?:string; category?:string; discountPercent:number; durationHours:number; createdAt:number; expiresAt:number; active:boolean; }
 interface OrderSnapshot { items:CartItem[]; total:number; payMethod:string; deliveryInfo:DeliveryInfo; comprobanteUrl:string; waUrl:string; orderId:string; couponCode?:string; couponDiscount?:number; }
-interface ProductComment { id:string; productId:string; productName:string; name:string; email?:string; comment:string; stars:number; createdAt:number; }
+interface ProductComment { id:string; productId:string; productName:string; name:string; email?:string; comment:string; stars:number; createdAt:number; photoUrl?:string; isAdmin?:boolean; }
 interface AgendaClient { id:string; name:string; phone:string; product:string; totalAmount:number; paidAmount:number; deliveryDate:string; status:"abono"|"pagado"; notes:string; createdAt:number; }
 
 type MainView = "fokus"|"shop"|"comunidad"|"grabados"|"cart"|"admin"|"account"|"thankyou";
@@ -245,7 +247,7 @@ type FsVal=|{stringValue:string}|{doubleValue:number}|{integerValue:string}|{boo
 function toFs(v:unknown):FsVal{if(v===null||v===undefined)return{nullValue:null};if(typeof v==="string")return{stringValue:v};if(typeof v==="number")return{doubleValue:v};if(typeof v==="boolean")return{booleanValue:v};if(Array.isArray(v))return{arrayValue:{values:v.map(toFs)}};if(typeof v==="object")return{mapValue:{fields:Object.fromEntries(Object.entries(v as Record<string,unknown>).map(([k,val])=>[k,toFs(val)]))}};return{stringValue:String(v)};}
 function fromFs(f:FsVal):unknown{if("stringValue" in f)return f.stringValue;if("doubleValue" in f)return f.doubleValue;if("integerValue" in f)return Number(f.integerValue);if("booleanValue" in f)return f.booleanValue;if("nullValue" in f)return null;if("arrayValue" in f)return((f as{arrayValue:{values?:FsVal[]}}).arrayValue.values||[]).map(fromFs);if("mapValue" in f){const fields=(f as{mapValue:{fields?:Record<string,FsVal>}}).mapValue.fields||{};return Object.fromEntries(Object.entries(fields).map(([k,v])=>[k,fromFs(v)]));}return null;}
 interface FsDoc{name:string;fields:Record<string,FsVal>;}
-function docToProduct(doc:FsDoc):Product{const f=doc.fields||{};const rawImages=fromFs(f.images??{nullValue:null}) as string[]|null;const id=doc.name.split("/").pop() as string;return{id,name:fromFs(f.name??{nullValue:null}) as string||"",category:((fromFs(f.category??{nullValue:null}) as string)||"").toUpperCase(),price:fromFs(f.price??{nullValue:null}) as number||0,img:fromFs(f.img??{nullValue:null}) as string||"",description:fromFs(f.description??{nullValue:null}) as string||"",createdAt:fromFs(f.createdAt??{nullValue:null}) as number||0,order:fromFs(f.order??{nullValue:null}) as number||0,active:f.active!==undefined?(fromFs(f.active) as boolean):true,discount:fromFs(f.discount??{nullValue:null}) as number||0,images:Array.isArray(rawImages)?rawImages:[],code:(fromFs(f.code??{nullValue:null}) as string)||("FK-"+id.slice(-6).toUpperCase()),bestseller:f.bestseller!==undefined?(fromFs(f.bestseller) as boolean):false,stock:Number(fromFs(f.stock??{nullValue:null}))||1,variantGroup:(fromFs(f.variantGroup??{nullValue:null}) as string)||"",variantLabel:(fromFs(f.variantLabel??{nullValue:null}) as string)||"",urgencyTag:((fromFs(f.urgencyTag??{nullValue:null}) as string)||"") as Product["urgencyTag"]};}
+function docToProduct(doc:FsDoc):Product{const f=doc.fields||{};const rawImages=fromFs(f.images??{nullValue:null}) as string[]|null;const id=doc.name.split("/").pop() as string;return{id,name:fromFs(f.name??{nullValue:null}) as string||"",category:((fromFs(f.category??{nullValue:null}) as string)||"").toUpperCase(),price:fromFs(f.price??{nullValue:null}) as number||0,img:fromFs(f.img??{nullValue:null}) as string||"",description:fromFs(f.description??{nullValue:null}) as string||"",createdAt:fromFs(f.createdAt??{nullValue:null}) as number||0,order:fromFs(f.order??{nullValue:null}) as number||0,active:f.active!==undefined?(fromFs(f.active) as boolean):true,discount:fromFs(f.discount??{nullValue:null}) as number||0,images:Array.isArray(rawImages)?rawImages:[],code:(fromFs(f.code??{nullValue:null}) as string)||("FK-"+id.slice(-6).toUpperCase()),bestseller:f.bestseller!==undefined?(fromFs(f.bestseller) as boolean):false,stock:Number(fromFs(f.stock??{nullValue:null}))||1,variantGroup:(fromFs(f.variantGroup??{nullValue:null}) as string)||"",variantLabel:(fromFs(f.variantLabel??{nullValue:null}) as string)||"",urgencyTag:((fromFs(f.urgencyTag??{nullValue:null}) as string)||"") as Product["urgencyTag"],unitsSold:Number(fromFs(f.unitsSold??{nullValue:null}))||0};}
 async function fsGetAll():Promise<Product[]>{const r=await fetch(`${fsBase()}/products?pageSize=300`);if(!r.ok)throw new Error(await r.text());const d=await r.json() as{documents?:FsDoc[]};return(d.documents||[]).map(docToProduct);}
 async function fsGetProductsVersion():Promise<number|null>{
   try{
@@ -273,6 +275,41 @@ async function fsSaveUser(uid:string,data:Record<string,unknown>,idToken?:string
 async function refreshIdToken(refreshToken:string):Promise<{idToken:string;localId:string}|null>{try{const r=await fetch(`https://securetoken.googleapis.com/v1/token?key=${FIREBASE_CONFIG.apiKey}`,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:`grant_type=refresh_token&refresh_token=${encodeURIComponent(refreshToken)}`});const d=await r.json() as{id_token?:string;user_id?:string};if(!r.ok||!d.id_token)return null;return{idToken:d.id_token,localId:d.user_id!};}catch{return null;}}
 async function authSignUp(email:string,password:string,displayName:string):Promise<{idToken:string;localId:string;refreshToken:string}>{const r=await fetch(`${AUTH_BASE}:signUp?key=${FIREBASE_CONFIG.apiKey}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password,returnSecureToken:true})});const d=await r.json() as{idToken?:string;localId?:string;refreshToken?:string;error?:{message:string}};if(!r.ok||d.error)throw new Error(d.error?.message||"Error al registrar");await fetch(`${AUTH_BASE}:update?key=${FIREBASE_CONFIG.apiKey}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({idToken:d.idToken,displayName,returnSecureToken:false})});return{idToken:d.idToken!,localId:d.localId!,refreshToken:d.refreshToken!};}
 async function authSignIn(email:string,password:string):Promise<{idToken:string;localId:string;displayName:string;refreshToken:string}>{const r=await fetch(`${AUTH_BASE}:signInWithPassword?key=${FIREBASE_CONFIG.apiKey}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password,returnSecureToken:true})});const d=await r.json() as{idToken?:string;localId?:string;displayName?:string;refreshToken?:string;error?:{message:string}};if(!r.ok||d.error)throw new Error(d.error?.message||"Error al iniciar sesión");return{idToken:d.idToken!,localId:d.localId!,displayName:d.displayName||"",refreshToken:d.refreshToken!};}
+async function authSignInWithIdp(providerId:"google.com"|"facebook.com",idTokenOrAccessToken:string,isIdToken:boolean):Promise<{idToken:string;localId:string;displayName:string;email:string;refreshToken:string;photoUrl:string}>{
+  const requestUri=typeof window!=="undefined"?window.location.origin:"https://fokusaccesorios.shop";
+  const postBody=isIdToken?`id_token=${idTokenOrAccessToken}&providerId=${providerId}`:`access_token=${idTokenOrAccessToken}&providerId=${providerId}`;
+  const r=await fetch(`${AUTH_BASE}:signInWithIdp?key=${FIREBASE_CONFIG.apiKey}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({postBody,requestUri,returnIdpCredential:true,returnSecureToken:true})});
+  const d=await r.json() as{idToken?:string;localId?:string;displayName?:string;email?:string;refreshToken?:string;photoUrl?:string;error?:{message:string}};
+  if(!r.ok||d.error)throw new Error(d.error?.message||"Error al iniciar sesión con "+providerId);
+  return{idToken:d.idToken!,localId:d.localId!,displayName:d.displayName||"",email:d.email||"",refreshToken:d.refreshToken!,photoUrl:d.photoUrl||""};
+}
+function loadGoogleScript():Promise<any>{
+  return new Promise((resolve,reject)=>{
+    if((window as any).google?.accounts?.id){resolve((window as any).google);return;}
+    const existing=document.getElementById("fokus-google-gsi");
+    if(existing){existing.addEventListener("load",()=>resolve((window as any).google));existing.addEventListener("error",()=>reject(new Error("No se pudo cargar Google")));return;}
+    const s=document.createElement("script");
+    s.id="fokus-google-gsi";s.src="https://accounts.google.com/gsi/client";s.async=true;
+    s.onload=()=>resolve((window as any).google);
+    s.onerror=()=>reject(new Error("No se pudo cargar Google"));
+    document.head.appendChild(s);
+  });
+}
+function loadFacebookScript():Promise<any>{
+  return new Promise((resolve,reject)=>{
+    if((window as any).FB){resolve((window as any).FB);return;}
+    (window as any).fbAsyncInit=function(){
+      (window as any).FB.init({appId:FACEBOOK_APP_ID,cookie:true,xfbml:false,version:"v19.0"});
+      resolve((window as any).FB);
+    };
+    const existing=document.getElementById("fokus-fb-sdk");
+    if(existing)return;
+    const s=document.createElement("script");
+    s.id="fokus-fb-sdk";s.src="https://connect.facebook.net/es_LA/sdk.js";s.async=true;
+    s.onerror=()=>reject(new Error("No se pudo cargar Facebook"));
+    document.head.appendChild(s);
+  });
+}
 async function fsGetUser(uid:string):Promise<{photoURL:string}>{try{const r=await fetch(`${fsBase()}/users/${uid}`);if(!r.ok)return{photoURL:""};const d=await r.json() as FsDoc;return{photoURL:(fromFs(d.fields?.photoURL??{nullValue:null}) as string)||""};}catch{return{photoURL:""};}}
 async function uploadImg(file:File,preset=CLOUDINARY_PRESET):Promise<string>{const fd=new FormData();fd.append("file",file);fd.append("upload_preset",preset);const r=await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`,{method:"POST",body:fd});if(!r.ok)throw new Error("Error subiendo imagen");return((await r.json()) as{secure_url:string}).secure_url;}
 function loadXLSXLib():Promise<any>{
@@ -291,6 +328,9 @@ function loadXLSXLib():Promise<any>{
 function optImg(url:string,w=400):string{if(!url||!url.includes("cloudinary.com"))return url;return url.replace("/upload/",`/upload/w_${w},q_auto,f_webp,dpr_auto/`);}
 function getAllImages(p:Product):string[]{const extra=(p.images||[]).filter(u=>u&&u!==p.img);return[p.img,...extra].filter(Boolean);}
 function getFinalPrice(p:Product):number{if(p.discount&&p.discount>0)return p.price*(1-p.discount/100);return p.price;}
+const units_sold_tiers=[50,100,200,1000];
+function seededrandomtier(id:string):number{let hash=0;for(let i=0;i<id.length;i++){hash=(hash*31+id.charCodeAt(i))>>>0;}return units_sold_tiers[hash%units_sold_tiers.length];}
+function getUnitsSoldLabel(p:Product):string{if(p.unitsSold&&p.unitsSold>0)return`+${p.unitsSold} vendidos`;return`+${seededrandomtier(p.id)} vendidos`;}
 const SUPER_OFFER_THRESHOLD=40;
 function isSuperOffer(discount?:number):boolean{return!!discount&&discount>=SUPER_OFFER_THRESHOLD;}
 const DiscountBadge=memo(function DiscountBadge({percent,issuper}:{percent:number;issuper?:boolean}){
@@ -654,6 +694,7 @@ const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,fmtPrice}:
         ):(
           <p style={{margin:0,fontSize:14,fontWeight:800,color:C.accent,letterSpacing:0.5}}>{fmtPrice(product.price)}</p>
         )}
+        <p style={{margin:"3px 0 0",fontSize:9,color:"#4caf50",fontWeight:700,letterSpacing:0.3}}>🔥 {getUnitsSoldLabel(product)}</p>
       </div>
       <button onClick={e=>{e.stopPropagation();onBuyNow();}} style={{background:"linear-gradient(180deg,#ffffff 0%,#ededed 100%)",color:"#080808",border:"none",height:34,padding:"0",fontSize:9,fontWeight:900,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",gap:4,WebkitTapHighlightColor:"transparent",width:"100%",boxShadow:"0 3px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.6)",marginBottom:"0.3rem"}}>
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
@@ -690,6 +731,7 @@ const HCard=memo(function HCard({product,onClick,onBuyNow,fmtPrice}:{product:Pro
         ):(
           <p style={{margin:0,fontSize:13,fontWeight:800,color:C.accent}}>{fmtPrice(product.price)}</p>
         )}
+        <p style={{margin:"2px 0 0",fontSize:8,color:"#4caf50",fontWeight:700}}>🔥 {getUnitsSoldLabel(product)}</p>
       </div>
       <div style={{display:"flex",flexDirection:"column",gap:"0.3rem"}}>
         <button
@@ -864,12 +906,60 @@ const Footer=memo(function Footer({setMainView,setShopFilter}:{setMainView:(v:Ma
 function AuthModal({onClose,onSuccess}:{onClose:()=>void;onSuccess:(u:UserData)=>void}){
   const[mode,setMode]=useState<"login"|"register">("login");
   const[name,setName]=useState(""),[email,setEmail]=useState(""),[pwd,setPwd]=useState(""),[err,setErr]=useState(""),[loading,setLoading]=useState(false);
+  const[socialLoading,setSocialLoading]=useState<"google"|"facebook"|"">("");
   const authErrMap:Record<string,string>={"EMAIL_EXISTS":"Este correo ya está registrado.","INVALID_EMAIL":"Correo inválido.","WEAK_PASSWORD : Password should be at least 6 characters":"La contraseña debe tener al menos 6 caracteres.","WEAK_PASSWORD":"La contraseña debe tener al menos 6 caracteres.","INVALID_LOGIN_CREDENTIALS":"Correo o contraseña incorrectos.","EMAIL_NOT_FOUND":"No existe una cuenta con este correo.","INVALID_PASSWORD":"Contraseña incorrecta.","USER_DISABLED":"Esta cuenta ha sido deshabilitada.","TOO_MANY_ATTEMPTS_TRY_LATER":"Demasiados intentos. Intenta más tarde.","CONFIGURATION_NOT_FOUND":"El inicio de sesión con correo no está activado.","OPERATION_NOT_ALLOWED":"Registro con email/contraseña no habilitado."};
+  const finishSocialLogin=async(res:{idToken:string;localId:string;displayName:string;email:string;refreshToken:string;photoUrl:string})=>{
+    const fsData=await fsGetUser(res.localId).catch(()=>({photoURL:""}));
+    const photoURL=fsData.photoURL||res.photoUrl||"";
+    const ud:UserData={uid:res.localId,email:res.email,displayName:res.displayName||res.email.split("@")[0],createdAt:Date.now(),photoURL,idToken:res.idToken};
+    await fsSaveUser(res.localId,{email:res.email,displayName:ud.displayName,createdAt:ud.createdAt,photoURL},res.idToken).catch(()=>{});
+    localStorage.setItem("fokus_refresh",res.refreshToken);
+    localStorage.setItem("fokus_user",JSON.stringify(ud));
+    onSuccess(ud);
+  };
+  const handleGoogle=async()=>{
+    setErr("");setSocialLoading("google");
+    try{
+      const google=await loadGoogleScript();
+      await new Promise<void>((resolve,reject)=>{
+        google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,callback:async(resp:{credential:string})=>{
+          try{const res=await authSignInWithIdp("google.com",resp.credential,true);await finishSocialLogin(res);resolve();}
+          catch(e){reject(e);}
+        }});
+        google.accounts.id.prompt((notification:any)=>{
+          if(notification.isNotDisplayed?.()||notification.isSkippedMoment?.()){reject(new Error("No se pudo abrir la ventana de Google. Verifica que las ventanas emergentes estén permitidas."));}
+        });
+      });
+    }catch(e:unknown){setErr(e instanceof Error?e.message:"Error al iniciar sesión con Google");}
+    finally{setSocialLoading("");}
+  };
+  const handleFacebook=async()=>{
+    setErr("");setSocialLoading("facebook");
+    try{
+      const FB=await loadFacebookScript();
+      const loginResp:any=await new Promise(resolve=>FB.login((r:any)=>resolve(r),{scope:"email,public_profile"}));
+      if(!loginResp?.authResponse?.accessToken)throw new Error("No se pudo iniciar sesión con Facebook.");
+      const res=await authSignInWithIdp("facebook.com",loginResp.authResponse.accessToken,false);
+      await finishSocialLogin(res);
+    }catch(e:unknown){setErr(e instanceof Error?e.message:"Error al iniciar sesión con Facebook");}
+    finally{setSocialLoading("");}
+  };
   const handle=async()=>{setErr("");setLoading(true);try{if(mode==="register"){if(!name.trim()){setErr("Ingresa tu nombre.");setLoading(false);return;}if(!email.trim()){setErr("Ingresa tu correo.");setLoading(false);return;}if(pwd.length<6){setErr("La contraseña debe tener al menos 6 caracteres.");setLoading(false);return;}const{idToken,localId,refreshToken}=await authSignUp(email.trim(),pwd,name.trim());const ud:UserData={uid:localId,email:email.trim(),displayName:name.trim(),createdAt:Date.now(),photoURL:"",idToken};await fsSaveUser(localId,{email:email.trim(),displayName:name.trim(),createdAt:ud.createdAt,photoURL:""},idToken).catch(()=>{});localStorage.setItem("fokus_refresh",refreshToken);localStorage.setItem("fokus_user",JSON.stringify(ud));onSuccess(ud);}else{const{idToken,localId,displayName,refreshToken}=await authSignIn(email.trim(),pwd);const fsData=await fsGetUser(localId);const ud:UserData={uid:localId,email:email.trim(),displayName:displayName||email.split("@")[0],createdAt:Date.now(),photoURL:fsData.photoURL,idToken};localStorage.setItem("fokus_refresh",refreshToken);localStorage.setItem("fokus_user",JSON.stringify(ud));onSuccess(ud);}}catch(e:unknown){const raw=e instanceof Error?e.message:"Error desconocido";const matched=Object.keys(authErrMap).find(k=>raw.includes(k));setErr(matched?authErrMap[matched]:raw);}finally{setLoading(false);}};
   return(
     <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:700,background:"rgba(0,0,0,0.85)",display:"flex",alignItems:"flex-end",justifyContent:"center",animation:"fadeIn 0.18s ease"}}>
       <div onClick={e=>e.stopPropagation()} style={{background:"#111",width:"100%",maxWidth:460,borderRadius:"18px 18px 0 0",padding:"1.5rem 1.5rem 2.5rem",animation:"slideUp 0.28s cubic-bezier(0.34,1.3,0.64,1)",border:"1px solid #1e1e1e",borderBottom:"none"}}>
         <div style={{width:36,height:3,background:"#222",borderRadius:2,margin:"0 auto 1.5rem"}}/>
+        <div style={{display:"flex",flexDirection:"column",gap:"0.65rem",marginBottom:"1.25rem"}}>
+          <button onClick={handleGoogle} disabled={!!socialLoading} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.65rem",width:"100%",background:"#fff",color:"#1a1a1a",border:"1px solid #ddd",borderRadius:10,padding:"0.85rem",fontSize:12,fontWeight:800,cursor:socialLoading?"not-allowed":"pointer",fontFamily:"inherit",opacity:socialLoading&&socialLoading!=="google"?0.5:1}}>
+            <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.52 12.27c0-.85-.08-1.67-.22-2.45H12v4.64h6.46c-.28 1.5-1.13 2.78-2.4 3.63v3h3.88c2.27-2.09 3.58-5.17 3.58-8.82z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.07 7.94-2.91l-3.88-3c-1.08.72-2.45 1.15-4.06 1.15-3.12 0-5.77-2.11-6.71-4.94H1.28v3.1C3.26 21.3 7.31 24 12 24z"/><path fill="#FBBC05" d="M5.29 14.3c-.24-.72-.38-1.49-.38-2.3s.14-1.58.38-2.3v-3.1H1.28C.46 8.24 0 10.06 0 12s.46 3.76 1.28 5.4l4.01-3.1z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.44-3.44C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.28 6.6l4.01 3.1c.94-2.83 3.59-4.95 6.71-4.95z"/></svg>
+            {socialLoading==="google"?"Conectando…":"Continuar con Google"}
+          </button>
+          <button onClick={handleFacebook} disabled={!!socialLoading} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.65rem",width:"100%",background:"#1877F2",color:"#fff",border:"none",borderRadius:10,padding:"0.85rem",fontSize:12,fontWeight:800,cursor:socialLoading?"not-allowed":"pointer",fontFamily:"inherit",opacity:socialLoading&&socialLoading!=="facebook"?0.5:1}}>
+            <IcFB s={16} c="#fff"/>
+            {socialLoading==="facebook"?"Conectando…":"Continuar con Facebook"}
+          </button>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:"0.75rem",margin:"0 0 1.25rem"}}><div style={{flex:1,height:1,background:"#1e1e1e"}}/><span style={{fontSize:10,color:"#333",fontWeight:700,letterSpacing:1}}>O CON TU CORREO</span><div style={{flex:1,height:1,background:"#1e1e1e"}}/></div>
         <div style={{display:"flex",gap:0,marginBottom:"1.5rem",background:"#0e0e0e",borderRadius:10,padding:3,border:"1px solid #1a1a1a"}}>{(["login","register"] as const).map(m=>(<button key={m} onClick={()=>{setMode(m);setErr("");}} style={{flex:1,padding:"0.6rem",border:"none",borderRadius:8,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:800,letterSpacing:1.5,transition:"all 0.15s",WebkitTapHighlightColor:"transparent",background:mode===m?"#fff":"transparent",color:mode===m?"#080808":"#444"}}>{m==="login"?"ENTRAR":"REGISTRARSE"}</button>))}</div>
         <div style={{display:"flex",flexDirection:"column",gap:"0.75rem"}}>
           {mode==="register"&&<input placeholder="Nombre *" value={name} onChange={e=>setName(e.target.value)} style={S.input} autoComplete="name"/>}
@@ -1148,6 +1238,9 @@ export default function Home() {
   const[commentSending,setCommentSending]=useState(false);
   const[commentErr,setCommentErr]=useState("");
   const[commentOk,setCommentOk]=useState(false);
+  const[commentPhotoUrl,setCommentPhotoUrl]=useState("");
+  const[commentPhotoUploading,setCommentPhotoUploading]=useState(false);
+  const commentPhotoRef=useRef<HTMLInputElement>(null);
   const[menuOpen,setMenuOpen]      = useState(false);
   const[searchOpen,setSearchOpen]  = useState(false);
   const[searchQuery,setSearchQuery]= useState("");
@@ -1364,6 +1457,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   const[fDiscount,setFDiscount]    =useState("");
   const[fCode,setFCode]            =useState("");
 const[fStock,setFStock]          =useState("1");
+const[fUnitsSold,setFUnitsSold]  =useState("");
 const[fVariantGroupId,setFVariantGroupId]=useState("");
 const[fColors,setFColors]=useState<{id?:string;label:string;img:string;uploading?:boolean}[]>([]);
 const colorFileRefs=useRef<Record<number,HTMLInputElement|null>>({});
@@ -1384,6 +1478,17 @@ const[allComments,setAllComments]=useState<ProductComment[]>([]);
 const[allCommentsLoading,setAllCommentsLoading]=useState(false);
 const allCommentsLoaded=useRef(false);
 const[commentsDateFilter,setCommentsDateFilter]=useState<"all"|"hoy"|"7d"|"30d"|"90d">("all");
+const[acProductId,setAcProductId]=useState("");
+const[acProductSearch,setAcProductSearch]=useState("");
+const[acName,setAcName]=useState("Fokus");
+const[acStars,setAcStars]=useState(5);
+const[acText,setAcText]=useState("");
+const[acPhotoUrl,setAcPhotoUrl]=useState("");
+const[acPhotoUploading,setAcPhotoUploading]=useState(false);
+const[acSaving,setAcSaving]=useState(false);
+const[acErr,setAcErr]=useState("");
+const[acOk,setAcOk]=useState("");
+const acPhotoRef=useRef<HTMLInputElement>(null);
 const[bulkCat,setBulkCat]=useState("COLLARES");
 const[bulkDrafts,setBulkDrafts]=useState<Record<string,{name:string;description:string}>>({});
 const[bulkSaving,setBulkSaving]=useState(false);
@@ -1646,7 +1751,7 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
     setCommentsLoading(true);
     try{
       const all=await fsGetCollection("product_comments",300);
-      const filtered=all.filter(c=>c.productId===productId).map(c=>({id:c.id,productId:(c.productId as string)||"",productName:(c.productName as string)||"",name:(c.name as string)||"",email:(c.email as string)||"",comment:(c.comment as string)||"",stars:Number(c.stars)||5,createdAt:Number(c.createdAt)||0})) as ProductComment[];
+      const filtered=all.filter(c=>c.productId===productId).map(c=>({id:c.id,productId:(c.productId as string)||"",productName:(c.productName as string)||"",name:(c.name as string)||"",email:(c.email as string)||"",comment:(c.comment as string)||"",stars:Number(c.stars)||5,createdAt:Number(c.createdAt)||0,photoUrl:(c.photoUrl as string)||"",isAdmin:!!c.isAdmin})) as ProductComment[];
       filtered.sort((a,b)=>b.createdAt-a.createdAt);
       setProductComments(filtered);
     }catch{
@@ -1658,36 +1763,48 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
 
   useEffect(()=>{
     if(selectedProduct){
-      setCommentName("");
-      setCommentEmail("");
+      setCommentName(currentUser?.displayName||"");
+      setCommentEmail(currentUser?.email||"");
       setCommentText("");
       setCommentStars(5);
       setCommentErr("");
       setCommentOk(false);
+      setCommentPhotoUrl("");
       loadProductComments(selectedProduct.id);
     }else{
       setProductComments([]);
     }
-  },[selectedProduct?.id,loadProductComments]);
+  },[selectedProduct?.id,loadProductComments,currentUser?.displayName,currentUser?.email]);
+
+  const handleCommentPhotoChange=useCallback(async(e:React.ChangeEvent<HTMLInputElement>)=>{
+    const file=e.target.files?.[0];
+    if(!file)return;
+    setCommentPhotoUploading(true);
+    try{
+      const url=await uploadImg(file,"fokus_products");
+      setCommentPhotoUrl(url);
+    }catch{
+      setCommentErr("Error al subir la foto. Intenta de nuevo.");
+    }finally{
+      setCommentPhotoUploading(false);
+      if(commentPhotoRef.current)commentPhotoRef.current.value="";
+    }
+  },[]);
 
   const submitProductComment=useCallback(async()=>{
     if(!selectedProduct)return;
-    if(!commentName.trim()||!commentText.trim()||!commentEmail.trim())return;
-    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(commentEmail.trim())){
-      setCommentErr("Ingresa un correo electrónico válido.");
-      return;
-    }
+    if(!currentUser?.email){setCommentErr("Debes iniciar sesión con tu cuenta para publicar un comentario.");return;}
+    if(!commentName.trim()||!commentText.trim())return;
     setCommentSending(true);
     setCommentErr("");
     setCommentOk(false);
     try{
       const createdAt=Date.now();
-      await fsAddToCollection("product_comments",{productId:selectedProduct.id,productName:selectedProduct.name,name:commentName.trim(),email:commentEmail.trim(),comment:commentText.trim(),stars:commentStars,createdAt});
-      setProductComments(prev=>[{id:"tmp_"+createdAt,productId:selectedProduct.id,productName:selectedProduct.name,name:commentName.trim(),email:commentEmail.trim(),comment:commentText.trim(),stars:commentStars,createdAt},...prev]);
-      setCommentName("");
-      setCommentEmail("");
+      await fsAddToCollection("product_comments",{productId:selectedProduct.id,productName:selectedProduct.name,name:commentName.trim(),email:currentUser.email,comment:commentText.trim(),stars:commentStars,createdAt,photoUrl:commentPhotoUrl,isAdmin:false});
+      setProductComments(prev=>[{id:"tmp_"+createdAt,productId:selectedProduct.id,productName:selectedProduct.name,name:commentName.trim(),email:currentUser.email,comment:commentText.trim(),stars:commentStars,createdAt,photoUrl:commentPhotoUrl},...prev]);
       setCommentText("");
       setCommentStars(5);
+      setCommentPhotoUrl("");
       setCommentOk(true);
       setTimeout(()=>setCommentOk(false),3500);
     }catch(err){
@@ -1695,7 +1812,7 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
     }finally{
       setCommentSending(false);
     }
-  },[selectedProduct,commentName,commentEmail,commentText,commentStars]);
+  },[selectedProduct,currentUser,commentName,commentText,commentStars,commentPhotoUrl]);
 
   const closeProdModal=useCallback(()=>{if(modalPushedRef.current)window.history.back();else setSel(null);},[]);
 
@@ -1734,8 +1851,8 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
 
   const doLogin=()=>{if(adminEmail===ADMIN_EMAIL&&adminPwd===ADMIN_PASSWORD){setAdminLogged(true);setAdminErr("");setAdminSec("menu");}else setAdminErr("Credenciales incorrectas");};
   const doLogout=()=>{setAdminLogged(false);setAdminEmail("");setAdminPwd("");setMainView("fokus");if(typeof window!=="undefined")window.history.pushState("","","/");};
-  const resetForm = () => {setEditing(null);setFName("");setFDesc("");setFPrice("");setFCat("");setFFile(null);setFPrev("");setFErr("");setFOk("");setFGallery([]);setFActive(true);setFDiscount("");setFCode("");setFStock("1");setFVariantGroupId("");setFColors([]);if(fileRef.current)fileRef.current.value="";};
-  const startEdit = (p:Product) => {setEditing(p);setFName(p.name);setFDesc(p.description||"");setFPrice(String(p.price));setFCat(p.category);setFPrev(p.img);setFFile(null);setFGallery(p.images||[]);setFActive(p.active!==false);setFDiscount(p.discount&&p.discount>0?String(p.discount):"");setFCode(p.code||"");setFStock(p.stock!==undefined?String(p.stock):"0");setFVariantGroupId(p.variantGroup||"");setFColors(p.variantGroup?products.filter(x=>x.variantGroup===p.variantGroup&&x.id!==p.id).map(x=>({id:x.id,label:x.variantLabel||"",img:x.img})):[]);setFErr("");setFOk("");if(fileRef.current)fileRef.current.value="";setTimeout(()=>formRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),50);};
+  const resetForm = () => {setEditing(null);setFName("");setFDesc("");setFPrice("");setFCat("");setFFile(null);setFPrev("");setFErr("");setFOk("");setFGallery([]);setFActive(true);setFDiscount("");setFCode("");setFStock("1");setFUnitsSold("");setFVariantGroupId("");setFColors([]);if(fileRef.current)fileRef.current.value="";};
+  const startEdit = (p:Product) => {setEditing(p);setFName(p.name);setFDesc(p.description||"");setFPrice(String(p.price));setFCat(p.category);setFPrev(p.img);setFFile(null);setFGallery(p.images||[]);setFActive(p.active!==false);setFDiscount(p.discount&&p.discount>0?String(p.discount):"");setFCode(p.code||"");setFStock(p.stock!==undefined?String(p.stock):"0");setFUnitsSold(p.unitsSold&&p.unitsSold>0?String(p.unitsSold):"");setFVariantGroupId(p.variantGroup||"");setFColors(p.variantGroup?products.filter(x=>x.variantGroup===p.variantGroup&&x.id!==p.id).map(x=>({id:x.id,label:x.variantLabel||"",img:x.img})):[]);setFErr("");setFOk("");if(fileRef.current)fileRef.current.value="";setTimeout(()=>formRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),50);};
   const onFileChange=(e:React.ChangeEvent<HTMLInputElement>)=>{const file=e.target.files?.[0];if(!file)return;setFFile(file);const r=new FileReader();r.onload=ev=>setFPrev(ev.target?.result as string);r.readAsDataURL(file);};
   const onGalleryFilesChange=async(e:React.ChangeEvent<HTMLInputElement>)=>{const files=Array.from(e.target.files||[]);if(!files.length)return;setFGalleryUploading(true);try{const urls=await Promise.all(files.map(f=>uploadImg(f)));setFGallery(prev=>[...prev,...urls]);}catch{setFErr("Error subiendo alguna de las fotos adicionales.");}finally{setFGalleryUploading(false);if(galleryFileRef.current)galleryFileRef.current.value="";}};
   const makeGalleryImageMain=(idx:number)=>{setFGallery(prevGal=>{const url=prevGal[idx];const newGal=[...prevGal];newGal.splice(idx,1);if(fPrev)newGal.push(fPrev);setFPrev(url);setFFile(null);return newGal;});};
@@ -1855,7 +1972,7 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
       let imgUrl=fPrev;
       if(fFile)imgUrl=await uploadImg(fFile);
       const groupId=editing?.variantGroup||fVariantGroupId||(validColors.length>0?generateVariantGroupId():"");
-      const data={name:fName.trim(),description:fDesc.trim(),price:parseFloat(fPrice),category:fCat.toUpperCase(),img:imgUrl,active:fActive,discount:fDiscount?Math.max(0,Math.min(95,parseFloat(fDiscount))):0,images:fGallery,code:fCode.trim()?fCode.trim().toUpperCase():("FK-"+Date.now().toString(36).slice(-6).toUpperCase()),stock:fStock!==""?Math.max(0,parseInt(fStock)||0):1,variantGroup:groupId,variantLabel:editing?.variantLabel||""};
+      const data={name:fName.trim(),description:fDesc.trim(),price:parseFloat(fPrice),category:fCat.toUpperCase(),img:imgUrl,active:fActive,discount:fDiscount?Math.max(0,Math.min(95,parseFloat(fDiscount))):0,images:fGallery,code:fCode.trim()?fCode.trim().toUpperCase():("FK-"+Date.now().toString(36).slice(-6).toUpperCase()),stock:fStock!==""?Math.max(0,parseInt(fStock)||0):1,unitsSold:fUnitsSold!==""?Math.max(0,parseInt(fUnitsSold)||0):0,variantGroup:groupId,variantLabel:editing?.variantLabel||""};
       if(editing){await fsUpdate(editing.id,data);setFOk("✓ Producto actualizado");}
       else{await fsAdd(data);setFOk("✓ Producto agregado");}
       for(let i=0;i<validColors.length;i++){
@@ -1997,6 +2114,36 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     setProductComments(prev=>prev.filter(c=>c.id!==id));
     try{await fsDeleteDoc("product_comments",id);}catch{}
   },[]);
+
+  const handleAcPhotoChange=useCallback(async(e:React.ChangeEvent<HTMLInputElement>)=>{
+    const file=e.target.files?.[0];
+    if(!file)return;
+    setAcPhotoUploading(true);
+    try{const url=await uploadImg(file,"fokus_products");setAcPhotoUrl(url);}
+    catch{setAcErr("Error al subir la foto.");}
+    finally{setAcPhotoUploading(false);if(acPhotoRef.current)acPhotoRef.current.value="";}
+  },[]);
+
+  const submitAdminComment=useCallback(async()=>{
+    setAcErr("");setAcOk("");
+    const prod=products.find(p=>p.id===acProductId);
+    if(!prod){setAcErr("Selecciona un producto.");return;}
+    if(!acName.trim()||!acText.trim()){setAcErr("Ingresa nombre y comentario.");return;}
+    setAcSaving(true);
+    try{
+      const createdAt=Date.now();
+      await fsAddToCollection("product_comments",{productId:prod.id,productName:prod.name,name:acName.trim(),email:"",comment:acText.trim(),stars:acStars,createdAt,photoUrl:acPhotoUrl,isAdmin:true});
+      setAcOk("✓ Comentario publicado correctamente");
+      allCommentsLoaded.current=false;
+      await loadAllComments(true);
+      setAcText("");setAcPhotoUrl("");setAcStars(5);
+      setTimeout(()=>setAcOk(""),2500);
+    }catch(err){
+      setAcErr("Error: "+(err instanceof Error?err.message:"desconocido"));
+    }finally{
+      setAcSaving(false);
+    }
+  },[products,acProductId,acName,acText,acStars,acPhotoUrl,loadAllComments]);
 
   const loadBulkDrafts=useCallback((cat:string)=>{
     const map:Record<string,{name:string;description:string}>={};
@@ -2904,6 +3051,11 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
   <input placeholder="Cantidad en inventario" type="number" min="0" step="1" value={fStock} onChange={e=>setFStock(e.target.value)} style={S.input}/>
   {(fStock==="1"||fStock==="2")&&<p style={{margin:"0.6rem 0 0",fontSize:11,color:fStock==="1"?"#ff5555":"#ffd43b",fontWeight:700}}>⚠️ El cliente verá el aviso de "{fStock==="1"?"Última unidad":"Quedan 2"}" en la tienda.</p>}
 </div>
+<div style={{background:"linear-gradient(135deg,#0e1a0e 0%,#0e0e0e 100%)",borderRadius:8,padding:"1rem",border:"1px solid #1a3a1a"}}>
+  <p style={{color:"#4caf50",fontSize:9,letterSpacing:2,margin:"0 0 0.6rem",fontWeight:800}}>🔥 UNIDADES VENDIDAS (BADGE DE CONFIANZA)</p>
+  <input placeholder="Ej: 250 (vacío = número aleatorio automático)" type="number" min="0" step="1" value={fUnitsSold} onChange={e=>setFUnitsSold(e.target.value)} style={S.input}/>
+  <p style={{margin:"0.6rem 0 0",fontSize:10,color:"#555",lineHeight:1.5}}>Si lo dejas vacío, se muestra un número automático (+50, +100, +200 o +1000 vendidos) que no cambia entre visitas.</p>
+</div>
 <div style={{background:"linear-gradient(135deg,#0a1420 0%,#0e0e0e 100%)",borderRadius:8,padding:"1rem",border:"1px solid #1a2a3a"}}>
   <p style={{color:"#4dabf7",fontSize:9,letterSpacing:2,margin:"0 0 0.6rem",fontWeight:800}}>🎨 OTROS COLORES DE ESTE PRODUCTO (OPCIONAL)</p>
   <p style={{color:"#555",fontSize:10,margin:"0 0 0.75rem",lineHeight:1.5}}>Agrega cada color adicional con su nombre y su foto. El cliente podrá cambiar de color desde la ficha del producto.</p>
@@ -3440,6 +3592,33 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
 
             {adminLogged&&adminSec==="comments"&&(<>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem"}}><h1 style={{color:"#fff",fontSize:16,fontWeight:900,margin:0,letterSpacing:2}}>COMENTARIOS DE PRODUCTOS</h1><button onClick={()=>exitAdminSec()} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:12,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>← MENÚ</button></div>
+              <div style={{background:"linear-gradient(160deg,#141414 0%,#0a0a0a 100%)",borderRadius:14,padding:"1.25rem",border:"1px solid #2a2a2a",marginBottom:"1.25rem"}}>
+                <p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2.5,margin:"0 0 1rem"}}>PUBLICAR RESEÑA COMO FOKUS (SIN CORREO)</p>
+                <div style={{display:"flex",flexDirection:"column",gap:"0.75rem"}}>
+                  <input placeholder="🔎 Buscar producto…" value={acProductSearch} onChange={e=>setAcProductSearch(e.target.value)} style={S.input}/>
+                  <select value={acProductId} onChange={e=>setAcProductId(e.target.value)} style={{...S.input,appearance:"auto" as any}}>
+                    <option value="">Selecciona el producto *</option>
+                    {products.filter(p=>p.name.toLowerCase().includes(acProductSearch.toLowerCase())).map(p=><option key={p.id} value={p.id}>{p.name} — {catLabel(p.category)}</option>)}
+                  </select>
+                  <input placeholder="Nombre a mostrar" value={acName} onChange={e=>setAcName(e.target.value)} style={S.input}/>
+                  <div><StarRow value={acStars} onChange={setAcStars} size={20}/></div>
+                  <textarea placeholder="Comentario *" value={acText} onChange={e=>setAcText(e.target.value)} rows={2} style={{...S.input,resize:"vertical" as const,lineHeight:1.6}}/>
+                  <div>
+                    <input ref={acPhotoRef} type="file" accept="image/*" onChange={handleAcPhotoChange} disabled={acPhotoUploading} style={{display:"none"}} id="ac-photo-input"/>
+                    {acPhotoUrl?(
+                      <div style={{position:"relative",display:"inline-block"}}>
+                        <img src={acPhotoUrl} alt="" style={{width:70,height:70,objectFit:"cover",borderRadius:8,border:"1px solid #2a5a2a"}} draggable={false}/>
+                        <button type="button" onClick={()=>setAcPhotoUrl("")} style={{position:"absolute",top:-6,right:-6,background:"#cc3333",border:"none",borderRadius:"50%",width:20,height:20,color:"#fff",fontSize:11,cursor:"pointer"}}>✕</button>
+                      </div>
+                    ):(
+                      <label htmlFor="ac-photo-input" style={{display:"inline-flex",alignItems:"center",gap:6,background:"#161616",border:"1px dashed #2a2a2a",borderRadius:8,padding:"0.6rem 1rem",cursor:acPhotoUploading?"not-allowed":"pointer",fontSize:11,color:"#888",fontWeight:700}}>{acPhotoUploading?"Subiendo…":<><IcCamera s={14} c="#888"/> Agregar foto (opcional)</>}</label>
+                    )}
+                  </div>
+                  {acErr&&<div style={{color:"#ff5555",fontSize:12,background:"#1e0808",padding:"0.65rem 1rem",borderRadius:8}}>{acErr}</div>}
+                  {acOk&&<div style={{color:"#55cc77",fontSize:12,background:"#081e0e",padding:"0.65rem 1rem",borderRadius:8}}>{acOk}</div>}
+                  <button onClick={submitAdminComment} disabled={acSaving} style={{...S.adminBtn,opacity:acSaving?0.5:1,cursor:acSaving?"not-allowed":"pointer"}}>{acSaving?"Publicando...":"Publicar reseña"}</button>
+                </div>
+              </div>
               <div style={{background:"#111",borderRadius:14,padding:"1.25rem",border:"1px solid #1a1a1a"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.75rem"}}>
                   <p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2.5,margin:0}}>TODOS LOS COMENTARIOS ({filteredComments.length})</p>
@@ -3466,6 +3645,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                             <span style={{fontSize:9,color:"#2a2a2a"}}>· {new Date(c.createdAt).toLocaleDateString("es-VE",{day:"2-digit",month:"short",year:"numeric"})}</span>
                           </div>
                           <p style={{margin:0,fontSize:12,color:"#888",lineHeight:1.6}}>{c.comment}</p>
+                          {!!c.photoUrl&&<img src={c.photoUrl} alt="" style={{width:60,height:60,objectFit:"cover",borderRadius:6,marginTop:6}} draggable={false}/>}
                         </div>
                         <button onClick={()=>deleteProductComment(c.id)} style={{background:"none",color:"#cc3333",border:"1px solid #2a1515",padding:"0.3rem 0.65rem",borderRadius:6,cursor:"pointer",fontSize:10,fontFamily:"inherit",flexShrink:0,WebkitTapHighlightColor:"transparent"}}>✕</button>
                       </div>
@@ -3507,13 +3687,14 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
               {selectedProduct.code&&<p style={{fontSize:10,color:"#333",margin:"0 0 0.5rem",fontFamily:"monospace",letterSpacing:1}}>Código: {selectedProduct.code}</p>}
               {selectedProduct.description&&<p style={{fontSize:13,color:"#555",margin:"0 0 0.65rem",lineHeight:1.6}}>{selectedProduct.description}</p>}
               {selectedProduct.discount&&selectedProduct.discount>0?(
-                <div style={{display:"flex",alignItems:"baseline",gap:10,marginBottom:"1.25rem",flexWrap:"wrap"}}>
+                <div style={{display:"flex",alignItems:"baseline",gap:10,marginBottom:"0.4rem",flexWrap:"wrap"}}>
                   <p style={{fontSize:24,fontWeight:900,margin:0,color:isSuperOffer(selectedProduct.discount)?"#ff5555":"#ffd43b"}}>{fmtPrice(getFinalPrice(selectedProduct))}</p>
                   <p style={{fontSize:15,margin:0,color:"#555",textDecoration:"line-through"}}>{fmtPrice(selectedProduct.price)}</p>
                 </div>
               ):(
-                <p style={{fontSize:24,fontWeight:900,margin:"0 0 1.25rem",color:C.accent}}>{fmtPrice(selectedProduct.price)}</p>
+                <p style={{fontSize:24,fontWeight:900,margin:"0 0 0.4rem",color:C.accent}}>{fmtPrice(selectedProduct.price)}</p>
               )}
+              <p style={{fontSize:11,color:"#4caf50",fontWeight:800,margin:"0 0 1.25rem",letterSpacing:0.3}}>🔥 {getUnitsSoldLabel(selectedProduct)} este mes</p>
               {!!selectedProduct.urgencyTag&&(
                 <div style={{display:"flex",alignItems:"center",gap:8,background:selectedProduct.urgencyTag==="ultima"?"linear-gradient(135deg,rgba(255,59,59,0.14) 0%,rgba(122,0,0,0.08) 100%)":"linear-gradient(135deg,rgba(255,255,255,0.06) 0%,rgba(255,255,255,0.02) 100%)",border:`1px solid ${selectedProduct.urgencyTag==="ultima"?"rgba(255,59,59,0.4)":"rgba(255,255,255,0.15)"}`,borderRadius:10,padding:"0.65rem 0.9rem",marginBottom:"1.1rem"}}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill={selectedProduct.urgencyTag==="ultima"?"#ff5555":"#ffd43b"}><path d="M13 2L3 14h7l-1 8 11-14h-7l1-6z"/></svg>
@@ -3555,12 +3736,12 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                     {productComments.map(c=>(
                       <div key={c.id} style={{background:"#0e0e0e",border:`1px solid ${C.border}`,borderRadius:12,padding:"0.85rem 1rem"}}>
                         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"5px"}}>
-                          <span style={{fontSize:12,fontWeight:800,color:"#ddd"}}>{c.name}</span>
+                          <span style={{fontSize:12,fontWeight:800,color:"#ddd"}}>{c.name}{c.isAdmin&&<span style={{marginLeft:6,fontSize:9,color:"#080808",background:"#fff",padding:"1px 6px",borderRadius:8,fontWeight:900}}>FOKUS</span>}</span>
                           <span style={{fontSize:9,color:"#333"}}>{new Date(c.createdAt).toLocaleDateString("es-VE",{day:"2-digit",month:"short"})}</span>
                         </div>
                         <div style={{marginBottom:"5px"}}><StarRow value={c.stars||5} size={11}/></div>
                         <p style={{margin:0,fontSize:12,color:"#888",lineHeight:1.6}}>{c.comment}</p>
-                        {!!c.email&&<p style={{margin:"4px 0 0",fontSize:10,color:"#444"}}>{c.email}</p>}
+                        {!!c.photoUrl&&<img src={c.photoUrl} alt="Foto del cliente" style={{width:"100%",maxWidth:180,borderRadius:8,marginTop:8,display:"block"}} draggable={false}/>}
                       </div>
                     ))}
                   </div>
@@ -3570,10 +3751,29 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   <p style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#444",margin:"0 0 0.6rem"}}>TU CALIFICACIÓN</p>
                   <div style={{marginBottom:"0.85rem"}}><StarRow value={commentStars} onChange={setCommentStars} size={22}/></div>
                   <div style={{display:"flex",flexDirection:"column",gap:"0.6rem"}}>
+                  {!currentUser?(
+                    <div style={{textAlign:"center",padding:"1rem 0.5rem"}}>
+                      <p style={{margin:"0 0 0.85rem",fontSize:12,color:"#888",lineHeight:1.6}}>Debes iniciar sesión con tu cuenta para publicar una reseña.</p>
+                      <button onClick={()=>setShowAuth(true)} style={{...S.darkBtn,borderRadius:8,fontSize:11}}>INICIAR SESIÓN / REGISTRARME</button>
+                    </div>
+                  ):(<>
                     <input placeholder="Tu nombre *" value={commentName} onChange={e=>setCommentName(e.target.value)} style={S.input}/>
                     <textarea placeholder="Escribe tu comentario sobre este producto..." value={commentText} onChange={e=>setCommentText(e.target.value)} rows={2} style={{...S.input,resize:"vertical" as const,lineHeight:1.6,minHeight:60}}/>
-                    <input placeholder="Tu correo electrónico *" type="email" value={commentEmail} onChange={e=>setCommentEmail(e.target.value)} style={S.input}/>
-                    <button onClick={submitProductComment} disabled={!commentName.trim()||!commentText.trim()||!commentEmail.trim()||commentSending} style={{...S.darkBtn,justifyContent:"center",borderRadius:8,fontSize:11,opacity:(!commentName.trim()||!commentText.trim()||!commentEmail.trim()||commentSending)?0.5:1,cursor:(!commentName.trim()||!commentText.trim()||!commentEmail.trim()||commentSending)?"not-allowed":"pointer"}}>{commentSending?"Publicando...":"PUBLICAR RESEÑA"}</button>
+                    <div>
+                      <input ref={commentPhotoRef} type="file" accept="image/*" onChange={handleCommentPhotoChange} disabled={commentPhotoUploading} style={{display:"none"}} id="comment-photo-input"/>
+                      {commentPhotoUrl?(
+                        <div style={{position:"relative",display:"inline-block"}}>
+                          <img src={commentPhotoUrl} alt="Tu foto" style={{width:70,height:70,objectFit:"cover",borderRadius:8,border:"1px solid #2a5a2a"}} draggable={false}/>
+                          <button type="button" onClick={()=>setCommentPhotoUrl("")} style={{position:"absolute",top:-6,right:-6,background:"#cc3333",border:"none",borderRadius:"50%",width:20,height:20,color:"#fff",fontSize:11,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+                        </div>
+                      ):(
+                        <label htmlFor="comment-photo-input" style={{display:"inline-flex",alignItems:"center",gap:6,background:"#161616",border:"1px dashed #2a2a2a",borderRadius:8,padding:"0.6rem 1rem",cursor:commentPhotoUploading?"not-allowed":"pointer",fontSize:11,color:"#888",fontWeight:700}}>
+                          {commentPhotoUploading?"Subiendo…":<><IcCamera s={14} c="#888"/> Agregar foto de tu artículo (opcional)</>}
+                        </label>
+                      )}
+                    </div>
+                    <button onClick={submitProductComment} disabled={!commentName.trim()||!commentText.trim()||commentSending} style={{...S.darkBtn,justifyContent:"center",borderRadius:8,fontSize:11,opacity:(!commentName.trim()||!commentText.trim()||commentSending)?0.5:1,cursor:(!commentName.trim()||!commentText.trim()||commentSending)?"not-allowed":"pointer"}}>{commentSending?"Publicando...":"PUBLICAR RESEÑA"}</button>
+                  </>)}
                     {commentErr&&<p style={{margin:0,fontSize:11,color:"#ff8888",background:"#1e0808",borderRadius:8,padding:"0.5rem 0.75rem"}}>{commentErr}</p>}
                     {commentOk&&<p style={{margin:0,fontSize:11,color:"#4caf50",background:"#081e0e",borderRadius:8,padding:"0.5rem 0.75rem"}}>✓ Reseña publicada, ya es visible para todos</p>}
                   </div>
