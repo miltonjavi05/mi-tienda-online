@@ -328,7 +328,7 @@ function loadXLSXLib():Promise<any>{
 function optImg(url:string,w=400):string{if(!url||!url.includes("cloudinary.com"))return url;return url.replace("/upload/",`/upload/w_${w},q_auto,f_webp,dpr_auto/`);}
 function getAllImages(p:Product):string[]{const extra=(p.images||[]).filter(u=>u&&u!==p.img);return[p.img,...extra].filter(Boolean);}
 function getFinalPrice(p:Product):number{if(p.discount&&p.discount>0)return p.price*(1-p.discount/100);return p.price;}
-const units_sold_tiers=[50,100,200,1000];
+const units_sold_tiers=[8,14,23,37];
 function seededrandomtier(id:string):number{let hash=0;for(let i=0;i<id.length;i++){hash=(hash*31+id.charCodeAt(i))>>>0;}return units_sold_tiers[hash%units_sold_tiers.length];}
 function getUnitsSoldLabel(p:Product):string{if(p.unitsSold&&p.unitsSold>0)return`+${p.unitsSold} vendidos`;return`+${seededrandomtier(p.id)} vendidos`;}
 const SUPER_OFFER_THRESHOLD=40;
@@ -694,7 +694,7 @@ const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,fmtPrice}:
         ):(
           <p style={{margin:0,fontSize:14,fontWeight:800,color:C.accent,letterSpacing:0.5}}>{fmtPrice(product.price)}</p>
         )}
-        <p style={{margin:"3px 0 0",fontSize:9,color:"#4caf50",fontWeight:700,letterSpacing:0.3}}>🔥 {getUnitsSoldLabel(product)}</p>
+        <p style={{margin:"3px 0 0",fontSize:9,color:"#fff",fontWeight:900,letterSpacing:1,textShadow:"0 0 8px rgba(255,255,255,0.35)"}}>⚡ {getUnitsSoldLabel(product)}</p>
       </div>
       <button onClick={e=>{e.stopPropagation();onBuyNow();}} style={{background:"linear-gradient(180deg,#ffffff 0%,#ededed 100%)",color:"#080808",border:"none",height:34,padding:"0",fontSize:9,fontWeight:900,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",gap:4,WebkitTapHighlightColor:"transparent",width:"100%",boxShadow:"0 3px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.6)",marginBottom:"0.3rem"}}>
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
@@ -731,7 +731,7 @@ const HCard=memo(function HCard({product,onClick,onBuyNow,fmtPrice}:{product:Pro
         ):(
           <p style={{margin:0,fontSize:13,fontWeight:800,color:C.accent}}>{fmtPrice(product.price)}</p>
         )}
-        <p style={{margin:"2px 0 0",fontSize:8,color:"#4caf50",fontWeight:700}}>🔥 {getUnitsSoldLabel(product)}</p>
+        <p style={{margin:"2px 0 0",fontSize:8,color:"#fff",fontWeight:900,letterSpacing:0.8,textShadow:"0 0 8px rgba(255,255,255,0.35)"}}>⚡ {getUnitsSoldLabel(product)}</p>
       </div>
       <div style={{display:"flex",flexDirection:"column",gap:"0.3rem"}}>
         <button
@@ -1793,7 +1793,7 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
 
   const submitProductComment=useCallback(async()=>{
     if(!selectedProduct)return;
-    if(!currentUser?.email){setCommentErr("Debes iniciar sesión con tu cuenta para publicar un comentario.");return;}
+    if(!currentUser?.email){setShowAuth(true);return;}
     if(!commentName.trim()||!commentText.trim())return;
     setCommentSending(true);
     setCommentErr("");
@@ -3694,7 +3694,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
               ):(
                 <p style={{fontSize:24,fontWeight:900,margin:"0 0 0.4rem",color:C.accent}}>{fmtPrice(selectedProduct.price)}</p>
               )}
-              <p style={{fontSize:11,color:"#4caf50",fontWeight:800,margin:"0 0 1.25rem",letterSpacing:0.3}}>🔥 {getUnitsSoldLabel(selectedProduct)} este mes</p>
+              <p style={{fontSize:11,color:"#fff",fontWeight:900,margin:"0 0 1.25rem",letterSpacing:1,textShadow:"0 0 8px rgba(255,255,255,0.35)"}}>⚡ {getUnitsSoldLabel(selectedProduct)} este mes</p>
               {!!selectedProduct.urgencyTag&&(
                 <div style={{display:"flex",alignItems:"center",gap:8,background:selectedProduct.urgencyTag==="ultima"?"linear-gradient(135deg,rgba(255,59,59,0.14) 0%,rgba(122,0,0,0.08) 100%)":"linear-gradient(135deg,rgba(255,255,255,0.06) 0%,rgba(255,255,255,0.02) 100%)",border:`1px solid ${selectedProduct.urgencyTag==="ultima"?"rgba(255,59,59,0.4)":"rgba(255,255,255,0.15)"}`,borderRadius:10,padding:"0.65rem 0.9rem",marginBottom:"1.1rem"}}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill={selectedProduct.urgencyTag==="ultima"?"#ff5555":"#ffd43b"}><path d="M13 2L3 14h7l-1 8 11-14h-7l1-6z"/></svg>
@@ -3739,6 +3739,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                           <span style={{fontSize:12,fontWeight:800,color:"#ddd"}}>{c.name}{c.isAdmin&&<span style={{marginLeft:6,fontSize:9,color:"#080808",background:"#fff",padding:"1px 6px",borderRadius:8,fontWeight:900}}>FOKUS</span>}</span>
                           <span style={{fontSize:9,color:"#333"}}>{new Date(c.createdAt).toLocaleDateString("es-VE",{day:"2-digit",month:"short"})}</span>
                         </div>
+                        {!!c.email&&<p style={{margin:"0 0 5px",fontSize:10,color:"#555"}}>{c.email}</p>}
                         <div style={{marginBottom:"5px"}}><StarRow value={c.stars||5} size={11}/></div>
                         <p style={{margin:0,fontSize:12,color:"#888",lineHeight:1.6}}>{c.comment}</p>
                         {!!c.photoUrl&&<img src={c.photoUrl} alt="Foto del cliente" style={{width:"100%",maxWidth:180,borderRadius:8,marginTop:8,display:"block"}} draggable={false}/>}
@@ -3751,12 +3752,6 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   <p style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#444",margin:"0 0 0.6rem"}}>TU CALIFICACIÓN</p>
                   <div style={{marginBottom:"0.85rem"}}><StarRow value={commentStars} onChange={setCommentStars} size={22}/></div>
                   <div style={{display:"flex",flexDirection:"column",gap:"0.6rem"}}>
-                  {!currentUser?(
-                    <div style={{textAlign:"center",padding:"1rem 0.5rem"}}>
-                      <p style={{margin:"0 0 0.85rem",fontSize:12,color:"#888",lineHeight:1.6}}>Debes iniciar sesión con tu cuenta para publicar una reseña.</p>
-                      <button onClick={()=>setShowAuth(true)} style={{...S.darkBtn,borderRadius:8,fontSize:11}}>INICIAR SESIÓN / REGISTRARME</button>
-                    </div>
-                  ):(<>
                     <input placeholder="Tu nombre *" value={commentName} onChange={e=>setCommentName(e.target.value)} style={S.input}/>
                     <textarea placeholder="Escribe tu comentario sobre este producto..." value={commentText} onChange={e=>setCommentText(e.target.value)} rows={2} style={{...S.input,resize:"vertical" as const,lineHeight:1.6,minHeight:60}}/>
                     <div>
@@ -3773,7 +3768,6 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                       )}
                     </div>
                     <button onClick={submitProductComment} disabled={!commentName.trim()||!commentText.trim()||commentSending} style={{...S.darkBtn,justifyContent:"center",borderRadius:8,fontSize:11,opacity:(!commentName.trim()||!commentText.trim()||commentSending)?0.5:1,cursor:(!commentName.trim()||!commentText.trim()||commentSending)?"not-allowed":"pointer"}}>{commentSending?"Publicando...":"PUBLICAR RESEÑA"}</button>
-                  </>)}
                     {commentErr&&<p style={{margin:0,fontSize:11,color:"#ff8888",background:"#1e0808",borderRadius:8,padding:"0.5rem 0.75rem"}}>{commentErr}</p>}
                     {commentOk&&<p style={{margin:0,fontSize:11,color:"#4caf50",background:"#081e0e",borderRadius:8,padding:"0.5rem 0.75rem"}}>✓ Reseña publicada, ya es visible para todos</p>}
                   </div>
