@@ -659,8 +659,9 @@ Reglas:
       })
     });
     const d=await r.json();
+    if(!r.ok){console.error("Gemini API error response:",d);return null;}
     const text=d?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if(!text)return null;
+    if(!text){console.error("Gemini: sin texto en la respuesta:",d);return null;}
     const parsed=JSON.parse(text);
     const name=capitalizeName(String(parsed.name||"Cliente Fokus"));
     const email=String(parsed.email||"").toLowerCase().trim();
@@ -668,7 +669,8 @@ Reglas:
     const comment=String(parsed.comment||"").trim();
     if(!comment)return null;
     return{name,email,stars,comment};
-  }catch{
+  }catch(err){
+    console.error("Gemini fetch/parse error:",err);
     return null;
   }
 }
