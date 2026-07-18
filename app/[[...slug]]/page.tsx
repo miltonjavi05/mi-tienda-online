@@ -896,6 +896,7 @@ const Footer=memo(function Footer({setMainView,setShopFilter}:{setMainView:(v:Ma
             <div style={{display:"flex",flexDirection:"column",gap:"0.2rem"}}><p style={{fontSize:10,color:"#2a2a2a",margin:0}}>miltonjavi05@gmail.com</p><p style={{fontSize:10,color:"#2a2a2a",margin:0}}>+58 424-300-5733</p></div>
           </div>
         </div>
+        <p style={{fontSize:10,color:"#333",margin:"0 0 0.85rem",lineHeight:1.7,maxWidth:640,textAlign:"center",marginLeft:"auto",marginRight:"auto"}}>Fokus Accesorios es tu tienda en línea de lentes de sol, relojes, pulseras, aretes, anillos y billeteras en Venezuela. Compra fácil, rápido y seguro, con confirmación de pedido directa por WhatsApp y envíos a todo el país.</p>
         <div style={{borderTop:"1px solid #111",paddingTop:"1rem",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"0.4rem"}}><p style={{fontSize:9,color:"#222",margin:0,letterSpacing:1}}>© {new Date().getFullYear()} FOKUS. TODOS LOS DERECHOS RESERVADOS.</p><p style={{fontSize:9,color:"#1a1a1a",margin:0,letterSpacing:1}}>FOKUS ®</p></div>
       </div>
     </footer>
