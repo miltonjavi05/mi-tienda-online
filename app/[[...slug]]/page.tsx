@@ -1506,6 +1506,17 @@ const[acSaving,setAcSaving]=useState(false);
 const[acErr,setAcErr]=useState("");
 const[acOk,setAcOk]=useState("");
 const acPhotoRef=useRef<HTMLInputElement>(null);
+const[editingCommentId,setEditingCommentId]=useState<string|null>(null);
+const[ecName,setEcName]=useState("");
+const[ecEmail,setEcEmail]=useState("");
+const[ecDate,setEcDate]=useState("");
+const[ecStars,setEcStars]=useState(5);
+const[ecText,setEcText]=useState("");
+const[ecAvatarUrl,setEcAvatarUrl]=useState("");
+const[ecAvatarUploading,setEcAvatarUploading]=useState(false);
+const ecAvatarRef=useRef<HTMLInputElement>(null);
+const[ecSaving,setEcSaving]=useState(false);
+const[ecErr,setEcErr]=useState("");
 const[bulkCat,setBulkCat]=useState("COLLARES");
 const[bulkDrafts,setBulkDrafts]=useState<Record<string,{name:string;description:string}>>({});
 const[bulkSaving,setBulkSaving]=useState(false);
@@ -2142,7 +2153,7 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     setAllCommentsLoading(true);
     try{
       const raw=await fsGetCollection("product_comments",300);
-      const list:ProductComment[]=raw.map(r=>({id:r.id,productId:(r.productId as string)||"",productName:(r.productName as string)||"",name:(r.name as string)||"",comment:(r.comment as string)||"",stars:Number(r.stars)||5,createdAt:Number(r.createdAt)||0}));
+      const list:ProductComment[]=raw.map(r=>({id:r.id,productId:(r.productId as string)||"",productName:(r.productName as string)||"",name:(r.name as string)||"",email:(r.email as string)||"",comment:(r.comment as string)||"",stars:Number(r.stars)||5,createdAt:Number(r.createdAt)||0,photoUrl:(r.photoUrl as string)||"",photoUrls:Array.isArray(r.photoUrls)?(r.photoUrls as string[]):[],avatarUrl:(r.avatarUrl as string)||"",isAdmin:!!r.isAdmin}));
       list.sort((a,b)=>b.createdAt-a.createdAt);
       setAllComments(list);
       allCommentsLoaded.current=true;
@@ -2159,6 +2170,51 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     setProductComments(prev=>prev.filter(c=>c.id!==id));
     try{await fsDeleteDoc("product_comments",id);}catch{}
   },[]);
+
+  const startEditComment=useCallback((c:ProductComment)=>{
+    setEditingCommentId(c.id);
+    setEcName(c.name);
+    setEcEmail(c.email||"");
+    const d=new Date(c.createdAt);
+    const pad=(n:number)=>String(n).padStart(2,"0");
+    setEcDate(`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+    setEcStars(c.stars||5);
+    setEcText(c.comment);
+    setEcAvatarUrl(c.avatarUrl||"");
+    setEcErr("");
+  },[]);
+
+  const cancelEditComment=useCallback(()=>{
+    setEditingCommentId(null);
+    setEcErr("");
+  },[]);
+
+  const handleEcAvatarChange=useCallback(async(e:React.ChangeEvent<HTMLInputElement>)=>{
+    const file=e.target.files?.[0];
+    if(!file)return;
+    setEcAvatarUploading(true);
+    try{const url=await uploadImg(file,"fokus_products");setEcAvatarUrl(url);}
+    catch{setEcErr("Error al subir la foto de perfil.");}
+    finally{setEcAvatarUploading(false);if(ecAvatarRef.current)ecAvatarRef.current.value="";}
+  },[]);
+
+  const saveEditComment=useCallback(async()=>{
+    if(!editingCommentId)return;
+    if(!ecName.trim()||!ecText.trim()){setEcErr("Ingresa nombre y comentario.");return;}
+    setEcSaving(true);setEcErr("");
+    try{
+      const newCreatedAt=ecDate?new Date(ecDate).getTime():Date.now();
+      const updateData={name:ecName.trim(),email:ecEmail.trim(),comment:ecText.trim(),stars:ecStars,createdAt:newCreatedAt,avatarUrl:ecAvatarUrl};
+      await fsUpdateDoc("product_comments",editingCommentId,updateData);
+      setAllComments(prev=>prev.map(c=>c.id===editingCommentId?{...c,...updateData}:c));
+      setProductComments(prev=>prev.map(c=>c.id===editingCommentId?{...c,...updateData}:c));
+      setEditingCommentId(null);
+    }catch(err){
+      setEcErr("Error: "+(err instanceof Error?err.message:"desconocido"));
+    }finally{
+      setEcSaving(false);
+    }
+  },[editingCommentId,ecName,ecEmail,ecDate,ecStars,ecText,ecAvatarUrl]);
 
   const handleAcPhotoChange=useCallback(async(e:React.ChangeEvent<HTMLInputElement>)=>{
     const file=e.target.files?.[0];
@@ -3743,19 +3799,50 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                 ):(
                   <div style={{display:"flex",flexDirection:"column",gap:"0.5rem"}}>
                     {filteredComments.map(c=>(
-                      <div key={c.id} style={{display:"flex",alignItems:"flex-start",gap:"0.75rem",padding:"0.75rem",borderRadius:10,background:"#0c0c0c",border:"1px solid #1a1a1a"}}>
-                        <div style={{flex:1,minWidth:0}}>
-                          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2,flexWrap:"wrap"}}>
-                            <span style={{fontSize:12,fontWeight:800,color:"#ccc"}}>{c.name}</span>
-                            <StarRow value={c.stars||5} size={10}/>
-                            <span style={{fontSize:9,color:"#333"}}>· {c.productName||"Producto eliminado"}</span>
-                            <span style={{fontSize:9,color:"#2a2a2a"}}>· {new Date(c.createdAt).toLocaleDateString("es-VE",{day:"2-digit",month:"short",year:"numeric"})}</span>
+                      editingCommentId===c.id?(
+                        <div key={c.id} style={{padding:"0.85rem",borderRadius:10,background:"linear-gradient(135deg,#141410 0%,#0a0a0a 100%)",border:"1px solid #3a3520",display:"flex",flexDirection:"column",gap:"0.6rem"}}>
+                          <p style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#ffd43b",margin:0}}>EDITANDO COMENTARIO</p>
+                          <div style={{display:"flex",alignItems:"center",gap:"0.65rem"}}>
+                            <div>
+                              <input ref={ecAvatarRef} type="file" accept="image/*" onChange={handleEcAvatarChange} disabled={ecAvatarUploading} style={{display:"none"}} id={`ec-avatar-${c.id}`}/>
+                              <label htmlFor={`ec-avatar-${c.id}`} style={{position:"relative",display:"block",width:44,height:44,borderRadius:"50%",overflow:"hidden",cursor:ecAvatarUploading?"not-allowed":"pointer",background:"#161616",border:"1px solid #2a2a2a",flexShrink:0}}>
+                                {ecAvatarUrl?<img src={ecAvatarUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} draggable={false}/>:<div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center"}}><IcCamera s={16} c="#555"/></div>}
+                              </label>
+                            </div>
+                            <div style={{flex:1,display:"flex",flexDirection:"column",gap:"0.5rem"}}>
+                              <input placeholder="Nombre" value={ecName} onChange={e=>setEcName(e.target.value)} style={{...S.input,padding:"0.5rem 0.75rem",fontSize:12}}/>
+                              <input placeholder="Correo (opcional)" value={ecEmail} onChange={e=>setEcEmail(e.target.value)} style={{...S.input,padding:"0.5rem 0.75rem",fontSize:12}}/>
+                            </div>
                           </div>
-                          <p style={{margin:0,fontSize:12,color:"#888",lineHeight:1.6}}>{c.comment}</p>
-                          {!!c.photoUrl&&<img src={c.photoUrl} alt="" style={{width:60,height:60,objectFit:"cover",borderRadius:6,marginTop:6}} draggable={false}/>}
+                          <input type="datetime-local" value={ecDate} onChange={e=>setEcDate(e.target.value)} style={{...S.input,padding:"0.5rem 0.75rem",fontSize:12,appearance:"auto" as any}}/>
+                          <StarRow value={ecStars} onChange={setEcStars} size={16}/>
+                          <textarea value={ecText} onChange={e=>setEcText(e.target.value)} rows={2} style={{...S.input,fontSize:12,padding:"0.5rem 0.75rem",resize:"vertical" as const,lineHeight:1.5}}/>
+                          {ecErr&&<p style={{margin:0,fontSize:11,color:"#ff8888",background:"#1e0808",borderRadius:6,padding:"0.4rem 0.65rem"}}>{ecErr}</p>}
+                          <div style={{display:"flex",gap:"0.5rem"}}>
+                            <button onClick={saveEditComment} disabled={ecSaving} style={{...S.adminBtn,flex:1,padding:"0.6rem",fontSize:11,opacity:ecSaving?0.5:1}}>{ecSaving?"Guardando...":"Guardar cambios"}</button>
+                            <button onClick={cancelEditComment} style={{background:"none",border:"1px solid #2a2a2a",color:"#888",borderRadius:8,padding:"0.6rem 1rem",cursor:"pointer",fontSize:11,fontFamily:"inherit"}}>Cancelar</button>
+                          </div>
                         </div>
-                        <button onClick={()=>deleteProductComment(c.id)} style={{background:"none",color:"#cc3333",border:"1px solid #2a1515",padding:"0.3rem 0.65rem",borderRadius:6,cursor:"pointer",fontSize:10,fontFamily:"inherit",flexShrink:0,WebkitTapHighlightColor:"transparent"}}>✕</button>
-                      </div>
+                      ):(
+                        <div key={c.id} style={{display:"flex",alignItems:"flex-start",gap:"0.75rem",padding:"0.75rem",borderRadius:10,background:"#0c0c0c",border:"1px solid #1a1a1a"}}>
+                          {c.avatarUrl?<img src={c.avatarUrl} alt="" style={{width:32,height:32,borderRadius:"50%",objectFit:"cover",flexShrink:0,border:"1px solid #333"}} draggable={false}/>:<div style={{width:32,height:32,borderRadius:"50%",background:"#1a1a1a",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:12,fontWeight:900,color:"#555"}}>{c.name[0]?.toUpperCase()||"?"}</span></div>}
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2,flexWrap:"wrap"}}>
+                              <span style={{fontSize:12,fontWeight:800,color:"#ccc"}}>{c.name}</span>
+                              <StarRow value={c.stars||5} size={10}/>
+                              <span style={{fontSize:9,color:"#333"}}>· {c.productName||"Producto eliminado"}</span>
+                              <span style={{fontSize:9,color:"#2a2a2a"}}>· {new Date(c.createdAt).toLocaleDateString("es-VE",{day:"2-digit",month:"short",year:"numeric"})}</span>
+                            </div>
+                            {!!c.email&&<p style={{margin:"0 0 3px",fontSize:10,color:"#444"}}>{c.email}</p>}
+                            <p style={{margin:0,fontSize:12,color:"#888",lineHeight:1.6}}>{c.comment}</p>
+                            {!!c.photoUrl&&<img src={c.photoUrl} alt="" style={{width:60,height:60,objectFit:"cover",borderRadius:6,marginTop:6}} draggable={false}/>}
+                          </div>
+                          <div style={{display:"flex",gap:"0.3rem",flexShrink:0}}>
+                            <button onClick={()=>startEditComment(c)} style={{background:"#1a1a1a",color:"#888",border:"1px solid #222",padding:"0.3rem 0.55rem",borderRadius:6,cursor:"pointer",fontSize:10,fontFamily:"inherit",fontWeight:700}}>✏️</button>
+                            <button onClick={()=>deleteProductComment(c.id)} style={{background:"none",color:"#cc3333",border:"1px solid #2a1515",padding:"0.3rem 0.65rem",borderRadius:6,cursor:"pointer",fontSize:10,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>✕</button>
+                          </div>
+                        </div>
+                      )
                     ))}
                   </div>
                 )}
