@@ -1362,7 +1362,7 @@ const otroAutoScrolled=useRef(false);
 const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",cedula:"",telefono:"",agencia:"",direccion:"",estado:""});
 
   const navRef=useRef<HTMLElement>(null);
-  const[navH,setNavH]=useState(NAV_H+TABS_H);
+  const[navH,setNavH]=useState(NAV_H+TABS_H+36);
   useEffect(()=>{const upd=()=>{if(navRef.current)setNavH(navRef.current.offsetHeight);};upd();const ro=new ResizeObserver(upd);if(navRef.current)ro.observe(navRef.current);return()=>ro.disconnect();},[mainView,lentesOpen,searchOpen]);
 
   useEffect(()=>{initMetaPixel();},[]);
@@ -2684,7 +2684,7 @@ const filteredComments=useMemo(()=>allComments.filter(c=>{
               </div>
             )}
           </div>
-          <div style={{maxWidth:1200,margin:"0 auto",padding:"1.5rem 1rem 5rem"}}>
+          <div style={{maxWidth:1200,margin:"0 auto",padding:"0.75rem 1rem 5rem"}}>
             {loading?(
               <div className="pg" style={{display:"grid",gap:"1rem"}}>{Array.from({length:8}).map((_,i)=><SkeletonCard key={i}/>)}</div>
             ):shopFilter==="TODO"?(
@@ -2694,7 +2694,7 @@ const filteredComments=useMemo(()=>allComments.filter(c=>{
                 const isLC=(LENTES_SUBCATS as readonly string[]).includes(cat);
                 return(
                   <div key={cat} style={{marginBottom:"2.5rem",animation:"fadeIn 0.3s ease"}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.85rem",borderBottom:`1px solid ${C.border}`,paddingBottom:"0.65rem"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.5rem",borderBottom:`1px solid ${C.border}`,paddingBottom:"0.4rem"}}>
                       <h2 style={{fontSize:11,fontWeight:800,letterSpacing:3,margin:0,color:"#555"}}>{isLC?`LENTES · ${catLabel(cat).toUpperCase()}`:catLabel(cat).toUpperCase()}</h2>
                       <button onClick={()=>{setShopFilter(cat as ShopFilter);setLentesOpen(isLC);scrollTop();}} style={{background:"none",border:"none",fontSize:10,color:"#333",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",letterSpacing:1,fontWeight:700}}>VER TODOS</button>
                     </div>
