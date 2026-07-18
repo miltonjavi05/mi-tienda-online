@@ -1,4 +1,4 @@
-"use client";
+  "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
 import { usePathname } from "next/navigation";
@@ -896,7 +896,7 @@ const Footer=memo(function Footer({setMainView,setShopFilter}:{setMainView:(v:Ma
             <div style={{display:"flex",flexDirection:"column",gap:"0.2rem"}}><p style={{fontSize:10,color:"#2a2a2a",margin:0}}>miltonjavi05@gmail.com</p><p style={{fontSize:10,color:"#2a2a2a",margin:0}}>+58 424-300-5733</p></div>
           </div>
         </div>
-        <p style={{fontSize:11,color:"#444",margin:"0 0 0.85rem",lineHeight:1.8,maxWidth:680,textAlign:"center",marginLeft:"auto",marginRight:"auto"}}>Fokus Accesorios (fokusaccesorios.shop) es una tienda en línea de accesorios en Venezuela: lentes de sol, relojes, pulseras, collares, aretes, anillos y billeteras. La aplicación permite iniciar sesión con Google o Facebook únicamente para identificar al usuario, guardar su nombre y foto de perfil, y facilitar futuras compras. No se comparte información personal con terceros. Los pedidos se coordinan y confirman por WhatsApp.</p>
+        <p style={{fontSize:10,color:"#333",margin:"0 0 0.85rem",lineHeight:1.7,maxWidth:640,textAlign:"center",marginLeft:"auto",marginRight:"auto"}}>Fokus Accesorios es tu tienda en línea de lentes de sol, relojes, pulseras, aretes, anillos y billeteras en Venezuela. Compra fácil, rápido y seguro, con confirmación de pedido directa por WhatsApp y envíos a todo el país.</p>
         <div style={{borderTop:"1px solid #111",paddingTop:"1rem",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"0.4rem"}}><p style={{fontSize:9,color:"#222",margin:0,letterSpacing:1}}>© {new Date().getFullYear()} FOKUS. TODOS LOS DERECHOS RESERVADOS.</p><p style={{fontSize:9,color:"#1a1a1a",margin:0,letterSpacing:1}}>FOKUS ®</p></div>
       </div>
     </footer>
@@ -2609,8 +2609,8 @@ const filteredComments=useMemo(()=>allComments.filter(c=>{
       {/* ── HOME ── */}
       {mainView==="fokus"&&(
         <main className="pv" style={{paddingTop:navH,background:C.bg}}>
-          <div style={{maxWidth:760,margin:"0 auto",padding:"2rem 1.5rem 0",textAlign:"center",animation:"slideUp 0.5s ease"}}>
-            <div style={{marginBottom:"1.25rem"}}><img src="/favicon.png" alt="Fokus" width={64} height={64} style={{objectFit:"contain",filter:"brightness(1.1)",pointerEvents:"none"}} draggable={false}/></div>
+          <div style={{maxWidth:760,margin:"0 auto",padding:"4rem 1.5rem 0",textAlign:"center",animation:"slideUp 0.5s ease"}}>
+            <div style={{marginBottom:"2rem"}}><img src="/favicon.png" alt="Fokus" width={64} height={64} style={{objectFit:"contain",filter:"brightness(1.1)",pointerEvents:"none"}} draggable={false}/></div>
 
             {/* ── ETIQUETA PREMIUM "ACCESORIOS PARA CABALLERO" ── */}
             <div style={{
@@ -2618,7 +2618,7 @@ const filteredComments=useMemo(()=>allComments.filter(c=>{
               alignItems:"center",
               gap:"0.55rem",
               width:"fit-content",
-              margin:"0 auto 0.75rem",
+              margin:"0 auto 1rem",
               padding:"0.45rem 1.1rem 0.45rem 0.75rem",
               borderRadius:40,
               background:"linear-gradient(135deg,rgba(255,255,255,0.06) 0%,rgba(255,255,255,0.02) 100%)",
@@ -2655,11 +2655,9 @@ const filteredComments=useMemo(()=>allComments.filter(c=>{
               }}>ACCESORIOS PARA CABALLERO</span>
             </div>
 
-            <h1 className="fokus-logo" style={{fontSize:46,marginBottom:"0.65rem",color:C.accent,lineHeight:1}}>FOKUS</h1>
-            <p style={{fontSize:13,color:"#666",lineHeight:1.75,maxWidth:420,margin:"0 auto 0.75rem"}}>
-              Tienda en línea de accesorios para caballero en Venezuela: lentes de sol, relojes, collares, pulseras, anillos, aretes y billeteras. Inicia sesión con Google para guardar tu perfil y agilizar tus compras. Envíos a todo el país, pedidos confirmados por WhatsApp.
-            </p>
-            <p style={{fontSize:14,color:"#444",lineHeight:1.7,maxWidth:300,margin:"0 auto 1.75rem"}}>Cada detalle +<br/>Calidad, diseño y actitud.</p>
+            <h1 className="fokus-logo" style={{fontSize:46,marginBottom:"0.85rem",color:C.accent,lineHeight:1}}>FOKUS</h1>
+            <p style={{fontSize:14,color:"#444",lineHeight:1.7,maxWidth:300,margin:"0 auto 1rem"}}>Cada detalle +<br/>Calidad, diseño y actitud.</p>
+            <p style={{fontSize:12,color:"#333",lineHeight:1.7,maxWidth:420,margin:"0 auto 2rem"}}>Fokus Accesorios es una tienda en línea venezolana de lentes de sol, relojes, pulseras, collares, aretes, anillos y billeteras. Puedes iniciar sesión con tu cuenta de Google para guardar tu foto de perfil y agilizar tus pedidos, los cuales se confirman directamente por WhatsApp.</p>
             <div style={{maxWidth:360,margin:"0 auto 2rem"}}><div style={{background:"linear-gradient(135deg,rgba(255,255,255,0.04) 0%,rgba(255,255,255,0.01) 100%)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:14,padding:"0.85rem 1.25rem",display:"flex",alignItems:"center",gap:"0.85rem",position:"relative",overflow:"hidden",boxShadow:"0 0 32px rgba(255,255,255,0.02), inset 0 1px 0 rgba(255,255,255,0.05)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"}}><div style={{position:"absolute",inset:0,background:"linear-gradient(90deg,transparent 0%,rgba(76,175,80,0.04) 50%,transparent 100%)",backgroundSize:"200% 100%",animation:"badgeShimmer 3s ease infinite",pointerEvents:"none"}}/><div style={{width:38,height:38,borderRadius:10,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><IcTruck s={20} c="rgba(255,255,255,0.6)"/></div><div style={{textAlign:"left",position:"relative",flex:1}}><p style={{margin:"0 0 2px",fontSize:11,fontWeight:900,color:"rgba(255,255,255,0.75)",letterSpacing:1.5}}>ENVÍOS A TODA VENEZUELA</p><p style={{margin:0,fontSize:10,color:"rgba(255,255,255,0.25)"}}>Llegamos a cualquier estado del país</p></div><div style={{width:6,height:6,borderRadius:"50%",background:"rgba(255,255,255,0.5)",boxShadow:"0 0 0 3px rgba(255,255,255,0.08)",animation:"pulseRing 2s infinite",flexShrink:0}}/></div></div>
             <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={{...S.darkBtn,fontSize:11,padding:"1.1rem 2.8rem",letterSpacing:3,borderRadius:3}}>VER COLECCIÓN →</button><div style={{maxWidth:360,margin:"1.5rem auto 0",background:"linear-gradient(135deg,rgba(255,255,255,0.03) 0%,rgba(255,255,255,0.01) 100%)",border:"1px solid #1e1e1e",borderRadius:14,padding:"1rem 1.25rem",position:"relative",overflow:"hidden"}}><div style={{position:"absolute",inset:0,background:"linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.02) 50%,transparent 100%)",backgroundSize:"200% 100%",animation:"badgeShimmer 4s ease infinite",pointerEvents:"none"}}/><div style={{display:"flex",alignItems:"center",gap:"0.75rem",marginBottom:"0.6rem",position:"relative"}}><div style={{width:32,height:32,borderRadius:8,background:"rgba(255,255,255,0.04)",border:"1px solid #2a2a2a",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div><div style={{flex:1}}><p style={{margin:0,fontSize:11,fontWeight:900,color:"rgba(255,255,255,0.6)",letterSpacing:1.5}}>GRABADOS LÁSER</p><p style={{margin:0,fontSize:9,color:"#2a2a2a",letterSpacing:0.5}}>Personalización exclusiva</p></div><span/></div><p style={{margin:0,fontSize:11,color:"#444",lineHeight:1.75,position:"relative"}}>Personalizamos tu <span style={{color:"rgba(255,255,255,0.3)",fontWeight:700}}>reloj</span>, <span style={{color:"rgba(255,255,255,0.3)",fontWeight:700}}>pulsera</span>, <span style={{color:"rgba(255,255,255,0.3)",fontWeight:700}}>collar</span> y <span style={{color:"rgba(255,255,255,0.3)",fontWeight:700}}>billetera</span> con tu nombre, fecha o diseño especial.</p></div>
             <div style={{display:"flex",justifyContent:"center",gap:"0.75rem",marginTop:"3rem"}}><a href={SOCIAL.instagram} target="_blank" rel="noreferrer" className="sl" style={S.socialA}><IcIG s={18}/></a><a href={SOCIAL.tiktok} target="_blank" rel="noreferrer" className="sl" style={S.socialA}><IcTT s={18}/></a><a href={SOCIAL.facebook} target="_blank" rel="noreferrer" className="sl" style={S.socialA}><IcFB s={18}/></a><a href={SOCIAL.whatsapp} target="_blank" rel="noreferrer" className="sl" style={{...S.socialA,border:"1px solid #1e2e1e",background:"#0e1e0e"}}><IcWA s={18}/></a></div>
