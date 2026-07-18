@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     shortcut: "/favicon.png",
   },
   openGraph: {
-    title: "Fokus Accesorios | Lentes, Relojes y Accesorios en Venezuela",
+    title: "Fokus Accesorios | Accesorios para Caballero en Venezuela",
     description: "Tienda en línea venezolana de lentes de sol, relojes, pulseras, collares, aretes, anillos y billeteras. Envíos a toda Venezuela, compra por WhatsApp.",
     siteName: "Fokus Accesorios",
     locale: "es_VE",

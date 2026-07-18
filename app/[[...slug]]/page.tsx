@@ -2597,9 +2597,9 @@ const filteredComments=useMemo(()=>allComments.filter(c=>{
   const filteredLeads=useMemo(()=>leadsList.filter(l=>(Number(l.createdAt)||0)>=periodCutoff),[leadsList,periodCutoff]);
   const salesCategories=useMemo(()=>[...new Set(salesList.map(s=>s.category as string).filter(Boolean))].sort(),[salesList]);
 
-  const productCodeMap=useMemo(()=>{
-    const map:Record<string,string>={};
-    products.forEach(p=>{map[p.id]=p.code||"";});
+  const productLookupMap=useMemo(()=>{
+    const map:Record<string,Product>={};
+    products.forEach(p=>{map[p.id]=p;});
     return map;
   },[products]);
 
@@ -2618,16 +2618,16 @@ const filteredComments=useMemo(()=>allComments.filter(c=>{
       if(searchLower){
         const pid=(r.productId as string)||"";
         const name=((r.productName as string)||"").toLowerCase();
-        const code=(productCodeMap[pid]||"").toLowerCase();
+        const code=(productLookupMap[pid]?.code||"").toLowerCase();
         if(!name.includes(searchLower)&&!code.includes(searchLower))return false;
       }
       return true;
     });
-    const map:Record<string,{productId:string;productName:string;category:string;code:string;views:number;carts:number}>={};
+    const map:Record<string,{productId:string;productName:string;category:string;code:string;img:string;views:number;carts:number}>={};
     filtered.forEach(r=>{
       const pid=(r.productId as string)||"";
       if(!pid)return;
-      if(!map[pid])map[pid]={productId:pid,productName:(r.productName as string)||"",category:(r.category as string)||"",code:productCodeMap[pid]||"",views:0,carts:0};
+      if(!map[pid])map[pid]={productId:pid,productName:(r.productName as string)||"",category:(r.category as string)||"",code:productLookupMap[pid]?.code||"",img:productLookupMap[pid]?.img||"",views:0,carts:0};
       if(r.type==="cart")map[pid].carts++;else map[pid].views++;
     });
     const list=Object.values(map);
@@ -2636,7 +2636,7 @@ const filteredComments=useMemo(()=>allComments.filter(c=>{
     const totalViews=filtered.filter(r=>r.type!=="cart").length;
     const totalCarts=filtered.filter(r=>r.type==="cart").length;
     return{byViews,byCarts,totalViews,totalCarts};
-  },[interestList,interestPeriodCutoff,interestCatFilter,interestSearch,productCodeMap]);
+  },[interestList,interestPeriodCutoff,interestCatFilter,interestSearch,productLookupMap]);
 
   const salesStats=useMemo(()=>{
     const onlineSales=filteredSales.filter(s=>s.source!=="offline");
@@ -3567,17 +3567,25 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                 ):interestAgg.byViews.length===0?(
                   <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"1rem"}}>Aún no hay vistas registradas en este período</p>
                 ):(
-                  <div style={{display:"flex",flexDirection:"column",gap:2}}>
-                    {interestAgg.byViews.slice(0,20).map((p,i)=>(
-                      <div key={p.productId} style={{display:"flex",alignItems:"center",gap:"0.75rem",padding:"0.6rem 0.65rem",borderRadius:8,background:"#0c0c0c"}}>
-                        <span style={{fontSize:11,fontWeight:900,color:"#333",width:20,flexShrink:0}}>#{i+1}</span>
+                  <div style={{display:"flex",flexDirection:"column",gap:"0.5rem"}}>
+                    {interestAgg.byViews.slice(0,20).map((p,i)=>{
+                      const fullProd=productLookupMap[p.productId];
+                      return(
+                      <div key={p.productId} onClick={()=>fullProd&&openProd(fullProd)} style={{display:"flex",alignItems:"center",gap:"0.85rem",padding:"0.75rem",borderRadius:10,background:"#0c0c0c",border:"1px solid #1a1a1a",cursor:fullProd?"pointer":"default"}}>
+                        <span style={{fontSize:12,fontWeight:900,color:"#333",width:20,flexShrink:0,textAlign:"center"}}>#{i+1}</span>
+                        <div style={{width:48,height:48,borderRadius:8,overflow:"hidden",background:"#161616",flexShrink:0}}>{p.img&&<img src={optImg(p.img,120)} alt={p.productName} style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/>}</div>
                         <div style={{flex:1,minWidth:0}}>
-                          <p style={{margin:"0 0 1px",fontSize:12,fontWeight:700,color:"#ccc",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.productName||"Producto eliminado"}{p.code&&<span style={{color:"#555",fontFamily:"monospace",fontWeight:700,marginLeft:6}}>· {p.code}</span>}</p>
+                          <p style={{margin:"0 0 3px",fontSize:12,fontWeight:800,color:"#ddd",lineHeight:1.4,wordBreak:"break-word"}}>{p.productName||"Producto eliminado"}</p>
+                          {p.code&&<p style={{margin:"0 0 3px",fontSize:10,color:"#4dabf7",fontFamily:"monospace",fontWeight:800,letterSpacing:0.5}}>{p.code}</p>}
                           <p style={{margin:0,fontSize:10,color:"#444"}}>{p.category?catLabel(p.category):""} · {p.carts} agregados al carrito</p>
                         </div>
-                        <span style={{fontSize:14,fontWeight:900,color:"#4dabf7",flexShrink:0}}>{p.views} 👁️</span>
+                        <div style={{textAlign:"center",flexShrink:0}}>
+                          <p style={{margin:0,fontSize:16,fontWeight:900,color:"#4dabf7"}}>{p.views}</p>
+                          <p style={{margin:0,fontSize:14}}>👁️</p>
+                        </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -3588,17 +3596,25 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                 ):interestAgg.byCarts.length===0?(
                   <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"1rem"}}>Aún no hay artículos agregados al carrito en este período</p>
                 ):(
-                  <div style={{display:"flex",flexDirection:"column",gap:2}}>
-                    {interestAgg.byCarts.slice(0,20).map((p,i)=>(
-                      <div key={p.productId} style={{display:"flex",alignItems:"center",gap:"0.75rem",padding:"0.6rem 0.65rem",borderRadius:8,background:"#0c0c0c"}}>
-                        <span style={{fontSize:11,fontWeight:900,color:"#333",width:20,flexShrink:0}}>#{i+1}</span>
+                  <div style={{display:"flex",flexDirection:"column",gap:"0.5rem"}}>
+                    {interestAgg.byCarts.slice(0,20).map((p,i)=>{
+                      const fullProd=productLookupMap[p.productId];
+                      return(
+                      <div key={p.productId} onClick={()=>fullProd&&openProd(fullProd)} style={{display:"flex",alignItems:"center",gap:"0.85rem",padding:"0.75rem",borderRadius:10,background:"#0c0c0c",border:"1px solid #1a1a1a",cursor:fullProd?"pointer":"default"}}>
+                        <span style={{fontSize:12,fontWeight:900,color:"#333",width:20,flexShrink:0,textAlign:"center"}}>#{i+1}</span>
+                        <div style={{width:48,height:48,borderRadius:8,overflow:"hidden",background:"#161616",flexShrink:0}}>{p.img&&<img src={optImg(p.img,120)} alt={p.productName} style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/>}</div>
                         <div style={{flex:1,minWidth:0}}>
-                          <p style={{margin:"0 0 1px",fontSize:12,fontWeight:700,color:"#ccc",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.productName||"Producto eliminado"}{p.code&&<span style={{color:"#555",fontFamily:"monospace",fontWeight:700,marginLeft:6}}>· {p.code}</span>}</p>
+                          <p style={{margin:"0 0 3px",fontSize:12,fontWeight:800,color:"#ddd",lineHeight:1.4,wordBreak:"break-word"}}>{p.productName||"Producto eliminado"}</p>
+                          {p.code&&<p style={{margin:"0 0 3px",fontSize:10,color:"#4caf50",fontFamily:"monospace",fontWeight:800,letterSpacing:0.5}}>{p.code}</p>}
                           <p style={{margin:0,fontSize:10,color:"#444"}}>{p.category?catLabel(p.category):""} · {p.views} vistas</p>
                         </div>
-                        <span style={{fontSize:14,fontWeight:900,color:"#4caf50",flexShrink:0}}>{p.carts} 🛒</span>
+                        <div style={{textAlign:"center",flexShrink:0}}>
+                          <p style={{margin:0,fontSize:16,fontWeight:900,color:"#4caf50"}}>{p.carts}</p>
+                          <p style={{margin:0,fontSize:14}}>🛒</p>
+                        </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
