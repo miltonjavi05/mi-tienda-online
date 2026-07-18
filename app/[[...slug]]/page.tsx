@@ -487,8 +487,7 @@ const GLOBAL_CSS = `
     .hr-arrow { display: none !important; }
   }
 
-  .pc, .hc, .cc { content-visibility: auto; contain-intrinsic-size: 280px; }
-  .admin-list { content-visibility: auto; }
+  .pc, .hc, .cc { transition: transform 0.25s ease, border-color 0.2s ease, box-shadow 0.25s ease; }
   img { image-rendering: auto; }
   .pc:active { transform: scale(0.97); }
   .hc:active { opacity: 0.85; }
