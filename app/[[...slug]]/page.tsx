@@ -487,7 +487,7 @@ const GLOBAL_CSS = `
     .hr-arrow { display: none !important; }
   }
 
-  .pc, .hc, .cc { content-visibility: auto; contain-intrinsic-size: 280px; }
+  .pc, .hc, .cc { content-visibility: auto; contain-intrinsic-size: auto 420px; }
   .admin-list { content-visibility: auto; }
   img { image-rendering: auto; }
   .pc:active { transform: scale(0.97); }
@@ -1399,6 +1399,18 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   useEffect(()=>{const upd=()=>{if(navRef.current)setNavH(navRef.current.offsetHeight);};upd();const ro=new ResizeObserver(upd);if(navRef.current)ro.observe(navRef.current);return()=>ro.disconnect();},[mainView,lentesOpen,searchOpen]);
 
   useEffect(()=>{initMetaPixel();},[]);
+
+  // Fix iOS Safari: si el usuario hizo zoom sin querer (pellizco/doble-tap) y luego cambia
+  // de categoría o de sección, Safari se queda "pegado" en ese zoom y el sitio se ve chico,
+  // como versión de escritorio. Esto fuerza a resetear el viewport en cada cambio.
+  useEffect(()=>{
+    const meta=document.querySelector('meta[name="viewport"]');
+    if(!meta)return;
+    const original=meta.getAttribute("content")||"width=device-width, initial-scale=1";
+    meta.setAttribute("content",original+", maximum-scale=1");
+    const raf=requestAnimationFrame(()=>{meta.setAttribute("content",original);});
+    return()=>cancelAnimationFrame(raf);
+  },[mainView,shopFilter]);
   useEffect(()=>{if(typeof window!=="undefined"&&(window as any).fbq)(window as any).fbq("track","PageView");},[mainView]);
   useEffect(()=>{setModalImgIdx(0);},[selectedProduct?.id]);
 
