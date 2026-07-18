@@ -8,8 +8,8 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Fokus",
-  description: "Accesorios con actitud. Calidad, diseño y estilo para el caballero moderno. Envíos a toda Venezuela.",
+  title: "Fokus Accesorios | Lentes, Relojes y Accesorios en Venezuela",
+  description: "Fokus Accesorios es una tienda en línea venezolana de lentes de sol, relojes, pulseras, collares, aretes, anillos y billeteras. Compra fácil y rápido, con confirmación de pedido por WhatsApp y envíos a toda Venezuela. Inicia sesión con Google para guardar tu perfil y agilizar tus pedidos.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -27,9 +27,9 @@ export const metadata: Metadata = {
     shortcut: "/favicon.png",
   },
   openGraph: {
-    title: "Fokus",
-    description: "Calidad, diseño y actitud. Envíos a toda Venezuela.",
-    siteName: "Fokus",
+    title: "Fokus Accesorios | Lentes, Relojes y Accesorios en Venezuela",
+    description: "Tienda en línea venezolana de lentes de sol, relojes, pulseras, collares, aretes, anillos y billeteras. Envíos a toda Venezuela, compra por WhatsApp.",
+    siteName: "Fokus Accesorios",
     locale: "es_VE",
     type: "website",
   },
@@ -64,6 +64,9 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://res.cloudinary.com" />
       </head>
       <body style={{ margin: 0, padding: 0, background: "#080808" }}>
+        <h1 style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap" }}>
+          fokus accesorios — tienda en línea de lentes de sol, relojes, pulseras, collares, aretes, anillos y billeteras en venezuela. compra fácil por whatsapp con envíos a todo el país.
+        </h1>
         {children}
       </body>
     </html>
