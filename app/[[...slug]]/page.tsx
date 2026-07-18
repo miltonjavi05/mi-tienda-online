@@ -938,7 +938,7 @@ function AuthModal({onClose,onSuccess}:{onClose:()=>void;onSuccess:(u:UserData)=
     setErr("");setSocialLoading("facebook");
     try{
       const FB=await loadFacebookScript();
-      const loginResp:any=await new Promise(resolve=>FB.login((r:any)=>resolve(r),{scope:"email,public_profile"}));
+      const loginResp:any=await new Promise(resolve=>FB.login((r:any)=>resolve(r),{scope:"public_profile"}));
       if(!loginResp?.authResponse?.accessToken)throw new Error("No se pudo iniciar sesión con Facebook.");
       const res=await authSignInWithIdp("facebook.com",loginResp.authResponse.accessToken,false);
       await finishSocialLogin(res);
