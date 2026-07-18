@@ -1602,7 +1602,9 @@ const[agendaFilter,setAgendaFilter]=useState<"todos"|"abono"|"pagado">("todos");
   const[salesList,setSalesList]=useState<Array<Record<string,unknown>&{id:string}>>([]);
 const[interestList,setInterestList]=useState<Array<Record<string,unknown>&{id:string}>>([]);
 const[interestLoading,setInterestLoading]=useState(false);
-const[interestPeriod,setInterestPeriod]=useState<"7d"|"30d"|"90d"|"all">("30d");
+const[interestPeriod,setInterestPeriod]=useState<"hoy"|"7d"|"30d"|"90d"|"all">("30d");
+const[interestCatFilter,setInterestCatFilter]=useState("ALL");
+const[interestSearch,setInterestSearch]=useState("");
 const interestLoaded=useRef(false);
   const[leadsList,setLeadsList]=useState<Array<Record<string,unknown>&{id:string}>>([]);
   const[statsLoading,setStatsLoading]=useState(false);
@@ -2597,13 +2599,18 @@ const filteredComments=useMemo(()=>allComments.filter(c=>{
 
   const interestPeriodCutoff=useMemo(()=>{
     if(interestPeriod==="all")return 0;
-    const daysBack=interestPeriod==="7d"?7:interestPeriod==="30d"?30:90;
+    const daysBack=interestPeriod==="hoy"?1:interestPeriod==="7d"?7:interestPeriod==="30d"?30:90;
     const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-(daysBack-1));
     return d.getTime();
   },[interestPeriod]);
 
   const interestAgg=useMemo(()=>{
-    const filtered=interestList.filter(r=>(Number(r.createdAt)||0)>=interestPeriodCutoff);
+    const filtered=interestList.filter(r=>{
+      if((Number(r.createdAt)||0)<interestPeriodCutoff)return false;
+      if(interestCatFilter!=="ALL"&&(r.category as string)!==interestCatFilter)return false;
+      if(interestSearch.trim()&&!((r.productName as string)||"").toLowerCase().includes(interestSearch.trim().toLowerCase()))return false;
+      return true;
+    });
     const map:Record<string,{productId:string;productName:string;category:string;views:number;carts:number}>={};
     filtered.forEach(r=>{
       const pid=(r.productId as string)||"";
@@ -2617,7 +2624,7 @@ const filteredComments=useMemo(()=>allComments.filter(c=>{
     const totalViews=filtered.filter(r=>r.type!=="cart").length;
     const totalCarts=filtered.filter(r=>r.type==="cart").length;
     return{byViews,byCarts,totalViews,totalCarts};
-  },[interestList,interestPeriodCutoff]);
+  },[interestList,interestPeriodCutoff,interestCatFilter,interestSearch]);
 
   const salesStats=useMemo(()=>{
     const onlineSales=filteredSales.filter(s=>s.source!=="offline");
@@ -3524,10 +3531,18 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   <button onClick={()=>exitAdminSec()} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:12,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>← MENÚ</button>
                 </div>
               </div>
-              <div style={{display:"flex",gap:"0.4rem",marginBottom:"1.25rem",flexWrap:"wrap"}}>
-                {[{id:"7d" as const,l:"7 DÍAS"},{id:"30d" as const,l:"30 DÍAS"},{id:"90d" as const,l:"90 DÍAS"},{id:"all" as const,l:"TODO"}].map(p=>(
+              <div style={{display:"flex",gap:"0.4rem",marginBottom:"0.75rem",flexWrap:"wrap"}}>
+                {[{id:"hoy" as const,l:"HOY"},{id:"7d" as const,l:"7 DÍAS"},{id:"30d" as const,l:"30 DÍAS"},{id:"90d" as const,l:"90 DÍAS"},{id:"all" as const,l:"TODO"}].map(p=>(
                   <button key={p.id} onClick={()=>setInterestPeriod(p.id)} style={{background:interestPeriod===p.id?"#fff":"#161616",color:interestPeriod===p.id?"#080808":"#666",border:`1px solid ${interestPeriod===p.id?"#fff":"#222"}`,padding:"0.4rem 0.9rem",borderRadius:20,fontSize:10,fontWeight:800,letterSpacing:1,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>{p.l}</button>
                 ))}
+              </div>
+              <div style={{display:"flex",gap:"0.5rem",marginBottom:"1.25rem",flexWrap:"wrap"}}>
+                <select value={interestCatFilter} onChange={e=>setInterestCatFilter(e.target.value)} style={{...S.input,flex:1,minWidth:160,appearance:"auto" as any}}>
+                  <option value="ALL">Todas las categorías</option>
+                  <optgroup label="── LENTES">{LENTES_SUBCATS.map(s=><option key={s} value={s}>{catLabel(s)}</option>)}</optgroup>
+                  <optgroup label="── OTROS">{SHOP_CATS.filter(c=>c!=="LENTES").map(c=><option key={c} value={c}>{catLabel(c)}</option>)}</optgroup>
+                </select>
+                <input placeholder="🔎 Buscar producto…" value={interestSearch} onChange={e=>setInterestSearch(e.target.value)} style={{...S.input,flex:1,minWidth:160}}/>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:"0.75rem",marginBottom:"1.5rem"}}>
                 <div style={{background:"linear-gradient(160deg,#141414 0%,#0d0d0d 100%)",border:"1px solid #1e1e1e",borderRadius:14,padding:"1.1rem"}}><p style={{fontSize:20,margin:"0 0 0.5rem"}}>👁️</p><p style={{fontSize:18,fontWeight:900,margin:"0 0 2px",color:"#4dabf7"}}>{interestAgg.totalViews}</p><p style={{fontSize:8,fontWeight:800,letterSpacing:1.5,color:"#444",margin:0}}>VISTAS DE ARTÍCULOS</p></div>
