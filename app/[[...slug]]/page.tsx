@@ -312,6 +312,29 @@ function loadFacebookScript():Promise<any>{
 }
 async function fsGetUser(uid:string):Promise<{photoURL:string}>{try{const r=await fetch(`${fsBase()}/users/${uid}`);if(!r.ok)return{photoURL:""};const d=await r.json() as FsDoc;return{photoURL:(fromFs(d.fields?.photoURL??{nullValue:null}) as string)||""};}catch{return{photoURL:""};}}
 async function uploadImg(file:File,preset=CLOUDINARY_PRESET):Promise<string>{const fd=new FormData();fd.append("file",file);fd.append("upload_preset",preset);const r=await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`,{method:"POST",body:fd});if(!r.ok)throw new Error("Error subiendo imagen");return((await r.json()) as{secure_url:string}).secure_url;}
+function cropImageToSquare(file:File):Promise<File>{
+  return new Promise(resolve=>{
+    const url=URL.createObjectURL(file);
+    const img=new Image();
+    img.onload=()=>{
+      const size=Math.min(img.width,img.height);
+      const sx=(img.width-size)/2,sy=(img.height-size)/2;
+      const canvas=document.createElement("canvas");
+      canvas.width=size;canvas.height=size;
+      const ctx=canvas.getContext("2d");
+      if(!ctx){URL.revokeObjectURL(url);resolve(file);return;}
+      ctx.drawImage(img,sx,sy,size,size,0,0,size,size);
+      const outType=file.type==="image/png"?"image/png":"image/jpeg";
+      canvas.toBlob((blob:Blob|null)=>{
+        URL.revokeObjectURL(url);
+        if(!blob){resolve(file);return;}
+        resolve(new File([blob],file.name,{type:outType}));
+      },outType,0.95);
+    };
+    img.onerror=()=>{URL.revokeObjectURL(url);resolve(file);};
+    img.src=url;
+  });
+}
 function loadXLSXLib():Promise<any>{
   return new Promise((resolve,reject)=>{
     if((window as any).XLSX){resolve((window as any).XLSX);return;}
@@ -328,8 +351,8 @@ function loadXLSXLib():Promise<any>{
 function optImg(url:string,w=400):string{if(!url||!url.includes("cloudinary.com"))return url;return url.replace("/upload/",`/upload/w_${w},q_auto,f_webp,dpr_auto/`);}
 function getAllImages(p:Product):string[]{const extra=(p.images||[]).filter(u=>u&&u!==p.img);return[p.img,...extra].filter(Boolean);}
 function getFinalPrice(p:Product):number{if(p.discount&&p.discount>0)return p.price*(1-p.discount/100);return p.price;}
-const units_sold_tiers=[8,14,23,37];
-function seededrandomtier(id:string):number{let hash=0;for(let i=0;i<id.length;i++){hash=(hash*31+id.charCodeAt(i))>>>0;}return units_sold_tiers[hash%units_sold_tiers.length];}
+const units_sold_tiers=[6,9,12,15,18,22,27,31,36,42,48,55,63,71,80,89,99,110,122,135,149,164,180,197,215,234,254,275,297,320,344,369,395,422,450,479,509,540,572,605,639,674,710,747,785,824,864,905];
+function seededrandomtier(id:string):number{let hash=0;for(let i=0;i<id.length;i++){hash=(hash*31+id.charCodeAt(i))>>>0;}hash=(hash^(hash>>>13))*0x45d9f3b>>>0;hash=(hash^(hash>>>16))>>>0;return units_sold_tiers[hash%units_sold_tiers.length];}
 function getUnitsSoldLabel(p:Product):string{if(p.unitsSold&&p.unitsSold>0)return`+${p.unitsSold} vendidos`;return`+${seededrandomtier(p.id)} vendidos`;}
 const SUPER_OFFER_THRESHOLD=40;
 function isSuperOffer(discount?:number):boolean{return!!discount&&discount>=SUPER_OFFER_THRESHOLD;}
@@ -1515,6 +1538,9 @@ const[ecText,setEcText]=useState("");
 const[ecAvatarUrl,setEcAvatarUrl]=useState("");
 const[ecAvatarUploading,setEcAvatarUploading]=useState(false);
 const ecAvatarRef=useRef<HTMLInputElement>(null);
+const[ecPhotoUrl,setEcPhotoUrl]=useState("");
+const[ecPhotoUploading,setEcPhotoUploading]=useState(false);
+const ecPhotoRef=useRef<HTMLInputElement>(null);
 const[ecSaving,setEcSaving]=useState(false);
 const[ecErr,setEcErr]=useState("");
 const[bulkCat,setBulkCat]=useState("COLLARES");
@@ -1886,15 +1912,15 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
   const doLogout=()=>{setAdminLogged(false);setAdminEmail("");setAdminPwd("");setMainView("fokus");if(typeof window!=="undefined")window.history.pushState("","","/");};
   const resetForm = () => {setEditing(null);setFName("");setFDesc("");setFPrice("");setFCat("");setFFile(null);setFPrev("");setFErr("");setFOk("");setFGallery([]);setFActive(true);setFDiscount("");setFCode("");setFStock("1");setFUnitsSold("");setFVariantGroupId("");setFColors([]);if(fileRef.current)fileRef.current.value="";};
   const startEdit = (p:Product) => {setEditing(p);setFName(p.name);setFDesc(p.description||"");setFPrice(String(p.price));setFCat(p.category);setFPrev(p.img);setFFile(null);setFGallery(p.images||[]);setFActive(p.active!==false);setFDiscount(p.discount&&p.discount>0?String(p.discount):"");setFCode(p.code||"");setFStock(p.stock!==undefined?String(p.stock):"0");setFUnitsSold(p.unitsSold&&p.unitsSold>0?String(p.unitsSold):"");setFVariantGroupId(p.variantGroup||"");setFColors(p.variantGroup?products.filter(x=>x.variantGroup===p.variantGroup&&x.id!==p.id).map(x=>({id:x.id,label:x.variantLabel||"",img:x.img})):[]);setFErr("");setFOk("");if(fileRef.current)fileRef.current.value="";setTimeout(()=>formRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),50);};
-  const onFileChange=(e:React.ChangeEvent<HTMLInputElement>)=>{const file=e.target.files?.[0];if(!file)return;setFFile(file);const r=new FileReader();r.onload=ev=>setFPrev(ev.target?.result as string);r.readAsDataURL(file);};
-  const onGalleryFilesChange=async(e:React.ChangeEvent<HTMLInputElement>)=>{const files=Array.from(e.target.files||[]);if(!files.length)return;setFGalleryUploading(true);try{const urls=await Promise.all(files.map(f=>uploadImg(f)));setFGallery(prev=>[...prev,...urls]);}catch{setFErr("Error subiendo alguna de las fotos adicionales.");}finally{setFGalleryUploading(false);if(galleryFileRef.current)galleryFileRef.current.value="";}};
+  const onFileChange=async(e:React.ChangeEvent<HTMLInputElement>)=>{const raw=e.target.files?.[0];if(!raw)return;const file=await cropImageToSquare(raw);setFFile(file);const r=new FileReader();r.onload=ev=>setFPrev(ev.target?.result as string);r.readAsDataURL(file);};
+  const onGalleryFilesChange=async(e:React.ChangeEvent<HTMLInputElement>)=>{const files=Array.from(e.target.files||[]);if(!files.length)return;setFGalleryUploading(true);try{const urls=await Promise.all(files.map(async f=>uploadImg(await cropImageToSquare(f))));setFGallery(prev=>[...prev,...urls]);}catch{setFErr("Error subiendo alguna de las fotos adicionales.");}finally{setFGalleryUploading(false);if(galleryFileRef.current)galleryFileRef.current.value="";}};
   const makeGalleryImageMain=(idx:number)=>{setFGallery(prevGal=>{const url=prevGal[idx];const newGal=[...prevGal];newGal.splice(idx,1);if(fPrev)newGal.push(fPrev);setFPrev(url);setFFile(null);return newGal;});};
   const removeGalleryImage=(idx:number)=>setFGallery(prev=>prev.filter((_,i)=>i!==idx));
   const moveGalleryImage=(idx:number,dir:-1|1)=>{setFGallery(prev=>{const arr=[...prev];const ni=idx+dir;if(ni<0||ni>=arr.length)return prev;[arr[idx],arr[ni]]=[arr[ni],arr[idx]];return arr;});};
   const addColorRow=()=>{if(fColors.length===0&&!editing?.variantGroup&&!fVariantGroupId)setFVariantGroupId(generateVariantGroupId());setFColors(prev=>[...prev,{label:"",img:""}]);};
   const updateColorLabel=(idx:number,label:string)=>setFColors(prev=>prev.map((c,i)=>i===idx?{...c,label}:c));
   const removeColorRow=async(idx:number)=>{const row=fColors[idx];if(row.id){if(!confirm("¿Eliminar este color? Se borrará el producto asociado."))return;try{await fsDelete(row.id);invalidateProductsCache();}catch{}}setFColors(prev=>prev.filter((_,i)=>i!==idx));};
-  const onColorFileChange=async(idx:number,e:React.ChangeEvent<HTMLInputElement>)=>{const file=e.target.files?.[0];if(!file)return;setFColors(prev=>prev.map((c,i)=>i===idx?{...c,uploading:true}:c));try{const url=await uploadImg(file);setFColors(prev=>prev.map((c,i)=>i===idx?{...c,img:url,uploading:false}:c));}catch{setFColors(prev=>prev.map((c,i)=>i===idx?{...c,uploading:false}:c));}if(colorFileRefs.current[idx])colorFileRefs.current[idx]!.value="";};
+  const onColorFileChange=async(idx:number,e:React.ChangeEvent<HTMLInputElement>)=>{const raw=e.target.files?.[0];if(!raw)return;setFColors(prev=>prev.map((c,i)=>i===idx?{...c,uploading:true}:c));try{const file=await cropImageToSquare(raw);const url=await uploadImg(file);setFColors(prev=>prev.map((c,i)=>i===idx?{...c,img:url,uploading:false}:c));}catch{setFColors(prev=>prev.map((c,i)=>i===idx?{...c,uploading:false}:c));}if(colorFileRefs.current[idx])colorFileRefs.current[idx]!.value="";};
   const toggleProductActive=async(p:Product)=>{const newActive=p.active===false;setProducts(prev=>{const upd=prev.map(x=>x.id===p.id?{...x,active:newActive}:x);setCachedProducts(upd);return upd;});try{await fsUpdate(p.id,{active:newActive});invalidateProductsCache();}catch{}};
   const promptDiscount=async(p:Product)=>{const current=p.discount&&p.discount>0?String(p.discount):"";const input=window.prompt(`Descuento para "${p.name}" (0-95). Deja vacío o 0 para quitar la oferta:`,current);if(input===null)return;const val=Math.max(0,Math.min(95,parseFloat(input)||0));setProducts(prev=>{const upd=prev.map(x=>x.id===p.id?{...x,discount:val}:x);setCachedProducts(upd);return upd;});try{await fsUpdate(p.id,{discount:val});invalidateProductsCache();}catch{}};
   const toggleProductBestseller=async(p:Product)=>{const newBestseller=!p.bestseller;setProducts(prev=>{const upd=prev.map(x=>x.id===p.id?{...x,bestseller:newBestseller}:x);setCachedProducts(upd);return upd;});try{await fsUpdate(p.id,{bestseller:newBestseller});invalidateProductsCache();}catch{}};
@@ -2181,11 +2207,13 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     setEcStars(c.stars||5);
     setEcText(c.comment);
     setEcAvatarUrl(c.avatarUrl||"");
+    setEcPhotoUrl(c.photoUrl||(c.photoUrls&&c.photoUrls[0])||"");
     setEcErr("");
   },[]);
 
   const cancelEditComment=useCallback(()=>{
     setEditingCommentId(null);
+    setEcPhotoUrl("");
     setEcErr("");
   },[]);
 
@@ -2198,13 +2226,22 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     finally{setEcAvatarUploading(false);if(ecAvatarRef.current)ecAvatarRef.current.value="";}
   },[]);
 
+  const handleEcPhotoChange=useCallback(async(e:React.ChangeEvent<HTMLInputElement>)=>{
+    const file=e.target.files?.[0];
+    if(!file)return;
+    setEcPhotoUploading(true);
+    try{const url=await uploadImg(file,"fokus_products");setEcPhotoUrl(url);}
+    catch{setEcErr("Error al subir la foto.");}
+    finally{setEcPhotoUploading(false);if(ecPhotoRef.current)ecPhotoRef.current.value="";}
+  },[]);
+
   const saveEditComment=useCallback(async()=>{
     if(!editingCommentId)return;
     if(!ecName.trim()||!ecText.trim()){setEcErr("Ingresa nombre y comentario.");return;}
     setEcSaving(true);setEcErr("");
     try{
       const newCreatedAt=ecDate?new Date(ecDate).getTime():Date.now();
-      const updateData={name:ecName.trim(),email:ecEmail.trim(),comment:ecText.trim(),stars:ecStars,createdAt:newCreatedAt,avatarUrl:ecAvatarUrl};
+      const updateData={name:ecName.trim(),email:ecEmail.trim(),comment:ecText.trim(),stars:ecStars,createdAt:newCreatedAt,avatarUrl:ecAvatarUrl,photoUrl:ecPhotoUrl,photoUrls:ecPhotoUrl?[ecPhotoUrl]:[]};
       await fsUpdateDoc("product_comments",editingCommentId,updateData);
       setAllComments(prev=>prev.map(c=>c.id===editingCommentId?{...c,...updateData}:c));
       setProductComments(prev=>prev.map(c=>c.id===editingCommentId?{...c,...updateData}:c));
@@ -2214,7 +2251,7 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     }finally{
       setEcSaving(false);
     }
-  },[editingCommentId,ecName,ecEmail,ecDate,ecStars,ecText,ecAvatarUrl]);
+  },[editingCommentId,ecName,ecEmail,ecDate,ecStars,ecText,ecAvatarUrl,ecPhotoUrl]);
 
   const handleAcPhotoChange=useCallback(async(e:React.ChangeEvent<HTMLInputElement>)=>{
     const file=e.target.files?.[0];
@@ -2356,7 +2393,7 @@ const onBulkAddFilesChange=useCallback(async(e:React.ChangeEvent<HTMLInputElemen
   if(!files.length)return;
   setBulkAddUploading(true);
   try{
-    const urls=await Promise.all(files.map(f=>uploadImg(f)));
+    const urls=await Promise.all(files.map(async f=>uploadImg(await cropImageToSquare(f))));
     setBulkAddImages(prev=>[...prev,...urls]);
   }catch{setBulkAddErr("Error subiendo alguna de las fotos.");}
   finally{setBulkAddUploading(false);if(bulkAddFileRef.current)bulkAddFileRef.current.value="";}
@@ -3817,6 +3854,17 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                           <input type="datetime-local" value={ecDate} onChange={e=>setEcDate(e.target.value)} style={{...S.input,padding:"0.5rem 0.75rem",fontSize:12,appearance:"auto" as any}}/>
                           <StarRow value={ecStars} onChange={setEcStars} size={16}/>
                           <textarea value={ecText} onChange={e=>setEcText(e.target.value)} rows={2} style={{...S.input,fontSize:12,padding:"0.5rem 0.75rem",resize:"vertical" as const,lineHeight:1.5}}/>
+                          <div>
+                            <input ref={ecPhotoRef} type="file" accept="image/*" onChange={handleEcPhotoChange} disabled={ecPhotoUploading} style={{display:"none"}} id={`ec-photo-${c.id}`}/>
+                            {ecPhotoUrl?(
+                              <div style={{position:"relative",display:"inline-block"}}>
+                                <img src={ecPhotoUrl} alt="" style={{width:70,height:70,objectFit:"cover",borderRadius:8,border:"1px solid #2a5a2a"}} draggable={false}/>
+                                <button type="button" onClick={()=>setEcPhotoUrl("")} style={{position:"absolute",top:-6,right:-6,background:"#cc3333",border:"none",borderRadius:"50%",width:20,height:20,color:"#fff",fontSize:11,cursor:"pointer"}}>✕</button>
+                              </div>
+                            ):(
+                              <label htmlFor={`ec-photo-${c.id}`} style={{display:"inline-flex",alignItems:"center",gap:6,background:"#161616",border:"1px dashed #2a2a2a",borderRadius:8,padding:"0.6rem 1rem",cursor:ecPhotoUploading?"not-allowed":"pointer",fontSize:11,color:"#888",fontWeight:700}}>{ecPhotoUploading?"Subiendo…":<><IcCamera s={14} c="#888"/> Agregar/cambiar foto</>}</label>
+                            )}
+                          </div>
                           {ecErr&&<p style={{margin:0,fontSize:11,color:"#ff8888",background:"#1e0808",borderRadius:6,padding:"0.4rem 0.65rem"}}>{ecErr}</p>}
                           <div style={{display:"flex",gap:"0.5rem"}}>
                             <button onClick={saveEditComment} disabled={ecSaving} style={{...S.adminBtn,flex:1,padding:"0.6rem",fontSize:11,opacity:ecSaving?0.5:1}}>{ecSaving?"Guardando...":"Guardar cambios"}</button>
