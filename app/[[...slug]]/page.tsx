@@ -108,7 +108,7 @@ interface CartItem { product:Product; qty:number; }
 interface UserData { uid:string; email:string; displayName:string; createdAt:number; photoURL?:string; idToken?:string; }
 interface Coupon { id:string; code:string; type:"general"|"product"|"category"; productId?:string; productName?:string; category?:string; excludedCategories?:string[]; discountPercent:number; durationHours:number; createdAt:number; expiresAt:number; active:boolean; }
 interface OrderSnapshot { items:CartItem[]; total:number; payMethod:string; deliveryInfo:DeliveryInfo; comprobanteUrl:string; waUrl:string; orderId:string; couponCode?:string; couponDiscount?:number; }
-interface ProductComment { id:string; productId:string; productName:string; name:string; email?:string; comment:string; stars:number; createdAt:number; photoUrl?:string; isAdmin?:boolean; }
+interface ProductComment { id:string; productId:string; productName:string; name:string; email?:string; comment:string; stars:number; createdAt:number; photoUrl?:string; photoUrls?:string[]; avatarUrl?:string; isAdmin?:boolean; }
 interface AgendaClient { id:string; name:string; phone:string; product:string; totalAmount:number; paidAmount:number; deliveryDate:string; status:"abono"|"pagado"; notes:string; createdAt:number; }
 
 type MainView = "fokus"|"shop"|"comunidad"|"grabados"|"cart"|"admin"|"account"|"thankyou";
@@ -965,10 +965,7 @@ function AuthModal({onClose,onSuccess}:{onClose:()=>void;onSuccess:(u:UserData)=
             <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.52 12.27c0-.85-.08-1.67-.22-2.45H12v4.64h6.46c-.28 1.5-1.13 2.78-2.4 3.63v3h3.88c2.27-2.09 3.58-5.17 3.58-8.82z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.07 7.94-2.91l-3.88-3c-1.08.72-2.45 1.15-4.06 1.15-3.12 0-5.77-2.11-6.71-4.94H1.28v3.1C3.26 21.3 7.31 24 12 24z"/><path fill="#FBBC05" d="M5.29 14.3c-.24-.72-.38-1.49-.38-2.3s.14-1.58.38-2.3v-3.1H1.28C.46 8.24 0 10.06 0 12s.46 3.76 1.28 5.4l4.01-3.1z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.44-3.44C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.28 6.6l4.01 3.1c.94-2.83 3.59-4.95 6.71-4.95z"/></svg>
             {socialLoading==="google"?"Conectando…":"Continuar con Google"}
           </button>
-          <button onClick={handleFacebook} disabled={!!socialLoading} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.65rem",width:"100%",background:"#1877F2",color:"#fff",border:"none",borderRadius:10,padding:"0.85rem",fontSize:12,fontWeight:800,cursor:socialLoading?"not-allowed":"pointer",fontFamily:"inherit",opacity:socialLoading&&socialLoading!=="facebook"?0.5:1}}>
-            <IcFB s={16} c="#fff"/>
-            {socialLoading==="facebook"?"Conectando…":"Continuar con Facebook"}
-          </button>
+          
         </div>
         <div style={{display:"flex",alignItems:"center",gap:"0.75rem",margin:"0 0 1.25rem"}}><div style={{flex:1,height:1,background:"#1e1e1e"}}/><span style={{fontSize:10,color:"#333",fontWeight:700,letterSpacing:1}}>O CON TU CORREO</span><div style={{flex:1,height:1,background:"#1e1e1e"}}/></div>
         <div style={{display:"flex",gap:0,marginBottom:"1.5rem",background:"#0e0e0e",borderRadius:10,padding:3,border:"1px solid #1a1a1a"}}>{(["login","register"] as const).map(m=>(<button key={m} onClick={()=>{setMode(m);setErr("");}} style={{flex:1,padding:"0.6rem",border:"none",borderRadius:8,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:800,letterSpacing:1.5,transition:"all 0.15s",WebkitTapHighlightColor:"transparent",background:mode===m?"#fff":"transparent",color:mode===m?"#080808":"#444"}}>{m==="login"?"ENTRAR":"REGISTRARSE"}</button>))}</div>
@@ -1249,7 +1246,7 @@ export default function Home() {
   const[commentSending,setCommentSending]=useState(false);
   const[commentErr,setCommentErr]=useState("");
   const[commentOk,setCommentOk]=useState(false);
-  const[commentPhotoUrl,setCommentPhotoUrl]=useState("");
+  const[commentPhotoUrls,setCommentPhotoUrls]=useState<string[]>([]);
   const[commentPhotoUploading,setCommentPhotoUploading]=useState(false);
   const commentPhotoRef=useRef<HTMLInputElement>(null);
   const[menuOpen,setMenuOpen]      = useState(false);
@@ -1500,6 +1497,9 @@ const[acName,setAcName]=useState("Fokus");
 const[acStars,setAcStars]=useState(5);
 const[acText,setAcText]=useState("");
 const[acPhotoUrl,setAcPhotoUrl]=useState("");
+const[acAvatarUrl,setAcAvatarUrl]=useState("");
+const[acAvatarUploading,setAcAvatarUploading]=useState(false);
+const acAvatarRef=useRef<HTMLInputElement>(null);
 const[acFakeEmail,setAcFakeEmail]=useState("");
 const[acPhotoUploading,setAcPhotoUploading]=useState(false);
 const[acSaving,setAcSaving]=useState(false);
@@ -1773,7 +1773,7 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
     setCommentsLoading(true);
     try{
       const all=await fsGetCollection("product_comments",300);
-      const filtered=all.filter(c=>c.productId===productId).map(c=>({id:c.id,productId:(c.productId as string)||"",productName:(c.productName as string)||"",name:(c.name as string)||"",email:(c.email as string)||"",comment:(c.comment as string)||"",stars:Number(c.stars)||5,createdAt:Number(c.createdAt)||0,photoUrl:(c.photoUrl as string)||"",isAdmin:!!c.isAdmin})) as ProductComment[];
+      const filtered=all.filter(c=>c.productId===productId).map(c=>({id:c.id,productId:(c.productId as string)||"",productName:(c.productName as string)||"",name:(c.name as string)||"",email:(c.email as string)||"",comment:(c.comment as string)||"",stars:Number(c.stars)||5,createdAt:Number(c.createdAt)||0,photoUrl:(c.photoUrl as string)||"",photoUrls:Array.isArray(c.photoUrls)?(c.photoUrls as string[]):[],avatarUrl:(c.avatarUrl as string)||"",isAdmin:!!c.isAdmin})) as ProductComment[];
       filtered.sort((a,b)=>b.createdAt-a.createdAt);
       setProductComments(filtered);
     }catch{
@@ -1791,7 +1791,7 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
       setCommentStars(5);
       setCommentErr("");
       setCommentOk(false);
-      setCommentPhotoUrl("");
+      setCommentPhotoUrls([]);
       loadProductComments(selectedProduct.id);
     }else{
       setProductComments([]);
@@ -1799,12 +1799,12 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
   },[selectedProduct?.id,loadProductComments,currentUser?.displayName,currentUser?.email]);
 
   const handleCommentPhotoChange=useCallback(async(e:React.ChangeEvent<HTMLInputElement>)=>{
-    const file=e.target.files?.[0];
-    if(!file)return;
+    const files=Array.from(e.target.files||[]);
+    if(!files.length)return;
     setCommentPhotoUploading(true);
     try{
-      const url=await uploadImg(file,"fokus_products");
-      setCommentPhotoUrl(url);
+      const urls=await Promise.all(files.map(f=>uploadImg(f,"fokus_products")));
+      setCommentPhotoUrls(prev=>[...prev,...urls]);
     }catch{
       setCommentErr("Error al subir la foto. Intenta de nuevo.");
     }finally{
@@ -1822,11 +1822,11 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
     setCommentOk(false);
     try{
       const createdAt=Date.now();
-      await fsAddToCollection("product_comments",{productId:selectedProduct.id,productName:selectedProduct.name,name:commentName.trim(),email:currentUser.email,comment:commentText.trim(),stars:commentStars,createdAt,photoUrl:commentPhotoUrl,isAdmin:false});
-      setProductComments(prev=>[{id:"tmp_"+createdAt,productId:selectedProduct.id,productName:selectedProduct.name,name:commentName.trim(),email:currentUser.email,comment:commentText.trim(),stars:commentStars,createdAt,photoUrl:commentPhotoUrl},...prev]);
+      await fsAddToCollection("product_comments",{productId:selectedProduct.id,productName:selectedProduct.name,name:commentName.trim(),email:currentUser.email,comment:commentText.trim(),stars:commentStars,createdAt,photoUrls:commentPhotoUrls,avatarUrl:currentUser.photoURL||"",isAdmin:false});
+      setProductComments(prev=>[{id:"tmp_"+createdAt,productId:selectedProduct.id,productName:selectedProduct.name,name:commentName.trim(),email:currentUser.email,comment:commentText.trim(),stars:commentStars,createdAt,photoUrls:commentPhotoUrls,avatarUrl:currentUser.photoURL||""},...prev]);
       setCommentText("");
       setCommentStars(5);
-      setCommentPhotoUrl("");
+      setCommentPhotoUrls([]);
       setCommentOk(true);
       setTimeout(()=>setCommentOk(false),3500);
     }catch(err){
@@ -1834,7 +1834,7 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
     }finally{
       setCommentSending(false);
     }
-  },[selectedProduct,currentUser,commentName,commentText,commentStars,commentPhotoUrl]);
+  },[selectedProduct,currentUser,commentName,commentText,commentStars,commentPhotoUrls]);
 
   const closeProdModal=useCallback(()=>{if(modalPushedRef.current)window.history.back();else setSel(null);},[]);
 
@@ -2169,6 +2169,15 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     finally{setAcPhotoUploading(false);if(acPhotoRef.current)acPhotoRef.current.value="";}
   },[]);
 
+  const handleAcAvatarChange=useCallback(async(e:React.ChangeEvent<HTMLInputElement>)=>{
+    const file=e.target.files?.[0];
+    if(!file)return;
+    setAcAvatarUploading(true);
+    try{const url=await uploadImg(file,"fokus_products");setAcAvatarUrl(url);}
+    catch{setAcErr("Error al subir la foto de perfil.");}
+    finally{setAcAvatarUploading(false);if(acAvatarRef.current)acAvatarRef.current.value="";}
+  },[]);
+
   const submitAdminComment=useCallback(async()=>{
     setAcErr("");setAcOk("");
     const prod=products.find(p=>p.id===acProductId);
@@ -2177,18 +2186,18 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     setAcSaving(true);
     try{
       const createdAt=Date.now();
-      await fsAddToCollection("product_comments",{productId:prod.id,productName:prod.name,name:acName.trim(),email:acFakeEmail.trim(),comment:acText.trim(),stars:acStars,createdAt,photoUrl:acPhotoUrl,isAdmin:false});
+      await fsAddToCollection("product_comments",{productId:prod.id,productName:prod.name,name:acName.trim(),email:acFakeEmail.trim(),comment:acText.trim(),stars:acStars,createdAt,photoUrl:acPhotoUrl,avatarUrl:acAvatarUrl,isAdmin:false});
       setAcOk("✓ Comentario publicado correctamente");
       allCommentsLoaded.current=false;
       await loadAllComments(true);
-      setAcText("");setAcPhotoUrl("");setAcStars(5);setAcFakeEmail("");
+      setAcText("");setAcPhotoUrl("");setAcAvatarUrl("");setAcStars(5);setAcFakeEmail("");
       setTimeout(()=>setAcOk(""),2500);
     }catch(err){
       setAcErr("Error: "+(err instanceof Error?err.message:"desconocido"));
     }finally{
       setAcSaving(false);
     }
-  },[products,acProductId,acName,acText,acStars,acPhotoUrl,loadAllComments]);
+  },[products,acProductId,acName,acText,acStars,acPhotoUrl,acAvatarUrl,loadAllComments]);
 
   const loadBulkDrafts=useCallback((cat:string)=>{
     const map:Record<string,{name:string;description:string}>={};
@@ -3676,6 +3685,18 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   </select>
                   <input placeholder="Nombre a mostrar" value={acName} onChange={e=>setAcName(e.target.value)} style={S.input}/>
                   <input placeholder="Correo a mostrar (opcional)" value={acFakeEmail} onChange={e=>setAcFakeEmail(e.target.value)} style={S.input}/>
+                  <div>
+                    <p style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#333",margin:"0 0 0.5rem"}}>FOTO DE PERFIL DEL CLIENTE (OPCIONAL)</p>
+                    <input ref={acAvatarRef} type="file" accept="image/*" onChange={handleAcAvatarChange} disabled={acAvatarUploading} style={{display:"none"}} id="ac-avatar-input"/>
+                    {acAvatarUrl?(
+                      <div style={{position:"relative",display:"inline-block"}}>
+                        <img src={acAvatarUrl} alt="" style={{width:50,height:50,borderRadius:"50%",objectFit:"cover",border:"1px solid #2a5a2a"}} draggable={false}/>
+                        <button type="button" onClick={()=>setAcAvatarUrl("")} style={{position:"absolute",top:-6,right:-6,background:"#cc3333",border:"none",borderRadius:"50%",width:20,height:20,color:"#fff",fontSize:11,cursor:"pointer"}}>✕</button>
+                      </div>
+                    ):(
+                      <label htmlFor="ac-avatar-input" style={{display:"inline-flex",alignItems:"center",gap:6,background:"#161616",border:"1px dashed #2a2a2a",borderRadius:8,padding:"0.6rem 1rem",cursor:acAvatarUploading?"not-allowed":"pointer",fontSize:11,color:"#888",fontWeight:700}}>{acAvatarUploading?"Subiendo…":<><IcUser s={14} c="#888"/> Agregar foto de perfil</>}</label>
+                    )}
+                  </div>
                   <div><StarRow value={acStars} onChange={setAcStars} size={20}/></div>
                   <textarea placeholder="Comentario *" value={acText} onChange={e=>setAcText(e.target.value)} rows={2} style={{...S.input,resize:"vertical" as const,lineHeight:1.6}}/>
                   <div>
@@ -3822,13 +3843,22 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                     {productComments.map(c=>(
                       <div key={c.id} style={{background:"#0e0e0e",border:`1px solid ${C.border}`,borderRadius:12,padding:"0.85rem 1rem"}}>
                         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"5px"}}>
-                          <span style={{fontSize:12,fontWeight:800,color:"#ddd"}}>{c.name}{c.isAdmin&&<span style={{marginLeft:6,fontSize:9,color:"#080808",background:"#fff",padding:"1px 6px",borderRadius:8,fontWeight:900}}>FOKUS</span>}</span>
+                          <div style={{display:"flex",alignItems:"center",gap:8}}>
+                            {c.avatarUrl?<img src={c.avatarUrl} alt={c.name} style={{width:26,height:26,borderRadius:"50%",objectFit:"cover",flexShrink:0,border:"1px solid #333"}} draggable={false}/>:<div style={{width:26,height:26,borderRadius:"50%",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:11,fontWeight:900,color:"#080808"}}>{c.name[0]?.toUpperCase()||"?"}</span></div>}
+                            <span style={{fontSize:12,fontWeight:800,color:"#ddd"}}>{c.name}{c.isAdmin&&<span style={{marginLeft:6,fontSize:9,color:"#080808",background:"#fff",padding:"1px 6px",borderRadius:8,fontWeight:900}}>FOKUS</span>}</span>
+                          </div>
                           <span style={{fontSize:9,color:"#333"}}>{new Date(c.createdAt).toLocaleDateString("es-VE",{day:"2-digit",month:"short"})}</span>
                         </div>
                         {!!c.email&&<p style={{margin:"0 0 5px",fontSize:10,color:"#555"}}>{c.email}</p>}
                         <div style={{marginBottom:"5px"}}><StarRow value={c.stars||5} size={11}/></div>
                         <p style={{margin:0,fontSize:12,color:"#888",lineHeight:1.6}}>{c.comment}</p>
-                        {!!c.photoUrl&&<img src={c.photoUrl} alt="Foto del cliente" style={{width:"100%",maxWidth:180,borderRadius:8,marginTop:8,display:"block"}} draggable={false}/>}
+                        {(c.photoUrls&&c.photoUrls.length>0?c.photoUrls:c.photoUrl?[c.photoUrl]:[]).length>0&&(
+                          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:8}}>
+                            {(c.photoUrls&&c.photoUrls.length>0?c.photoUrls:[c.photoUrl as string]).map((url,i)=>(
+                              <img key={i} src={url} alt="Foto del cliente" style={{width:100,height:100,objectFit:"cover",borderRadius:8,display:"block"}} draggable={false}/>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -3841,17 +3871,20 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                     <input placeholder="Tu nombre *" value={commentName} onChange={e=>setCommentName(e.target.value)} style={S.input}/>
                     <textarea placeholder="Escribe tu comentario sobre este producto..." value={commentText} onChange={e=>setCommentText(e.target.value)} rows={2} style={{...S.input,resize:"vertical" as const,lineHeight:1.6,minHeight:60}}/>
                     <div>
-                      <input ref={commentPhotoRef} type="file" accept="image/*" onChange={handleCommentPhotoChange} disabled={commentPhotoUploading} style={{display:"none"}} id="comment-photo-input"/>
-                      {commentPhotoUrl?(
-                        <div style={{position:"relative",display:"inline-block"}}>
-                          <img src={commentPhotoUrl} alt="Tu foto" style={{width:70,height:70,objectFit:"cover",borderRadius:8,border:"1px solid #2a5a2a"}} draggable={false}/>
-                          <button type="button" onClick={()=>setCommentPhotoUrl("")} style={{position:"absolute",top:-6,right:-6,background:"#cc3333",border:"none",borderRadius:"50%",width:20,height:20,color:"#fff",fontSize:11,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+                      <input ref={commentPhotoRef} type="file" accept="image/*" multiple onChange={handleCommentPhotoChange} disabled={commentPhotoUploading} style={{display:"none"}} id="comment-photo-input"/>
+                      {commentPhotoUrls.length>0&&(
+                        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:"0.5rem"}}>
+                          {commentPhotoUrls.map((url,i)=>(
+                            <div key={i} style={{position:"relative",display:"inline-block"}}>
+                              <img src={url} alt="Tu foto" style={{width:70,height:70,objectFit:"cover",borderRadius:8,border:"1px solid #2a5a2a"}} draggable={false}/>
+                              <button type="button" onClick={()=>setCommentPhotoUrls(prev=>prev.filter((_,idx)=>idx!==i))} style={{position:"absolute",top:-6,right:-6,background:"#cc3333",border:"none",borderRadius:"50%",width:20,height:20,color:"#fff",fontSize:11,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+                            </div>
+                          ))}
                         </div>
-                      ):(
-                        <label htmlFor="comment-photo-input" style={{display:"inline-flex",alignItems:"center",gap:6,background:"#161616",border:"1px dashed #2a2a2a",borderRadius:8,padding:"0.6rem 1rem",cursor:commentPhotoUploading?"not-allowed":"pointer",fontSize:11,color:"#888",fontWeight:700}}>
-                          {commentPhotoUploading?"Subiendo…":<><IcCamera s={14} c="#888"/> Agregar foto de tu artículo (opcional)</>}
-                        </label>
                       )}
+                      <label htmlFor="comment-photo-input" style={{display:"inline-flex",alignItems:"center",gap:6,background:"#161616",border:"1px dashed #2a2a2a",borderRadius:8,padding:"0.6rem 1rem",cursor:commentPhotoUploading?"not-allowed":"pointer",fontSize:11,color:"#888",fontWeight:700}}>
+                        {commentPhotoUploading?"Subiendo…":<><IcCamera s={14} c="#888"/> {commentPhotoUrls.length>0?"Agregar más fotos":"Agregar fotos de tu artículo (opcional)"}</>}
+                      </label>
                     </div>
                     <button onClick={submitProductComment} disabled={!commentName.trim()||!commentText.trim()||commentSending} style={{...S.darkBtn,justifyContent:"center",borderRadius:8,fontSize:11,opacity:(!commentName.trim()||!commentText.trim()||commentSending)?0.5:1,cursor:(!commentName.trim()||!commentText.trim()||commentSending)?"not-allowed":"pointer"}}>{commentSending?"Publicando...":"PUBLICAR RESEÑA"}</button>
                     {commentErr&&<p style={{margin:0,fontSize:11,color:"#ff8888",background:"#1e0808",borderRadius:8,padding:"0.5rem 0.75rem"}}>{commentErr}</p>}
