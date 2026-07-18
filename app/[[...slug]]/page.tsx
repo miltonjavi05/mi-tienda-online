@@ -496,7 +496,7 @@ const GLOBAL_CSS = `
 
   /* ── home: adaptado a pantallas grandes ── */
   @media(min-width:900px){
-    .home-hero { max-width: 980px !important; padding-top: 3.5rem !important; padding-left: 2rem !important; padding-right: 2rem !important; }
+    .home-hero { max-width: 980px !important; padding-top: 3rem !important; padding-left: 2rem !important; padding-right: 2rem !important; }
     .home-hero img[width="64"] { width: 80px !important; height: 80px !important; }
     .home-hero h1 { font-size: 62px !important; }
     .home-hero p { font-size: 15px !important; }
@@ -2619,8 +2619,8 @@ const filteredComments=useMemo(()=>allComments.filter(c=>{
       {/* ── HOME ── */}
       {mainView==="fokus"&&(
         <main className="pv" style={{paddingTop:navH,background:C.bg}}>
-          <div className="home-hero" style={{maxWidth:760,margin:"0 auto",padding:"4rem 1.5rem 0",textAlign:"center",animation:"slideUp 0.5s ease"}}>
-            <div style={{marginBottom:"2rem"}}><img src="/favicon.png" alt="Fokus" width={64} height={64} style={{objectFit:"contain",filter:"brightness(1.1)",pointerEvents:"none"}} draggable={false}/></div>
+          <div className="home-hero" style={{maxWidth:760,margin:"0 auto",padding:"1.25rem 1.5rem 0",textAlign:"center",animation:"slideUp 0.5s ease"}}>
+            <div style={{marginBottom:"1rem"}}><img src="/favicon.png" alt="Fokus" width={64} height={64} style={{objectFit:"contain",filter:"brightness(1.1)",pointerEvents:"none"}} draggable={false}/></div>
 
             {/* ── ETIQUETA PREMIUM "ACCESORIOS PARA CABALLERO" ── */}
             <div style={{
@@ -2628,7 +2628,7 @@ const filteredComments=useMemo(()=>allComments.filter(c=>{
               alignItems:"center",
               gap:"0.55rem",
               width:"fit-content",
-              margin:"0 auto 1rem",
+              margin:"0 auto 0.65rem",
               padding:"0.45rem 1.1rem 0.45rem 0.75rem",
               borderRadius:40,
               background:"linear-gradient(135deg,rgba(255,255,255,0.06) 0%,rgba(255,255,255,0.02) 100%)",
