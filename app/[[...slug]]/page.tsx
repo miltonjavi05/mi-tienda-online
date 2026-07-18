@@ -2597,6 +2597,12 @@ const filteredComments=useMemo(()=>allComments.filter(c=>{
   const filteredLeads=useMemo(()=>leadsList.filter(l=>(Number(l.createdAt)||0)>=periodCutoff),[leadsList,periodCutoff]);
   const salesCategories=useMemo(()=>[...new Set(salesList.map(s=>s.category as string).filter(Boolean))].sort(),[salesList]);
 
+  const productCodeMap=useMemo(()=>{
+    const map:Record<string,string>={};
+    products.forEach(p=>{map[p.id]=p.code||"";});
+    return map;
+  },[products]);
+
   const interestPeriodCutoff=useMemo(()=>{
     if(interestPeriod==="all")return 0;
     const daysBack=interestPeriod==="hoy"?1:interestPeriod==="7d"?7:interestPeriod==="30d"?30:90;
@@ -2605,17 +2611,23 @@ const filteredComments=useMemo(()=>allComments.filter(c=>{
   },[interestPeriod]);
 
   const interestAgg=useMemo(()=>{
+    const searchLower=interestSearch.trim().toLowerCase();
     const filtered=interestList.filter(r=>{
       if((Number(r.createdAt)||0)<interestPeriodCutoff)return false;
       if(interestCatFilter!=="ALL"&&(r.category as string)!==interestCatFilter)return false;
-      if(interestSearch.trim()&&!((r.productName as string)||"").toLowerCase().includes(interestSearch.trim().toLowerCase()))return false;
+      if(searchLower){
+        const pid=(r.productId as string)||"";
+        const name=((r.productName as string)||"").toLowerCase();
+        const code=(productCodeMap[pid]||"").toLowerCase();
+        if(!name.includes(searchLower)&&!code.includes(searchLower))return false;
+      }
       return true;
     });
-    const map:Record<string,{productId:string;productName:string;category:string;views:number;carts:number}>={};
+    const map:Record<string,{productId:string;productName:string;category:string;code:string;views:number;carts:number}>={};
     filtered.forEach(r=>{
       const pid=(r.productId as string)||"";
       if(!pid)return;
-      if(!map[pid])map[pid]={productId:pid,productName:(r.productName as string)||"",category:(r.category as string)||"",views:0,carts:0};
+      if(!map[pid])map[pid]={productId:pid,productName:(r.productName as string)||"",category:(r.category as string)||"",code:productCodeMap[pid]||"",views:0,carts:0};
       if(r.type==="cart")map[pid].carts++;else map[pid].views++;
     });
     const list=Object.values(map);
@@ -2624,7 +2636,7 @@ const filteredComments=useMemo(()=>allComments.filter(c=>{
     const totalViews=filtered.filter(r=>r.type!=="cart").length;
     const totalCarts=filtered.filter(r=>r.type==="cart").length;
     return{byViews,byCarts,totalViews,totalCarts};
-  },[interestList,interestPeriodCutoff,interestCatFilter,interestSearch]);
+  },[interestList,interestPeriodCutoff,interestCatFilter,interestSearch,productCodeMap]);
 
   const salesStats=useMemo(()=>{
     const onlineSales=filteredSales.filter(s=>s.source!=="offline");
@@ -3542,7 +3554,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   <optgroup label="── LENTES">{LENTES_SUBCATS.map(s=><option key={s} value={s}>{catLabel(s)}</option>)}</optgroup>
                   <optgroup label="── OTROS">{SHOP_CATS.filter(c=>c!=="LENTES").map(c=><option key={c} value={c}>{catLabel(c)}</option>)}</optgroup>
                 </select>
-                <input placeholder="🔎 Buscar producto…" value={interestSearch} onChange={e=>setInterestSearch(e.target.value)} style={{...S.input,flex:1,minWidth:160}}/>
+                <input placeholder="🔎 Buscar por nombre o código…" value={interestSearch} onChange={e=>setInterestSearch(e.target.value)} style={{...S.input,flex:1,minWidth:160}}/>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:"0.75rem",marginBottom:"1.5rem"}}>
                 <div style={{background:"linear-gradient(160deg,#141414 0%,#0d0d0d 100%)",border:"1px solid #1e1e1e",borderRadius:14,padding:"1.1rem"}}><p style={{fontSize:20,margin:"0 0 0.5rem"}}>👁️</p><p style={{fontSize:18,fontWeight:900,margin:"0 0 2px",color:"#4dabf7"}}>{interestAgg.totalViews}</p><p style={{fontSize:8,fontWeight:800,letterSpacing:1.5,color:"#444",margin:0}}>VISTAS DE ARTÍCULOS</p></div>
@@ -3560,7 +3572,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                       <div key={p.productId} style={{display:"flex",alignItems:"center",gap:"0.75rem",padding:"0.6rem 0.65rem",borderRadius:8,background:"#0c0c0c"}}>
                         <span style={{fontSize:11,fontWeight:900,color:"#333",width:20,flexShrink:0}}>#{i+1}</span>
                         <div style={{flex:1,minWidth:0}}>
-                          <p style={{margin:"0 0 1px",fontSize:12,fontWeight:700,color:"#ccc",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.productName||"Producto eliminado"}</p>
+                          <p style={{margin:"0 0 1px",fontSize:12,fontWeight:700,color:"#ccc",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.productName||"Producto eliminado"}{p.code&&<span style={{color:"#555",fontFamily:"monospace",fontWeight:700,marginLeft:6}}>· {p.code}</span>}</p>
                           <p style={{margin:0,fontSize:10,color:"#444"}}>{p.category?catLabel(p.category):""} · {p.carts} agregados al carrito</p>
                         </div>
                         <span style={{fontSize:14,fontWeight:900,color:"#4dabf7",flexShrink:0}}>{p.views} 👁️</span>
@@ -3581,7 +3593,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                       <div key={p.productId} style={{display:"flex",alignItems:"center",gap:"0.75rem",padding:"0.6rem 0.65rem",borderRadius:8,background:"#0c0c0c"}}>
                         <span style={{fontSize:11,fontWeight:900,color:"#333",width:20,flexShrink:0}}>#{i+1}</span>
                         <div style={{flex:1,minWidth:0}}>
-                          <p style={{margin:"0 0 1px",fontSize:12,fontWeight:700,color:"#ccc",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.productName||"Producto eliminado"}</p>
+                          <p style={{margin:"0 0 1px",fontSize:12,fontWeight:700,color:"#ccc",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.productName||"Producto eliminado"}{p.code&&<span style={{color:"#555",fontFamily:"monospace",fontWeight:700,marginLeft:6}}>· {p.code}</span>}</p>
                           <p style={{margin:0,fontSize:10,color:"#444"}}>{p.category?catLabel(p.category):""} · {p.views} vistas</p>
                         </div>
                         <span style={{fontSize:14,fontWeight:900,color:"#4caf50",flexShrink:0}}>{p.carts} 🛒</span>
