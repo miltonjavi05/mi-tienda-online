@@ -8,7 +8,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Fokus Accesorios | Lentes, Relojes y Accesorios en Venezuela",
+  title: "Fokus Accesorios | Accesorios para Caballero en Venezuela",
   description: "Fokus Accesorios es una tienda en línea venezolana de lentes de sol, relojes, pulseras, collares, aretes, anillos y billeteras. Compra fácil y rápido, con confirmación de pedido por WhatsApp y envíos a toda Venezuela. Inicia sesión con Google para guardar tu perfil y agilizar tus pedidos.",
   manifest: "/manifest.json",
   appleWebApp: {

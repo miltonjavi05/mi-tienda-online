@@ -240,7 +240,7 @@ async function trackLeadWhatsApp(source: string): Promise<void> {
   fsAddToCollection("leads", { source, createdAt: Date.now() }).catch(() => {});
 }
 function trackProductInterest(productId:string,productName:string,category:string,type:"view"|"cart"):void{
-  fsAddToCollection("product_interest",{productId,productName,category,type,createdAt:Date.now()}).catch(()=>{});
+  fsAddToCollection("product_interest",{productId,productName,category,type,createdAt:Date.now()}).catch(err=>{console.error("trackProductInterest error:",err);});
 }
 
 // ─── FIREBASE REST ────────────────────────────────────────────────────────────
