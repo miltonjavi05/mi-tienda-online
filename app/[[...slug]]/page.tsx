@@ -3921,7 +3921,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
       {addedProduct&&<AddedModal product={addedProduct} onClose={()=>setAddedProduct(null)} onGoCart={()=>{setAddedProduct(null);setMainView("cart");}} fmtPrice={fmtPrice}/>}
       {showAuth&&<AuthModal onClose={()=>setShowAuth(false)} onSuccess={u=>{setCurrentUser(u);setShowAuth(false);}}/>}
       {totalItems>0&&!isCart&&!isAdmin&&!isTY&&!selectedProduct&&<MiniCartBar totalItems={totalItems} totalPrice={totalPrice} fmtPrice={fmtPrice} onClick={()=>setMainView("cart")}/>}
-      {!isAdmin&&!selectedProduct&&<DraggableWA/>}
+      {!isAdmin&&!selectedProduct&&<DraggableWA/>} 
     </div>
   );
 }     
