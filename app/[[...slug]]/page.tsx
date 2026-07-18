@@ -488,7 +488,7 @@ const GLOBAL_CSS = `
   }
 
   .pc, .hc, .cc { content-visibility: auto; contain-intrinsic-size: 280px; }
-  .admin-list, .ts { content-visibility: auto; }
+  .admin-list { content-visibility: auto; }
   img { image-rendering: auto; }
   .pc:active { transform: scale(0.97); }
   .hc:active { opacity: 0.85; }
