@@ -667,9 +667,9 @@ Reglas:
           await new Promise(res=>setTimeout(res,(attempt+1)*8000));
           continue;
         }
-        if(!r.ok){console.error("Gemini API error response:",d);return null;}
+        if(!r.ok){console.error("Gemini API error response:",r.status,d);throw new Error(d?.error?.message||`Error ${r.status} de Gemini`);}
         const text=d?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if(!text){console.error("Gemini: sin texto en la respuesta:",d);return null;}
+        if(!text){console.error("Gemini: sin texto en la respuesta:",d);throw new Error("Gemini no devolvió texto (posible bloqueo de seguridad)");}
         const parsed=JSON.parse(text);
         const name=capitalizeName(String(parsed.name||"Cliente Fokus"));
         const email=String(parsed.email||"").toLowerCase().trim();
@@ -680,14 +680,14 @@ Reglas:
       }catch(err){
         lastErr=err;
         console.error("Gemini fetch/parse error:",err);
-        return null;
+        throw err;
       }
     }
     console.error("Gemini: se agotaron los reintentos por límite de cuota.",lastErr);
-    return null;
+    throw lastErr instanceof Error?lastErr:new Error("Se agotaron los reintentos");
   }catch(err){
     console.error("Gemini fetch/parse error (outer):",err);
-    return null;
+    throw err;
   }
 }
 function formatTimeLeft(expiresAt:number):string{
@@ -2360,6 +2360,7 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
   const generateAdminCommentAI=useCallback(async()=>{
     const prod=products.find(p=>p.id===acProductId);
     if(!prod){setAcErr("Selecciona un producto primero.");return;}
+    if(GEMINI_API_KEY==="TU_GEMINI_API_KEY"){setAcErr("Falta configurar NEXT_PUBLIC_GEMINI_API_KEY en las variables de entorno.");return;}
     setAcErr("");setAcGenerating(true);
     try{
       const result=await generateAIReview(prod.name,prod.category);
@@ -2368,8 +2369,8 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
       setAcFakeEmail(result.email);
       setAcStars(result.stars);
       setAcText(result.comment);
-    }catch{
-      setAcErr("Error al generar la reseña con IA.");
+    }catch(err){
+      setAcErr(err instanceof Error?`Error de Gemini: ${err.message}`:"Error al generar la reseña con IA.");
     }finally{
       setAcGenerating(false);
     }
