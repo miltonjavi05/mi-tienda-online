@@ -64,9 +64,6 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://res.cloudinary.com" />
       </head>
       <body style={{ margin: 0, padding: 0, background: "#080808" }}>
-        <div style={{ padding: "12px 16px", textAlign: "center", color: "#e5e5e5", fontSize: 13, lineHeight: 1.4, fontFamily: "system-ui, sans-serif", background: "#0f0f0f", borderBottom: "1px solid #1f1f1f" }}>
-          Fokus Accesorios — tienda en línea de lentes de sol, relojes, pulseras, collares, aretes, anillos y billeteras en Venezuela. Compra fácil, confirmación por WhatsApp y envíos a todo el país. Inicia sesión con Google para guardar tu perfil.
-        </div>
         {children}
       </body>
     </html>
