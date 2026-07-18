@@ -640,56 +640,16 @@ function capitalizeName(raw:string):string{
   return raw.trim().split(/\s+/).map(w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(" ");
 }
 async function generateAIReview(productName:string,category:string):Promise<{name:string;email:string;stars:number;comment:string}|null>{
-  try{
-    const prompt=`Genera una reseña de cliente en español (Venezuela) para este producto de accesorios: "${productName}" (categoría: ${catLabel(category)}).
-Responde ÚNICAMENTE con un JSON válido, sin texto adicional ni backticks, con este formato exacto:
-{"name":"...","email":"...","stars":5,"comment":"..."}
-Reglas:
-- El nombre debe ser un nombre venezolano realista, en el estilo de estos ejemplos: ${SAMPLE_REVIEW_NAMES.join(", ")}. No repitas siempre los mismos, varía.
-- Cada palabra del nombre debe empezar con mayúscula y el resto en minúscula.
-- El correo debe estar completamente en minúsculas, basado en el nombre (sin tildes ni espacios), con dominio gmail.com, hotmail.com o outlook.com.
-- Las estrellas deben ser 4 o 5 (mayormente 5).
-- El comentario debe ser breve (1 a 2 oraciones), natural y coloquial, mencionando el producto o la categoría, en tono positivo, sin sonar repetitivo ni robótico.`;
-    let lastErr:unknown=null;
-    for(let attempt=0;attempt<3;attempt++){
-      try{
-        const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,{
-          method:"POST",
-          headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({
-            contents:[{parts:[{text:prompt}]}],
-            generationConfig:{responseMimeType:"application/json",temperature:1}
-          })
-        });
-        const d=await r.json();
-        if(r.status===429){
-          console.warn(`Gemini: límite de cuota (429), reintentando en ${(attempt+1)*8}s…`);
-          await new Promise(res=>setTimeout(res,(attempt+1)*8000));
-          continue;
-        }
-        if(!r.ok){console.error("Gemini API error response:",r.status,d);throw new Error(d?.error?.message||`Error ${r.status} de Gemini`);}
-        const text=d?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if(!text){console.error("Gemini: sin texto en la respuesta:",d);throw new Error("Gemini no devolvió texto (posible bloqueo de seguridad)");}
-        const parsed=JSON.parse(text);
-        const name=capitalizeName(String(parsed.name||"Cliente Fokus"));
-        const email=String(parsed.email||"").toLowerCase().trim();
-        const stars=Math.max(4,Math.min(5,parseInt(parsed.stars)||5));
-        const comment=String(parsed.comment||"").trim();
-        if(!comment)return null;
-        return{name,email,stars,comment};
-      }catch(err){
-        lastErr=err;
-        console.error("Gemini fetch/parse error:",err);
-        throw err;
-      }
-    }
-    console.error("Gemini: se agotaron los reintentos por límite de cuota.",lastErr);
-    throw lastErr instanceof Error?lastErr:new Error("Se agotaron los reintentos");
-  }catch(err){
-    console.error("Gemini fetch/parse error (outer):",err);
-    throw err;
-  }
+  const r=await fetch("/api/generate-review",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({productName,category})
+  });
+  const d=await r.json();
+  if(!r.ok){console.error("generate-review error:",d);throw new Error(d?.error||`Error ${r.status}`);}
+  return d;
 }
+  
 function formatTimeLeft(expiresAt:number):string{
   const ms=expiresAt-Date.now();
   if(ms<=0)return"Expirado";
@@ -2391,7 +2351,7 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
             await fsAddToCollection("product_comments",{productId:prod.id,productName:prod.name,name:result.name,email:result.email,comment:result.comment,stars:result.stars,createdAt:Date.now()-Math.floor(Math.random()*20)*86400000,photoUrl:"",avatarUrl:"",isAdmin:false});
             totalCreated++;
           }
-          await new Promise(res=>setTimeout(res,4500));
+          await new Promise(res=>setTimeout(res,1200));
         }
       }
       setBulkGenMsg(`✓ Se crearon ${totalCreated} reseñas en total para ${products.length} productos.`);
