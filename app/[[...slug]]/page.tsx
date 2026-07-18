@@ -1272,6 +1272,7 @@ export default function Home() {
   const[commentErr,setCommentErr]=useState("");
   const[commentOk,setCommentOk]=useState(false);
   const[commentPhotoUrls,setCommentPhotoUrls]=useState<string[]>([]);
+  const[commentsVisibleCount,setCommentsVisibleCount]=useState(10);
   const[commentPhotoUploading,setCommentPhotoUploading]=useState(false);
   const commentPhotoRef=useRef<HTMLInputElement>(null);
   const[menuOpen,setMenuOpen]      = useState(false);
@@ -1831,6 +1832,7 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
       setCommentErr("");
       setCommentOk(false);
       setCommentPhotoUrls([]);
+      setCommentsVisibleCount(10);
       loadProductComments(selectedProduct.id);
     }else{
       setProductComments([]);
@@ -3977,7 +3979,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"0.5rem"}}>Sé el primero en dejar una reseña de este producto.</p>
                 ):(
                   <div style={{display:"flex",flexDirection:"column",gap:"0.65rem",marginBottom:"1.1rem"}}>
-                    {productComments.map(c=>(
+                    {productComments.slice(0,commentsVisibleCount).map(c=>(
                       <div key={c.id} style={{background:"#0e0e0e",border:`1px solid ${C.border}`,borderRadius:12,padding:"0.85rem 1rem"}}>
                         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"5px"}}>
                           <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -3998,6 +4000,9 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                         )}
                       </div>
                     ))}
+                    {productComments.length>commentsVisibleCount&&(
+                      <button onClick={()=>setCommentsVisibleCount(v=>v+10)} style={{background:"#161616",border:`1px solid ${C.border}`,color:"#ccc",borderRadius:10,padding:"0.75rem",fontSize:12,fontWeight:800,letterSpacing:1,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>VER MÁS RESEÑAS ({productComments.length-commentsVisibleCount})</button>
+                    )}
                   </div>
                 )}
                 <div style={{background:"linear-gradient(160deg,#141414 0%,#0c0c0c 100%)",border:"1px solid #1e1e1e",borderRadius:14,padding:"1.1rem",position:"relative",overflow:"hidden"}}>
