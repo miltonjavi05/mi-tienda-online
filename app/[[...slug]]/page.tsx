@@ -494,6 +494,14 @@ const GLOBAL_CSS = `
     .cg { grid-template-columns: repeat(3,1fr) !important; }
   }
 
+  /* ── home: adaptado a pantallas grandes ── */
+  @media(min-width:900px){
+    .home-hero { max-width: 620px !important; padding-top: 3.5rem !important; }
+    .home-hero img[width="64"] { width: 76px !important; height: 76px !important; }
+    .home-hero h1 { font-size: 58px !important; }
+    .home-hero p { font-size: 15px !important; }
+  }
+
   /* ── modal de producto: vista premium en escritorio ── */
   @media(min-width:900px){
     .pm-overlay { align-items: center !important; padding: 3rem 2rem !important; }
@@ -2609,7 +2617,7 @@ const filteredComments=useMemo(()=>allComments.filter(c=>{
       {/* ── HOME ── */}
       {mainView==="fokus"&&(
         <main className="pv" style={{paddingTop:navH,background:C.bg}}>
-          <div style={{maxWidth:760,margin:"0 auto",padding:"4rem 1.5rem 0",textAlign:"center",animation:"slideUp 0.5s ease"}}>
+          <div className="home-hero" style={{maxWidth:760,margin:"0 auto",padding:"4rem 1.5rem 0",textAlign:"center",animation:"slideUp 0.5s ease"}}>
             <div style={{marginBottom:"2rem"}}><img src="/favicon.png" alt="Fokus" width={64} height={64} style={{objectFit:"contain",filter:"brightness(1.1)",pointerEvents:"none"}} draggable={false}/></div>
 
             {/* ── ETIQUETA PREMIUM "ACCESORIOS PARA CABALLERO" ── */}
