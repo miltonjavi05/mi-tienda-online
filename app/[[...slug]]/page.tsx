@@ -19,6 +19,8 @@ const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "2844242900";
 const WHATSAPP_NUMBER = "584243005733";
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "TU_GOOGLE_CLIENT_ID.apps.googleusercontent.com";
 const FACEBOOK_APP_ID  = process.env.NEXT_PUBLIC_FACEBOOK_APP_ID  || "TU_FACEBOOK_APP_ID";
+const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || "TU_GEMINI_API_KEY";
+const GEMINI_MODEL = "gemini-2.0-flash";
 if (typeof document !== "undefined") {
   document.addEventListener("click", (e:MouseEvent) => {
     const el = (e.target as HTMLElement).closest?.("a[href*='wa.me']");
@@ -633,6 +635,43 @@ function productIdFromPath(path:string):string|null{
 }
 function generateCouponCode():string{const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let s="FOKUS-";for(let i=0;i<5;i++)s+=chars[Math.floor(Math.random()*chars.length)];return s;}
 function generateVariantGroupId():string{return "VG-"+Date.now().toString(36).toUpperCase()+"-"+Math.random().toString(36).slice(2,6).toUpperCase();}
+const SAMPLE_REVIEW_NAMES=["Javier Jose","Anderson","Carrillo","Gamarra","Arturo Jose"];
+function capitalizeName(raw:string):string{
+  return raw.trim().split(/\s+/).map(w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(" ");
+}
+async function generateAIReview(productName:string,category:string):Promise<{name:string;email:string;stars:number;comment:string}|null>{
+  try{
+    const prompt=`Genera una reseña de cliente en español (Venezuela) para este producto de accesorios: "${productName}" (categoría: ${catLabel(category)}).
+Responde ÚNICAMENTE con un JSON válido, sin texto adicional ni backticks, con este formato exacto:
+{"name":"...","email":"...","stars":5,"comment":"..."}
+Reglas:
+- El nombre debe ser un nombre venezolano realista, en el estilo de estos ejemplos: ${SAMPLE_REVIEW_NAMES.join(", ")}. No repitas siempre los mismos, varía.
+- Cada palabra del nombre debe empezar con mayúscula y el resto en minúscula.
+- El correo debe estar completamente en minúsculas, basado en el nombre (sin tildes ni espacios), con dominio gmail.com, hotmail.com o outlook.com.
+- Las estrellas deben ser 4 o 5 (mayormente 5).
+- El comentario debe ser breve (1 a 2 oraciones), natural y coloquial, mencionando el producto o la categoría, en tono positivo, sin sonar repetitivo ni robótico.`;
+    const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        contents:[{parts:[{text:prompt}]}],
+        generationConfig:{responseMimeType:"application/json",temperature:1}
+      })
+    });
+    const d=await r.json();
+    const text=d?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if(!text)return null;
+    const parsed=JSON.parse(text);
+    const name=capitalizeName(String(parsed.name||"Cliente Fokus"));
+    const email=String(parsed.email||"").toLowerCase().trim();
+    const stars=Math.max(4,Math.min(5,parseInt(parsed.stars)||5));
+    const comment=String(parsed.comment||"").trim();
+    if(!comment)return null;
+    return{name,email,stars,comment};
+  }catch{
+    return null;
+  }
+}
 function formatTimeLeft(expiresAt:number):string{
   const ms=expiresAt-Date.now();
   if(ms<=0)return"Expirado";
@@ -1531,6 +1570,10 @@ const acAvatarRef=useRef<HTMLInputElement>(null);
 const[acFakeEmail,setAcFakeEmail]=useState("");
 const[acPhotoUploading,setAcPhotoUploading]=useState(false);
 const[acSaving,setAcSaving]=useState(false);
+const[acGenerating,setAcGenerating]=useState(false);
+const[bulkGenLoading,setBulkGenLoading]=useState(false);
+const[bulkGenMsg,setBulkGenMsg]=useState("");
+const[bulkGenErr,setBulkGenErr]=useState("");
 const[acErr,setAcErr]=useState("");
 const[acOk,setAcOk]=useState("");
 const acPhotoRef=useRef<HTMLInputElement>(null);
@@ -2295,6 +2338,52 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     catch{setAcErr("Error al subir la foto de perfil.");}
     finally{setAcAvatarUploading(false);if(acAvatarRef.current)acAvatarRef.current.value="";}
   },[]);
+
+  const generateAdminCommentAI=useCallback(async()=>{
+    const prod=products.find(p=>p.id===acProductId);
+    if(!prod){setAcErr("Selecciona un producto primero.");return;}
+    setAcErr("");setAcGenerating(true);
+    try{
+      const result=await generateAIReview(prod.name,prod.category);
+      if(!result){setAcErr("No se pudo generar la reseña. Intenta de nuevo.");return;}
+      setAcName(result.name);
+      setAcFakeEmail(result.email);
+      setAcStars(result.stars);
+      setAcText(result.comment);
+    }catch{
+      setAcErr("Error al generar la reseña con IA.");
+    }finally{
+      setAcGenerating(false);
+    }
+  },[products,acProductId]);
+
+  const bulkGenerateAllComments=useCallback(async()=>{
+    if(!confirm("Esto generará entre 2 y 5 reseñas con IA para CADA producto de la tienda y las publicará automáticamente. ¿Continuar?"))return;
+    setBulkGenLoading(true);setBulkGenErr("");setBulkGenMsg("");
+    let totalCreated=0;
+    try{
+      for(let pi=0;pi<products.length;pi++){
+        const prod=products[pi];
+        const count=Math.floor(Math.random()*4)+2;
+        setBulkGenMsg(`Generando reseñas para "${prod.name}" (${pi+1}/${products.length})…`);
+        for(let i=0;i<count;i++){
+          const result=await generateAIReview(prod.name,prod.category);
+          if(result){
+            await fsAddToCollection("product_comments",{productId:prod.id,productName:prod.name,name:result.name,email:result.email,comment:result.comment,stars:result.stars,createdAt:Date.now()-Math.floor(Math.random()*20)*86400000,photoUrl:"",avatarUrl:"",isAdmin:false});
+            totalCreated++;
+          }
+          await new Promise(res=>setTimeout(res,300));
+        }
+      }
+      setBulkGenMsg(`✓ Se crearon ${totalCreated} reseñas en total para ${products.length} productos.`);
+      allCommentsLoaded.current=false;
+      await loadAllComments(true);
+    }catch(err){
+      setBulkGenErr("Error: "+(err instanceof Error?err.message:"desconocido"));
+    }finally{
+      setBulkGenLoading(false);
+    }
+  },[products,loadAllComments]);
 
   const submitAdminComment=useCallback(async()=>{
     setAcErr("");setAcOk("");
@@ -3982,6 +4071,13 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
 
             {adminLogged&&adminSec==="comments"&&(<>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem"}}><h1 style={{color:"#fff",fontSize:16,fontWeight:900,margin:0,letterSpacing:2}}>COMENTARIOS DE PRODUCTOS</h1><button onClick={()=>exitAdminSec()} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:12,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>← MENÚ</button></div>
+              <div style={{background:"linear-gradient(135deg,#0a1420 0%,#0e0e0e 100%)",borderRadius:14,padding:"1.25rem",border:"1px solid #1a2a3a",marginBottom:"1.25rem"}}>
+                <p style={{color:"#4dabf7",fontSize:9,fontWeight:800,letterSpacing:2.5,margin:"0 0 0.5rem"}}>🤖 GENERAR RESEÑAS CON IA PARA TODOS LOS PRODUCTOS</p>
+                <p style={{color:"#666",fontSize:11,margin:"0 0 0.85rem",lineHeight:1.6}}>Crea entre 2 y 5 reseñas automáticas por cada producto de la tienda, con nombres y correos generados según el título de cada artículo.</p>
+                <button onClick={bulkGenerateAllComments} disabled={bulkGenLoading} style={{...S.adminBtn,background:"linear-gradient(135deg,#4dabf7 0%,#2a6bb0 100%)",opacity:bulkGenLoading?0.5:1,cursor:bulkGenLoading?"not-allowed":"pointer"}}>{bulkGenLoading?"Generando…":"🤖 Generar para todos los productos"}</button>
+                {bulkGenMsg&&<p style={{margin:"0.75rem 0 0",fontSize:11,color:"#4dabf7",lineHeight:1.6}}>{bulkGenMsg}</p>}
+                {bulkGenErr&&<p style={{margin:"0.75rem 0 0",fontSize:11,color:"#ff8888",background:"#1e0808",borderRadius:8,padding:"0.5rem 0.75rem"}}>{bulkGenErr}</p>}
+              </div>
               <div style={{background:"linear-gradient(160deg,#141414 0%,#0a0a0a 100%)",borderRadius:14,padding:"1.25rem",border:"1px solid #2a2a2a",marginBottom:"1.25rem"}}>
                 <p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2.5,margin:"0 0 1rem"}}>PUBLICAR RESEÑA COMO FOKUS (SIN CORREO)</p>
                 <div style={{display:"flex",flexDirection:"column",gap:"0.75rem"}}>
@@ -3995,6 +4091,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                     <option value="">Selecciona el producto *</option>
                     {products.filter(p=>(acCatFilter==="ALL"||p.category===acCatFilter)&&p.name.toLowerCase().includes(acProductSearch.toLowerCase())).map(p=><option key={p.id} value={p.id}>{p.name} — {catLabel(p.category)}</option>)}
                   </select>
+                  <button type="button" onClick={generateAdminCommentAI} disabled={!acProductId||acGenerating} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.5rem",background:"linear-gradient(135deg,#4dabf7 0%,#2a6bb0 100%)",color:"#fff",border:"none",borderRadius:8,padding:"0.75rem",cursor:(!acProductId||acGenerating)?"not-allowed":"pointer",fontFamily:"inherit",fontSize:12,fontWeight:800,letterSpacing:1,opacity:(!acProductId||acGenerating)?0.5:1}}>{acGenerating?"Generando…":"🤖 GENERAR RESEÑA CON IA"}</button>
                   <input placeholder="Nombre a mostrar" value={acName} onChange={e=>setAcName(e.target.value)} style={S.input}/>
                   <input placeholder="Correo a mostrar (opcional)" value={acFakeEmail} onChange={e=>setAcFakeEmail(e.target.value)} style={S.input}/>
                   <div>
