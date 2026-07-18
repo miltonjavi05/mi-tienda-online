@@ -2522,7 +2522,7 @@ const saveBulkAddProducts=useCallback(async()=>{
   }
 },[bulkAddImages,bulkAddParsed,bulkAddCat,loadProducts]);
   useEffect(()=>{if(adminSec==="stats")loadStats();},[adminSec,loadStats]);
-  useEffect(()=>{if(adminSec==="interest")loadInterest();},[adminSec,loadInterest]);
+  useEffect(()=>{if(adminSec==="interest"){loadInterest();loadStats();}},[adminSec,loadInterest,loadStats]);
 useEffect(()=>{if(adminSec==="agenda")loadAgenda();},[adminSec,loadAgenda]);
 useEffect(()=>{if(adminSec==="coupons"){loadCoupons();if(!couponCode)setCouponCode(generateCouponCode());}},[adminSec,loadCoupons]);
 useEffect(()=>{if(adminSec==="comments")loadAllComments();},[adminSec,loadAllComments]);
@@ -2603,6 +2603,12 @@ const filteredComments=useMemo(()=>allComments.filter(c=>{
     return map;
   },[products]);
 
+  const productByNameMap=useMemo(()=>{
+    const map:Record<string,Product>={};
+    products.forEach(p=>{map[p.name.trim().toLowerCase()]=p;});
+    return map;
+  },[products]);
+
   const interestPeriodCutoff=useMemo(()=>{
     if(interestPeriod==="all")return 0;
     const daysBack=interestPeriod==="hoy"?1:interestPeriod==="7d"?7:interestPeriod==="30d"?30:90;
@@ -2637,6 +2643,37 @@ const filteredComments=useMemo(()=>allComments.filter(c=>{
     const totalCarts=filtered.filter(r=>r.type==="cart").length;
     return{byViews,byCarts,totalViews,totalCarts};
   },[interestList,interestPeriodCutoff,interestCatFilter,interestSearch,productLookupMap]);
+
+  const soldAgg=useMemo(()=>{
+    const searchLower=interestSearch.trim().toLowerCase();
+    const soldFiltered=salesList.filter(s=>(Number(s.createdAt)||0)>=interestPeriodCutoff);
+    const map:Record<string,{productName:string;category:string;code:string;img:string;units:number;revenue:number}>={};
+    soldFiltered.forEach(s=>{
+      const raw=((s.product as string)||"").trim();
+      if(!raw)return;
+      raw.split(",").forEach(chunk=>{
+        const c=chunk.trim();
+        if(!c)return;
+        const m=c.match(/^(.*?)\s*x\s*(\d+)$/i);
+        const name=(m?m[1]:c).trim();
+        const qty=m?Math.max(1,parseInt(m[2])||1):1;
+        if(!name)return;
+        const matched=productByNameMap[name.toLowerCase()];
+        const category=matched?matched.category:((s.category as string)||"");
+        if(interestCatFilter!=="ALL"&&category!==interestCatFilter)return;
+        const code=matched?.code||"";
+        if(searchLower&&!name.toLowerCase().includes(searchLower)&&!code.toLowerCase().includes(searchLower))return;
+        const key=matched?matched.id:name.toLowerCase();
+        if(!map[key])map[key]={productName:matched?matched.name:name,category,code,img:matched?.img||"",units:0,revenue:0};
+        map[key].units+=qty;
+        map[key].revenue+=(Number(s.amount)||0)/(raw.split(",").length||1);
+      });
+    });
+    const list=Object.entries(map).map(([id,v])=>({productId:id,...v}));
+    const bySold=[...list].sort((a,b)=>b.units-a.units);
+    const totalUnitsSold=bySold.reduce((s,p)=>s+p.units,0);
+    return{bySold,totalUnitsSold};
+  },[salesList,interestPeriodCutoff,interestCatFilter,interestSearch,productByNameMap]);
 
   const salesStats=useMemo(()=>{
     const onlineSales=filteredSales.filter(s=>s.source!=="offline");
@@ -3227,7 +3264,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
         <main className="pv" style={{paddingTop:NAV_H,background:"#060606",minHeight:"100vh"}}>
           <div style={{maxWidth:720,margin:"0 auto",padding:"2rem 1rem 4rem"}}>
             {!adminLogged&&(<div style={{background:"#111",borderRadius:14,padding:"2.5rem 2rem",maxWidth:380,margin:"2rem auto",border:"1px solid #1a1a1a",animation:"slideUp 0.3s ease"}}><h1 style={{color:"#fff",fontSize:20,fontWeight:900,marginBottom:"1.5rem",textAlign:"center",letterSpacing:2}}>ADMIN</h1><div style={{display:"flex",flexDirection:"column",gap:"0.85rem"}}><input type="email" placeholder="Correo" value={adminEmail} onChange={e=>setAdminEmail(e.target.value)} style={S.input}/><PwdInput placeholder="Contraseña" value={adminPwd} onChange={setAdminPwd} onKeyDown={e=>e.key==="Enter"&&doLogin()} autoComplete="current-password"/>{adminErr&&<p style={{color:"#ff5555",fontSize:12,margin:0,background:"#1e0a0a",padding:"0.6rem 1rem",borderRadius:8}}>{adminErr}</p>}<button onClick={doLogin} style={S.adminBtn}>Entrar</button><button onClick={doLogout} style={{...S.adminBtn,background:"transparent",color:"#333",marginTop:4}}>← Volver</button></div></div>)}
-            {adminLogged&&adminSec==="menu"&&(<div style={{background:"#111",borderRadius:14,padding:"2.5rem 2rem",maxWidth:380,margin:"2rem auto",border:"1px solid #1a1a1a",animation:"slideUp 0.3s ease"}}><h1 style={{color:"#fff",fontSize:18,fontWeight:900,marginBottom:"0.4rem",textAlign:"center",letterSpacing:2}}>PANEL</h1><p style={{color:"#333",fontSize:12,textAlign:"center",marginBottom:"2rem",letterSpacing:1}}>Selecciona una opción</p><div style={{display:"flex",flexDirection:"column",gap:"0.65rem"}}><button onClick={()=>enterAdminSec("products")} style={S.adminBtn}>📦 Gestionar productos</button><button onClick={()=>enterAdminSec("inventory")} style={S.adminBtn}>📊 Inventario / Stock</button><button onClick={()=>enterAdminSec("bulkedit")} style={S.adminBtn}>✏️ Edición masiva de textos</button><button onClick={()=>enterAdminSec("bulkadd")} style={S.adminBtn}>🖼️ Agregar productos masivo</button><button onClick={()=>enterAdminSec("sales")} style={S.adminBtn}>💰 Registrar venta manual</button><button onClick={()=>enterAdminSec("agenda")} style={S.adminBtn}>📅 Agendar clientes</button><button onClick={()=>enterAdminSec("stats")} style={S.adminBtn}>📊 Ver estadísticas</button><button onClick={()=>enterAdminSec("interest")} style={S.adminBtn}>👀 Más vistos / interés</button><button onClick={()=>enterAdminSec("coupons")} style={{...S.adminBtn,background:"linear-gradient(135deg,#fff 0%,#ccc 100%)"}}>🎟️ Cupones de descuento</button><button onClick={()=>enterAdminSec("lookup")} style={S.adminBtn}>🔍 Buscar por código</button><button onClick={()=>enterAdminSec("comments")} style={S.adminBtn}>💬 Comentarios de productos</button><button onClick={doLogout} style={{...S.adminBtn,background:"transparent",color:"#ff5555",border:"none",marginTop:8,letterSpacing:1}}>Cerrar sesión</button></div></div>)}
+            {adminLogged&&adminSec==="menu"&&(<div style={{background:"#111",borderRadius:14,padding:"2.5rem 2rem",maxWidth:380,margin:"2rem auto",border:"1px solid #1a1a1a",animation:"slideUp 0.3s ease"}}><h1 style={{color:"#fff",fontSize:18,fontWeight:900,marginBottom:"0.4rem",textAlign:"center",letterSpacing:2}}>PANEL</h1><p style={{color:"#333",fontSize:12,textAlign:"center",marginBottom:"2rem",letterSpacing:1}}>Selecciona una opción</p><div style={{display:"flex",flexDirection:"column",gap:"0.65rem"}}><button onClick={()=>enterAdminSec("products")} style={S.adminBtn}>📦 Gestionar productos</button><button onClick={()=>enterAdminSec("inventory")} style={S.adminBtn}>📊 Inventario / Stock</button><button onClick={()=>enterAdminSec("bulkedit")} style={S.adminBtn}>✏️ Edición masiva de textos</button><button onClick={()=>enterAdminSec("bulkadd")} style={S.adminBtn}>🖼️ Agregar productos masivo</button><button onClick={()=>enterAdminSec("sales")} style={S.adminBtn}>💰 Registrar venta manual</button><button onClick={()=>enterAdminSec("agenda")} style={S.adminBtn}>📅 Agendar clientes</button><button onClick={()=>enterAdminSec("stats")} style={S.adminBtn}>📊 Ver estadísticas</button><button onClick={()=>enterAdminSec("interest")} style={S.adminBtn}>👀 Vistas, carrito y más vendidos</button><button onClick={()=>enterAdminSec("coupons")} style={{...S.adminBtn,background:"linear-gradient(135deg,#fff 0%,#ccc 100%)"}}>🎟️ Cupones de descuento</button><button onClick={()=>enterAdminSec("lookup")} style={S.adminBtn}>🔍 Buscar por código</button><button onClick={()=>enterAdminSec("comments")} style={S.adminBtn}>💬 Comentarios de productos</button><button onClick={doLogout} style={{...S.adminBtn,background:"transparent",color:"#ff5555",border:"none",marginTop:8,letterSpacing:1}}>Cerrar sesión</button></div></div>)}
             {adminLogged&&adminSec==="products"&&(<>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem"}}><h1 style={{color:"#fff",fontSize:16,fontWeight:900,margin:0,letterSpacing:2}}>{editing?"EDITAR PRODUCTO":"PRODUCTOS"}</h1><button onClick={()=>{exitAdminSec();resetForm();}} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:12,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>← MENÚ</button></div>
               <div ref={formRef} style={{background:"#111",borderRadius:12,padding:"1.5rem",marginBottom:"1.25rem",border:editing?"1px solid #2a2a2a":"1px solid #1a1a1a"}}><p style={{color:"#333",fontSize:9,fontWeight:800,letterSpacing:2,margin:"0 0 1.25rem"}}>{editing?`EDITANDO: ${editing.name}`:"NUEVO PRODUCTO"}</p><div style={{display:"flex",flexDirection:"column",gap:"0.8rem"}}><input placeholder="Nombre del producto *" value={fName} onChange={e=>setFName(e.target.value)} style={S.input}/><textarea placeholder="Descripción (opcional)" value={fDesc} onChange={e=>setFDesc(e.target.value)} rows={2} style={{...S.input,resize:"vertical" as any,lineHeight:1.6}}/><input placeholder="Precio en USD *" type="number" min="0" step="0.01" value={fPrice} onChange={e=>setFPrice(e.target.value)} style={S.input}/><select value={fCat} onChange={e=>setFCat(e.target.value)} style={{...S.input,appearance:"auto" as any}}><option value="">Selecciona categoría *</option><optgroup label="── LENTES">{LENTES_SUBCATS.map(s=><option key={s} value={s}>{catLabel(s)}</option>)}</optgroup><optgroup label="── OTROS">{SHOP_CATS.filter(c=>c!=="LENTES").map(c=><option key={c} value={c}>{catLabel(c)}</option>)}</optgroup></select><div style={{background:"#0e0e0e",borderRadius:8,padding:"1rem",border:"1px dashed #1e1e1e"}}><p style={{color:"#333",fontSize:9,letterSpacing:2,margin:"0 0 0.65rem",fontWeight:800}}>IMAGEN {!editing&&"*"}</p><input ref={fileRef} type="file" accept="image/*" onChange={onFileChange} style={{display:"none"}} id="fi"/><label htmlFor="fi" style={{display:"inline-flex",alignItems:"center",gap:"0.45rem",background:"#1a1a1a",color:"#888",padding:"0.55rem 1rem",borderRadius:8,cursor:"pointer",fontSize:12,border:"1px solid #222",fontFamily:"inherit"}}>📷 {fFile?"Cambiar":"Elegir foto"}</label>{fFile&&<span style={{color:"#444",fontSize:11,marginLeft:"0.65rem"}}>{fFile.name}</span>}{fPrev&&<div style={{marginTop:"0.65rem",width:80,height:80,borderRadius:8,overflow:"hidden",border:"1px solid #222"}}><img src={fPrev} alt="preview" style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/></div>}</div>
@@ -3537,7 +3574,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
 
             {adminLogged&&adminSec==="interest"&&(<>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem"}}>
-                <h1 style={{color:"#fff",fontSize:16,fontWeight:900,margin:0,letterSpacing:2}}>MÁS VISTOS / INTERÉS</h1>
+                <h1 style={{color:"#fff",fontSize:16,fontWeight:900,margin:0,letterSpacing:2}}>VISTAS, CARRITO Y MÁS VENDIDOS</h1>
                 <div style={{display:"flex",gap:"0.5rem",alignItems:"center"}}>
                   <button onClick={()=>loadInterest(true)} disabled={interestLoading} style={{background:"none",border:"1px solid #2a2a2a",color:"#888",padding:"0.4rem 0.85rem",borderRadius:8,cursor:interestLoading?"not-allowed":"pointer",fontSize:11,fontFamily:"inherit",fontWeight:700,WebkitTapHighlightColor:"transparent"}}>{interestLoading?"Cargando…":"↻ Actualizar"}</button>
                   <button onClick={()=>exitAdminSec()} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:12,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>← MENÚ</button>
@@ -3559,6 +3596,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:"0.75rem",marginBottom:"1.5rem"}}>
                 <div style={{background:"linear-gradient(160deg,#141414 0%,#0d0d0d 100%)",border:"1px solid #1e1e1e",borderRadius:14,padding:"1.1rem"}}><p style={{fontSize:20,margin:"0 0 0.5rem"}}>👁️</p><p style={{fontSize:18,fontWeight:900,margin:"0 0 2px",color:"#4dabf7"}}>{interestAgg.totalViews}</p><p style={{fontSize:8,fontWeight:800,letterSpacing:1.5,color:"#444",margin:0}}>VISTAS DE ARTÍCULOS</p></div>
                 <div style={{background:"linear-gradient(160deg,#141414 0%,#0d0d0d 100%)",border:"1px solid #1e1e1e",borderRadius:14,padding:"1.1rem"}}><p style={{fontSize:20,margin:"0 0 0.5rem"}}>🛒</p><p style={{fontSize:18,fontWeight:900,margin:"0 0 2px",color:"#4caf50"}}>{interestAgg.totalCarts}</p><p style={{fontSize:8,fontWeight:800,letterSpacing:1.5,color:"#444",margin:0}}>AGREGADOS AL CARRITO</p></div>
+                <div style={{background:"linear-gradient(160deg,#141414 0%,#0d0d0d 100%)",border:"1px solid #1e1e1e",borderRadius:14,padding:"1.1rem"}}><p style={{fontSize:20,margin:"0 0 0.5rem"}}>🏆</p><p style={{fontSize:18,fontWeight:900,margin:"0 0 2px",color:"#ffd43b"}}>{soldAgg.totalUnitsSold}</p><p style={{fontSize:8,fontWeight:800,letterSpacing:1.5,color:"#444",margin:0}}>UNIDADES VENDIDAS</p></div>
               </div>
               <div style={{background:"#111",borderRadius:14,border:"1px solid #1a1a1a",padding:"1.25rem",marginBottom:"1.25rem"}}>
                 <p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#333",margin:"0 0 1rem"}}>TOP ARTÍCULOS MÁS VISTOS</p>
@@ -3611,6 +3649,35 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                         <div style={{textAlign:"center",flexShrink:0}}>
                           <p style={{margin:0,fontSize:16,fontWeight:900,color:"#4caf50"}}>{p.carts}</p>
                           <p style={{margin:0,fontSize:14}}>🛒</p>
+                        </div>
+                      </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              <div style={{background:"#111",borderRadius:14,border:"1px solid #1a1a1a",padding:"1.25rem",marginTop:"1.25rem"}}>
+                <p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#333",margin:"0 0 1rem"}}>TOP ARTÍCULOS MÁS VENDIDOS</p>
+                {statsLoading&&!soldAgg.bySold.length?(
+                  <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"1rem"}}>Cargando…</p>
+                ):soldAgg.bySold.length===0?(
+                  <p style={{color:"#333",fontSize:12,textAlign:"center",padding:"1rem"}}>Aún no hay ventas registradas en este período</p>
+                ):(
+                  <div style={{display:"flex",flexDirection:"column",gap:"0.5rem"}}>
+                    {soldAgg.bySold.slice(0,20).map((p,i)=>{
+                      const fullProd=productByNameMap[p.productName.trim().toLowerCase()];
+                      return(
+                      <div key={p.productId} onClick={()=>fullProd&&openProd(fullProd)} style={{display:"flex",alignItems:"center",gap:"0.85rem",padding:"0.75rem",borderRadius:10,background:"#0c0c0c",border:"1px solid #1a1a1a",cursor:fullProd?"pointer":"default"}}>
+                        <span style={{fontSize:12,fontWeight:900,color:"#333",width:20,flexShrink:0,textAlign:"center"}}>#{i+1}</span>
+                        <div style={{width:48,height:48,borderRadius:8,overflow:"hidden",background:"#161616",flexShrink:0}}>{p.img&&<img src={optImg(p.img,120)} alt={p.productName} style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/>}</div>
+                        <div style={{flex:1,minWidth:0}}>
+                          <p style={{margin:"0 0 3px",fontSize:12,fontWeight:800,color:"#ddd",lineHeight:1.4,wordBreak:"break-word"}}>{p.productName}</p>
+                          {p.code&&<p style={{margin:"0 0 3px",fontSize:10,color:"#ffd43b",fontFamily:"monospace",fontWeight:800,letterSpacing:0.5}}>{p.code}</p>}
+                          <p style={{margin:0,fontSize:10,color:"#444"}}>{p.category?catLabel(p.category):""} · ${p.revenue.toFixed(2)} en ventas</p>
+                        </div>
+                        <div style={{textAlign:"center",flexShrink:0}}>
+                          <p style={{margin:0,fontSize:16,fontWeight:900,color:"#ffd43b"}}>{p.units}</p>
+                          <p style={{margin:0,fontSize:14}}>🏆</p>
                         </div>
                       </div>
                       );
