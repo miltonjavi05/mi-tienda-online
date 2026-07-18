@@ -487,7 +487,9 @@ const GLOBAL_CSS = `
     .hr-arrow { display: none !important; }
   }
 
-  .cc { transition: transform 0.25s ease, border-color 0.2s ease, box-shadow 0.25s ease; }
+  .pc, .hc, .cc { content-visibility: auto; contain-intrinsic-size: 280px; }
+  .admin-list, .ts { content-visibility: auto; }
+  img { image-rendering: auto; }
   .pc:active { transform: scale(0.97); }
   .hc:active { opacity: 0.85; }
   .nb:active { opacity: 0.6; }
@@ -815,7 +817,7 @@ const AddedModal=memo(function AddedModal({product,onClose,onGoCart,fmtPrice}:{p
       <div onClick={e=>e.stopPropagation()} style={{background:"#161616",width:"100%",maxWidth:520,borderRadius:"18px 18px 0 0",padding:"1.25rem 1.25rem 2rem",animation:"slideUp 0.28s cubic-bezier(0.34,1.3,0.64,1)",border:"1px solid #222",borderBottom:"none"}}>
         <div style={{width:36,height:3,background:"#333",borderRadius:2,margin:"0 auto 1.25rem"}}/>
         <div style={{display:"flex",gap:"0.85rem",alignItems:"center",marginBottom:"1.25rem"}}>
-          <div style={{width:58,height:58,borderRadius:8,overflow:"hidden",flexShrink:0,background:"#111"}}><img src={optImg(product.img,120)} alt={product.name} style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/></div>
+          <div style={{width:58,height:58,borderRadius:8,overflow:"hidden",flexShrink:0,background:"#111"}}><img src={optImg(product.img,120)} alt={product.name} loading="lazy" decoding="async" style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/></div>
           <div style={{flex:1}}><p style={{margin:"0 0 2px",fontSize:11,color:"#555",letterSpacing:1.5,fontWeight:700}}>AÑADIDO AL CARRITO</p><p style={{margin:"0 0 2px",fontSize:14,color:C.text,fontWeight:600,lineHeight:1.3}}>{product.name}</p><p style={{margin:0,fontSize:13,color:"#888"}}><span style={{color:C.accent,fontWeight:700}}>{fmtPrice(product.price)}</span></p></div>
           <div style={{width:32,height:32,borderRadius:"50%",background:"#1a2e1a",border:"1.5px solid #2a4a2a",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,animation:"scaleIn 0.3s cubic-bezier(0.34,1.4,0.64,1)"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
@@ -1182,7 +1184,7 @@ const ARow=memo(function ARow({p,editing,onEdit,onDel,onDragStart,onDragOver,onD
     <div draggable onDragStart={()=>onDragStart(p.id)} onDragOver={e=>{e.preventDefault();onDragOver(p.id);}} onDragEnd={onDragEnd} data-rowid={p.id} className="ar" style={{display:"flex",alignItems:"center",gap:"0.75rem",padding:"0.6rem 0.65rem",borderRadius:8,background:isOver?"#1e1e1e":editing?.id===p.id?"#1a1a1a":"transparent",opacity:isDragging?0.4:1,border:isOver?"1px dashed #3a3a3a":"1px solid transparent",transition:"opacity 0.15s, background 0.15s, border 0.15s",cursor:"default",userSelect:"none",WebkitUserSelect:"none"}}>
       <div onTouchStart={e=>{e.stopPropagation();const t=e.touches[0];onTouchStart(p.id,t.clientY);}} onTouchMove={e=>{e.stopPropagation();e.preventDefault();const t=e.touches[0];onTouchMove(t.clientY,t.clientX);}} onTouchEnd={e=>{e.stopPropagation();onTouchEnd();}} style={{cursor:"grab",flexShrink:0,padding:"6px 8px",color:"#444",display:"flex",alignItems:"center",touchAction:"none",WebkitTapHighlightColor:"transparent",userSelect:"none",WebkitUserSelect:"none",WebkitTouchCallout:"none"} as React.CSSProperties}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="8" cy="6" r="1.2" fill="currentColor"/><circle cx="16" cy="6" r="1.2" fill="currentColor"/><circle cx="8" cy="12" r="1.2" fill="currentColor"/><circle cx="16" cy="12" r="1.2" fill="currentColor"/><circle cx="8" cy="18" r="1.2" fill="currentColor"/><circle cx="16" cy="18" r="1.2" fill="currentColor"/></svg></div>
       <div style={{position:"relative",width:44,height:44,flexShrink:0}}>
-        <img src={optImg(p.img,120)} alt={p.name} style={{width:44,height:44,objectFit:"cover",borderRadius:6,background:"#1a1a1a",pointerEvents:"none",userSelect:"none",WebkitUserSelect:"none",WebkitTouchCallout:"none",opacity:p.active===false?0.35:1} as React.CSSProperties} draggable={false}/>
+        <img src={optImg(p.img,120)} alt={p.name} loading="lazy" decoding="async" style={{width:44,height:44,objectFit:"cover",borderRadius:6,background:"#1a1a1a",pointerEvents:"none",userSelect:"none",WebkitUserSelect:"none",WebkitTouchCallout:"none",opacity:p.active===false?0.35:1} as React.CSSProperties} draggable={false}/>
         {!!p.discount&&p.discount>0&&<span style={{position:"absolute",top:-4,left:-4,background:isSuperOffer(p.discount)?"linear-gradient(135deg,#ff3b3b,#7a0000)":"linear-gradient(135deg,#fff,#999)",color:isSuperOffer(p.discount)?"#fff":"#080808",fontSize:8,fontWeight:900,padding:"1px 4px",borderRadius:6,border:isSuperOffer(p.discount)?"1px solid #ff8888":"1px solid #fff"}}>-{p.discount}%</span>}
       </div>
       <div style={{flex:1,minWidth:0,userSelect:"none",WebkitUserSelect:"none"} as React.CSSProperties}><p style={{color:p.active===false?"#666":"#ccc",fontSize:12,fontWeight:700,margin:"0 0 1px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}{p.active===false&&<span style={{color:"#ff6666",fontSize:9,marginLeft:6,fontWeight:800}}>OCULTO</span>}</p><p style={{color:"#333",fontSize:10,margin:0}}>${p.price.toFixed(2)} {p.code&&<span style={{color:"#555",fontFamily:"monospace",marginLeft:6}}>· {p.code}</span>} <span style={{color:(p.stock??0)===0?"#ff6666":(p.stock??0)<=5?"#ffd43b":"#4caf50",fontWeight:800,marginLeft:6}}>· Stock: {p.stock??0}</span></p></div>
@@ -2951,7 +2953,7 @@ const filteredComments=useMemo(()=>allComments.filter(c=>{
             {cart.map(item=>(
               <div key={item.product.id} style={{display:"flex",alignItems:"center",gap:"0.65rem",padding:"0.65rem 1rem",borderBottom:`1px solid ${C.border}`}}>
                 <button onClick={()=>updQty(item.product.id,-item.qty)} style={{background:"none",border:"none",cursor:"pointer",color:"#333",fontSize:11,padding:0,flexShrink:0,lineHeight:1}}>✕</button>
-                <img src={optImg(item.product.img,80)} alt={item.product.name} style={{width:40,height:40,objectFit:"cover",borderRadius:6,pointerEvents:"none",flexShrink:0}} draggable={false}/>
+                <img src={optImg(item.product.img,80)} alt={item.product.name} loading="lazy" decoding="async" style={{width:40,height:40,objectFit:"cover",borderRadius:6,pointerEvents:"none",flexShrink:0}} draggable={false}/>
                 <div style={{flex:1,minWidth:0}}>
                   <p style={{margin:0,fontSize:12,color:"#bbb",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.product.name}</p>
                   <p style={{margin:"2px 0 0",fontSize:11,color:item.product.discount?(isSuperOffer(item.product.discount)?"#ff5555":"#ffd43b"):"#555"}}>{fmtPrice(getFinalPrice(item.product))}{!!item.product.discount&&<span style={{textDecoration:"line-through",color:"#444",marginLeft:6}}>{fmtPrice(item.product.price)}</span>}</p>
@@ -3595,7 +3597,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                 <div style={{display:"flex",flexDirection:"column",gap:2}}>
                   {invProds.map(p=>{const st=p.stock??0;const color=st===0?"#ff6666":st<=5?"#ffd43b":"#4caf50";const bg=st===0?"#1e0d0d":st<=5?"#1a1608":"#0d1e0d";return(
                     <div key={p.id} style={{display:"flex",alignItems:"center",gap:"0.75rem",padding:"0.6rem 0.65rem",borderRadius:8}}>
-                      <img src={optImg(p.img,80)} alt={p.name} style={{width:40,height:40,objectFit:"cover",borderRadius:6,pointerEvents:"none",flexShrink:0}} draggable={false}/>
+                      <img src={optImg(p.img,80)} alt={p.name} loading="lazy" decoding="async" style={{width:40,height:40,objectFit:"cover",borderRadius:6,pointerEvents:"none",flexShrink:0}} draggable={false}/>
                       <div style={{flex:1,minWidth:0}}>
                         <p style={{margin:"0 0 1px",fontSize:12,fontWeight:700,color:"#ccc",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</p>
                         <p style={{margin:0,fontSize:10,color:"#444"}}>{catLabel(p.category)} {p.code&&<span style={{fontFamily:"monospace",marginLeft:4}}>· {p.code}</span>}</p>
@@ -3621,12 +3623,12 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   return(
                     <div style={{display:"flex",flexDirection:"column",gap:"0.6rem"}}>
                       {results.map(p=>(
-                        <div key={p.id} style={{display:"flex",alignItems:"center",gap:"0.85rem",background:"linear-gradient(135deg,#141410 0%,#0d0d0a 100%)",border:"1px solid #2a4a2a",borderRadius:10,padding:"0.85rem"}}>
-                          <img src={optImg(p.img,120)} alt={p.name} style={{width:56,height:56,objectFit:"cover",borderRadius:8,flexShrink:0}} draggable={false}/>
+                        <div key={p.id} style={{display:"flex",alignItems:"center",gap:"1rem",background:"linear-gradient(135deg,#141410 0%,#0d0d0a 100%)",border:"1px solid #2a4a2a",borderRadius:12,padding:"1rem"}}>
+                          <img src={optImg(p.img,800)} alt={p.name} style={{width:140,height:140,objectFit:"cover",borderRadius:10,flexShrink:0,background:"#0a0a0a"}} draggable={false}/>
                           <div style={{flex:1,minWidth:0}}>
-                            <p style={{margin:"0 0 3px",fontSize:13,fontWeight:800,color:"#fff"}}>{p.name}</p>
-                            <p style={{margin:"0 0 2px",fontSize:11,color:"#4caf50",fontFamily:"monospace",fontWeight:800}}>{p.code}</p>
-                            <p style={{margin:0,fontSize:11,color:"#666"}}>{catLabel(p.category)} · ${p.price.toFixed(2)} {p.active===false&&<span style={{color:"#ff6666",fontWeight:800}}> · OCULTO</span>}</p>
+                            <p style={{margin:"0 0 4px",fontSize:15,fontWeight:800,color:"#fff"}}>{p.name}</p>
+                            <p style={{margin:"0 0 3px",fontSize:12,color:"#4caf50",fontFamily:"monospace",fontWeight:800}}>{p.code}</p>
+                            <p style={{margin:0,fontSize:12,color:"#666"}}>{catLabel(p.category)} · ${p.price.toFixed(2)} {p.active===false&&<span style={{color:"#ff6666",fontWeight:800}}> · OCULTO</span>}</p>
                           </div>
                         </div>
                       ))}
@@ -3936,7 +3938,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
               ):(
                 <p style={{fontSize:24,fontWeight:900,margin:"0 0 0.4rem",color:C.accent}}>{fmtPrice(selectedProduct.price)}</p>
               )}
-              <p style={{fontSize:11,color:"#fff",fontWeight:900,margin:"0 0 1.25rem",letterSpacing:1,textShadow:"0 0 8px rgba(255,255,255,0.35)"}}>⚡ {getUnitsSoldLabel(selectedProduct)} este mes</p>
+              <p style={{fontSize:11,color:"#fff",fontWeight:900,margin:"0 0 1.25rem",letterSpacing:1,textShadow:"0 0 8px rgba(255,255,255,0.35)"}}>⚡ {getUnitsSoldLabel(selectedProduct)}</p>
               {!!selectedProduct.urgencyTag&&(
                 <div style={{display:"flex",alignItems:"center",gap:8,background:selectedProduct.urgencyTag==="ultima"?"linear-gradient(135deg,rgba(255,59,59,0.14) 0%,rgba(122,0,0,0.08) 100%)":"linear-gradient(135deg,rgba(255,255,255,0.06) 0%,rgba(255,255,255,0.02) 100%)",border:`1px solid ${selectedProduct.urgencyTag==="ultima"?"rgba(255,59,59,0.4)":"rgba(255,255,255,0.15)"}`,borderRadius:10,padding:"0.65rem 0.9rem",marginBottom:"1.1rem"}}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill={selectedProduct.urgencyTag==="ultima"?"#ff5555":"#ffd43b"}><path d="M13 2L3 14h7l-1 8 11-14h-7l1-6z"/></svg>
