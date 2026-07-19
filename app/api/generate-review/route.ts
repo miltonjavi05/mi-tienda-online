@@ -225,6 +225,14 @@ const COMMENT_FOCUS_STYLES = [
   "concéntrate en cómo le quedó puesto o cómo se ve usándolo, más que en describirlo objetivamente",
   "concéntrate en que fue justo lo que buscaba, ni más ni menos, sin adornarlo demasiado",
   "concéntrate en recomendarlo específicamente a un tipo de persona (para trabajar, para regalar, para estudiar, para el día a día)",
+  "concéntrate específicamente en lo bien cuidado, protegido o presentado que venía el empaque, como si fuera de una tienda de verdad y no algo improvisado",
+  "concéntrate en lo original y diferente que es el diseño del artículo comparado con lo que se consigue normalmente en la calle o en otras tiendas",
+  "concéntrate específicamente en la calidad del material (que no se ve barato, que pesa bien, que no parece que se va a dañar rápido)",
+  "concéntrate en la persona que lo atendió por WhatsApp: que fue amable, rápida para responder, resolvió dudas, o hizo sentir la compra segura",
+  "concéntrate en lo fácil, rápido y sin complicaciones que fue comprar directamente desde la página web, sin tener que hacer nada complicado",
+  "concéntrate en que el artículo se ve incluso mejor en persona que en las fotos de la página",
+  "concéntrate en la durabilidad esperada o ya comprobada del producto tras un tiempo de uso",
+  "concéntrate en el detalle de que el precio le pareció justo o incluso bajo para la calidad que recibió",
 ];
 
 const VENEZUELAN_CITIES = ["Maracaibo","Puerto Ordaz","Barquisimeto","Valencia","Maracay","San Cristóbal","Barinas","Ciudad Bolívar","Punto Fijo","Cumaná","Mérida","Coro","Guanare","Acarigua","San Felipe","Guarenas"];
@@ -266,7 +274,7 @@ const EMOJI_POOL = [
 ];
 
 function buildEmojiInstruction(): string {
-  const useEmojis = Math.random() < 0.62; // no todos los comentarios llevan emojis
+  const useEmojis = Math.random() < 0.60; // aproximadamente el 60% de los comentarios llevan emojis
   if (!useEmojis) {
     return "- NO uses ningún emoji en este comentario, escríbelo en texto plano de principio a fin.";
   }
@@ -299,7 +307,12 @@ function buildPrompt(productName: string, category: string, excludeNames: string
   const punctuation = PUNCTUATION_STYLES[Math.floor(Math.random() * PUNCTUATION_STYLES.length)];
   const emojiInstruction = buildEmojiInstruction();
   const slang = SLANG_INTENSITY[Math.floor(Math.random() * SLANG_INTENSITY.length)];
-  const lengthWords = 8 + Math.floor(Math.random() * 35); // varía muchísimo la longitud, de cortos a largos
+  const lengthTier = Math.random();
+  const lengthWords = lengthTier < 0.3
+    ? 5 + Math.floor(Math.random() * 8)   // muy cortos: 5-12 palabras
+    : lengthTier < 0.7
+    ? 15 + Math.floor(Math.random() * 20) // medianos: 15-34 palabras
+    : 40 + Math.floor(Math.random() * 35); // largos y detallados: 40-74 palabras
   const mentionCity = Math.random() < 0.25;
   const city = VENEZUELAN_CITIES[Math.floor(Math.random() * VENEZUELAN_CITIES.length)];
   const cityLine = mentionCity ? `- En este comentario en particular, menciona de forma natural que lo pidió desde ${city} (u otra ciudad de Venezuela que tú elijas) y cómo fue la experiencia de recibirlo ahí.` : "";
@@ -314,7 +327,7 @@ ${excludeLine}
 - Cada palabra del nombre debe empezar con mayúscula y el resto en minúscula.
 - El correo debe estar completamente en minúsculas, basado en el nombre (sin tildes ni espacios), con dominio gmail.com, hotmail.com o outlook.com.
 - Las estrellas deben ser mayormente 5, con menor frecuencia 4, y en muy pocas ocasiones 3. Sin importar la calificación (incluso si es 3), el comentario debe sonar igual de positivo, bien escrito y satisfecho que uno de 5 estrellas — la calificación no debe bajar la calidad ni el tono del texto.
-- El comentario debe tener aproximadamente ${lengthWords} palabras. Varía MUCHO la longitud entre comentarios: algunos deben ser muy cortos (una frase de 5-10 palabras, como "ame la tienda, todo bello" o "que buena calidad, la recomiendo"), otros medianos, y otros más largos y detallados.
+- El comentario debe tener aproximadamente ${lengthWords} palabras, respeta ese largo con fidelidad. En el conjunto general de reseñas debe haber una mezcla real: algunas muy cortas y directas (una frase de 5-12 palabras, como "ame la tienda, todo bello" o "que buena calidad, la recomiendo"), muchas de largo medio, y otras notablemente más largas y detalladas, contando con calma toda la experiencia de principio a fin. este comentario en particular debe ajustarse al largo indicado arriba, sin quedarse corto ni pasarse de forma exagerada.
 - Para este comentario específico, ${opening}, con ${tone}, y ${focus}. Además, ${structure}, y ${punctuation}.
 - Si el comentario es un regalo y la categoría es LENTES, ARETES, COLLARES o ANILLOS, el regalo puede ser tanto para hombre como para mujer. En cualquier otra categoría, el regalo debe ser casi siempre para un hombre (novio, esposo, hermano, papá, amigo) y solo raras veces para una mujer.
 - Habla la jerga ${slang}
