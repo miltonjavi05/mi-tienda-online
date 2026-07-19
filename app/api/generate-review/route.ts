@@ -18,7 +18,63 @@ const SAMPLE_REVIEW_NAMES = [
   "Kleiver Andres", "Yeraldin Moreno", "Nairobis Salazar", "Wilfredo Rangel", "Yusbeidy Ramirez",
   "Katiuska Fernandez", "Maiker Gonzalez", "Rosmary Torres", "Yeison David", "Estefany Nava",
   "Gleimar Rincon", "Marielys Camacho", "Deiker Rojas", "Yubelkis Aponte", "Franyeli Bastidas",
+  "Jhon Albert", "Alexander Vargas", "Andres Jholbert", "Carlos Uzcategui", "Miguelangel Rondon",
+  "Jesus Chourio", "Yeferson Delgado", "Robert Escalona", "Franklin Barrios", "Yordy Lugo",
+  "Edgardo Villalobos", "Jeanpierre Zambrano", "Yorman Petit", "Argenis Colmenares", "Jeanfranco Rios",
+  "Wuilmer Bracho", "Kervin Montilla", "Yohan Prieto", "Ronaldo Semprun", "Eliezer Paz",
+  "Maikel Fuenmayor", "Yerson Chacin", "Angel Urdaneta", "Dailer Morales", "Reinaldo Pirela",
 ];
+
+const MALE_FIRST_NAMES = [
+  "Jose","Luis","Carlos","Anderson","Jhonaiker","Deivis","Kleiver","Wilfredo","Maiker","Yeison",
+  "Deiker","Jhon","Alexander","Andres","Franklin","Yeferson","Robert","Yordy","Edgardo","Jeanpierre",
+  "Yorman","Argenis","Jeanfranco","Wuilmer","Kervin","Yohan","Ronaldo","Eliezer","Maikel","Yerson",
+  "Angel","Dailer","Reinaldo","Yeisson","Cristopher","Jeanmarco","Yorvin","Alixon","Ruben","Yorgel",
+  "Emerson","Neomar","Yeikol","Ismael","Yohandry","Marcos","Cristian","Yoendris","Gregory","Ronny",
+  "Yorbis","Jeikel","Yeremy","Franyer","Yohander","Deybis","Yerlin","Wilker","Yeimer","Jeanderson",
+  "Yosneiber","Kelvin","Yohanser","Endher","Yeimar","Jeanmichael","Yorwin","Ademar","Yeikson","Anthony",
+  "Yeiker","Ronal","Yorvis","Miguelangel","Jesus","Yohaner","Freddy","Yorbelis","Elimar","Yerald",
+  "Osman","Yohanny","Rixon","Yoiner","Adonai","Yeixon","Ronaldy","Yorgel","Neiber","Yeikcer",
+];
+const FEMALE_FIRST_NAMES = [
+  "Maria","Valeria","Sofia","Yorbelis","Neirimar","Marielvis","Yusneidy","Yolimar","Franyelis","Yeraldin",
+  "Nairobis","Yusbeidy","Katiuska","Rosmary","Estefany","Gleimar","Marielys","Yubelkis","Franyeli","Genesis",
+  "Yorgelis","Migdalia","Anyelina","Yeimy","Carla","Marielena","Yusmely","Dayana","Yorley","Anakarina",
+  "Yubisay","Solangel","Zuleima","Yohana","Wendy","Adriana","Yumelis","Marbelys","Ninoska","Yosmar",
+  "Anghy","Deisy","Yeslibeth","Ana","Yusleidy","Carolina","Yulimar","Yenifer","Yoselin","Mariangel",
+  "Zoraida","Yubisay","Yorlenis","Marielsi","Yusmar","Karelis","Yorman","Andreina","Yosmely","Elimar",
+  "Yenny","Yoleida","Ninoska","Yeliany","Marianyela","Yulaimis","Roselys","Yumaira","Yeismar","Anghela",
+];
+const LAST_NAMES = [
+  "Rodriguez","Perez","Gonzalez","Fernandez","Martinez","Sanchez","Ramirez","Torres","Flores","Rivera",
+  "Gomez","Diaz","Reyes","Morales","Ortiz","Chirinos","Bracho","Villalobos","Fuenmayor","Urdaneta",
+  "Boscan","Petit","Ferrer","Colmenares","Rincon","Nava","Bermudez","Semprun","Vera","Larez",
+  "Andrade","Zambrano","Materan","Atencio","Guerra","Perozo","Portillo","Balza","Chiquinquira","Faria",
+  "Añez","Quintero","Vilchez","Contreras","Blanco","Rojas","Aponte","Bastidas","Camacho","Suarez",
+  "Salazar","Rangel","Peña","Delgado","Escalona","Barrios","Lugo","Rondon","Chourio","Uzcategui",
+  "Villasmil","Sulbaran","Palencia","Mavarez","Machado","Nuñez","Torrealba","Bohorquez","Larrazabal","Finol",
+  "Molero","Marin","Reales","Paz","Rincones","Colina","Cova","Duran","Godoy","Gutierrez",
+  "Hernandez","Herrera","Jimenez","Leal","Luna","Marquez","Medina","Mendoza","Moreno","Ochoa",
+  "Ortega","Paredes","Prieto","Quiroz","Ramos","Salcedo","Silva","Tovar","Uzcanga","Vasquez",
+];
+
+function normalizeNameKey(name: string): string {
+  return stripAccents(name.trim().toLowerCase()).replace(/\s+/g, " ");
+}
+
+function generateUniqueName(usedKeys: Set<string>, preferFemale = false): string {
+  const firstPool = preferFemale ? FEMALE_FIRST_NAMES : MALE_FIRST_NAMES;
+  let attempts = 0;
+  while (attempts < 300) {
+    const first = pick(firstPool);
+    const last = pick(LAST_NAMES);
+    const full = `${first} ${last}`;
+    const key = normalizeNameKey(full);
+    if (!usedKeys.has(key)) return capitalizeName(full);
+    attempts++;
+  }
+  return capitalizeName(`${pick(firstPool)} ${pick(LAST_NAMES)} ${randomInt(2, 99)}`);
+}
 
 function catLabel(cat: string): string {
   const m: Record<string, string> = {
@@ -148,7 +204,7 @@ const SLANG_INTENSITY = [
   "con dos expresiones coloquiales venezolanas como máximo, bien naturales, como si lo escribiera alguien de la calle sin pensarlo mucho",
 ];
 
-function buildPrompt(productName: string, category: string): string {
+function buildPrompt(productName: string, category: string, excludeNames: string[] = []): string {
   const opening = OPENING_STYLES[Math.floor(Math.random() * OPENING_STYLES.length)];
   const tone = TONE_STYLES[Math.floor(Math.random() * TONE_STYLES.length)];
   const focus = COMMENT_FOCUS_STYLES[Math.floor(Math.random() * COMMENT_FOCUS_STYLES.length)];
@@ -157,19 +213,23 @@ function buildPrompt(productName: string, category: string): string {
   const mentionCity = Math.random() < 0.25;
   const city = VENEZUELAN_CITIES[Math.floor(Math.random() * VENEZUELAN_CITIES.length)];
   const cityLine = mentionCity ? `- En este comentario en particular, menciona de forma natural que lo pidió desde ${city} (u otra ciudad de Venezuela que tú elijas) y cómo fue la experiencia de recibirlo ahí.` : "";
+  const recentExclude = excludeNames.slice(-30);
+  const excludeLine = recentExclude.length ? `- NUNCA uses ninguno de estos nombres y apellidos que ya se usaron antes (elige uno completamente distinto): ${recentExclude.join(", ")}.` : "";
   return `Genera una reseña de cliente en español (Venezuela) para este producto de accesorios: "${productName}" (categoría: ${catLabel(category)}).
 Responde ÚNICAMENTE con un JSON válido, sin texto adicional ni backticks, con este formato exacto:
 {"name":"...","email":"...","stars":5,"comment":"..."}
 Reglas:
-- El nombre debe ser un nombre venezolano realista, en el estilo de estos ejemplos: ${SAMPLE_REVIEW_NAMES.join(", ")}. No repitas siempre los mismos, varía muchísimo (nombres compuestos, apodos, solo primer nombre, etc).
+- El nombre debe ser un nombre venezolano realista, en el estilo de estos ejemplos: ${SAMPLE_REVIEW_NAMES.join(", ")}. Usa la MAYOR variedad posible de nombres y apellidos, evitando siempre los más obvios o repetidos.
+${excludeLine}
 - Cada palabra del nombre debe empezar con mayúscula y el resto en minúscula.
 - El correo debe estar completamente en minúsculas, basado en el nombre (sin tildes ni espacios), con dominio gmail.com, hotmail.com o outlook.com.
 - Las estrellas deben ser 4 o 5 (mayormente 5).
 - El comentario debe tener aproximadamente ${lengthWords} palabras. Varía MUCHO la longitud entre comentarios: algunos deben ser muy cortos (una frase de 5-10 palabras, como "ame la tienda, todo bello" o "que buena calidad, la recomiendo"), otros medianos, y otros más largos y detallados.
 - Para este comentario específico, ${opening}, con ${tone}, y ${focus}.
+- Si el comentario es un regalo y la categoría es LENTES, ARETES, COLLARES o ANILLOS, el regalo puede ser tanto para hombre como para mujer. En cualquier otra categoría, el regalo debe ser casi siempre para un hombre (novio, esposo, hermano, papá, amigo) y solo raras veces para una mujer.
 - Habla la jerga ${slang}
 ${cityLine}
-- Estructura y forma cada comentario de manera TOTALMENTE distinta a los demás: unos empiezan con el nombre del artículo, otros con la tienda, otros con una expresión suelta, otros con la experiencia de compra, otros con el beneficio que le dio el producto. Ninguno debe sonar a plantilla ni seguir el mismo orden de ideas que otro.
+- Estructura y forma cada comentario de manera EXTREMADAMENTE distinta a los demás: unos empiezan con el nombre del artículo, otros con la tienda, otros con una expresión suelta, otros con la experiencia de compra, otros con el beneficio que le dio el producto, otros con una anécdota o una queja inicial que se resuelve positivamente. Varía también la longitud de las frases, la puntuación y el orden en que aparecen los datos, para que ningún comentario se parezca en su forma a otro. Ninguno debe sonar a plantilla ni seguir el mismo orden de ideas ni la misma cantidad de oraciones que otro.
 - Si el comentario menciona una característica o beneficio del producto, que sea coherente con la categoría real (ej: lentes anti luz azul → protegen la vista al usar la computadora o estudiar; lentes fotocromáticos → se oscurecen con el sol y protegen los ojos; monturas/lentes de fórmula → se los colocó en la óptica y ahora ve mejor; relojes → nunca más llega tarde o siempre sabe la hora; pulseras/aretes/collares → se ven originales, bonito color, buen acabado; billeteras → buen material, cómoda, resistente).
 - No repitas estructuras de frase típicas de reseña genérica de e-commerce. Escribe como lo escribiría alguien rápido desde el celular: puede tener alguna palabra pegada, abreviación común de Venezuela (xq, q, tmb) usada con moderación, letras repetidas para dar énfasis (ej: bonitooo, bienn, sigan asiii) usado con moderación y solo a veces, o signos de exclamación de forma natural, no forzada.
 - NUNCA empieces el comentario con estas frases ni nada parecido: ${BANNED_OPENERS.join(" / ")}.
@@ -235,14 +295,17 @@ async function callGroq(prompt: string): Promise<string> {
 
 export async function POST(req: Request) {
   try {
-    const { productName, category } = await req.json();
+    const { productName, category, existingNames } = await req.json();
     if (!productName) return NextResponse.json({ error: "Falta productName" }, { status: 400 });
 
     if (!GROQ_API_KEYS.length) {
       return NextResponse.json({ error: "Falta configurar GROQ_API_KEY en el servidor" }, { status: 500 });
     }
 
-    const prompt = buildPrompt(productName, category || "");
+    const existingList: string[] = Array.isArray(existingNames) ? existingNames.filter((n: unknown) => typeof n === "string") : [];
+    const usedKeys = new Set(existingList.map(normalizeNameKey));
+
+    const prompt = buildPrompt(productName, category || "", existingList);
     let text: string;
     try {
       text = await callGroq(prompt);
@@ -253,6 +316,12 @@ export async function POST(req: Request) {
 
     const result = parseReviewText(text);
     if (!result) return NextResponse.json({ error: "Respuesta vacía o mal formada" }, { status: 502 });
+
+    // Garantía real: si el nombre generado ya se usó antes en la tienda, se reemplaza por uno único
+    if (usedKeys.has(normalizeNameKey(result.name))) {
+      result.name = generateUniqueName(usedKeys);
+      result.email = generateCreativeEmail(result.name);
+    }
 
     return NextResponse.json(result);
   } catch (err) {

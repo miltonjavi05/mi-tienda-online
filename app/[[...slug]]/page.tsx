@@ -649,11 +649,11 @@ const SAMPLE_REVIEW_NAMES=["Javier Jose","Anderson","Carrillo","Gamarra","Arturo
 function capitalizeName(raw:string):string{
   return raw.trim().split(/\s+/).map(w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(" ");
 }
-async function generateAIReview(productName:string,category:string):Promise<{name:string;email:string;stars:number;comment:string}|null>{
+async function generateAIReview(productName:string,category:string,existingNames:string[]=[]):Promise<{name:string;email:string;stars:number;comment:string}|null>{
   const r=await fetch("/api/generate-review",{
     method:"POST",
     headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({productName,category})
+    body:JSON.stringify({productName,category,existingNames})
   });
   const d=await r.json();
   if(!r.ok){console.error("generate-review error:",d);throw new Error(d?.error||`Error ${r.status}`);}
@@ -2238,7 +2238,7 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     if(allCommentsLoaded.current&&!force)return;
     setAllCommentsLoading(true);
     try{
-      const raw=await fsGetCollection("product_comments",300);
+      const raw=await fsGetCollection("product_comments",2000);
       const list:ProductComment[]=raw.map(r=>({id:r.id,productId:(r.productId as string)||"",productName:(r.productName as string)||"",name:(r.name as string)||"",email:(r.email as string)||"",comment:(r.comment as string)||"",stars:Number(r.stars)||5,createdAt:Number(r.createdAt)||0,photoUrl:(r.photoUrl as string)||"",photoUrls:Array.isArray(r.photoUrls)?(r.photoUrls as string[]):[],avatarUrl:(r.avatarUrl as string)||"",isAdmin:!!r.isAdmin}));
       list.sort((a,b)=>b.createdAt-a.createdAt);
       setAllComments(list);
@@ -2438,7 +2438,9 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     if(!prod){setAcErr("Selecciona un producto primero.");return;}
     setAcErr("");setAcGenerating(true);
     try{
-      const result=await generateAIReview(prod.name,prod.category);
+      await loadAllComments();
+      const existingNames=[...new Set(allComments.map(c=>c.name).filter(Boolean))];
+      const result=await generateAIReview(prod.name,prod.category,existingNames);
       if(!result){setAcErr("No se pudo generar la reseña. Intenta de nuevo.");return;}
       setAcName(result.name);
       setAcFakeEmail(result.email);
@@ -2449,7 +2451,7 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     }finally{
       setAcGenerating(false);
     }
-  },[products,acProductId]);
+  },[products,acProductId,allComments,loadAllComments]);
 
   const bulkGenerateAllComments=useCallback(async()=>{
     const catFilteredProducts=bulkGenCatFilter==="ALL"?products:products.filter(p=>p.category===bulkGenCatFilter);
@@ -2464,6 +2466,8 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     }else if(!confirm(`Se generarán reseñas para ${toProcess.length} producto(s) pendientes de "${catLabelText}" (de ${catFilteredProducts.length} en esta selección). Si la API se satura por límites, esperará sola y continuará automáticamente sin perder el progreso. ¿Continuar?`))return;
 
     setBulkGenLoading(true);setBulkGenErr("");setBulkGenMsg("");
+    await loadAllComments(true);
+    const usedNames=allComments.map(c=>c.name).filter(Boolean);
     let totalCreated=0;
     const MAX_WAIT=60000;
     try{
@@ -2476,7 +2480,7 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
           while(!result){
             setBulkGenMsg(`Generando reseñas para "${prod.name}" (${pi+1}/${toProcess.length} pendientes · ${progressSet.size}/${catFilteredProducts.length} completados en "${catLabelText}")…`);
             try{
-              result=await generateAIReview(prod.name,prod.category);
+              result=await generateAIReview(prod.name,prod.category,usedNames);
             }catch{
               setBulkGenMsg(`Límite de la API alcanzado en "${prod.name}". Esperando ${Math.round(wait/1000)}s para reintentar automáticamente, no cierres esta pestaña…`);
               await new Promise(res=>setTimeout(res,wait));
@@ -2488,6 +2492,7 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
               wait=Math.min(MAX_WAIT,wait*2);
             }
           }
+          usedNames.push(result.name);
           try{
             await fsAddToCollection("product_comments",{productId:prod.id,productName:prod.name,name:result.name,email:result.email,comment:result.comment,stars:result.stars,createdAt:Date.now()-Math.floor(Math.random()*1095)*86400000,photoUrl:"",avatarUrl:"",isAdmin:false});
             totalCreated++;
@@ -2506,7 +2511,7 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     }finally{
       setBulkGenLoading(false);
     }
-  },[products,loadAllComments,bulkGenCatFilter]);
+  },[products,loadAllComments,bulkGenCatFilter,allComments]);
 
   const submitAdminComment=useCallback(async()=>{
     setAcErr("");setAcOk("");
