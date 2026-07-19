@@ -4453,7 +4453,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                             {c.avatarUrl?<img src={c.avatarUrl} alt={c.name} style={{width:26,height:26,borderRadius:"50%",objectFit:"cover",flexShrink:0,border:"1px solid #333"}} draggable={false}/>:<div style={{width:26,height:26,borderRadius:"50%",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:11,fontWeight:900,color:"#080808"}}>{c.name[0]?.toUpperCase()||"?"}</span></div>}
                             <span style={{fontSize:12,fontWeight:800,color:"#ddd"}}>{c.name}{c.isAdmin&&<span style={{marginLeft:6,fontSize:9,color:"#080808",background:"#fff",padding:"1px 6px",borderRadius:8,fontWeight:900}}>FOKUS</span>}</span>
                           </div>
-                          <span style={{fontSize:9,color:"#333"}}>{new Date(c.createdAt).toLocaleDateString("es-VE",{day:"2-digit",month:"short"})}</span>
+                          <span style={{fontSize:9,color:"#333"}}>{new Date(c.createdAt).toLocaleDateString("es-VE",{day:"2-digit",month:"short",year:"numeric"})}</span>
                         </div>
                         {!!c.email&&<p style={{margin:"0 0 5px",fontSize:10,color:"#555"}}>{c.email}</p>}
                         <div style={{marginBottom:"5px"}}><StarRow value={c.stars||5} size={11}/></div>

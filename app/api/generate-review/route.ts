@@ -148,6 +148,13 @@ function generateRandomPastDate(maxDaysAgo = 1095): Date {
   return d;
 }
 
+function pickWeightedStars(): number {
+  const r = Math.random();
+  if (r < 0.72) return 5;
+  if (r < 0.94) return 4;
+  return 3;
+}
+
 const OPENING_STYLES = [
   "empieza contando en qué momento u ocasión lo usó (ej: un viaje, el trabajo, una salida)",
   "empieza con una opinión directa y espontánea sobre la calidad o el material",
@@ -223,7 +230,7 @@ Reglas:
 ${excludeLine}
 - Cada palabra del nombre debe empezar con mayúscula y el resto en minúscula.
 - El correo debe estar completamente en minúsculas, basado en el nombre (sin tildes ni espacios), con dominio gmail.com, hotmail.com o outlook.com.
-- Las estrellas deben ser 4 o 5 (mayormente 5).
+- Las estrellas deben ser mayormente 5, con menor frecuencia 4, y en muy pocas ocasiones 3. Sin importar la calificación (incluso si es 3), el comentario debe sonar igual de positivo, bien escrito y satisfecho que uno de 5 estrellas — la calificación no debe bajar la calidad ni el tono del texto.
 - El comentario debe tener aproximadamente ${lengthWords} palabras. Varía MUCHO la longitud entre comentarios: algunos deben ser muy cortos (una frase de 5-10 palabras, como "ame la tienda, todo bello" o "que buena calidad, la recomiendo"), otros medianos, y otros más largos y detallados.
 - Para este comentario específico, ${opening}, con ${tone}, y ${focus}.
 - Si el comentario es un regalo y la categoría es LENTES, ARETES, COLLARES o ANILLOS, el regalo puede ser tanto para hombre como para mujer. En cualquier otra categoría, el regalo debe ser casi siempre para un hombre (novio, esposo, hermano, papá, amigo) y solo raras veces para una mujer.
@@ -231,6 +238,7 @@ ${excludeLine}
 ${cityLine}
 - Estructura y forma cada comentario de manera EXTREMADAMENTE distinta a los demás: unos empiezan con el nombre del artículo, otros con la tienda, otros con una expresión suelta, otros con la experiencia de compra, otros con el beneficio que le dio el producto, otros con una anécdota o una queja inicial que se resuelve positivamente. Varía también la longitud de las frases, la puntuación y el orden en que aparecen los datos, para que ningún comentario se parezca en su forma a otro. Ninguno debe sonar a plantilla ni seguir el mismo orden de ideas ni la misma cantidad de oraciones que otro.
 - Si el comentario menciona una característica o beneficio del producto, que sea coherente con la categoría real (ej: lentes anti luz azul → protegen la vista al usar la computadora o estudiar; lentes fotocromáticos → se oscurecen con el sol y protegen los ojos; monturas/lentes de fórmula → se los colocó en la óptica y ahora ve mejor; relojes → nunca más llega tarde o siempre sabe la hora; pulseras/aretes/collares → se ven originales, bonito color, buen acabado; billeteras → buen material, cómoda, resistente).
+- Al mencionar el producto dentro del comentario, NO uses siempre el nombre completo y exacto del artículo. Varía la forma de referirte a él: a veces el nombre completo, a veces solo el tipo genérico de accesorio (ej: "los lentes", "el reloj", "la pulsera", "los aretes", "el collar", "la billetera", "el anillo"), a veces una versión corta o coloquial (ej: "lentes anti luz azul" → "los lentes" o "los de luz azul"), y a veces ni lo menciones explícitamente y habla de "lo que compré" o "mi pedido". Que suene natural, como hablaría una persona real, no como una ficha de producto repetida en cada reseña.
 - No repitas estructuras de frase típicas de reseña genérica de e-commerce. Escribe como lo escribiría alguien rápido desde el celular: puede tener alguna palabra pegada, abreviación común de Venezuela (xq, q, tmb) usada con moderación, letras repetidas para dar énfasis (ej: bonitooo, bienn, sigan asiii) usado con moderación y solo a veces, o signos de exclamación de forma natural, no forzada.
 - NUNCA empieces el comentario con estas frases ni nada parecido: ${BANNED_OPENERS.join(" / ")}.
 - Evita muletillas repetitivas de reseña genérica. Que suene como algo que alguien realmente escribiría, con su propio estilo, no como plantilla.`;
@@ -241,7 +249,7 @@ function parseReviewText(text: string) {
   const parsed = JSON.parse(cleaned);
   const name = capitalizeName(String(parsed.name || "Cliente Fokus"));
   const email = generateCreativeEmail(name); // generado localmente, más variado que el de la IA
-  const stars = Math.max(4, Math.min(5, parseInt(parsed.stars) || 5));
+  const stars = pickWeightedStars();
   const comment = String(parsed.comment || "").trim();
   const createdAt = generateRandomPastDate(); // úsalo al guardar la reseña en tu DB
   if (!comment) return null;
