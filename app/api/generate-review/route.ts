@@ -136,7 +136,7 @@ function generateCreativeEmail(fullName: string): string {
   ];
 
   const local = pick(patterns)().replace(/\.+/g, ".").replace(/^\.|\.$/g, "");
-  const domain = pick(["gmail.com", "hotmail.com", "outlook.com"]);
+  const domain = pick(["gmail.com", "hotmail.com"]);
   return `${local}@${domain}`;
 }
 
