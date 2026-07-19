@@ -2320,7 +2320,6 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
   const generateAdminCommentAI=useCallback(async()=>{
     const prod=products.find(p=>p.id===acProductId);
     if(!prod){setAcErr("Selecciona un producto primero.");return;}
-    if(GEMINI_API_KEY==="TU_GEMINI_API_KEY"){setAcErr("Falta configurar NEXT_PUBLIC_GEMINI_API_KEY en las variables de entorno.");return;}
     setAcErr("");setAcGenerating(true);
     try{
       const result=await generateAIReview(prod.name,prod.category);
