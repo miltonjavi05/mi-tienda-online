@@ -1564,6 +1564,8 @@ const[acGenerating,setAcGenerating]=useState(false);
 const[bulkGenLoading,setBulkGenLoading]=useState(false);
 const[bulkGenMsg,setBulkGenMsg]=useState("");
 const[bulkGenErr,setBulkGenErr]=useState("");
+const[bulkGenCatFilter,setBulkGenCatFilter]=useState("ALL");
+const[bulkDeleteCatFilter,setBulkDeleteCatFilter]=useState("ALL");
 const[acErr,setAcErr]=useState("");
 const[acOk,setAcOk]=useState("");
 const acPhotoRef=useRef<HTMLInputElement>(null);
@@ -2275,6 +2277,47 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     }
   },[allComments,bulkKeepProductId,products]);
 
+  const bulkDeleteByCategory=useCallback(async()=>{
+    if(bulkDeleteCatFilter==="ALL"){alert("Selecciona la categoría específica que quieres borrar.");return;}
+    const catProductIds=new Set(products.filter(p=>p.category===bulkDeleteCatFilter).map(p=>p.id));
+    const toDelete=allComments.filter(c=>catProductIds.has(c.productId));
+    if(!toDelete.length){alert("No hay comentarios en esa categoría.");return;}
+    if(!confirm(`Esto eliminará ${toDelete.length} comentario(s) de la categoría "${catLabel(bulkDeleteCatFilter)}". ¿Continuar?`))return;
+    setBulkDeleteRunning(true);
+    try{
+      for(const c of toDelete){
+        await fsDeleteDoc("product_comments",c.id);
+      }
+      const deletedIds=new Set(toDelete.map(c=>c.id));
+      setAllComments(prev=>prev.filter(c=>!deletedIds.has(c.id)));
+      setProductComments(prev=>prev.filter(c=>!deletedIds.has(c.id)));
+    }catch(err){
+      alert("Error al eliminar: "+(err instanceof Error?err.message:"desconocido"));
+    }finally{
+      setBulkDeleteRunning(false);
+    }
+  },[allComments,bulkDeleteCatFilter,products]);
+
+  const bulkDeleteExceptCategory=useCallback(async()=>{
+    if(bulkDeleteCatFilter==="ALL"){alert("Selecciona la categoría que quieres conservar.");return;}
+    const catProductIds=new Set(products.filter(p=>p.category===bulkDeleteCatFilter).map(p=>p.id));
+    const toDelete=allComments.filter(c=>!catProductIds.has(c.productId));
+    if(!toDelete.length){alert("No hay comentarios de otras categorías para eliminar.");return;}
+    if(!confirm(`Esto eliminará ${toDelete.length} comentario(s) de TODAS las demás categorías, dejando solo los de "${catLabel(bulkDeleteCatFilter)}". ¿Continuar?`))return;
+    setBulkDeleteRunning(true);
+    try{
+      for(const c of toDelete){
+        await fsDeleteDoc("product_comments",c.id);
+      }
+      setAllComments(prev=>prev.filter(c=>catProductIds.has(c.productId)));
+      setProductComments(prev=>prev.filter(c=>catProductIds.has(c.productId)));
+    }catch(err){
+      alert("Error al eliminar: "+(err instanceof Error?err.message:"desconocido"));
+    }finally{
+      setBulkDeleteRunning(false);
+    }
+  },[allComments,bulkDeleteCatFilter,products]);
+
   const startEditComment=useCallback((c:ProductComment)=>{
     setEditingCommentId(c.id);
     setEcName(c.name);
@@ -2368,14 +2411,16 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
   },[products,acProductId]);
 
   const bulkGenerateAllComments=useCallback(async()=>{
+    const catFilteredProducts=bulkGenCatFilter==="ALL"?products:products.filter(p=>p.category===bulkGenCatFilter);
+    if(!catFilteredProducts.length){alert("No hay productos en esa categoría.");return;}
+    const catLabelText=bulkGenCatFilter==="ALL"?"todas las categorías":catLabel(bulkGenCatFilter);
     const progressSet=new Set(getBulkGenProgress());
-    let toProcess=products.filter(p=>!progressSet.has(p.id));
-    if(toProcess.length===0){
-      if(!confirm("Ya se generaron reseñas para todos los productos guardados en el progreso. ¿Reiniciar y generar de nuevo para todos?"))return;
-      clearBulkGenProgress();
-      progressSet.clear();
-      toProcess=[...products];
-    }else if(!confirm(`Se generarán reseñas para ${toProcess.length} producto(s) pendientes (de ${products.length} en total). Si la API se satura por límites, esperará sola y continuará automáticamente sin perder el progreso. ¿Continuar?`))return;
+    let toProcess=catFilteredProducts.filter(p=>!progressSet.has(p.id));
+    const isTopUp=toProcess.length===0;
+    if(isTopUp){
+      toProcess=[...catFilteredProducts];
+      if(!confirm(`Ya hay reseñas generadas para los ${catFilteredProducts.length} producto(s) de "${catLabelText}". Se agregarán reseñas ADICIONALES (2 a 5 más por producto) sin borrar las anteriores. ¿Continuar?`))return;
+    }else if(!confirm(`Se generarán reseñas para ${toProcess.length} producto(s) pendientes de "${catLabelText}" (de ${catFilteredProducts.length} en esta selección). Si la API se satura por límites, esperará sola y continuará automáticamente sin perder el progreso. ¿Continuar?`))return;
 
     setBulkGenLoading(true);setBulkGenErr("");setBulkGenMsg("");
     let totalCreated=0;
@@ -2388,7 +2433,7 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
           let result:{name:string;email:string;stars:number;comment:string}|null=null;
           let wait=5000;
           while(!result){
-            setBulkGenMsg(`Generando reseñas para "${prod.name}" (${pi+1}/${toProcess.length} pendientes · ${progressSet.size}/${products.length} completados)…`);
+            setBulkGenMsg(`Generando reseñas para "${prod.name}" (${pi+1}/${toProcess.length} pendientes · ${progressSet.size}/${catFilteredProducts.length} completados en "${catLabelText}")…`);
             try{
               result=await generateAIReview(prod.name,prod.category);
             }catch{
@@ -2413,14 +2458,14 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
         progressSet.add(prod.id);
         saveBulkGenProgress(Array.from(progressSet));
       }
-      setBulkGenMsg(`✓ Se crearon ${totalCreated} reseñas nuevas. Progreso total: ${progressSet.size}/${products.length} productos completados.`);
-      clearBulkGenProgress();
+      setBulkGenMsg(isTopUp?`✓ Se agregaron ${totalCreated} reseñas adicionales a los ${catFilteredProducts.length} productos de "${catLabelText}".`:`✓ Se crearon ${totalCreated} reseñas nuevas. Progreso: ${progressSet.size}/${catFilteredProducts.length} productos completados en "${catLabelText}".`);
+      if(progressSet.size>=catFilteredProducts.length)clearBulkGenProgress();
       allCommentsLoaded.current=false;
       await loadAllComments(true);
     }finally{
       setBulkGenLoading(false);
     }
-  },[products,loadAllComments]);
+  },[products,loadAllComments,bulkGenCatFilter]);
 
   const submitAdminComment=useCallback(async()=>{
     setAcErr("");setAcOk("");
@@ -4109,9 +4154,14 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
             {adminLogged&&adminSec==="comments"&&(<>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem"}}><h1 style={{color:"#fff",fontSize:16,fontWeight:900,margin:0,letterSpacing:2}}>COMENTARIOS DE PRODUCTOS</h1><button onClick={()=>exitAdminSec()} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:12,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>← MENÚ</button></div>
               <div style={{background:"linear-gradient(135deg,#0a1420 0%,#0e0e0e 100%)",borderRadius:14,padding:"1.25rem",border:"1px solid #1a2a3a",marginBottom:"1.25rem"}}>
-                <p style={{color:"#4dabf7",fontSize:9,fontWeight:800,letterSpacing:2.5,margin:"0 0 0.5rem"}}>🤖 GENERAR RESEÑAS CON IA PARA TODOS LOS PRODUCTOS</p>
-                <p style={{color:"#666",fontSize:11,margin:"0 0 0.85rem",lineHeight:1.6}}>Crea entre 2 y 5 reseñas automáticas por cada producto de la tienda, con nombres y correos generados según el título de cada artículo.</p>
-                <button onClick={bulkGenerateAllComments} disabled={bulkGenLoading} style={{...S.adminBtn,background:"linear-gradient(135deg,#4dabf7 0%,#2a6bb0 100%)",opacity:bulkGenLoading?0.5:1,cursor:bulkGenLoading?"not-allowed":"pointer"}}>{bulkGenLoading?"Generando…":"🤖 Generar para todos los productos"}</button>
+                <p style={{color:"#4dabf7",fontSize:9,fontWeight:800,letterSpacing:2.5,margin:"0 0 0.5rem"}}>🤖 GENERAR RESEÑAS CON IA</p>
+                <p style={{color:"#666",fontSize:11,margin:"0 0 0.85rem",lineHeight:1.6}}>Crea entre 2 y 5 reseñas automáticas por producto. Elige "todas las categorías" o una específica.</p>
+                <select value={bulkGenCatFilter} onChange={e=>setBulkGenCatFilter(e.target.value)} style={{...S.input,appearance:"auto" as any,marginBottom:"0.75rem"}}>
+                  <option value="ALL">Todas las categorías</option>
+                  <optgroup label="── LENTES">{LENTES_SUBCATS.map(s=><option key={s} value={s}>{catLabel(s)}</option>)}</optgroup>
+                  <optgroup label="── OTROS">{SHOP_CATS.filter(c=>c!=="LENTES").map(c=><option key={c} value={c}>{catLabel(c)}</option>)}</optgroup>
+                </select>
+                <button onClick={bulkGenerateAllComments} disabled={bulkGenLoading} style={{...S.adminBtn,background:"linear-gradient(135deg,#4dabf7 0%,#2a6bb0 100%)",opacity:bulkGenLoading?0.5:1,cursor:bulkGenLoading?"not-allowed":"pointer"}}>{bulkGenLoading?"Generando…":(bulkGenCatFilter==="ALL"?"🤖 Generar para todos los productos":`🤖 Generar solo para "${catLabel(bulkGenCatFilter)}"`)}</button>
                 {bulkGenMsg&&<p style={{margin:"0.75rem 0 0",fontSize:11,color:"#4dabf7",lineHeight:1.6}}>{bulkGenMsg}</p>}
                 {bulkGenErr&&<p style={{margin:"0.75rem 0 0",fontSize:11,color:"#ff8888",background:"#1e0808",borderRadius:8,padding:"0.5rem 0.75rem"}}>{bulkGenErr}</p>}
               </div>
@@ -4159,6 +4209,19 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   {acErr&&<div style={{color:"#ff5555",fontSize:12,background:"#1e0808",padding:"0.65rem 1rem",borderRadius:8}}>{acErr}</div>}
                   {acOk&&<div style={{color:"#55cc77",fontSize:12,background:"#081e0e",padding:"0.65rem 1rem",borderRadius:8}}>{acOk}</div>}
                   <button onClick={submitAdminComment} disabled={acSaving} style={{...S.adminBtn,opacity:acSaving?0.5:1,cursor:acSaving?"not-allowed":"pointer"}}>{acSaving?"Publicando...":"Publicar reseña"}</button>
+                </div>
+              </div>
+              <div style={{background:"linear-gradient(135deg,#1e0a0a 0%,#0e0e0e 100%)",borderRadius:14,padding:"1.25rem",border:"1px solid #3a1515",marginBottom:"1.25rem"}}>
+                <p style={{color:"#ff8888",fontSize:9,fontWeight:800,letterSpacing:2.5,margin:"0 0 0.5rem"}}>🗑️ BORRAR POR CATEGORÍA</p>
+                <p style={{color:"#666",fontSize:11,margin:"0 0 0.85rem",lineHeight:1.6}}>Elige una categoría y borra solo esa, o borra todas las demás dejando solo esa.</p>
+                <select value={bulkDeleteCatFilter} onChange={e=>setBulkDeleteCatFilter(e.target.value)} style={{...S.input,appearance:"auto" as any,marginBottom:"0.75rem"}}>
+                  <option value="ALL">Selecciona una categoría *</option>
+                  <optgroup label="── LENTES">{LENTES_SUBCATS.map(s=><option key={s} value={s}>{catLabel(s)}</option>)}</optgroup>
+                  <optgroup label="── OTROS">{SHOP_CATS.filter(c=>c!=="LENTES").map(c=><option key={c} value={c}>{catLabel(c)}</option>)}</optgroup>
+                </select>
+                <div style={{display:"flex",gap:"0.6rem",flexWrap:"wrap"}}>
+                  <button onClick={bulkDeleteByCategory} disabled={bulkDeleteRunning||bulkDeleteCatFilter==="ALL"} style={{flex:1,minWidth:150,background:"#cc3333",color:"#fff",border:"none",borderRadius:8,padding:"0.8rem",cursor:(bulkDeleteRunning||bulkDeleteCatFilter==="ALL")?"not-allowed":"pointer",fontFamily:"inherit",fontSize:12,fontWeight:800,opacity:(bulkDeleteRunning||bulkDeleteCatFilter==="ALL")?0.5:1}}>{bulkDeleteRunning?"Eliminando…":"Borrar solo esta categoría"}</button>
+                  <button onClick={bulkDeleteExceptCategory} disabled={bulkDeleteRunning||bulkDeleteCatFilter==="ALL"} style={{flex:1,minWidth:150,background:"#7a1a1a",color:"#fff",border:"1px solid #cc3333",borderRadius:8,padding:"0.8rem",cursor:(bulkDeleteRunning||bulkDeleteCatFilter==="ALL")?"not-allowed":"pointer",fontFamily:"inherit",fontSize:12,fontWeight:800,opacity:(bulkDeleteRunning||bulkDeleteCatFilter==="ALL")?0.5:1}}>{bulkDeleteRunning?"Eliminando…":"Borrar todo EXCEPTO esta"}</button>
                 </div>
               </div>
               <div style={{background:"linear-gradient(135deg,#1e0a0a 0%,#0e0e0e 100%)",borderRadius:14,padding:"1.25rem",border:"1px solid #3a1515",marginBottom:"1.25rem"}}>

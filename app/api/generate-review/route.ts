@@ -124,10 +124,35 @@ const BANNED_OPENERS = [
   "Totalmente satisfecho", "Cumplió mis expectativas", "Buenísima calidad", "Producto de excelente calidad",
 ];
 
+const COMMENT_FOCUS_STYLES = [
+  "concéntrate en alabar la tienda en general (buena atención, buenos precios, confianza), más que en el producto puntual",
+  "concéntrate en decir que sigan así, que van a crecer, o que es la mejor tienda del país en su rubro",
+  "concéntrate en un beneficio concreto que le trajo el producto en su día a día (ver mejor, no llegar tarde, protegerse del sol, verse bien, cuidar la vista, etc), acorde a la categoría del producto",
+  "concéntrate en contar que lo pidió desde un estado o ciudad de Venezuela y que llegó rápido y en buen estado",
+  "concéntrate en una característica visual o física concreta del producto (color, diseño, tamaño, textura, ajuste, brillo, acabado)",
+  "concéntrate en decir que ya había comprado antes y que volverá a comprar pronto",
+  "concéntrate en la relación calidad-precio",
+  "concéntrate en el envío y la atención recibida, más que en el producto en sí",
+  "concéntrate en que se lo regaló a alguien (pareja, hermano, amigo) y la reacción que tuvo",
+];
+
+const VENEZUELAN_CITIES = ["Maracaibo","Puerto Ordaz","Barquisimeto","Valencia","Maracay","San Cristóbal","Barinas","Ciudad Bolívar","Punto Fijo","Cumaná","Mérida","Coro","Guanare","Acarigua","San Felipe","Guarenas"];
+
+const SLANG_INTENSITY = [
+  "sin ninguna jerga venezolana, en español neutro y cercano",
+  "con una sola palabra o expresión coloquial venezolana suelta de forma natural en cualquier parte de la frase (como pana, mano, wn, chamo, vrg, papá, manito, hermano, muchachos, mijo, jaja), nunca forzada",
+  "con dos expresiones coloquiales venezolanas como máximo, bien naturales, como si lo escribiera alguien de la calle sin pensarlo mucho",
+];
+
 function buildPrompt(productName: string, category: string): string {
   const opening = OPENING_STYLES[Math.floor(Math.random() * OPENING_STYLES.length)];
   const tone = TONE_STYLES[Math.floor(Math.random() * TONE_STYLES.length)];
-  const lengthWords = 12 + Math.floor(Math.random() * 25); // varía la longitud real
+  const focus = COMMENT_FOCUS_STYLES[Math.floor(Math.random() * COMMENT_FOCUS_STYLES.length)];
+  const slang = SLANG_INTENSITY[Math.floor(Math.random() * SLANG_INTENSITY.length)];
+  const lengthWords = 8 + Math.floor(Math.random() * 35); // varía muchísimo la longitud, de cortos a largos
+  const mentionCity = Math.random() < 0.25;
+  const city = VENEZUELAN_CITIES[Math.floor(Math.random() * VENEZUELAN_CITIES.length)];
+  const cityLine = mentionCity ? `- En este comentario en particular, menciona de forma natural que lo pidió desde ${city} (u otra ciudad de Venezuela que tú elijas) y cómo fue la experiencia de recibirlo ahí.` : "";
   return `Genera una reseña de cliente en español (Venezuela) para este producto de accesorios: "${productName}" (categoría: ${catLabel(category)}).
 Responde ÚNICAMENTE con un JSON válido, sin texto adicional ni backticks, con este formato exacto:
 {"name":"...","email":"...","stars":5,"comment":"..."}
@@ -136,9 +161,13 @@ Reglas:
 - Cada palabra del nombre debe empezar con mayúscula y el resto en minúscula.
 - El correo debe estar completamente en minúsculas, basado en el nombre (sin tildes ni espacios), con dominio gmail.com, hotmail.com o outlook.com.
 - Las estrellas deben ser 4 o 5 (mayormente 5).
-- El comentario debe tener aproximadamente ${lengthWords} palabras, natural y coloquial. La mayoría de las veces menciona el producto o la categoría, pero a veces puede hablar más de la tienda, el trato o la experiencia de compra en general sin nombrar el producto textualmente.
-- Para este comentario específico, ${opening}, con ${tone}.
-- No repitas estructuras de frase típicas de reseña genérica de e-commerce. Escribe como lo escribiría alguien rápido desde el celular: puede tener alguna palabra pegada, abreviación común de Venezuela (xq, q, tmb) usada con moderación, o signos de exclamación de forma natural, no forzada.
+- El comentario debe tener aproximadamente ${lengthWords} palabras. Varía MUCHO la longitud entre comentarios: algunos deben ser muy cortos (una frase de 5-10 palabras, como "ame la tienda, todo bello" o "que buena calidad, la recomiendo"), otros medianos, y otros más largos y detallados.
+- Para este comentario específico, ${opening}, con ${tone}, y ${focus}.
+- Habla la jerga ${slang}
+${cityLine}
+- Estructura y forma cada comentario de manera TOTALMENTE distinta a los demás: unos empiezan con el nombre del artículo, otros con la tienda, otros con una expresión suelta, otros con la experiencia de compra, otros con el beneficio que le dio el producto. Ninguno debe sonar a plantilla ni seguir el mismo orden de ideas que otro.
+- Si el comentario menciona una característica o beneficio del producto, que sea coherente con la categoría real (ej: lentes anti luz azul → protegen la vista al usar la computadora o estudiar; lentes fotocromáticos → se oscurecen con el sol y protegen los ojos; monturas/lentes de fórmula → se los colocó en la óptica y ahora ve mejor; relojes → nunca más llega tarde o siempre sabe la hora; pulseras/aretes/collares → se ven originales, bonito color, buen acabado; billeteras → buen material, cómoda, resistente).
+- No repitas estructuras de frase típicas de reseña genérica de e-commerce. Escribe como lo escribiría alguien rápido desde el celular: puede tener alguna palabra pegada, abreviación común de Venezuela (xq, q, tmb) usada con moderación, letras repetidas para dar énfasis (ej: bonitooo, bienn, sigan asiii) usado con moderación y solo a veces, o signos de exclamación de forma natural, no forzada.
 - NUNCA empieces el comentario con estas frases ni nada parecido: ${BANNED_OPENERS.join(" / ")}.
 - Evita muletillas repetitivas de reseña genérica. Que suene como algo que alguien realmente escribiría, con su propio estilo, no como plantilla.`;
 }
