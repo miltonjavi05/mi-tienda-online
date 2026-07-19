@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
-const GEMINI_MODEL = "gemini-2.0-flash";
+const GROQ_API_KEY = process.env.GROQ_API_KEY || "";
+const GROQ_MODEL = "llama-3.3-70b-versatile";
 
 const SAMPLE_REVIEW_NAMES = ["Javier Jose", "Anderson", "Carrillo", "Gamarra", "Arturo Jose"];
 
@@ -42,29 +42,37 @@ function parseReviewText(text: string) {
   return { name, email, stars, comment };
 }
 
-async function callGemini(prompt: string): Promise<string> {
+async function callGroq(prompt: string): Promise<string> {
   let lastErr: unknown = null;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`, {
+      const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 1 } }),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${GROQ_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: GROQ_MODEL,
+          messages: [{ role: "user", content: prompt }],
+          temperature: 1,
+          response_format: { type: "json_object" },
+        }),
       });
       const d = await r.json();
       if (r.status === 429) {
         await new Promise(res => setTimeout(res, 1500));
         continue;
       }
-      if (!r.ok) throw new Error(d?.error?.message || `Error ${r.status} de Gemini`);
-      const text = d?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) throw new Error("Gemini no devolvió texto");
+      if (!r.ok) throw new Error(d?.error?.message || `Error ${r.status} de Groq`);
+      const text = d?.choices?.[0]?.message?.content;
+      if (!text) throw new Error("Groq no devolvió texto");
       return text;
     } catch (err) {
       lastErr = err;
     }
   }
-  throw lastErr instanceof Error ? lastErr : new Error("Se agotaron los reintentos de Gemini");
+  throw lastErr instanceof Error ? lastErr : new Error("Se agotaron los reintentos de Groq");
 }
 
 export async function POST(req: Request) {
@@ -72,16 +80,16 @@ export async function POST(req: Request) {
     const { productName, category } = await req.json();
     if (!productName) return NextResponse.json({ error: "Falta productName" }, { status: 400 });
 
-    if (!GEMINI_API_KEY) {
-      return NextResponse.json({ error: "Falta configurar GEMINI_API_KEY en el servidor" }, { status: 500 });
+    if (!GROQ_API_KEY) {
+      return NextResponse.json({ error: "Falta configurar GROQ_API_KEY en el servidor" }, { status: 500 });
     }
 
     const prompt = buildPrompt(productName, category || "");
     let text: string;
     try {
-      text = await callGemini(prompt);
+      text = await callGroq(prompt);
     } catch (err) {
-      console.error("Gemini falló:", err);
+      console.error("Groq falló:", err);
       return NextResponse.json({ error: err instanceof Error ? err.message : "No se pudo generar la reseña" }, { status: 502 });
     }
 
