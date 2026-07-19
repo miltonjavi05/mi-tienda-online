@@ -2448,7 +2448,7 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
             }
           }
           try{
-            await fsAddToCollection("product_comments",{productId:prod.id,productName:prod.name,name:result.name,email:result.email,comment:result.comment,stars:result.stars,createdAt:Date.now()-Math.floor(Math.random()*20)*86400000,photoUrl:"",avatarUrl:"",isAdmin:false});
+            await fsAddToCollection("product_comments",{productId:prod.id,productName:prod.name,name:result.name,email:result.email,comment:result.comment,stars:result.stars,createdAt:Date.now()-Math.floor(Math.random()*1095)*86400000,photoUrl:"",avatarUrl:"",isAdmin:false});
             totalCreated++;
           }catch(err){
             setBulkGenErr("Error guardando en Firestore: "+(err instanceof Error?err.message:"desconocido"));
