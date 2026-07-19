@@ -6,6 +6,8 @@ const GROQ_API_KEYS = [
   process.env.GROQ_API_KEY_3 || "",
   process.env.GROQ_API_KEY_4 || "",
   process.env.GROQ_API_KEY_5 || "",
+  process.env.GROQ_API_KEY_6 || "",
+  process.env.GROQ_API_KEY_7 || "",
 ].filter(Boolean);
 const GROQ_MODEL = "llama-3.3-70b-versatile";
 
