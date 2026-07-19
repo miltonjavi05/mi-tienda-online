@@ -633,6 +633,18 @@ function productIdFromPath(path:string):string|null{
 }
 function generateCouponCode():string{const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let s="FOKUS-";for(let i=0;i<5;i++)s+=chars[Math.floor(Math.random()*chars.length)];return s;}
 function generateVariantGroupId():string{return "VG-"+Date.now().toString(36).toUpperCase()+"-"+Math.random().toString(36).slice(2,6).toUpperCase();}
+
+const BULKGEN_PROGRESS_KEY="fokus_bulkgen_progress_v1";
+function getBulkGenProgress():string[]{
+  try{const raw=localStorage.getItem(BULKGEN_PROGRESS_KEY);return raw?JSON.parse(raw):[];}catch{return[];}
+}
+function saveBulkGenProgress(ids:string[]):void{
+  try{localStorage.setItem(BULKGEN_PROGRESS_KEY,JSON.stringify(ids));}catch{}
+}
+function clearBulkGenProgress():void{
+  try{localStorage.removeItem(BULKGEN_PROGRESS_KEY);}catch{}
+}
+
 const SAMPLE_REVIEW_NAMES=["Javier Jose","Anderson","Carrillo","Gamarra","Arturo Jose"];
 function capitalizeName(raw:string):string{
   return raw.trim().split(/\s+/).map(w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(" ");
@@ -2356,28 +2368,55 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
   },[products,acProductId]);
 
   const bulkGenerateAllComments=useCallback(async()=>{
-    if(!confirm("Esto generará entre 2 y 5 reseñas con IA para CADA producto de la tienda y las publicará automáticamente. ¿Continuar?"))return;
+    const progressSet=new Set(getBulkGenProgress());
+    let toProcess=products.filter(p=>!progressSet.has(p.id));
+    if(toProcess.length===0){
+      if(!confirm("Ya se generaron reseñas para todos los productos guardados en el progreso. ¿Reiniciar y generar de nuevo para todos?"))return;
+      clearBulkGenProgress();
+      progressSet.clear();
+      toProcess=[...products];
+    }else if(!confirm(`Se generarán reseñas para ${toProcess.length} producto(s) pendientes (de ${products.length} en total). Si la API se satura por límites, esperará sola y continuará automáticamente sin perder el progreso. ¿Continuar?`))return;
+
     setBulkGenLoading(true);setBulkGenErr("");setBulkGenMsg("");
     let totalCreated=0;
+    const MAX_WAIT=60000;
     try{
-      for(let pi=0;pi<products.length;pi++){
-        const prod=products[pi];
+      for(let pi=0;pi<toProcess.length;pi++){
+        const prod=toProcess[pi];
         const count=Math.floor(Math.random()*4)+2;
-        setBulkGenMsg(`Generando reseñas para "${prod.name}" (${pi+1}/${products.length})… esto puede tardar por los límites de la API gratuita, no cierres esta pestaña.`);
         for(let i=0;i<count;i++){
-          const result=await generateAIReview(prod.name,prod.category);
-          if(result){
+          let result:{name:string;email:string;stars:number;comment:string}|null=null;
+          let wait=5000;
+          while(!result){
+            setBulkGenMsg(`Generando reseñas para "${prod.name}" (${pi+1}/${toProcess.length} pendientes · ${progressSet.size}/${products.length} completados)…`);
+            try{
+              result=await generateAIReview(prod.name,prod.category);
+            }catch{
+              setBulkGenMsg(`Límite de la API alcanzado en "${prod.name}". Esperando ${Math.round(wait/1000)}s para reintentar automáticamente, no cierres esta pestaña…`);
+              await new Promise(res=>setTimeout(res,wait));
+              wait=Math.min(MAX_WAIT,wait*2);
+              continue;
+            }
+            if(!result){
+              await new Promise(res=>setTimeout(res,wait));
+              wait=Math.min(MAX_WAIT,wait*2);
+            }
+          }
+          try{
             await fsAddToCollection("product_comments",{productId:prod.id,productName:prod.name,name:result.name,email:result.email,comment:result.comment,stars:result.stars,createdAt:Date.now()-Math.floor(Math.random()*20)*86400000,photoUrl:"",avatarUrl:"",isAdmin:false});
             totalCreated++;
+          }catch(err){
+            setBulkGenErr("Error guardando en Firestore: "+(err instanceof Error?err.message:"desconocido"));
           }
           await new Promise(res=>setTimeout(res,1200));
         }
+        progressSet.add(prod.id);
+        saveBulkGenProgress(Array.from(progressSet));
       }
-      setBulkGenMsg(`✓ Se crearon ${totalCreated} reseñas en total para ${products.length} productos.`);
+      setBulkGenMsg(`✓ Se crearon ${totalCreated} reseñas nuevas. Progreso total: ${progressSet.size}/${products.length} productos completados.`);
+      clearBulkGenProgress();
       allCommentsLoaded.current=false;
       await loadAllComments(true);
-    }catch(err){
-      setBulkGenErr("Error: "+(err instanceof Error?err.message:"desconocido"));
     }finally{
       setBulkGenLoading(false);
     }
