@@ -19,8 +19,6 @@ const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "2844242900";
 const WHATSAPP_NUMBER = "584243005733";
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "TU_GOOGLE_CLIENT_ID.apps.googleusercontent.com";
 const FACEBOOK_APP_ID  = process.env.NEXT_PUBLIC_FACEBOOK_APP_ID  || "TU_FACEBOOK_APP_ID";
-const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || "TU_GEMINI_API_KEY";
-const GEMINI_MODEL = "gemini-2.0-flash";
 if (typeof document !== "undefined") {
   document.addEventListener("click", (e:MouseEvent) => {
     const el = (e.target as HTMLElement).closest?.("a[href*='wa.me']");
