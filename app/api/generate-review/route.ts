@@ -171,6 +171,18 @@ const OPENING_STYLES = [
   "empieza con una expresión venezolana coloquial de sorpresa o emoción antes de opinar",
   "empieza contando que dudaba en comprar por miedo a que no llegara bien y se llevó una sorpresa",
   "empieza mencionando que se lo mostró a alguien más y esa persona también quedó encantada",
+  "empieza a mitad de una idea, como si continuara un pensamiento que ya traía en la cabeza",
+  "empieza con una comparación directa contra otra tienda o compra anterior que fue peor",
+  "empieza describiendo su reacción física o gesto al abrir el paquete (sonrisa, sorpresa, cara de emoción)",
+  "empieza mencionando qué estaba haciendo justo cuando le llegó el pedido",
+  "empieza con un elogio corto y seco de una sola palabra o frase muy breve, y luego se explaya",
+  "empieza contando una anécdota pequeña y aparentemente sin relación, que luego conecta con el producto",
+  "empieza hablando del precio o de que esperaba que fuera más caro para lo que es",
+  "empieza mencionando que casi no compra porque vio reseñas de otra tienda, y cómo esta la sorprendió distinto",
+  "empieza con una frase corta a modo de titular, y el resto del comentario la desarrolla",
+  "empieza contando que fue un regalo sorpresa que ni el que lo recibió esperaba",
+  "empieza quejándose brevemente de un detalle menor (demora, empaque simple) que igual no opaca lo positivo",
+  "empieza quejándose de sí mismo por haber tardado tanto en comprarlo",
 ];
 
 const TONE_STYLES = [
@@ -183,6 +195,12 @@ const TONE_STYLES = [
   "tono maternal/paternal, hablando de un regalo para un hijo o familiar",
   "tono de pareja enamorada contando la reacción del novio/novia al recibir el regalo",
   "tono de venezolano criollo, con alguna expresión local (ej: 'de pana', 'que fino', 'bien chevere') usada con naturalidad, sin abusar",
+  "tono un poco sorprendido, como si no esperaba que fuera tan bueno",
+  "tono serio y formal, casi como una recomendación profesional",
+  "tono relajado y perezoso, como quien escribe medio dormido pero contento",
+  "tono agradecido, dirigiéndose casi como una carta corta a la tienda",
+  "tono práctico y sin adornos, centrado solo en datos útiles para otro comprador",
+  "tono nostálgico, comparando con una compra parecida de hace tiempo",
 ];
 
 const BANNED_OPENERS = [
@@ -201,6 +219,12 @@ const COMMENT_FOCUS_STYLES = [
   "concéntrate en la relación calidad-precio",
   "concéntrate en el envío y la atención recibida, más que en el producto en sí",
   "concéntrate en que se lo regaló a alguien (pareja, hermano, amigo) y la reacción que tuvo",
+  "concéntrate en comparar el producto con uno similar que compró antes en otro lado, y por qué este ganó",
+  "concéntrate en lo fácil que fue todo el proceso de compra por WhatsApp, sin mencionar mucho el producto en sí",
+  "concéntrate en un comentario sobre el empaque o la presentación al llegar",
+  "concéntrate en cómo le quedó puesto o cómo se ve usándolo, más que en describirlo objetivamente",
+  "concéntrate en que fue justo lo que buscaba, ni más ni menos, sin adornarlo demasiado",
+  "concéntrate en recomendarlo específicamente a un tipo de persona (para trabajar, para regalar, para estudiar, para el día a día)",
 ];
 
 const VENEZUELAN_CITIES = ["Maracaibo","Puerto Ordaz","Barquisimeto","Valencia","Maracay","San Cristóbal","Barinas","Ciudad Bolívar","Punto Fijo","Cumaná","Mérida","Coro","Guanare","Acarigua","San Felipe","Guarenas"];
@@ -211,10 +235,69 @@ const SLANG_INTENSITY = [
   "con dos expresiones coloquiales venezolanas como máximo, bien naturales, como si lo escribiera alguien de la calle sin pensarlo mucho",
 ];
 
+const STRUCTURE_PATTERNS = [
+  "estructura: una sola frase larga sin pausas, como si lo escribiera de corrido sin pensar",
+  "estructura: dos oraciones cortas y separadas, casi telegráficas",
+  "estructura: empieza con una idea, se corta con puntos suspensivos, y termina con otra idea distinta",
+  "estructura: primero el veredicto final, y solo después explica por qué",
+  "estructura: cuenta la experiencia en orden cronológico (antes de comprar, cuando llegó, ahora que lo usa)",
+  "estructura: una pregunta seguida de su propia respuesta",
+  "estructura: menciona primero un pequeño detalle negativo o duda inicial, y lo resuelve al final de forma positiva",
+  "estructura: un párrafo corto y directo sin ninguna anécdota, solo el punto central",
+  "estructura: mezcla dos ideas distintas conectadas con 'y' o 'pero', sin puntuación formal",
+  "estructura: termina con una recomendación directa a otros compradores",
+  "estructura: termina con una emoción o sensación personal, no con una recomendación",
+  "estructura: no sigue ningún patrón de reseña, parece un mensaje de texto suelto y espontáneo",
+];
+
+const PUNCTUATION_STYLES = [
+  "usa signos de exclamación en una sola parte del comentario, no en todo",
+  "usa muy poca puntuación, casi sin comas, como si lo escribiera con prisa",
+  "usa puntos suspensivos en algún punto para dar sensación de pausa o duda",
+  "no uses ningún emoji ni signo especial, solo texto plano",
+  "usa mayúsculas en una sola palabra para dar énfasis (ej: SUPER bien, ORIGINAL de verdad)",
+];
+
+const EMOJI_POOL = [
+  "🖤","😍","🥰","😻","💕","💖","💗","💘","💝","✨","🔥","👌","🙌","👏",
+  "🙏","🤗","😊","😄","😁","🥳","🎉","💯","👑","💎","⭐","🌟","😎","🤩",
+  "❤️","🧡","💛","💚","💙","💜","🤎","🤍","😌","🥹","😭","🫶","👀","🕶️",
+  "⌚","💍","👜","👍","😅","🤙","💪","🎁","📦","🚚","💫","☺️","🫡","🥇",
+];
+
+function buildEmojiInstruction(): string {
+  const useEmojis = Math.random() < 0.62; // no todos los comentarios llevan emojis
+  if (!useEmojis) {
+    return "- NO uses ningún emoji en este comentario, escríbelo en texto plano de principio a fin.";
+  }
+  const count = randomInt(1, 8);
+  const chosen: string[] = [];
+  for (let i = 0; i < count; i++) chosen.push(pick(EMOJI_POOL));
+
+  const placementPatterns = [
+    `coloca ${count===1?"ese emoji":"esos emojis"} todos juntos en un solo punto de la frase (puede ser al inicio, en medio, o al final — elige libremente)`,
+    `reparte los emojis en distintos puntos de la frase, cada uno intercalado entre dos palabras distintas, no todos juntos`,
+    `agrupa algunos de los emojis (por ejemplo 2 o 3 juntos) en un punto, y coloca el resto suelto en otra parte de la frase`,
+    `pon un emoji justo al principio del comentario, y el resto (si hay más de uno) distribuido entre palabras a lo largo del texto`,
+    `pon todos los emojis únicamente al final del comentario, como remate`,
+    `intercala cada emoji entre dos palabras específicas a lo largo de toda la frase, como si se le escaparan al escribir rápido`,
+  ];
+  const placement = pick(placementPatterns);
+
+  const relevance = Math.random() < 0.55
+    ? "usa emojis que tengan relación directa con el producto, la emoción de recibirlo, o la tienda (ej: caritas enamoradas, corazones, brillitos, manitos, caja/envío, el tipo de accesorio)"
+    : "usa emojis que NO necesariamente tengan relación literal con el producto, simplemente que transmitan alegría, emoción o aprobación de forma espontánea, como los usaría cualquier persona real";
+
+  return `- Este comentario SÍ debe llevar emojis: usa exactamente estos ${count} emoji(s) → ${chosen.join(" ")} (puedes repetir alguno si el conteo lo requiere, o usar variantes similares del mismo estilo). Para su ubicación, ${placement}. Sobre el criterio de selección, ${relevance}. Los emojis deben sentirse naturales y espontáneos, nunca forzados ni puestos todos en el mismo patrón que otros comentarios — la posición y agrupación deben variar completamente de una reseña a otra.`;
+}
+
 function buildPrompt(productName: string, category: string, excludeNames: string[] = []): string {
   const opening = OPENING_STYLES[Math.floor(Math.random() * OPENING_STYLES.length)];
   const tone = TONE_STYLES[Math.floor(Math.random() * TONE_STYLES.length)];
   const focus = COMMENT_FOCUS_STYLES[Math.floor(Math.random() * COMMENT_FOCUS_STYLES.length)];
+  const structure = STRUCTURE_PATTERNS[Math.floor(Math.random() * STRUCTURE_PATTERNS.length)];
+  const punctuation = PUNCTUATION_STYLES[Math.floor(Math.random() * PUNCTUATION_STYLES.length)];
+  const emojiInstruction = buildEmojiInstruction();
   const slang = SLANG_INTENSITY[Math.floor(Math.random() * SLANG_INTENSITY.length)];
   const lengthWords = 8 + Math.floor(Math.random() * 35); // varía muchísimo la longitud, de cortos a largos
   const mentionCity = Math.random() < 0.25;
@@ -232,11 +315,13 @@ ${excludeLine}
 - El correo debe estar completamente en minúsculas, basado en el nombre (sin tildes ni espacios), con dominio gmail.com, hotmail.com o outlook.com.
 - Las estrellas deben ser mayormente 5, con menor frecuencia 4, y en muy pocas ocasiones 3. Sin importar la calificación (incluso si es 3), el comentario debe sonar igual de positivo, bien escrito y satisfecho que uno de 5 estrellas — la calificación no debe bajar la calidad ni el tono del texto.
 - El comentario debe tener aproximadamente ${lengthWords} palabras. Varía MUCHO la longitud entre comentarios: algunos deben ser muy cortos (una frase de 5-10 palabras, como "ame la tienda, todo bello" o "que buena calidad, la recomiendo"), otros medianos, y otros más largos y detallados.
-- Para este comentario específico, ${opening}, con ${tone}, y ${focus}.
+- Para este comentario específico, ${opening}, con ${tone}, y ${focus}. Además, ${structure}, y ${punctuation}.
 - Si el comentario es un regalo y la categoría es LENTES, ARETES, COLLARES o ANILLOS, el regalo puede ser tanto para hombre como para mujer. En cualquier otra categoría, el regalo debe ser casi siempre para un hombre (novio, esposo, hermano, papá, amigo) y solo raras veces para una mujer.
 - Habla la jerga ${slang}
+${emojiInstruction}
 ${cityLine}
-- Estructura y forma cada comentario de manera EXTREMADAMENTE distinta a los demás: unos empiezan con el nombre del artículo, otros con la tienda, otros con una expresión suelta, otros con la experiencia de compra, otros con el beneficio que le dio el producto, otros con una anécdota o una queja inicial que se resuelve positivamente. Varía también la longitud de las frases, la puntuación y el orden en que aparecen los datos, para que ningún comentario se parezca en su forma a otro. Ninguno debe sonar a plantilla ni seguir el mismo orden de ideas ni la misma cantidad de oraciones que otro.
+- IMPORTANTE — RIGOR POR ARTÍCULO: este producto ya tiene o tendrá otras reseñas generadas de forma independiente. Es CRÍTICO que esta reseña en particular sea irreconocible en su forma frente a cualquier otra reseña típica del mismo artículo: no repitas el mismo orden de ideas, el mismo tipo de arranque, el mismo largo de frase ni el mismo cierre que usarías por defecto. Imagina que ya existen 10 reseñas distintas de este mismo producto y la tuya debe notarse a simple vista como diferente en ritmo, forma y construcción de frase, no solo en las palabras usadas.
+- Varía también la longitud de las frases, la puntuación y el orden en que aparecen los datos, para que ningún comentario se parezca en su forma a otro. Ninguno debe sonar a plantilla ni seguir el mismo orden de ideas ni la misma cantidad de oraciones que otro.
 - Si el comentario menciona una característica o beneficio del producto, que sea coherente con la categoría real (ej: lentes anti luz azul → protegen la vista al usar la computadora o estudiar; lentes fotocromáticos → se oscurecen con el sol y protegen los ojos; monturas/lentes de fórmula → se los colocó en la óptica y ahora ve mejor; relojes → nunca más llega tarde o siempre sabe la hora; pulseras/aretes/collares → se ven originales, bonito color, buen acabado; billeteras → buen material, cómoda, resistente).
 - Al mencionar el producto dentro del comentario, NO uses siempre el nombre completo y exacto del artículo. Varía la forma de referirte a él: a veces el nombre completo, a veces solo el tipo genérico de accesorio (ej: "los lentes", "el reloj", "la pulsera", "los aretes", "el collar", "la billetera", "el anillo"), a veces una versión corta o coloquial (ej: "lentes anti luz azul" → "los lentes" o "los de luz azul"), y a veces ni lo menciones explícitamente y habla de "lo que compré" o "mi pedido". Que suene natural, como hablaría una persona real, no como una ficha de producto repetida en cada reseña.
 - No repitas estructuras de frase típicas de reseña genérica de e-commerce. Escribe como lo escribiría alguien rápido desde el celular: puede tener alguna palabra pegada, abreviación común de Venezuela (xq, q, tmb) usada con moderación, letras repetidas para dar énfasis (ej: bonitooo, bienn, sigan asiii) usado con moderación y solo a veces, o signos de exclamación de forma natural, no forzada.
