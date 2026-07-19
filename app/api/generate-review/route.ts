@@ -237,10 +237,16 @@ const COMMENT_FOCUS_STYLES = [
 
 const VENEZUELAN_CITIES = ["Maracaibo","Puerto Ordaz","Barquisimeto","Valencia","Maracay","San Cristóbal","Barinas","Ciudad Bolívar","Punto Fijo","Cumaná","Mérida","Coro","Guanare","Acarigua","San Felipe","Guarenas"];
 
+const VENEZUELAN_SLANG_EXAMPLES = [
+  "nwr", "increíble mi pana", "pana", "verga que buenos", "bello papá",
+  "sisas me encantaron manito", "gracias por todo de vrdd", "que fino", "bien chevere",
+  "mano", "wn", "chamo", "vrg", "manito", "hermano", "muchachos", "mijo", "jaja",
+];
+
 const SLANG_INTENSITY = [
   "sin ninguna jerga venezolana, en español neutro y cercano",
-  "con una sola palabra o expresión coloquial venezolana suelta de forma natural en cualquier parte de la frase (como pana, mano, wn, chamo, vrg, papá, manito, hermano, muchachos, mijo, jaja), nunca forzada",
-  "con dos expresiones coloquiales venezolanas como máximo, bien naturales, como si lo escribiera alguien de la calle sin pensarlo mucho",
+  `con una sola palabra o expresión coloquial venezolana suelta de forma natural en cualquier parte de la frase (elige libremente entre estilos como: ${VENEZUELAN_SLANG_EXAMPLES.join(", ")}, u otras similares), nunca forzada`,
+  `con dos expresiones coloquiales venezolanas como máximo, bien naturales, como si lo escribiera alguien de la calle sin pensarlo mucho (puedes inspirarte en: ${VENEZUELAN_SLANG_EXAMPLES.join(", ")}, u otras parecidas)`,
 ];
 
 const STRUCTURE_PATTERNS = [
