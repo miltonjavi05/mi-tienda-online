@@ -271,7 +271,7 @@ async function fsAdd(p:Omit<Product,"id">):Promise<void>{const fields=Object.fro
 async function fsUpdate(id:string,p:Partial<Omit<Product,"id">>):Promise<void>{const fields=Object.fromEntries(Object.entries(p).map(([k,v])=>[k,toFs(v)]));const mask=Object.keys(p).map(k=>`updateMask.fieldPaths=${encodeURIComponent(k)}`).join("&");const r=await fetch(`${fsBase()}/products/${id}?${mask}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({fields})});if(!r.ok)throw new Error(await r.text());}
 async function fsDelete(id:string):Promise<void>{await fetch(`${fsBase()}/products/${id}`,{method:"DELETE"});}
 async function fsUpdateDoc(collection:string,id:string,p:Record<string,unknown>):Promise<void>{const fields=Object.fromEntries(Object.entries(p).map(([k,v])=>[k,toFs(v)]));const mask=Object.keys(p).map(k=>`updateMask.fieldPaths=${encodeURIComponent(k)}`).join("&");const r=await fetch(`${fsBase()}/${collection}/${id}?${mask}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({fields})});if(!r.ok)throw new Error(await r.text());}
-async function fsDeleteDoc(collection:string,id:string):Promise<void>{await fetch(`${fsBase()}/${collection}/${id}`,{method:"DELETE"});}
+async function fsDeleteDoc(collection:string,id:string):Promise<void>{const r=await fetch(`${fsBase()}/${collection}/${id}`,{method:"DELETE"});if(!r.ok){const t=await r.text().catch(()=>"");throw new Error(`No se pudo eliminar (${r.status}): ${t}`);}}
 async function fsAddToCollection(collection:string,data:Record<string,unknown>):Promise<void>{const fields=Object.fromEntries(Object.entries(data).map(([k,v])=>[k,toFs(v as unknown)]));const r=await fetch(`${fsBase()}/${collection}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fields})});if(!r.ok)throw new Error(await r.text());}
 async function fsGetCollection(collection:string,pageSize=300):Promise<Array<Record<string,unknown>&{id:string}>>{const r=await fetch(`${fsBase()}/${collection}?pageSize=${pageSize}`);if(!r.ok)throw new Error(await r.text());const d=await r.json() as{documents?:FsDoc[]};return(d.documents||[]).map(doc=>{const fields=doc.fields||{};const obj:Record<string,unknown>={};Object.entries(fields).forEach(([k,v])=>{obj[k]=fromFs(v);});return{...obj,id:doc.name.split("/").pop() as string};});}
 async function fsSaveUser(uid:string,data:Record<string,unknown>,idToken?:string):Promise<void>{const fields=Object.fromEntries(Object.entries(data).map(([k,v])=>[k,toFs(v as unknown)]));const mask=Object.keys(data).map(k=>`updateMask.fieldPaths=${encodeURIComponent(k)}`).join("&");const headers:Record<string,string>={"Content-Type":"application/json"};if(idToken)headers["Authorization"]=`Bearer ${idToken}`;const r=await fetch(`${fsBase()}/users/${uid}?${mask}`,{method:"PATCH",headers,body:JSON.stringify({fields})});if(!r.ok)throw new Error(await r.text());}
@@ -2264,18 +2264,32 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     const keptName=products.find(p=>p.id===bulkKeepProductId)?.name||"el producto seleccionado";
     if(!confirm(`Esto eliminará ${toDelete.length} comentario(s) de TODOS los demás productos, dejando solo los de "${keptName}". ¿Continuar?`))return;
     setBulkDeleteRunning(true);
+    const deletedIds:string[]=[];
+    const failedIds:string[]=[];
     try{
       for(const c of toDelete){
-        await fsDeleteDoc("product_comments",c.id);
+        try{
+          await fsDeleteDoc("product_comments",c.id);
+          deletedIds.push(c.id);
+        }catch{
+          failedIds.push(c.id);
+        }
+        await new Promise(res=>setTimeout(res,120));
       }
-      setAllComments(prev=>prev.filter(c=>c.productId===bulkKeepProductId));
-      setProductComments(prev=>prev.filter(c=>c.productId===bulkKeepProductId));
+      const deletedSet=new Set(deletedIds);
+      setAllComments(prev=>prev.filter(c=>!deletedSet.has(c.id)));
+      setProductComments(prev=>prev.filter(c=>!deletedSet.has(c.id)));
+      allCommentsLoaded.current=false;
+      await loadAllComments(true);
+      if(failedIds.length){
+        alert(`Se eliminaron ${deletedIds.length} comentario(s). ${failedIds.length} no se pudieron eliminar (revisa las reglas de Firestore para 'product_comments').`);
+      }
     }catch(err){
       alert("Error al eliminar: "+(err instanceof Error?err.message:"desconocido"));
     }finally{
       setBulkDeleteRunning(false);
     }
-  },[allComments,bulkKeepProductId,products]);
+  },[allComments,bulkKeepProductId,products,loadAllComments]);
 
   const bulkDeleteByCategory=useCallback(async()=>{
     if(bulkDeleteCatFilter==="ALL"){alert("Selecciona la categoría específica que quieres borrar.");return;}
@@ -2284,19 +2298,32 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     if(!toDelete.length){alert("No hay comentarios en esa categoría.");return;}
     if(!confirm(`Esto eliminará ${toDelete.length} comentario(s) de la categoría "${catLabel(bulkDeleteCatFilter)}". ¿Continuar?`))return;
     setBulkDeleteRunning(true);
+    const deletedIds:string[]=[];
+    const failedIds:string[]=[];
     try{
       for(const c of toDelete){
-        await fsDeleteDoc("product_comments",c.id);
+        try{
+          await fsDeleteDoc("product_comments",c.id);
+          deletedIds.push(c.id);
+        }catch{
+          failedIds.push(c.id);
+        }
+        await new Promise(res=>setTimeout(res,120));
       }
-      const deletedIds=new Set(toDelete.map(c=>c.id));
-      setAllComments(prev=>prev.filter(c=>!deletedIds.has(c.id)));
-      setProductComments(prev=>prev.filter(c=>!deletedIds.has(c.id)));
+      const deletedSet=new Set(deletedIds);
+      setAllComments(prev=>prev.filter(c=>!deletedSet.has(c.id)));
+      setProductComments(prev=>prev.filter(c=>!deletedSet.has(c.id)));
+      allCommentsLoaded.current=false;
+      await loadAllComments(true);
+      if(failedIds.length){
+        alert(`Se eliminaron ${deletedIds.length} comentario(s). ${failedIds.length} no se pudieron eliminar (revisa las reglas de Firestore para 'product_comments').`);
+      }
     }catch(err){
       alert("Error al eliminar: "+(err instanceof Error?err.message:"desconocido"));
     }finally{
       setBulkDeleteRunning(false);
     }
-  },[allComments,bulkDeleteCatFilter,products]);
+  },[allComments,bulkDeleteCatFilter,products,loadAllComments]);
 
   const bulkDeleteExceptCategory=useCallback(async()=>{
     if(bulkDeleteCatFilter==="ALL"){alert("Selecciona la categoría que quieres conservar.");return;}
@@ -2305,18 +2332,32 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     if(!toDelete.length){alert("No hay comentarios de otras categorías para eliminar.");return;}
     if(!confirm(`Esto eliminará ${toDelete.length} comentario(s) de TODAS las demás categorías, dejando solo los de "${catLabel(bulkDeleteCatFilter)}". ¿Continuar?`))return;
     setBulkDeleteRunning(true);
+    const deletedIds:string[]=[];
+    const failedIds:string[]=[];
     try{
       for(const c of toDelete){
-        await fsDeleteDoc("product_comments",c.id);
+        try{
+          await fsDeleteDoc("product_comments",c.id);
+          deletedIds.push(c.id);
+        }catch{
+          failedIds.push(c.id);
+        }
+        await new Promise(res=>setTimeout(res,120));
       }
-      setAllComments(prev=>prev.filter(c=>catProductIds.has(c.productId)));
-      setProductComments(prev=>prev.filter(c=>catProductIds.has(c.productId)));
+      const deletedSet=new Set(deletedIds);
+      setAllComments(prev=>prev.filter(c=>!deletedSet.has(c.id)));
+      setProductComments(prev=>prev.filter(c=>!deletedSet.has(c.id)));
+      allCommentsLoaded.current=false;
+      await loadAllComments(true);
+      if(failedIds.length){
+        alert(`Se eliminaron ${deletedIds.length} comentario(s). ${failedIds.length} no se pudieron eliminar (revisa las reglas de Firestore para 'product_comments').`);
+      }
     }catch(err){
       alert("Error al eliminar: "+(err instanceof Error?err.message:"desconocido"));
     }finally{
       setBulkDeleteRunning(false);
     }
-  },[allComments,bulkDeleteCatFilter,products]);
+  },[allComments,bulkDeleteCatFilter,products,loadAllComments]);
 
   const startEditComment=useCallback((c:ProductComment)=>{
     setEditingCommentId(c.id);
