@@ -1533,6 +1533,8 @@ const allCommentsLoaded=useRef(false);
 const[commentsDateFilter,setCommentsDateFilter]=useState<"all"|"hoy"|"7d"|"30d"|"90d">("all");
 const[commentsCatFilter,setCommentsCatFilter]=useState("ALL");
 const[commentsProductFilter,setCommentsProductFilter]=useState("ALL");
+const[bulkKeepProductId,setBulkKeepProductId]=useState("");
+const[bulkDeleteRunning,setBulkDeleteRunning]=useState(false);
 const[acProductId,setAcProductId]=useState("");
 const[acProductSearch,setAcProductSearch]=useState("");
 const[acCatFilter,setAcCatFilter]=useState("ALL");
@@ -2240,6 +2242,26 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     setProductComments(prev=>prev.filter(c=>c.id!==id));
     try{await fsDeleteDoc("product_comments",id);}catch{}
   },[]);
+
+  const bulkDeleteExceptProduct=useCallback(async()=>{
+    if(!bulkKeepProductId){alert("Selecciona el producto que quieres conservar.");return;}
+    const toDelete=allComments.filter(c=>c.productId!==bulkKeepProductId);
+    if(!toDelete.length){alert("No hay comentarios de otros productos para eliminar.");return;}
+    const keptName=products.find(p=>p.id===bulkKeepProductId)?.name||"el producto seleccionado";
+    if(!confirm(`Esto eliminará ${toDelete.length} comentario(s) de TODOS los demás productos, dejando solo los de "${keptName}". ¿Continuar?`))return;
+    setBulkDeleteRunning(true);
+    try{
+      for(const c of toDelete){
+        await fsDeleteDoc("product_comments",c.id);
+      }
+      setAllComments(prev=>prev.filter(c=>c.productId===bulkKeepProductId));
+      setProductComments(prev=>prev.filter(c=>c.productId===bulkKeepProductId));
+    }catch(err){
+      alert("Error al eliminar: "+(err instanceof Error?err.message:"desconocido"));
+    }finally{
+      setBulkDeleteRunning(false);
+    }
+  },[allComments,bulkKeepProductId,products]);
 
   const startEditComment=useCallback((c:ProductComment)=>{
     setEditingCommentId(c.id);
@@ -4099,6 +4121,15 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   {acOk&&<div style={{color:"#55cc77",fontSize:12,background:"#081e0e",padding:"0.65rem 1rem",borderRadius:8}}>{acOk}</div>}
                   <button onClick={submitAdminComment} disabled={acSaving} style={{...S.adminBtn,opacity:acSaving?0.5:1,cursor:acSaving?"not-allowed":"pointer"}}>{acSaving?"Publicando...":"Publicar reseña"}</button>
                 </div>
+              </div>
+              <div style={{background:"linear-gradient(135deg,#1e0a0a 0%,#0e0e0e 100%)",borderRadius:14,padding:"1.25rem",border:"1px solid #3a1515",marginBottom:"1.25rem"}}>
+                <p style={{color:"#ff8888",fontSize:9,fontWeight:800,letterSpacing:2.5,margin:"0 0 0.5rem"}}>🗑️ BORRAR TODO MENOS UN PRODUCTO</p>
+                <p style={{color:"#666",fontSize:11,margin:"0 0 0.85rem",lineHeight:1.6}}>Elimina todas las reseñas de los demás productos y conserva solo las del que elijas.</p>
+                <select value={bulkKeepProductId} onChange={e=>setBulkKeepProductId(e.target.value)} style={{...S.input,appearance:"auto" as any,marginBottom:"0.75rem"}}>
+                  <option value="">Selecciona el producto a conservar *</option>
+                  {products.map(p=><option key={p.id} value={p.id}>{p.name} — {catLabel(p.category)}</option>)}
+                </select>
+                <button onClick={bulkDeleteExceptProduct} disabled={bulkDeleteRunning||!bulkKeepProductId} style={{background:"#cc3333",color:"#fff",border:"none",borderRadius:8,padding:"0.8rem",width:"100%",cursor:(bulkDeleteRunning||!bulkKeepProductId)?"not-allowed":"pointer",fontFamily:"inherit",fontSize:12,fontWeight:800,opacity:(bulkDeleteRunning||!bulkKeepProductId)?0.5:1}}>{bulkDeleteRunning?"Eliminando…":"Eliminar todo lo demás"}</button>
               </div>
               <div style={{background:"#111",borderRadius:14,padding:"1.25rem",border:"1px solid #1a1a1a"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.75rem"}}>

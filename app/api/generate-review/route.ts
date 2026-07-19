@@ -19,16 +19,49 @@ function capitalizeName(raw: string): string {
   return raw.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
 }
 
+const OPENING_STYLES = [
+  "empieza contando en qué momento u ocasión lo usó (ej: un viaje, el trabajo, una salida)",
+  "empieza con una opinión directa y espontánea sobre la calidad o el material",
+  "empieza comparando el producto con lo que esperaba antes de comprarlo",
+  "empieza mencionando por qué decidió comprarlo",
+  "empieza mencionando el envío, el empaque o la atención, y luego pasa al producto",
+  "empieza contando para quién lo compró (regalo, familiar, pareja, etc.)",
+  "empieza con un detalle específico y concreto del producto (color, tamaño, textura, ajuste)",
+  "empieza como si le estuviera contando la experiencia a un amigo por WhatsApp",
+  "empieza mencionando cuánto tiempo lleva usándolo",
+  "empieza con una pregunta retórica corta antes de dar su opinión",
+];
+
+const TONE_STYLES = [
+  "tono entusiasta pero natural, sin sonar exagerado",
+  "tono tranquilo, satisfecho, casi de paso",
+  "tono casual y directo, como mensaje rápido",
+  "tono breve y telegráfico, pocas palabras",
+  "tono cálido con un toque de humor sutil",
+  "tono orgulloso, como quien presume su compra",
+];
+
+const BANNED_OPENERS = [
+  "Me encantó", "Excelente producto", "Muy buena calidad", "Súper recomendado",
+  "Increíble calidad", "Estoy muy satisfecho", "Quedé encantada", "Superó mis expectativas",
+];
+
 function buildPrompt(productName: string, category: string): string {
+  const opening = OPENING_STYLES[Math.floor(Math.random() * OPENING_STYLES.length)];
+  const tone = TONE_STYLES[Math.floor(Math.random() * TONE_STYLES.length)];
+  const lengthWords = 12 + Math.floor(Math.random() * 25); // varía la longitud real
   return `Genera una reseña de cliente en español (Venezuela) para este producto de accesorios: "${productName}" (categoría: ${catLabel(category)}).
 Responde ÚNICAMENTE con un JSON válido, sin texto adicional ni backticks, con este formato exacto:
 {"name":"...","email":"...","stars":5,"comment":"..."}
 Reglas:
-- El nombre debe ser un nombre venezolano realista, en el estilo de estos ejemplos: ${SAMPLE_REVIEW_NAMES.join(", ")}. No repitas siempre los mismos, varía.
+- El nombre debe ser un nombre venezolano realista, en el estilo de estos ejemplos: ${SAMPLE_REVIEW_NAMES.join(", ")}. No repitas siempre los mismos, varía muchísimo (nombres compuestos, apodos, solo primer nombre, etc).
 - Cada palabra del nombre debe empezar con mayúscula y el resto en minúscula.
 - El correo debe estar completamente en minúsculas, basado en el nombre (sin tildes ni espacios), con dominio gmail.com, hotmail.com o outlook.com.
 - Las estrellas deben ser 4 o 5 (mayormente 5).
-- El comentario debe ser breve (1 a 2 oraciones), natural y coloquial, mencionando el producto o la categoría, en tono positivo, sin sonar repetitivo ni robótico.`;
+- El comentario debe tener aproximadamente ${lengthWords} palabras, natural y coloquial, mencionando el producto o la categoría.
+- Para este comentario específico, ${opening}, con ${tone}.
+- NUNCA empieces el comentario con estas frases ni nada parecido: ${BANNED_OPENERS.join(" / ")}.
+- Evita muletillas repetitivas de reseña genérica. Que suene como algo que alguien realmente escribiría, con su propio estilo, no como plantilla.`;
 }
 
 function parseReviewText(text: string) {
