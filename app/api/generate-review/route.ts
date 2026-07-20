@@ -233,6 +233,9 @@ const COMMENT_FOCUS_STYLES = [
   "concéntrate en que el artículo se ve incluso mejor en persona que en las fotos de la página",
   "concéntrate en la durabilidad esperada o ya comprobada del producto tras un tiempo de uso",
   "concéntrate en el detalle de que el precio le pareció justo o incluso bajo para la calidad que recibió",
+  "concéntrate en decir que ya le había comprado antes a la tienda y que lo va a seguir haciendo, como cliente de confianza",
+  "concéntrate en lo bonito o cuidado que llegó el empaque, con una frase corta y espontánea tipo cumplido directo",
+  "concéntrate en decir explícitamente que la experiencia de compra en esta tienda online fue excelente, mencionando que fue directo desde la página web",
 ];
 
 const VENEZUELAN_CITIES = ["Maracaibo","Puerto Ordaz","Barquisimeto","Valencia","Maracay","San Cristóbal","Barinas","Ciudad Bolívar","Punto Fijo","Cumaná","Mérida","Coro","Guanare","Acarigua","San Felipe","Guarenas"];
@@ -241,6 +244,7 @@ const VENEZUELAN_SLANG_EXAMPLES = [
   "nwr", "increíble mi pana", "pana", "verga que buenos", "bello papá",
   "sisas me encantaron manito", "gracias por todo de vrdd", "que fino", "bien chevere",
   "mano", "wn", "chamo", "vrg", "manito", "hermano", "muchachos", "mijo", "jaja",
+  "nwr de bellos", "de verdad nwr", "que nota mano", "todo bien pana",
 ];
 
 const SLANG_INTENSITY = [
@@ -280,18 +284,18 @@ const EMOJI_POOL = [
 ];
 
 function buildEmojiInstruction(): string {
-  const useEmojis = Math.random() < 0.60; // aproximadamente el 60% de los comentarios llevan emojis
+  const useEmojis = Math.random() < 0.33; // aproximadamente el 33% de los comentarios llevan emojis
   if (!useEmojis) {
     return "- NO uses ningún emoji en este comentario, escríbelo en texto plano de principio a fin.";
   }
-  const count = randomInt(1, 8);
+  const count = randomInt(1, 4);
   const chosen: string[] = [];
   for (let i = 0; i < count; i++) chosen.push(pick(EMOJI_POOL));
 
   const placementPatterns = [
     `coloca ${count===1?"ese emoji":"esos emojis"} todos juntos en un solo punto de la frase (puede ser al inicio, en medio, o al final — elige libremente)`,
     `reparte los emojis en distintos puntos de la frase, cada uno intercalado entre dos palabras distintas, no todos juntos`,
-    `agrupa algunos de los emojis (por ejemplo 2 o 3 juntos) en un punto, y coloca el resto suelto en otra parte de la frase`,
+    `agrupa algunos de los emojis (por ejemplo 2 juntos) en un punto, y coloca el resto suelto en otra parte de la frase`,
     `pon un emoji justo al principio del comentario, y el resto (si hay más de uno) distribuido entre palabras a lo largo del texto`,
     `pon todos los emojis únicamente al final del comentario, como remate`,
     `intercala cada emoji entre dos palabras específicas a lo largo de toda la frase, como si se le escaparan al escribir rápido`,
@@ -314,11 +318,11 @@ function buildPrompt(productName: string, category: string, excludeNames: string
   const emojiInstruction = buildEmojiInstruction();
   const slang = SLANG_INTENSITY[Math.floor(Math.random() * SLANG_INTENSITY.length)];
   const lengthTier = Math.random();
-  const lengthWords = lengthTier < 0.3
+  const lengthWords = lengthTier < 0.35
     ? 5 + Math.floor(Math.random() * 8)   // muy cortos: 5-12 palabras
-    : lengthTier < 0.7
-    ? 15 + Math.floor(Math.random() * 20) // medianos: 15-34 palabras
-    : 40 + Math.floor(Math.random() * 35); // largos y detallados: 40-74 palabras
+    : lengthTier < 0.8
+    ? 13 + Math.floor(Math.random() * 15) // medianos: 13-27 palabras
+    : 28 + Math.floor(Math.random() * 15); // largos: 28-42 palabras
   const mentionCity = Math.random() < 0.25;
   const city = VENEZUELAN_CITIES[Math.floor(Math.random() * VENEZUELAN_CITIES.length)];
   const cityLine = mentionCity ? `- En este comentario en particular, menciona de forma natural que lo pidió desde ${city} (u otra ciudad de Venezuela que tú elijas) y cómo fue la experiencia de recibirlo ahí.` : "";
@@ -333,7 +337,7 @@ ${excludeLine}
 - Cada palabra del nombre debe empezar con mayúscula y el resto en minúscula.
 - El correo debe estar completamente en minúsculas, basado en el nombre (sin tildes ni espacios), con dominio gmail.com, hotmail.com o outlook.com.
 - Las estrellas deben ser mayormente 5, con menor frecuencia 4, y en muy pocas ocasiones 3. Sin importar la calificación (incluso si es 3), el comentario debe sonar igual de positivo, bien escrito y satisfecho que uno de 5 estrellas — la calificación no debe bajar la calidad ni el tono del texto.
-- El comentario debe tener aproximadamente ${lengthWords} palabras, respeta ese largo con fidelidad. En el conjunto general de reseñas debe haber una mezcla real: algunas muy cortas y directas (una frase de 5-12 palabras, como "ame la tienda, todo bello" o "que buena calidad, la recomiendo"), muchas de largo medio, y otras notablemente más largas y detalladas, contando con calma toda la experiencia de principio a fin. este comentario en particular debe ajustarse al largo indicado arriba, sin quedarse corto ni pasarse de forma exagerada.
+- El comentario debe tener aproximadamente ${lengthWords} palabras, respeta ese largo con fidelidad y NUNCA lo excedas por mucho. En el conjunto general de reseñas debe haber una mezcla real: algunas muy cortas y directas (una frase de 5-12 palabras, como "ame la tienda, todo bello" o "que buena calidad, la recomiendo"), muchas de largo medio y breves, y unas pocas un poco más largas pero siempre concisas, yendo al punto sin relleno ni vueltas innecesarias. ningún comentario debe sentirse como un párrafo extenso: incluso los más largos deben leerse rápido, como algo que alguien escribe en menos de un minuto desde el celular.
 - Para este comentario específico, ${opening}, con ${tone}, y ${focus}. Además, ${structure}, y ${punctuation}.
 - Si el comentario es un regalo y la categoría es LENTES, ARETES, COLLARES o ANILLOS, el regalo puede ser tanto para hombre como para mujer. En cualquier otra categoría, el regalo debe ser casi siempre para un hombre (novio, esposo, hermano, papá, amigo) y solo raras veces para una mujer.
 - Habla la jerga ${slang}
