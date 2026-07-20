@@ -1546,7 +1546,7 @@ const[fStock,setFStock]          =useState("1");
 const[fUnitsSold,setFUnitsSold]  =useState("");
 const[fVariantGroupId,setFVariantGroupId]=useState("");
 const[fMainVariantLabel,setFMainVariantLabel]=useState("");
-const[fColors,setFColors]=useState<{id?:string;label:string;img:string;uploading?:boolean;description?:string;discount?:string;price?:string;name?:string}[]>([]);const colorFileRefs=useRef<Record<number,HTMLInputElement|null>>({});
+const[fColors,setFColors]=useState<{id?:string;label:string;img:string;uploading?:boolean;description?:string;discount?:string;price?:string;name?:string;existingSearch?:string}[]>([]);const colorFileRefs=useRef<Record<number,HTMLInputElement|null>>({});
 const[editingCouponId,setEditingCouponId]=useState<string|null>(null);
 const[couponCode,setCouponCode]  =useState("");
 const[couponType,setCouponType]  =useState<"general"|"product"|"category">("general");
@@ -1996,6 +1996,10 @@ const updateColorDescription=(idx:number,description:string)=>setFColors(prev=>p
 const updateColorDiscount=(idx:number,discount:string)=>setFColors(prev=>prev.map((c,i)=>i===idx?{...c,discount}:c));
 const updateColorPrice=(idx:number,price:string)=>setFColors(prev=>prev.map((c,i)=>i===idx?{...c,price}:c));
 const updateColorName=(idx:number,name:string)=>setFColors(prev=>prev.map((c,i)=>i===idx?{...c,name}:c));
+const updateColorExistingSearch=(idx:number,val:string)=>setFColors(prev=>prev.map((c,i)=>i===idx?{...c,existingSearch:val}:c));
+const linkExistingProductAsColor=(idx:number,prod:Product)=>{
+  setFColors(prev=>prev.map((c,i)=>i===idx?{...c,id:prod.id,img:prod.img,existingSearch:""}:c));
+};
   const removeColorRow=async(idx:number)=>{const row=fColors[idx];if(row.id){if(!confirm("¿Eliminar este color? Se borrará el producto asociado."))return;try{await fsDelete(row.id);invalidateProductsCache();}catch{}}setFColors(prev=>prev.filter((_,i)=>i!==idx));};
   const onColorFileChange=async(idx:number,e:React.ChangeEvent<HTMLInputElement>)=>{const raw=e.target.files?.[0];if(!raw)return;setFColors(prev=>prev.map((c,i)=>i===idx?{...c,uploading:true}:c));try{const file=await cropImageToSquare(raw);const url=await uploadImg(file);setFColors(prev=>prev.map((c,i)=>i===idx?{...c,img:url,uploading:false}:c));}catch{setFColors(prev=>prev.map((c,i)=>i===idx?{...c,uploading:false}:c));}if(colorFileRefs.current[idx])colorFileRefs.current[idx]!.value="";};
   const toggleProductActive=async(p:Product)=>{const newActive=p.active===false;setProducts(prev=>{const upd=prev.map(x=>x.id===p.id?{...x,active:newActive}:x);setCachedProducts(upd);return upd;});try{await fsUpdate(p.id,{active:newActive});invalidateProductsCache();}catch{}};
@@ -3586,6 +3590,30 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
         <input placeholder="Nombre del color (ej: Rojo con Negro)" value={c.label} onChange={e=>updateColorLabel(i,e.target.value)} style={{...S.input,flex:1}}/>
         <button type="button" onClick={()=>removeColorRow(i)} style={{background:"none",border:"1px solid #2a1515",color:"#cc3333",borderRadius:6,width:30,height:30,cursor:"pointer",flexShrink:0,fontSize:13}}>✕</button>
       </div>
+      {c.id?(
+        <div style={{display:"flex",alignItems:"center",gap:6,background:"#0d1e0d",border:"1px solid #2a4a2a",borderRadius:6,padding:"0.4rem 0.6rem",marginBottom:"0.5rem"}}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          <span style={{fontSize:10,color:"#4caf50",fontWeight:700,flex:1}}>Vinculado a producto existente: {products.find(p=>p.id===c.id)?.name||c.id}</span>
+          <button type="button" onClick={()=>setFColors(prev=>prev.map((cc,ci)=>ci===i?{...cc,id:undefined}:cc))} style={{background:"none",border:"none",color:"#888",cursor:"pointer",fontSize:10,fontFamily:"inherit"}}>Desvincular</button>
+        </div>
+      ):(
+        <div style={{marginBottom:"0.5rem"}}>
+          <input placeholder="🔎 Buscar producto ya existente para usarlo como este color…" value={c.existingSearch||""} onChange={e=>updateColorExistingSearch(i,e.target.value)} style={S.input}/>
+          {!!(c.existingSearch&&c.existingSearch.trim())&&(
+            <div style={{marginTop:4,maxHeight:160,overflowY:"auto",background:"#161616",border:"1px solid #222",borderRadius:6}}>
+              {products.filter(p=>p.id!==editing?.id&&!fColors.some(fc=>fc.id===p.id)&&p.name.toLowerCase().includes((c.existingSearch||"").toLowerCase())).slice(0,8).map(p=>(
+                <button key={p.id} type="button" onClick={()=>linkExistingProductAsColor(i,p)} style={{display:"flex",alignItems:"center",gap:8,width:"100%",background:"none",border:"none",borderBottom:"1px solid #1e1e1e",padding:"0.4rem 0.6rem",cursor:"pointer",textAlign:"left",fontFamily:"inherit"}}>
+                  <img src={optImg(p.img,60)} alt="" style={{width:28,height:28,borderRadius:4,objectFit:"cover",flexShrink:0}} draggable={false}/>
+                  <span style={{fontSize:11,color:"#ccc"}}>{p.name} <span style={{color:"#555"}}>· ${p.price.toFixed(2)}</span></span>
+                </button>
+              ))}
+              {products.filter(p=>p.id!==editing?.id&&!fColors.some(fc=>fc.id===p.id)&&p.name.toLowerCase().includes((c.existingSearch||"").toLowerCase())).length===0&&(
+                <p style={{margin:0,padding:"0.5rem 0.6rem",fontSize:11,color:"#444"}}>Sin resultados</p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
       <input placeholder="Nombre del producto para este color (opcional, si vacío conserva/usa el nombre principal)" value={c.name||""} onChange={e=>updateColorName(i,e.target.value)} style={{...S.input,marginBottom:"0.5rem"}}/>
       <textarea placeholder="Descripción para este color (opcional, si vacío usa la del producto principal)" value={c.description||""} onChange={e=>updateColorDescription(i,e.target.value)} rows={2} style={{...S.input,resize:"vertical" as any,lineHeight:1.6,marginBottom:"0.5rem"}}/>
       <div style={{display:"flex",gap:"0.5rem"}}>
