@@ -731,7 +731,7 @@ const LazyImg=memo(function LazyImg({src,alt,fit="cover"}:{src:string;alt:string
   const ref=useRef<HTMLDivElement>(null);
   useEffect(()=>{
     const el=ref.current;if(!el)return;
-    const obs=new IntersectionObserver(([e])=>{if(e.isIntersecting){setInView(true);obs.disconnect();}},{rootMargin:"150px"});
+    const obs=new IntersectionObserver(([e])=>{if(e.isIntersecting){setInView(true);obs.disconnect();}},{rootMargin:"350px"});
     obs.observe(el);return()=>obs.disconnect();
   },[]);
   return(
