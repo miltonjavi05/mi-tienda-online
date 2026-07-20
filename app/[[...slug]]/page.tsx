@@ -3536,7 +3536,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   <div style={{padding:"1.1rem 1.2rem"}}>
                     <div style={{display:"flex",alignItems:"center",gap:6,background:"rgba(76,175,80,0.08)",border:"1px solid rgba(76,175,80,0.2)",borderRadius:8,padding:"0.5rem 0.75rem",marginBottom:"0.75rem"}}>
                       <span style={{fontSize:11}}>✓</span>
-                      <p style={{margin:0,fontSize:10,color:"#4caf50",fontWeight:700}}>Más de 3.000 clientes ya pagaron por este método</p>
+                      <p style={{margin:0,fontSize:10,color:"#4caf50",fontWeight:700}}>Más de 6.500 clientes ya pagaron por este método</p>
                     </div>
                     <div style={{background:"#0a0a0a",border:"1px solid #2a2a2a",borderRadius:10,padding:"0.9rem 1rem",marginBottom:"0.85rem"}}>
                       <p style={{margin:"0 0 3px",fontSize:9,fontWeight:800,letterSpacing:2,color:"#555"}}>MONTO A PAGAR</p>
