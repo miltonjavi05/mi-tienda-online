@@ -313,7 +313,7 @@ function loadFacebookScript():Promise<any>{
     document.head.appendChild(s);
   });
 }
-async function fsGetUser(uid:string):Promise<{photoURL:string}>{try{const r=await fetch(`${fsBase()}/users/${uid}`);if(!r.ok)return{photoURL:""};const d=await r.json() as FsDoc;return{photoURL:(fromFs(d.fields?.photoURL??{nullValue:null}) as string)||""};}catch{return{photoURL:""};}}
+async function fsGetUser(uid:string):Promise<{photoURL:string;favorites:string[]}>{try{const r=await fetch(`${fsBase()}/users/${uid}`);if(!r.ok)return{photoURL:"",favorites:[]};const d=await r.json() as FsDoc;const rawFav=fromFs(d.fields?.favorites??{nullValue:null}) as string[]|null;return{photoURL:(fromFs(d.fields?.photoURL??{nullValue:null}) as string)||"",favorites:Array.isArray(rawFav)?rawFav:[]};}catch{return{photoURL:"",favorites:[]};}}
 async function uploadImg(file:File,preset=CLOUDINARY_PRESET):Promise<string>{const fd=new FormData();fd.append("file",file);fd.append("upload_preset",preset);const r=await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`,{method:"POST",body:fd});if(!r.ok)throw new Error("Error subiendo imagen");return((await r.json()) as{secure_url:string}).secure_url;}
 function cropImageToSquare(file:File):Promise<File>{
   return new Promise(resolve=>{
@@ -377,7 +377,7 @@ const DiscountBadge=memo(function DiscountBadge({percent,issuper}:{percent:numbe
 });
 const GalleryBadge=memo(function GalleryBadge(){
   return(
-    <div style={{position:"absolute",top:8,right:8,zIndex:2,background:"rgba(0,0,0,0.65)",backdropFilter:"blur(6px)",WebkitBackdropFilter:"blur(6px)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:20,padding:"3px 8px",display:"flex",alignItems:"center",gap:4}}>
+    <div style={{position:"absolute",top:44,right:8,zIndex:2,background:"rgba(0,0,0,0.65)",backdropFilter:"blur(6px)",WebkitBackdropFilter:"blur(6px)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:20,padding:"3px 8px",display:"flex",alignItems:"center",gap:4}}>
       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><rect x="3" y="3" width="18" height="14" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
       <span style={{fontSize:9,color:"#fff",fontWeight:800}}>FOTOS</span>
     </div>
@@ -433,8 +433,8 @@ const GLOBAL_CSS = `
   .fokus-logo { font-family:'Rajdhani',Arial,sans-serif; font-weight:800; letter-spacing:2px; transform:skewX(-10deg); display:inline-block; }
   @keyframes superPulse { 0%{box-shadow:0 4px 18px rgba(255,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.35);} 50%{box-shadow:0 4px 30px rgba(255,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.5);} 100%{box-shadow:0 4px 18px rgba(255,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.35);} }
   *, *::before, *::after { box-sizing: border-box; }
-  html { overflow-y: scroll; scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
-  body { background: #080808; margin: 0; overscroll-behavior-y: contain; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+  html { overflow-y: scroll; overflow-x: hidden; scroll-behavior: smooth; -webkit-text-size-adjust: 100%; max-width: 100vw; }
+  body { background: #080808; margin: 0; overflow-x: hidden; max-width: 100vw; overscroll-behavior-y: contain; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
   input, select, textarea { font-size: 16px !important; }
   button, a { -webkit-tap-highlight-color: transparent; }
   img { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
@@ -561,6 +561,14 @@ const IcEdit=memo(({s=16,c="#fff"}:{s?:number;c?:string})=>(<svg width={s} heigh
 const IcCheck=memo(({s=16,c="#fff"}:{s?:number;c?:string})=>(<svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>));IcCheck.displayName="IcCheck";
 const IcUpload=memo(({s=18,c="#fff"}:{s?:number;c?:string})=>(<svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg>));IcUpload.displayName="IcUpload";
 const IcStar=memo(({s=14,filled=false}:{s?:number;filled?:boolean})=>(<svg width={s} height={s} viewBox="0 0 24 24" fill={filled?"#fff":"none"} stroke={filled?"#fff":"#3a3a3a"} strokeWidth="1.5" strokeLinejoin="round"><path d="M12 2l2.9 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l7.1-1.01z"/></svg>));IcStar.displayName="IcStar";
+const IcHeart=memo(({s=16,filled=false}:{s?:number;filled?:boolean})=>(<svg width={s} height={s} viewBox="0 0 24 24" fill={filled?"#ff4d6d":"rgba(0,0,0,0.35)"} stroke={filled?"#ff4d6d":"#fff"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>));IcHeart.displayName="IcHeart";
+const FavoriteButton=memo(function FavoriteButton({active,onToggle,size=30}:{active:boolean;onToggle:()=>void;size?:number}){
+  return(
+    <button onClick={e=>{e.stopPropagation();onToggle();}} aria-label="Favorito" style={{position:"absolute",top:8,right:8,zIndex:4,width:size,height:size,borderRadius:"50%",background:"rgba(8,8,8,0.55)",backdropFilter:"blur(6px)",WebkitBackdropFilter:"blur(6px)",border:"1px solid rgba(255,255,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",WebkitTapHighlightColor:"transparent"}}>
+      <IcHeart s={size*0.5} filled={active}/>
+    </button>
+  );
+});
 const StarRow=memo(function StarRow({value,onChange,size=15}:{value:number;onChange?:(n:number)=>void;size?:number}){
   return(
     <div style={{display:"flex",gap:3}}>
@@ -760,7 +768,7 @@ const NativeTabs=memo(function NativeTabs({items,active,onSelect,renderItem,heig
 });
 
 // ─── PRODUCT CARD (GRID) ──────────────────────────────────────────────────────
-const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,fmtPrice}:{product:Product;onClick:()=>void;onBuyNow:()=>void;index:number;fmtPrice:(n:number)=>string}){
+const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,fmtPrice,isFav,onToggleFavorite}:{product:Product;onClick:()=>void;onBuyNow:()=>void;index:number;fmtPrice:(n:number)=>string;isFav?:boolean;onToggleFavorite?:(id:string)=>void}){
   return(
     <div className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column"}}>
       <div onClick={onClick} style={{background:"#111",aspectRatio:"1",overflow:"hidden",borderRadius:10,position:"relative",marginBottom:"0.55rem"}}>
@@ -770,6 +778,7 @@ const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,fmtPrice}:
         {product.bestseller&&<BestsellerBadge/>}
         {getAllImages(product).length>1&&<GalleryBadge/>}
         {!!product.urgencyTag&&<StockUrgencyBadge tag={product.urgencyTag}/>}
+        {onToggleFavorite&&<FavoriteButton active={!!isFav} onToggle={()=>onToggleFavorite(product.id)} size={28}/>}
       </div>
       <div onClick={onClick} style={{marginBottom:"0.5rem",flex:1}}>
         <p style={{margin:"0 0 3px",fontSize:12,lineHeight:1.35,color:"#bbb",letterSpacing:0.2}}>{product.name}</p>
@@ -797,7 +806,7 @@ const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,fmtPrice}:
 });
 
 // ─── HORIZONTAL CARD ─────────────────────────────────────────────────────────
-const HCard=memo(function HCard({product,onClick,onBuyNow,fmtPrice}:{product:Product;onClick:()=>void;onBuyNow:()=>void;fmtPrice:(n:number)=>string}){
+const HCard=memo(function HCard({product,onClick,onBuyNow,fmtPrice,isFav,onToggleFavorite}:{product:Product;onClick:()=>void;onBuyNow:()=>void;fmtPrice:(n:number)=>string;isFav?:boolean;onToggleFavorite?:(id:string)=>void}){
   return(
     <div className="hc" style={{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column"}}>
       <div onClick={onClick} style={{background:"#111",width:152,height:152,overflow:"hidden",marginBottom:"0.55rem",borderRadius:10,position:"relative",cursor:"pointer"}}>
@@ -807,6 +816,7 @@ const HCard=memo(function HCard({product,onClick,onBuyNow,fmtPrice}:{product:Pro
         {product.bestseller&&<BestsellerBadge/>}
         {getAllImages(product).length>1&&<GalleryBadge/>}
         {!!product.urgencyTag&&<StockUrgencyBadge tag={product.urgencyTag}/>}
+        {onToggleFavorite&&<FavoriteButton active={!!isFav} onToggle={()=>onToggleFavorite(product.id)} size={26}/>}
       </div>
       <div onClick={onClick} style={{marginBottom:"0.5rem",cursor:"pointer",flex:1}}>
         <p style={{margin:"0 0 2px",fontSize:11,lineHeight:1.35,color:"#bbb",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{product.name}</p>
@@ -843,7 +853,7 @@ const HCard=memo(function HCard({product,onClick,onBuyNow,fmtPrice}:{product:Pro
 });
 
 // ─── HORIZONTAL ROW ───────────────────────────────────────────────────────────
-const HRow=memo(function HRow({products,onSelect,onBuyNow,fmtPrice}:{products:Product[];onSelect:(p:Product)=>void;onBuyNow:(p:Product)=>void;fmtPrice:(n:number)=>string}){
+const HRow=memo(function HRow({products,onSelect,onBuyNow,fmtPrice,isFavorite,onToggleFavorite}:{products:Product[];onSelect:(p:Product)=>void;onBuyNow:(p:Product)=>void;fmtPrice:(n:number)=>string;isFavorite?:(id:string)=>boolean;onToggleFavorite?:(id:string)=>void}){
   const rowRef=useRef<HTMLDivElement>(null);
   const[showLeft,setShowLeft]=useState(false);
   const[showRight,setShowRight]=useState(false);
@@ -856,7 +866,7 @@ const HRow=memo(function HRow({products,onSelect,onBuyNow,fmtPrice}:{products:Pr
       <button onClick={()=>scrollBy(-1)} className={`hr-arrow${showLeft?" hr-arrow-visible":""}`} style={{...arrowBase,left:-4}} aria-label="Anterior"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
       <button onClick={()=>scrollBy(1)} className={`hr-arrow${showRight?" hr-arrow-visible":""}`} style={{...arrowBase,right:-4}} aria-label="Siguiente"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
       <div ref={rowRef} className="hr" style={{display:"flex",gap:"0.75rem",overflowX:"scroll",overflowY:"hidden",paddingBottom:"0.5rem",paddingLeft:"0.25rem",paddingRight:"1rem",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",touchAction:"pan-x pan-y",userSelect:"none",WebkitUserSelect:"none",scrollSnapType:"x proximity"} as React.CSSProperties}>
-        {products.map(p=>(<div key={p.id} style={{scrollSnapAlign:"start",flexShrink:0}}><HCard product={p} onClick={()=>onSelect(p)} onBuyNow={()=>onBuyNow(p)} fmtPrice={fmtPrice}/></div>))}
+        {products.map(p=>(<div key={p.id} style={{scrollSnapAlign:"start",flexShrink:0}}><HCard product={p} onClick={()=>onSelect(p)} onBuyNow={()=>onBuyNow(p)} fmtPrice={fmtPrice} isFav={isFavorite?isFavorite(p.id):false} onToggleFavorite={onToggleFavorite}/></div>))}
       </div>
     </div>
   );
@@ -997,7 +1007,7 @@ function AuthModal({onClose,onSuccess}:{onClose:()=>void;onSuccess:(u:UserData)=
   const[socialLoading,setSocialLoading]=useState<"google"|"facebook"|"">("");
   const authErrMap:Record<string,string>={"EMAIL_EXISTS":"Este correo ya está registrado.","INVALID_EMAIL":"Correo inválido.","WEAK_PASSWORD : Password should be at least 6 characters":"La contraseña debe tener al menos 6 caracteres.","WEAK_PASSWORD":"La contraseña debe tener al menos 6 caracteres.","INVALID_LOGIN_CREDENTIALS":"Correo o contraseña incorrectos.","EMAIL_NOT_FOUND":"No existe una cuenta con este correo.","INVALID_PASSWORD":"Contraseña incorrecta.","USER_DISABLED":"Esta cuenta ha sido deshabilitada.","TOO_MANY_ATTEMPTS_TRY_LATER":"Demasiados intentos. Intenta más tarde.","CONFIGURATION_NOT_FOUND":"El inicio de sesión con correo no está activado.","OPERATION_NOT_ALLOWED":"Registro con email/contraseña no habilitado."};
   const finishSocialLogin=async(res:{idToken:string;localId:string;displayName:string;email:string;refreshToken:string;photoUrl:string})=>{
-    const fsData=await fsGetUser(res.localId).catch(()=>({photoURL:""}));
+    const fsData=await fsGetUser(res.localId).catch(()=>({photoURL:"",favorites:[]}));
     const photoURL=fsData.photoURL||res.photoUrl||"";
     const ud:UserData={uid:res.localId,email:res.email,displayName:res.displayName||res.email.split("@")[0],createdAt:Date.now(),photoURL,idToken:res.idToken};
     await fsSaveUser(res.localId,{email:res.email,displayName:ud.displayName,createdAt:ud.createdAt,photoURL},res.idToken).catch(()=>{});
@@ -1341,6 +1351,7 @@ const[couponCheckErr,setCouponCheckErr]=useState("");  const[products,setProduct
   const[addedProduct,setAddedProduct]=useState<Product|null>(null);
   const[showAuth,setShowAuth]      = useState(false);
   const[currentUser,setCurrentUser]= useState<UserData|null|undefined>(undefined);
+  const[favorites,setFavorites]      = useState<string[]>([]);
   const[lightboxIdx,setLightboxIdx]= useState<number|null>(null);
   const[orderSnap,setOrderSnap]    = useState<OrderSnapshot|null>(null);
   const[editingName,setEditingName]= useState(false);
@@ -1451,6 +1462,25 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   useEffect(()=>{const upd=()=>{if(navRef.current)setNavH(navRef.current.offsetHeight);};upd();const ro=new ResizeObserver(upd);if(navRef.current)ro.observe(navRef.current);return()=>ro.disconnect();},[mainView,lentesOpen,searchOpen]);
 
   useEffect(()=>{initMetaPixel();},[]);
+  useEffect(()=>{
+    if(!currentUser?.uid){setFavorites([]);return;}
+    fsGetUser(currentUser.uid).then(d=>setFavorites(d.favorites||[])).catch(()=>{});
+  },[currentUser?.uid]);
+  const isFavorite=useCallback((id:string)=>favorites.includes(id),[favorites]);
+  const toggleFavorite=useCallback((productId:string)=>{
+    if(!currentUser){setShowAuth(true);return;}
+    setFavorites(prev=>{
+      const next=prev.includes(productId)?prev.filter(id=>id!==productId):[...prev,productId];
+      (async()=>{
+        let idToken=currentUser.idToken;
+        const rt=localStorage.getItem("fokus_refresh");
+        if(rt){const res=await refreshIdToken(rt);if(res)idToken=res.idToken;}
+        fsSaveUser(currentUser.uid,{favorites:next},idToken).catch(()=>{});
+      })();
+      return next;
+    });
+  },[currentUser]);
+  const favoriteProducts=useMemo(()=>products.filter(p=>favorites.includes(p.id)),[products,favorites]);
   useEffect(()=>{if(typeof window!=="undefined"&&(window as any).fbq)(window as any).fbq("track","PageView");},[mainView]);
   useEffect(()=>{setModalImgIdx(0);},[selectedProduct?.id]);
 
@@ -1695,7 +1725,7 @@ const couponsLoaded=useRef(false);
   }, []);
 
   useEffect(()=>{
-    try{const stored=localStorage.getItem("fokus_user");if(stored){const parsed=JSON.parse(stored) as UserData;setCurrentUser(parsed);const rt=localStorage.getItem("fokus_refresh");if(rt&&parsed.uid){refreshIdToken(rt).then(async result=>{if(result){const fsData=await fsGetUser(parsed.uid).catch(()=>({photoURL:""}));setCurrentUser(prev=>{if(!prev)return prev;const updated={...prev,idToken:result.idToken,photoURL:fsData.photoURL||prev.photoURL||""};localStorage.setItem("fokus_user",JSON.stringify(updated));return updated;});}}).catch(()=>{});}}else{setCurrentUser(null);}}catch{setCurrentUser(null);}
+    try{const stored=localStorage.getItem("fokus_user");if(stored){const parsed=JSON.parse(stored) as UserData;setCurrentUser(parsed);const rt=localStorage.getItem("fokus_refresh");if(rt&&parsed.uid){refreshIdToken(rt).then(async result=>{if(result){const fsData=await fsGetUser(parsed.uid).catch(()=>({photoURL:"",favorites:[]}));setCurrentUser(prev=>{if(!prev)return prev;const updated={...prev,idToken:result.idToken,photoURL:fsData.photoURL||prev.photoURL||""};localStorage.setItem("fokus_user",JSON.stringify(updated));return updated;});setFavorites(fsData.favorites||[]);}}).catch(()=>{});}}else{setCurrentUser(null);}}catch{setCurrentUser(null);}
   }, []);
 
   useEffect(() => {
@@ -2490,7 +2520,7 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
       setAcText(result.comment);
       setAcDate(generateRandomAdminReviewDateStr());
     }catch(err){
-      setAcErr(err instanceof Error?`Error de Gemini: ${err.message}`:"Error al generar la reseña con IA.");
+      setAcErr(err instanceof Error?`No se pudo generar la reseña: ${err.message}`:"Error al generar la reseña con IA.");
     }finally{
       setAcGenerating(false);
     }
@@ -3174,7 +3204,7 @@ const filteredComments=useMemo(()=>allComments.filter(c=>{
                       <h2 style={{fontSize:11,fontWeight:800,letterSpacing:3,margin:0,color:"#555"}}>{isLC?`LENTES · ${catLabel(cat).toUpperCase()}`:catLabel(cat).toUpperCase()}</h2>
                       <button onClick={()=>{setShopFilter(cat as ShopFilter);setLentesOpen(isLC);scrollTop();}} style={{background:"none",border:"none",fontSize:10,color:"#333",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",letterSpacing:1,fontWeight:700}}>VER TODOS</button>
                     </div>
-                    <HRow products={prods} onSelect={openProd} onBuyNow={openProd} fmtPrice={fmtPrice}/>
+                    <HRow products={prods} onSelect={openProd} onBuyNow={openProd} fmtPrice={fmtPrice} isFavorite={isFavorite} onToggleFavorite={toggleFavorite}/>
                   </div>
                 );
               })
@@ -3190,7 +3220,7 @@ const filteredComments=useMemo(()=>allComments.filter(c=>{
                       <button onClick={()=>{setShopFilter(cat as ShopFilter);setLentesOpen(isLC);scrollTop();}} style={{background:"none",border:"none",fontSize:10,color:"#333",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",letterSpacing:1,fontWeight:700}}>VER TODOS</button>
                     </div>
                     <div className="pg" style={{display:"grid",gap:"1rem",alignItems:"start"}}>
-                      {prods.map((p,i)=><ProductCard key={p.id} product={p} index={i} onClick={()=>openProd(p)} onBuyNow={()=>openProd(p)} fmtPrice={fmtPrice}/>)}
+                      {prods.map((p,i)=><ProductCard key={p.id} product={p} index={i} onClick={()=>openProd(p)} onBuyNow={()=>openProd(p)} fmtPrice={fmtPrice} isFav={isFavorite(p.id)} onToggleFavorite={toggleFavorite}/>)}
                     </div>
                   </div>
                 );
@@ -3271,6 +3301,24 @@ const filteredComments=useMemo(()=>allComments.filter(c=>{
               </div>
               {photoErr&&<p style={{margin:"0 0 0.5rem",fontSize:11,color:"#ff8888",background:"#1e0808",borderRadius:8,padding:"0.5rem 0.75rem"}}>{photoErr}</p>}
               <p style={{fontSize:10,color:"#2a2a2a",margin:0,lineHeight:1.6}}>Tu foto se guarda en tu cuenta y estará disponible cada vez que inicies sesión, desde cualquier dispositivo.</p>
+            </div>
+            <div style={{background:"#111",borderRadius:16,padding:"1.5rem",border:"1px solid #1a1a1a",marginBottom:"1rem"}}>
+              <p style={{fontSize:11,fontWeight:800,letterSpacing:2,color:"#555",margin:"0 0 1rem"}}>MIS FAVORITOS ({favoriteProducts.length})</p>
+              {favoriteProducts.length===0?(
+                <p style={{fontSize:12,color:"#333",margin:0}}>Aún no has agregado productos a favoritos. Toca el ❤️ en cualquier producto para guardarlo aquí.</p>
+              ):(
+                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"0.6rem"}}>
+                  {favoriteProducts.map(p=>(
+                    <div key={p.id} onClick={()=>openProd(p)} style={{cursor:"pointer",position:"relative"}}>
+                      <div style={{aspectRatio:"1",borderRadius:8,overflow:"hidden",background:"#0a0a0a",position:"relative"}}>
+                        <LazyImg src={p.img} alt={p.name}/>
+                        <FavoriteButton active={true} onToggle={()=>toggleFavorite(p.id)} size={24}/>
+                      </div>
+                      <p style={{margin:"4px 0 0",fontSize:10,color:"#888",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <button onClick={()=>{setCurrentUser(null);setMainView("fokus");}} style={{...S.darkBtn,background:"transparent",color:"#cc3333",border:"1px solid #2a1515",borderRadius:8,width:"100%",justifyContent:"center",fontSize:12}}>Cerrar sesión</button>
           </div>
@@ -4484,7 +4532,12 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   )}
                 </div>
                 <div className="pm-info-col">
-              <h2 style={{fontSize:18,fontWeight:900,margin:"0 0 0.35rem",color:C.accent}}>{selectedProduct.name}</h2>
+              <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:"0.75rem"}}>
+                <h2 style={{fontSize:18,fontWeight:900,margin:"0 0 0.35rem",color:C.accent}}>{selectedProduct.name}</h2>
+                <button onClick={()=>toggleFavorite(selectedProduct.id)} aria-label="Favorito" style={{flexShrink:0,background:"#161616",border:"1px solid #2a2a2a",borderRadius:"50%",width:38,height:38,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",WebkitTapHighlightColor:"transparent"}}>
+                  <IcHeart s={18} filled={isFavorite(selectedProduct.id)}/>
+                </button>
+              </div>
               {selectedProduct.code&&<p style={{fontSize:10,color:"#333",margin:"0 0 0.5rem",fontFamily:"monospace",letterSpacing:1}}>Código: {selectedProduct.code}</p>}
               {selectedProduct.description&&<p style={{fontSize:13,color:"#555",margin:"0 0 0.65rem",lineHeight:1.6}}>{selectedProduct.description}</p>}
               {selectedProduct.discount&&selectedProduct.discount>0?(
@@ -4592,7 +4645,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
               {modalSuggestions.length>0&&(
                 <div style={{marginTop:"0.5rem",paddingTop:"1.25rem",borderTop:`1px solid ${C.border}`,paddingBottom:"1.5rem"}}>
                   <p style={{fontSize:10,fontWeight:800,letterSpacing:2,color:"#555",margin:"0 0 0.85rem"}}>TAMBIÉN TE PUEDE INTERESAR</p>
-                  <HRow products={modalSuggestions} onSelect={switchModalProduct} onBuyNow={switchModalProduct} fmtPrice={fmtPrice}/>
+                  <HRow products={modalSuggestions} onSelect={switchModalProduct} onBuyNow={switchModalProduct} fmtPrice={fmtPrice} isFavorite={isFavorite} onToggleFavorite={toggleFavorite}/>
                 </div>
               )}
               <div style={{marginTop:"1.5rem",marginLeft:"-1.5rem",marginRight:"-1.5rem"}}>
