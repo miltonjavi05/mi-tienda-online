@@ -3309,19 +3309,19 @@ const filteredComments=useMemo(()=>allComments.filter(c=>{
               {photoErr&&<p style={{margin:"0 0 0.5rem",fontSize:11,color:"#ff8888",background:"#1e0808",borderRadius:8,padding:"0.5rem 0.75rem"}}>{photoErr}</p>}
               <p style={{fontSize:10,color:"#2a2a2a",margin:0,lineHeight:1.6}}>Tu foto se guarda en tu cuenta y estará disponible cada vez que inicies sesión, desde cualquier dispositivo.</p>
             </div>
-            <div style={{background:"#111",borderRadius:16,padding:"1.5rem",border:"1px solid #1a1a1a",marginBottom:"1rem"}}>
+            <div style={{background:"#111",borderRadius:16,padding:"1.5rem",border:"1px solid #1a1a1a",marginBottom:"1rem",overflow:"hidden"}}>
               <p style={{fontSize:11,fontWeight:800,letterSpacing:2,color:"#555",margin:"0 0 1rem"}}>MIS FAVORITOS ({favoriteProducts.length})</p>
               {favoriteProducts.length===0?(
                 <p style={{fontSize:12,color:"#333",margin:0}}>Aún no has agregado productos a favoritos. Toca el ❤️ en cualquier producto para guardarlo aquí.</p>
               ):(
-                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"0.6rem"}}>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))",gap:"0.75rem",width:"100%",boxSizing:"border-box"}}>
                   {favoriteProducts.map(p=>(
-                    <div key={p.id} onClick={()=>openProd(p)} style={{cursor:"pointer",position:"relative"}}>
-                      <div style={{aspectRatio:"1",borderRadius:8,overflow:"hidden",background:"#0a0a0a",position:"relative"}}>
+                    <div key={p.id} onClick={()=>openProd(p)} style={{cursor:"pointer",display:"flex",flexDirection:"column",minWidth:0}}>
+                      <div style={{width:"100%",aspectRatio:"1",borderRadius:8,overflow:"hidden",background:"#0a0a0a",position:"relative",flexShrink:0}}>
                         <LazyImg src={p.img} alt={p.name}/>
-                        <FavoriteButton active={true} onToggle={()=>toggleFavorite(p.id)} size={24}/>
+                        <FavoriteButton active={true} onToggle={()=>toggleFavorite(p.id)} size={22}/>
                       </div>
-                      <p style={{margin:"4px 0 0",fontSize:10,color:"#888",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</p>
+                      <p style={{margin:"6px 0 0",fontSize:10,color:"#888",lineHeight:1.4,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical" as any,overflow:"hidden",minHeight:"2.8em"}}>{p.name}</p>
                     </div>
                   ))}
                 </div>
