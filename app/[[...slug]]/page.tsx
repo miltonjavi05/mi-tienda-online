@@ -433,12 +433,19 @@ const GLOBAL_CSS = `
   .fokus-logo { font-family:'Rajdhani',Arial,sans-serif; font-weight:800; letter-spacing:2px; transform:skewX(-10deg); display:inline-block; }
   @keyframes superPulse { 0%{box-shadow:0 4px 18px rgba(255,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.35);} 50%{box-shadow:0 4px 30px rgba(255,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.5);} 100%{box-shadow:0 4px 18px rgba(255,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.35);} }
   *, *::before, *::after { box-sizing: border-box; }
-  html { overflow-y: scroll; overflow-x: hidden; scroll-behavior: smooth; -webkit-text-size-adjust: 100%; max-width: 100vw; }
-  body { background: #080808; margin: 0; overflow-x: hidden; max-width: 100vw; overscroll-behavior-y: contain; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+  html { overflow-y: scroll; scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  body { background: #080808; margin: 0; overflow-x: clip; overscroll-behavior-y: contain; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
   input, select, textarea { font-size: 16px !important; }
   button, a { -webkit-tap-highlight-color: transparent; }
   img { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
   .ts::-webkit-scrollbar, .hr::-webkit-scrollbar { display: none; }
+  @media(hover:hover) and (pointer:fine){
+    .pm-scroll::-webkit-scrollbar { display: block; width: 8px; }
+    .pm-scroll::-webkit-scrollbar-track { background: transparent; }
+    .pm-scroll::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 8px; }
+    .pm-scroll::-webkit-scrollbar-thumb:hover { background: #3a3a3a; }
+    .pm-scroll { scrollbar-width: thin; scrollbar-color: #2a2a2a transparent; }
+  }
   .ts { -webkit-overflow-scrolling: touch; contain: layout style; }
   .hr { -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
   .hr * { -webkit-user-select: none; user-select: none; }
@@ -3204,7 +3211,7 @@ const filteredComments=useMemo(()=>allComments.filter(c=>{
                       <h2 style={{fontSize:11,fontWeight:800,letterSpacing:3,margin:0,color:"#555"}}>{isLC?`LENTES · ${catLabel(cat).toUpperCase()}`:catLabel(cat).toUpperCase()}</h2>
                       <button onClick={()=>{setShopFilter(cat as ShopFilter);setLentesOpen(isLC);scrollTop();}} style={{background:"none",border:"none",fontSize:10,color:"#333",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",letterSpacing:1,fontWeight:700}}>VER TODOS</button>
                     </div>
-                    <HRow products={prods} onSelect={openProd} onBuyNow={openProd} fmtPrice={fmtPrice} isFavorite={isFavorite} onToggleFavorite={toggleFavorite}/>
+                    <HRow products={prods} onSelect={openProd} onBuyNow={openProd} fmtPrice={fmtPrice}/>
                   </div>
                 );
               })
@@ -3220,7 +3227,7 @@ const filteredComments=useMemo(()=>allComments.filter(c=>{
                       <button onClick={()=>{setShopFilter(cat as ShopFilter);setLentesOpen(isLC);scrollTop();}} style={{background:"none",border:"none",fontSize:10,color:"#333",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",letterSpacing:1,fontWeight:700}}>VER TODOS</button>
                     </div>
                     <div className="pg" style={{display:"grid",gap:"1rem",alignItems:"start"}}>
-                      {prods.map((p,i)=><ProductCard key={p.id} product={p} index={i} onClick={()=>openProd(p)} onBuyNow={()=>openProd(p)} fmtPrice={fmtPrice} isFav={isFavorite(p.id)} onToggleFavorite={toggleFavorite}/>)}
+                      {prods.map((p,i)=><ProductCard key={p.id} product={p} index={i} onClick={()=>openProd(p)} onBuyNow={()=>openProd(p)} fmtPrice={fmtPrice}/>)}
                     </div>
                   </div>
                 );
@@ -4645,7 +4652,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
               {modalSuggestions.length>0&&(
                 <div style={{marginTop:"0.5rem",paddingTop:"1.25rem",borderTop:`1px solid ${C.border}`,paddingBottom:"1.5rem"}}>
                   <p style={{fontSize:10,fontWeight:800,letterSpacing:2,color:"#555",margin:"0 0 0.85rem"}}>TAMBIÉN TE PUEDE INTERESAR</p>
-                  <HRow products={modalSuggestions} onSelect={switchModalProduct} onBuyNow={switchModalProduct} fmtPrice={fmtPrice} isFavorite={isFavorite} onToggleFavorite={toggleFavorite}/>
+                  <HRow products={modalSuggestions} onSelect={switchModalProduct} onBuyNow={switchModalProduct} fmtPrice={fmtPrice}/>
                 </div>
               )}
               <div style={{marginTop:"1.5rem",marginLeft:"-1.5rem",marginRight:"-1.5rem"}}>
