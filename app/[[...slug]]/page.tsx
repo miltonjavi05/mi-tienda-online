@@ -451,7 +451,7 @@ const GLOBAL_CSS = `
   .hr * { -webkit-user-select: none; user-select: none; }
   .admin-list { -webkit-user-select: none; user-select: none; }
   select { -webkit-appearance: auto; appearance: auto; }
-  input[type="datetime-local"], input[type="date"] { min-width: 0; width: 100%; box-sizing: border-box; }
+  input[type="datetime-local"], input[type="date"] { min-width: 0; max-width: 100%; width: 100%; box-sizing: border-box; flex: 1 1 auto; }
   .avatar-ring { position: relative; display: inline-flex; align-items: center; justify-content: center; }
   .avatar-ring::after { content:''; position:absolute; inset:-3px; border-radius:50%; border:2px solid rgba(255,255,255,0.15); pointer-events:none; }
   @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
@@ -517,6 +517,7 @@ const GLOBAL_CSS = `
     .pg { grid-template-columns: repeat(2,1fr) !important; }
     .fg { grid-template-columns: 1fr !important; gap: 1.5rem !important; }
     .cg { grid-template-columns: repeat(2,1fr) !important; }
+    input[type="datetime-local"], input[type="date"] { font-size: 13px !important; padding-left: 0.6rem !important; padding-right: 0.6rem !important; }
   }
   @media(min-width:481px) and (max-width:767px){
     .pg { grid-template-columns: repeat(auto-fill,minmax(150px,1fr)) !important; }
