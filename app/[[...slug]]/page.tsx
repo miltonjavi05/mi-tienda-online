@@ -446,6 +446,8 @@ const GLOBAL_CSS = `
     .pm-scroll::-webkit-scrollbar-thumb:hover { background: #3a3a3a; }
     .pm-scroll { scrollbar-width: thin; scrollbar-color: #2a2a2a transparent; }
   }
+  .pm-scroll { contain: layout style paint; transform: translatez(0); }
+  .pm-content { contain: layout paint; }
   .ts { -webkit-overflow-scrolling: touch; contain: layout style; }
   .hr { -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
   .hr * { -webkit-user-select: none; user-select: none; }
