@@ -682,6 +682,16 @@ function formatTimeLeft(expiresAt:number):string{
   return`${h}h ${m}m`;
 }
 
+function generateRandomAdminReviewDateStr():string{
+  const now=new Date();
+  const yearsBack=Math.random()<0.15?3:2;
+  const msRange=yearsBack*365*24*60*60*1000;
+  const randomMs=Math.random()*msRange;
+  const d=new Date(now.getTime()-randomMs);
+  const pad=(n:number)=>String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function PwdInput({value,onChange,placeholder,onKeyDown,autoComplete}:{value:string;onChange:(v:string)=>void;placeholder:string;onKeyDown?:(e:React.KeyboardEvent)=>void;autoComplete?:string;}){
   const[show,setShow]=useState(false);
   return(<div style={{position:"relative",display:"flex",alignItems:"center"}}><input type={show?"text":"password"} placeholder={placeholder} value={value} onChange={e=>onChange(e.target.value)} onKeyDown={onKeyDown} autoComplete={autoComplete} style={{...S.input,paddingRight:"2.8rem"}}/><button type="button" onClick={()=>setShow(s=>!s)} style={{position:"absolute",right:10,background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",padding:4,WebkitTapHighlightColor:"transparent"}} tabIndex={-1}>{show?<IcEyeOff s={18} c="#666"/>:<IcEye s={18} c="#666"/>}</button></div>);
@@ -2460,6 +2470,7 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
       setAcFakeEmail(result.email);
       setAcStars(result.stars);
       setAcText(result.comment);
+      setAcDate(generateRandomAdminReviewDateStr());
     }catch(err){
       setAcErr(err instanceof Error?`Error de Gemini: ${err.message}`:"Error al generar la reseña con IA.");
     }finally{
