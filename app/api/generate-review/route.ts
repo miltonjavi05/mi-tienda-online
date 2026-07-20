@@ -211,7 +211,7 @@ const BANNED_OPENERS = [
 
 const COMMENT_FOCUS_STYLES = [
   "concéntrate en alabar la tienda en general (buena atención, buenos precios, confianza), más que en el producto puntual",
-  "concéntrate en decir que sigan así, que van a crecer, o que es la mejor tienda del país en su rubro",
+  "concéntrate en decir que la tienda 'siga así', que van a crecer, o que es la mejor tienda del país en su rubro — esta frase va dirigida a la tienda felicitándola por su servicio, nunca es una instrucción a otros clientes de 'seguir comprando'",
   "concéntrate en un beneficio concreto que le trajo el producto en su día a día (ver mejor, no llegar tarde, protegerse del sol, verse bien, cuidar la vista, etc), acorde a la categoría del producto — piensa en un beneficio distinto y específico según sea lentes, reloj, pulsera, collar, arete, anillo o billetera, no repitas siempre el mismo tipo de beneficio",
   "concéntrate en contar que lo pidió desde un estado o ciudad de Venezuela y que llegó rápido y en buen estado",
   "concéntrate en una característica visual o física concreta del producto (color, diseño, tamaño, textura, ajuste, brillo, acabado)",
@@ -303,7 +303,7 @@ const STRUCTURE_PATTERNS = [
   "estructura: menciona primero un pequeño detalle negativo o duda inicial, y lo resuelve al final de forma positiva",
   "estructura: un párrafo corto y directo sin ninguna anécdota, solo el punto central",
   "estructura: mezcla dos ideas distintas conectadas con 'y' o 'pero', sin puntuación formal",
-  "estructura: termina con una recomendación directa a otros compradores",
+  "estructura: termina con una recomendación directa a otros compradores, con una frase que tenga sentido lógico como 'se los recomiendo full', 'cómprenlo sin miedo', o 'no duden en pedir aquí' — nunca algo confuso o sin sentido como decirle a otros clientes que 'sigan comprando'",
   "estructura: termina con una emoción o sensación personal, no con una recomendación",
   "estructura: no sigue ningún patrón de reseña, parece un mensaje de texto suelto y espontáneo",
 ];
@@ -406,7 +406,8 @@ ${cityLine}
 - No repitas estructuras de frase típicas de reseña genérica de e-commerce. Escribe como lo escribiría alguien rápido desde el celular: puede tener alguna palabra pegada, abreviación común de Venezuela (xq, q, tmb) usada con moderación, letras repetidas para dar énfasis (ej: bonitooo, bienn, sigan asiii) usado con moderación y solo a veces, o signos de exclamación de forma natural, no forzada.
 - NUNCA empieces el comentario con estas frases ni nada parecido: ${BANNED_OPENERS.join(" / ")}.
 - Evita muletillas repetitivas de reseña genérica. Que suene como algo que alguien realmente escribiría, con su propio estilo, no como plantilla.
-- PROHIBIDO usar palabras en inglés como relleno o placeholder (ej: "none", "n/a", "null", "unknown") o dejar frases incompletas o vacías de sentido. Si no tienes un dato concreto sobre una característica específica del producto (como el ajuste exacto), simplemente no la menciones — habla de otra cosa que sí puedas describir con naturalidad, pero el comentario completo siempre debe estar 100% en español y sonar coherente de principio a fin.`;
+- PROHIBIDO usar palabras en inglés como relleno o placeholder (ej: "none", "n/a", "null", "unknown") o dejar frases incompletas o vacías de sentido. Si no tienes un dato concreto sobre una característica específica del producto (como el ajuste exacto), simplemente no la menciones — habla de otra cosa que sí puedas describir con naturalidad, pero el comentario completo siempre debe estar 100% en español y sonar coherente de principio a fin.
+- REVISIÓN DE LÓGICA: antes de responder, verifica que cada frase tenga sentido real. Evita cierres confusos o contradictorios como decirle a otros clientes que "sigan comprando" (eso no lo dice un cliente sobre sí mismo ni tiene sentido como consejo a otros). Si vas a felicitar a la tienda, hazlo dirigido a la tienda (ej: "sigan así", "van a crecer full"); si vas a recomendar el producto a otros compradores, hazlo con una frase que sí tenga lógica (ej: "se los recomiendo", "cómprenlo sin dudar").`;
 }
 
 function parseReviewText(text: string) {
