@@ -446,7 +446,7 @@ const GLOBAL_CSS = `
     .pm-scroll::-webkit-scrollbar-thumb:hover { background: #3a3a3a; }
     .pm-scroll { scrollbar-width: thin; scrollbar-color: #2a2a2a transparent; }
   }
-  .pm-scroll { contain: layout style paint; transform: translatez(0); }
+  .pm-scroll { contain: layout style paint; transform: translatez(0); overscroll-behavior-y: contain; }
   .pm-content { contain: layout paint; }
   @media(hover:hover) and (pointer:fine){
     .hr { contain: layout style paint; transform: translatez(0); }
@@ -505,7 +505,10 @@ const GLOBAL_CSS = `
     .hr-arrow { display: none !important; }
   }
 
-  .pc, .hc, .cc { transition: transform 0.25s ease, border-color 0.2s ease, box-shadow 0.25s ease; contain: layout paint; }
+  .pc, .hc, .cc { transition: transform 0.25s ease, border-color 0.2s ease, box-shadow 0.25s ease; }
+  @media(hover:hover) and (pointer:fine){
+    .pc, .hc, .cc { contain: layout paint; }
+  }
   img { image-rendering: auto; }
   .pc:active { transform: scale(0.97); }
   .hc:active { opacity: 0.85; }
@@ -3527,6 +3530,8 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
               const pm=PAYMENT_METHODS.find(m=>m.id===payMethod)!;
               const isBs=pm.id==="pagomovil_bv"||pm.id==="pagomovil_ba";
               const amountLabel=isBs?(bcvRate?`Bs. ${Math.round(totalPrice*bcvRate).toLocaleString("es-VE")}`:"Cargando tasa…"):`$${totalPrice.toFixed(2)}`;
+              const trustCounts:Record<string,number>={binance:3900,pagomovil_bv:8700,pagomovil_ba:6400,zinli:3900};
+              const trustCount=trustCounts[pm.id]??3000;
               return(
                 <div ref={payDetailsRef} style={{marginTop:"1rem",background:"linear-gradient(135deg,#141410 0%,#0a0a0a 100%)",borderRadius:14,border:"2px solid #3a3520",overflow:"hidden",boxShadow:"0 8px 28px rgba(255,212,59,0.08), inset 0 1px 0 rgba(255,255,255,0.05)",scrollMarginTop:`${navH+12}px`}}>
                   <div style={{padding:"0.7rem 1.1rem",borderBottom:"1px solid #2a2a1a",display:"flex",alignItems:"center",gap:"0.6rem",background:"rgba(255,212,59,0.05)"}}>
@@ -3536,7 +3541,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   <div style={{padding:"1.1rem 1.2rem"}}>
                     <div style={{display:"flex",alignItems:"center",gap:6,background:"rgba(76,175,80,0.08)",border:"1px solid rgba(76,175,80,0.2)",borderRadius:8,padding:"0.5rem 0.75rem",marginBottom:"0.75rem"}}>
                       <span style={{fontSize:11}}>✓</span>
-                      <p style={{margin:0,fontSize:10,color:"#4caf50",fontWeight:700}}>Más de 6.500 clientes ya pagaron por este método</p>
+                      <p style={{margin:0,fontSize:10,color:"#4caf50",fontWeight:700}}>Más de {trustCount.toLocaleString("es-VE")} clientes ya usaron este método</p>
                     </div>
                     <div style={{background:"#0a0a0a",border:"1px solid #2a2a2a",borderRadius:10,padding:"0.9rem 1rem",marginBottom:"0.85rem"}}>
                       <p style={{margin:"0 0 3px",fontSize:9,fontWeight:800,letterSpacing:2,color:"#555"}}>MONTO A PAGAR</p>
