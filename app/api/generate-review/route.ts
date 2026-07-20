@@ -212,19 +212,18 @@ const BANNED_OPENERS = [
 const COMMENT_FOCUS_STYLES = [
   "concéntrate en alabar la tienda en general (buena atención, buenos precios, confianza), más que en el producto puntual",
   "concéntrate en decir que sigan así, que van a crecer, o que es la mejor tienda del país en su rubro",
-  "concéntrate en un beneficio concreto que le trajo el producto en su día a día (ver mejor, no llegar tarde, protegerse del sol, verse bien, cuidar la vista, etc), acorde a la categoría del producto",
+  "concéntrate en un beneficio concreto que le trajo el producto en su día a día (ver mejor, no llegar tarde, protegerse del sol, verse bien, cuidar la vista, etc), acorde a la categoría del producto — piensa en un beneficio distinto y específico según sea lentes, reloj, pulsera, collar, arete, anillo o billetera, no repitas siempre el mismo tipo de beneficio",
   "concéntrate en contar que lo pidió desde un estado o ciudad de Venezuela y que llegó rápido y en buen estado",
   "concéntrate en una característica visual o física concreta del producto (color, diseño, tamaño, textura, ajuste, brillo, acabado)",
   "concéntrate en decir que ya había comprado antes y que volverá a comprar pronto",
   "concéntrate en la relación calidad-precio",
   "concéntrate en el envío y la atención recibida, más que en el producto en sí",
-  "concéntrate en que se lo regaló a alguien (pareja, hermano, amigo) y la reacción que tuvo",
   "concéntrate en comparar el producto con uno similar que compró antes en otro lado, y por qué este ganó",
   "concéntrate en lo fácil que fue todo el proceso de compra por WhatsApp, sin mencionar mucho el producto en sí",
   "concéntrate en un comentario sobre el empaque o la presentación al llegar",
   "concéntrate en cómo le quedó puesto o cómo se ve usándolo, más que en describirlo objetivamente",
   "concéntrate en que fue justo lo que buscaba, ni más ni menos, sin adornarlo demasiado",
-  "concéntrate en recomendarlo específicamente a un tipo de persona (para trabajar, para regalar, para estudiar, para el día a día)",
+  "concéntrate en recomendarlo específicamente a un tipo de persona (para trabajar, para estudiar, para el día a día, para salir)",
   "concéntrate específicamente en lo bien cuidado, protegido o presentado que venía el empaque, como si fuera de una tienda de verdad y no algo improvisado",
   "concéntrate en lo original y diferente que es el diseño del artículo comparado con lo que se consigue normalmente en la calle o en otras tiendas",
   "concéntrate específicamente en la calidad del material (que no se ve barato, que pesa bien, que no parece que se va a dañar rápido)",
@@ -236,9 +235,50 @@ const COMMENT_FOCUS_STYLES = [
   "concéntrate en decir que ya le había comprado antes a la tienda y que lo va a seguir haciendo, como cliente de confianza",
   "concéntrate en lo bonito o cuidado que llegó el empaque, con una frase corta y espontánea tipo cumplido directo",
   "concéntrate en decir explícitamente que la experiencia de compra en esta tienda online fue excelente, mencionando que fue directo desde la página web",
+  "concéntrate en decir que confió en la tienda tal cual se veía en las fotos o en la página, y que la realidad no lo defraudó",
+  "concéntrate en que ya se siente fiel a la marca, que le gusta cómo se ve el logo, el estilo general de la tienda o cómo maneja sus redes",
+  "concéntrate en contar una pequeña anécdota puntual con el accesorio (una salida, un comentario que le hicieron usándolo, una situación graciosa o curiosa)",
+  "concéntrate en combinar DOS de estos aspectos a la vez de forma natural, sin que se sienta forzado: por ejemplo calidad + rapidez de envío, o diseño + atención, o precio + confianza, eligiendo tú la combinación",
+  "concéntrate en lo cómodo que resulta usar el producto en el día a día, más allá de cómo se ve",
+  "concéntrate en que fue una compra impulsiva que terminó siendo una excelente decisión",
+  "concéntrate en el detalle de que se ve tal cual como en las fotos de la página, ni mejor ni peor, exactamente igual",
+  "concéntrate en el orgullo de comprar en una tienda venezolana o local, apoyando algo hecho o vendido en el país",
 ];
 
-const VENEZUELAN_CITIES = ["Maracaibo","Puerto Ordaz","Barquisimeto","Valencia","Maracay","San Cristóbal","Barinas","Ciudad Bolívar","Punto Fijo","Cumaná","Mérida","Coro","Guanare","Acarigua","San Felipe","Guarenas"];
+const GIFT_RECIPIENTS_MALE = [
+  "mi hijo", "mi esposo", "mi novio", "mi papá", "mi hermano", "mi cuñado", "mi tío",
+  "mi mejor amigo", "mi suegro", "mi primo", "mi nieto", "mi yerno", "mi compadre",
+  "un amigo del trabajo", "mi ahijado", "mi abuelo",
+];
+const GIFT_RECIPIENTS_FEMALE = [
+  "mi esposa", "mi novia", "mi mamá", "mi hermana", "mi hija", "mi cuñada", "mi tía",
+  "mi mejor amiga", "mi suegra", "mi prima", "mi abuela",
+];
+const GIFT_PHRASE_TEMPLATES = [
+  "le regalé {producto} a {persona} y le encantó",
+  "le regalé un par de {producto} a {persona}",
+  "le regalé {producto} a {persona} por su cumple y me encantó la presentación",
+  "le compré {producto} a {persona} y quedó feliz",
+  "se lo compré a {persona} de regalo y no se lo esperaba",
+  "fue un regalo para {persona} y la reacción valió la pena",
+  "se lo di a {persona} de sorpresa y casi llora",
+  "le compré esto y otra cosa más a {persona}, quedó encantado",
+];
+
+const VENEZUELAN_CITIES = [
+  "Caracas","Maracaibo","Valencia","Barquisimeto","Maracay","Ciudad Guayana","Puerto Ordaz",
+  "San Cristóbal","Maturín","Barcelona","Puerto La Cruz","Turmero","Ciudad Bolívar","Cumaná",
+  "Mérida","Cabimas","Coro","Guarenas","Guatire","Los Teques","Guanare","Acarigua","San Felipe",
+  "Barinas","Punto Fijo","Valera","El Tigre","Cagua","Tinaquillo","San Fernando de Apure",
+  "San Carlos","Trujillo","La Guaira","Porlamar","Tucupita","Puerto Ayacucho","Carúpano",
+  "Guasdualito","Ocumare del Tuy","La Victoria","San Juan de los Morros","El Vigía","Charallave",
+];
+
+const VENEZUELAN_STATES = [
+  "Amazonas","Anzoátegui","Apure","Aragua","Barinas","Bolívar","Carabobo","Cojedes",
+  "Delta Amacuro","Distrito Capital","Falcón","Guárico","Lara","Mérida","Miranda","Monagas",
+  "Nueva Esparta","Portuguesa","Sucre","Táchira","Trujillo","Vargas","Yaracuy","Zulia",
+];
 
 const VENEZUELAN_SLANG_EXAMPLES = [
   "nwr", "increíble mi pana", "pana", "verga que buenos", "bello papá",
@@ -323,9 +363,25 @@ function buildPrompt(productName: string, category: string, excludeNames: string
     : lengthTier < 0.8
     ? 13 + Math.floor(Math.random() * 15) // medianos: 13-27 palabras
     : 28 + Math.floor(Math.random() * 15); // largos: 28-42 palabras
+  const isGiftComment = Math.random() < 0.12;
+  const giftIsForFemale = Math.random() < 0.10; // 90% hombres, 10% mujeres
+  const giftRecipient = giftIsForFemale
+    ? GIFT_RECIPIENTS_FEMALE[Math.floor(Math.random() * GIFT_RECIPIENTS_FEMALE.length)]
+    : GIFT_RECIPIENTS_MALE[Math.floor(Math.random() * GIFT_RECIPIENTS_MALE.length)];
+  const giftPhraseExample = GIFT_PHRASE_TEMPLATES[Math.floor(Math.random() * GIFT_PHRASE_TEMPLATES.length)]
+    .replace("{persona}", giftRecipient);
+  const giftLine = isGiftComment
+    ? `- En este comentario en particular, cuenta que el producto fue (o incluye) un REGALO para ${giftRecipient}. Redacta esa parte con tus propias palabras y de forma natural, inspirándote libremente en el estilo de este ejemplo sin copiarlo literalmente: "${giftPhraseExample}". Puedes mencionar solo el regalo, o combinarlo con otro comentario sobre la tienda o la calidad.`
+    : "";
   const mentionCity = Math.random() < 0.25;
+  const mentionStateInstead = Math.random() < 0.35; // dentro del 25%, a veces usa estado en vez de ciudad
   const city = VENEZUELAN_CITIES[Math.floor(Math.random() * VENEZUELAN_CITIES.length)];
-  const cityLine = mentionCity ? `- En este comentario en particular, menciona de forma natural que lo pidió desde ${city} (u otra ciudad de Venezuela que tú elijas) y cómo fue la experiencia de recibirlo ahí.` : "";
+  const state = VENEZUELAN_STATES[Math.floor(Math.random() * VENEZUELAN_STATES.length)];
+  const cityLine = mentionCity
+    ? mentionStateInstead
+      ? `- En este comentario en particular, menciona de forma natural que lo pidió desde el estado ${state} (u otro estado de Venezuela que tú elijas) y cómo fue la experiencia de recibirlo ahí.`
+      : `- En este comentario en particular, menciona de forma natural que lo pidió desde ${city} (u otra ciudad de Venezuela que tú elijas) y cómo fue la experiencia de recibirlo ahí.`
+    : "";
   const recentExclude = excludeNames.slice(-30);
   const excludeLine = recentExclude.length ? `- NUNCA uses ninguno de estos nombres y apellidos que ya se usaron antes (elige uno completamente distinto): ${recentExclude.join(", ")}.` : "";
   return `Genera una reseña de cliente en español (Venezuela) para este producto de accesorios: "${productName}" (categoría: ${catLabel(category)}).
@@ -339,17 +395,18 @@ ${excludeLine}
 - Las estrellas deben ser mayormente 5, con menor frecuencia 4, y en muy pocas ocasiones 3. Sin importar la calificación (incluso si es 3), el comentario debe sonar igual de positivo, bien escrito y satisfecho que uno de 5 estrellas — la calificación no debe bajar la calidad ni el tono del texto.
 - El comentario debe tener aproximadamente ${lengthWords} palabras, respeta ese largo con fidelidad y NUNCA lo excedas por mucho. En el conjunto general de reseñas debe haber una mezcla real: algunas muy cortas y directas (una frase de 5-12 palabras, como "ame la tienda, todo bello" o "que buena calidad, la recomiendo"), muchas de largo medio y breves, y unas pocas un poco más largas pero siempre concisas, yendo al punto sin relleno ni vueltas innecesarias. ningún comentario debe sentirse como un párrafo extenso: incluso los más largos deben leerse rápido, como algo que alguien escribe en menos de un minuto desde el celular.
 - Para este comentario específico, ${opening}, con ${tone}, y ${focus}. Además, ${structure}, y ${punctuation}.
-- Si el comentario es un regalo y la categoría es LENTES, ARETES, COLLARES o ANILLOS, el regalo puede ser tanto para hombre como para mujer. En cualquier otra categoría, el regalo debe ser casi siempre para un hombre (novio, esposo, hermano, papá, amigo) y solo raras veces para una mujer.
+${giftLine}
 - Habla la jerga ${slang}
 ${emojiInstruction}
 ${cityLine}
 - IMPORTANTE — RIGOR POR ARTÍCULO: este producto ya tiene o tendrá otras reseñas generadas de forma independiente. Es CRÍTICO que esta reseña en particular sea irreconocible en su forma frente a cualquier otra reseña típica del mismo artículo: no repitas el mismo orden de ideas, el mismo tipo de arranque, el mismo largo de frase ni el mismo cierre que usarías por defecto. Imagina que ya existen 10 reseñas distintas de este mismo producto y la tuya debe notarse a simple vista como diferente en ritmo, forma y construcción de frase, no solo en las palabras usadas.
 - Varía también la longitud de las frases, la puntuación y el orden en que aparecen los datos, para que ningún comentario se parezca en su forma a otro. Ninguno debe sonar a plantilla ni seguir el mismo orden de ideas ni la misma cantidad de oraciones que otro.
 - Si el comentario menciona una característica o beneficio del producto, que sea coherente con la categoría real (ej: lentes anti luz azul → protegen la vista al usar la computadora o estudiar; lentes fotocromáticos → se oscurecen con el sol y protegen los ojos; monturas/lentes de fórmula → se los colocó en la óptica y ahora ve mejor; relojes → nunca más llega tarde o siempre sabe la hora; pulseras/aretes/collares → se ven originales, bonito color, buen acabado; billeteras → buen material, cómoda, resistente).
-- Al mencionar el producto dentro del comentario, NO uses siempre el nombre completo y exacto del artículo. Varía la forma de referirte a él: a veces el nombre completo, a veces solo el tipo genérico de accesorio (ej: "los lentes", "el reloj", "la pulsera", "los aretes", "el collar", "la billetera", "el anillo"), a veces una versión corta o coloquial (ej: "lentes anti luz azul" → "los lentes" o "los de luz azul"), y a veces ni lo menciones explícitamente y habla de "lo que compré" o "mi pedido". Que suene natural, como hablaría una persona real, no como una ficha de producto repetida en cada reseña.
+- Al mencionar el producto dentro del comentario, NO uses siempre el nombre completo y exacto del artículo (ej: evita repetir "lentes anti luz azul" tal cual en casi todas las reseñas). Varía la forma de referirte a él: la mayoría de las veces usa solo el tipo genérico de accesorio (ej: "los lentes", "el reloj", "la pulsera", "los aretes", "el collar", "la billetera", "el anillo"), a veces una versión corta o coloquial (ej: "los de luz azul", "los de sol", "los para moto"), pocas veces el nombre completo tal cual aparece en la tienda, y a veces ni lo menciones explícitamente y habla de "lo que compré", "mi pedido" o simplemente "esto". Que suene natural, como hablaría una persona real, no como una ficha de producto repetida en cada reseña.
 - No repitas estructuras de frase típicas de reseña genérica de e-commerce. Escribe como lo escribiría alguien rápido desde el celular: puede tener alguna palabra pegada, abreviación común de Venezuela (xq, q, tmb) usada con moderación, letras repetidas para dar énfasis (ej: bonitooo, bienn, sigan asiii) usado con moderación y solo a veces, o signos de exclamación de forma natural, no forzada.
 - NUNCA empieces el comentario con estas frases ni nada parecido: ${BANNED_OPENERS.join(" / ")}.
-- Evita muletillas repetitivas de reseña genérica. Que suene como algo que alguien realmente escribiría, con su propio estilo, no como plantilla.`;
+- Evita muletillas repetitivas de reseña genérica. Que suene como algo que alguien realmente escribiría, con su propio estilo, no como plantilla.
+- PROHIBIDO usar palabras en inglés como relleno o placeholder (ej: "none", "n/a", "null", "unknown") o dejar frases incompletas o vacías de sentido. Si no tienes un dato concreto sobre una característica específica del producto (como el ajuste exacto), simplemente no la menciones — habla de otra cosa que sí puedas describir con naturalidad, pero el comentario completo siempre debe estar 100% en español y sonar coherente de principio a fin.`;
 }
 
 function parseReviewText(text: string) {
