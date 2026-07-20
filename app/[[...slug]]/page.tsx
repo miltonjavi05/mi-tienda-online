@@ -727,17 +727,10 @@ function PwdInput({value,onChange,placeholder,onKeyDown,autoComplete}:{value:str
 // ─── LAZY IMAGE ───────────────────────────────────────────────────────────────
 const LazyImg=memo(function LazyImg({src,alt,fit="cover"}:{src:string;alt:string;fit?:"cover"|"contain"}){
   const[loaded,setLoaded]=useState(false);
-  const[inView,setInView]=useState(false);
-  const ref=useRef<HTMLDivElement>(null);
-  useEffect(()=>{
-    const el=ref.current;if(!el)return;
-    const obs=new IntersectionObserver(([e])=>{if(e.isIntersecting){setInView(true);obs.disconnect();}},{rootMargin:"350px"});
-    obs.observe(el);return()=>obs.disconnect();
-  },[]);
   return(
-    <div ref={ref} style={{position:"relative",width:"100%",height:"100%",pointerEvents:"none"}}>
+    <div style={{position:"relative",width:"100%",height:"100%",pointerEvents:"none"}}>
       {!loaded&&<div style={{position:"absolute",inset:0,background:"#161616"}}/>}
-      {inView&&<img
+      <img
         src={optImg(src,600)}
         alt={alt}
         loading="lazy"
@@ -754,7 +747,7 @@ const LazyImg=memo(function LazyImg({src,alt,fit="cover"}:{src:string;alt:string
           touchAction:"auto",
         } as React.CSSProperties}
         draggable={false}
-      />}
+      />
     </div>
   );
 });
