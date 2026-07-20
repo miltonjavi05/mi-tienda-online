@@ -1546,7 +1546,7 @@ const[fStock,setFStock]          =useState("1");
 const[fUnitsSold,setFUnitsSold]  =useState("");
 const[fVariantGroupId,setFVariantGroupId]=useState("");
 const[fMainVariantLabel,setFMainVariantLabel]=useState("");
-const[fColors,setFColors]=useState<{id?:string;label:string;img:string;uploading?:boolean;description?:string;discount?:string}[]>([]);const colorFileRefs=useRef<Record<number,HTMLInputElement|null>>({});
+const[fColors,setFColors]=useState<{id?:string;label:string;img:string;uploading?:boolean;description?:string;discount?:string;price?:string;name?:string}[]>([]);const colorFileRefs=useRef<Record<number,HTMLInputElement|null>>({});
 const[editingCouponId,setEditingCouponId]=useState<string|null>(null);
 const[couponCode,setCouponCode]  =useState("");
 const[couponType,setCouponType]  =useState<"general"|"product"|"category">("general");
@@ -1984,7 +1984,7 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
   const doLogin=()=>{if(adminEmail===ADMIN_EMAIL&&adminPwd===ADMIN_PASSWORD){setAdminLogged(true);setAdminErr("");setAdminSec("menu");}else setAdminErr("Credenciales incorrectas");};
   const doLogout=()=>{setAdminLogged(false);setAdminEmail("");setAdminPwd("");setMainView("fokus");if(typeof window!=="undefined")window.history.pushState("","","/");};
   const resetForm = () => {setEditing(null);setFName("");setFDesc("");setFPrice("");setFCat("");setFFile(null);setFPrev("");setFErr("");setFOk("");setFGallery([]);setFActive(true);setFDiscount("");setFCode("");setFStock("1");setFUnitsSold("");setFVariantGroupId("");setFMainVariantLabel("");setFColors([]);if(fileRef.current)fileRef.current.value="";};
-  const startEdit = (p:Product) => {setEditing(p);setFName(p.name);setFDesc(p.description||"");setFPrice(String(p.price));setFCat(p.category);setFPrev(p.img);setFFile(null);setFGallery(p.images||[]);setFActive(p.active!==false);setFDiscount(p.discount&&p.discount>0?String(p.discount):"");setFCode(p.code||"");setFStock(p.stock!==undefined?String(p.stock):"0");setFUnitsSold(p.unitsSold&&p.unitsSold>0?String(p.unitsSold):"");setFVariantGroupId(p.variantGroup||"");setFMainVariantLabel(p.variantLabel||"");setFColors(p.variantGroup?products.filter(x=>x.variantGroup===p.variantGroup&&x.id!==p.id).map(x=>({id:x.id,label:x.variantLabel||"",img:x.img,description:x.description||"",discount:x.discount&&x.discount>0?String(x.discount):""})):[]);setFErr("");setFOk("");if(fileRef.current)fileRef.current.value="";setTimeout(()=>formRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),50);};
+  const startEdit = (p:Product) => {setEditing(p);setFName(p.name);setFDesc(p.description||"");setFPrice(String(p.price));setFCat(p.category);setFPrev(p.img);setFFile(null);setFGallery(p.images||[]);setFActive(p.active!==false);setFDiscount(p.discount&&p.discount>0?String(p.discount):"");setFCode(p.code||"");setFStock(p.stock!==undefined?String(p.stock):"0");setFUnitsSold(p.unitsSold&&p.unitsSold>0?String(p.unitsSold):"");setFVariantGroupId(p.variantGroup||"");setFMainVariantLabel(p.variantLabel||"");setFColors(p.variantGroup?products.filter(x=>x.variantGroup===p.variantGroup&&x.id!==p.id).map(x=>({id:x.id,label:x.variantLabel||"",img:x.img,description:x.description||"",discount:x.discount&&x.discount>0?String(x.discount):"",price:String(x.price),name:x.name})):[]);setFErr("");setFOk("");if(fileRef.current)fileRef.current.value="";setTimeout(()=>formRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),50);};
   const onFileChange=async(e:React.ChangeEvent<HTMLInputElement>)=>{const raw=e.target.files?.[0];if(!raw)return;const file=await cropImageToSquare(raw);setFFile(file);const r=new FileReader();r.onload=ev=>setFPrev(ev.target?.result as string);r.readAsDataURL(file);};
   const onGalleryFilesChange=async(e:React.ChangeEvent<HTMLInputElement>)=>{const files=Array.from(e.target.files||[]);if(!files.length)return;setFGalleryUploading(true);try{const urls=await Promise.all(files.map(async f=>uploadImg(await cropImageToSquare(f))));setFGallery(prev=>[...prev,...urls]);}catch{setFErr("Error subiendo alguna de las fotos adicionales.");}finally{setFGalleryUploading(false);if(galleryFileRef.current)galleryFileRef.current.value="";}};
   const makeGalleryImageMain=(idx:number)=>{setFGallery(prevGal=>{const url=prevGal[idx];const newGal=[...prevGal];newGal.splice(idx,1);if(fPrev)newGal.push(fPrev);setFPrev(url);setFFile(null);return newGal;});};
@@ -1994,6 +1994,8 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
   const updateColorLabel=(idx:number,label:string)=>setFColors(prev=>prev.map((c,i)=>i===idx?{...c,label}:c));
 const updateColorDescription=(idx:number,description:string)=>setFColors(prev=>prev.map((c,i)=>i===idx?{...c,description}:c));
 const updateColorDiscount=(idx:number,discount:string)=>setFColors(prev=>prev.map((c,i)=>i===idx?{...c,discount}:c));
+const updateColorPrice=(idx:number,price:string)=>setFColors(prev=>prev.map((c,i)=>i===idx?{...c,price}:c));
+const updateColorName=(idx:number,name:string)=>setFColors(prev=>prev.map((c,i)=>i===idx?{...c,name}:c));
   const removeColorRow=async(idx:number)=>{const row=fColors[idx];if(row.id){if(!confirm("¿Eliminar este color? Se borrará el producto asociado."))return;try{await fsDelete(row.id);invalidateProductsCache();}catch{}}setFColors(prev=>prev.filter((_,i)=>i!==idx));};
   const onColorFileChange=async(idx:number,e:React.ChangeEvent<HTMLInputElement>)=>{const raw=e.target.files?.[0];if(!raw)return;setFColors(prev=>prev.map((c,i)=>i===idx?{...c,uploading:true}:c));try{const file=await cropImageToSquare(raw);const url=await uploadImg(file);setFColors(prev=>prev.map((c,i)=>i===idx?{...c,img:url,uploading:false}:c));}catch{setFColors(prev=>prev.map((c,i)=>i===idx?{...c,uploading:false}:c));}if(colorFileRefs.current[idx])colorFileRefs.current[idx]!.value="";};
   const toggleProductActive=async(p:Product)=>{const newActive=p.active===false;setProducts(prev=>{const upd=prev.map(x=>x.id===p.id?{...x,active:newActive}:x);setCachedProducts(upd);return upd;});try{await fsUpdate(p.id,{active:newActive});invalidateProductsCache();}catch{}};
@@ -2133,8 +2135,19 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
       else{await fsAdd(data);setFOk("✓ Producto agregado");}
       for(let i=0;i<validColors.length;i++){
         const c=validColors[i];
-         const colorData={name:fName.trim(),description:(c.description||"").trim()||fDesc.trim(),price:parseFloat(fPrice),category:fCat.toUpperCase(),img:c.img,active:fActive,discount:c.discount&&parseFloat(c.discount)>0?Math.max(0,Math.min(95,parseFloat(c.discount))):0,stock:fStock!==""?Math.max(0,parseInt(fStock)||0):1,variantGroup:groupId,variantLabel:c.label.trim()};        if(c.id)await fsUpdate(c.id,colorData);
-        else await fsAdd({...colorData,images:[],code:"FK-"+(Date.now()+i+1).toString(36).slice(-6).toUpperCase()});
+        const colorDiscount=c.discount&&parseFloat(c.discount)>0?Math.max(0,Math.min(95,parseFloat(c.discount))):0;
+        if(c.id){
+          const updateData:Record<string,unknown>={variantGroup:groupId,variantLabel:c.label.trim(),img:c.img,discount:colorDiscount};
+          if(c.name&&c.name.trim())updateData.name=c.name.trim();
+          if(c.description&&c.description.trim())updateData.description=c.description.trim();
+          if(c.price&&parseFloat(c.price)>0)updateData.price=parseFloat(c.price);
+          await fsUpdate(c.id,updateData as Partial<Omit<Product,"id">>);
+        }else{
+          const colorName=(c.name||"").trim()||fName.trim();
+          const colorPrice=c.price&&parseFloat(c.price)>0?parseFloat(c.price):parseFloat(fPrice);
+          const colorDesc=(c.description||"").trim()||fDesc.trim();
+          await fsAdd({name:colorName,description:colorDesc,price:colorPrice,category:fCat.toUpperCase(),img:c.img,active:fActive,discount:colorDiscount,stock:fStock!==""?Math.max(0,parseInt(fStock)||0):1,variantGroup:groupId,variantLabel:c.label.trim(),images:[],code:"FK-"+(Date.now()+i+1).toString(36).slice(-6).toUpperCase()});
+        }
       }
       invalidateProductsCache();
       productsAlreadyLoaded.current = false;
@@ -3573,8 +3586,12 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
         <input placeholder="Nombre del color (ej: Rojo con Negro)" value={c.label} onChange={e=>updateColorLabel(i,e.target.value)} style={{...S.input,flex:1}}/>
         <button type="button" onClick={()=>removeColorRow(i)} style={{background:"none",border:"1px solid #2a1515",color:"#cc3333",borderRadius:6,width:30,height:30,cursor:"pointer",flexShrink:0,fontSize:13}}>✕</button>
       </div>
+      <input placeholder="Nombre del producto para este color (opcional, si vacío conserva/usa el nombre principal)" value={c.name||""} onChange={e=>updateColorName(i,e.target.value)} style={{...S.input,marginBottom:"0.5rem"}}/>
       <textarea placeholder="Descripción para este color (opcional, si vacío usa la del producto principal)" value={c.description||""} onChange={e=>updateColorDescription(i,e.target.value)} rows={2} style={{...S.input,resize:"vertical" as any,lineHeight:1.6,marginBottom:"0.5rem"}}/>
-      <input placeholder="% de descuento para este color (vacío = sin oferta)" type="number" min="0" max="95" value={c.discount||""} onChange={e=>updateColorDiscount(i,e.target.value)} style={S.input}/>
+      <div style={{display:"flex",gap:"0.5rem"}}>
+        <input placeholder="Precio para este color (opcional, si vacío conserva/usa el precio principal)" type="number" min="0" step="0.01" value={c.price||""} onChange={e=>updateColorPrice(i,e.target.value)} style={{...S.input,flex:1}}/>
+        <input placeholder="% de descuento para este color (vacío = sin oferta)" type="number" min="0" max="95" value={c.discount||""} onChange={e=>updateColorDiscount(i,e.target.value)} style={{...S.input,flex:1}}/>
+      </div>
     </div>
   ))}
   <button type="button" onClick={addColorRow} style={{background:"#1a1a1a",color:"#4dabf7",border:"1px solid #2a2a2a",borderRadius:8,padding:"0.55rem 1rem",cursor:"pointer",fontSize:11,fontWeight:800,fontFamily:"inherit"}}>+ AGREGAR COLOR</button>

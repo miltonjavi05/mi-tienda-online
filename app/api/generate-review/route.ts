@@ -294,18 +294,27 @@ const VENEZUELAN_STATES = [
   "Nueva Esparta","Portuguesa","Sucre","Táchira","Trujillo","Vargas","Yaracuy","Zulia",
 ];
 
-const VENEZUELAN_SLANG_EXAMPLES = [
+const MALE_SLANG_EXAMPLES = [
   "nwr", "increíble mi pana", "pana", "verga que buenos", "bello papá",
   "sisas me encantaron manito", "gracias por todo de vrdd", "que fino", "bien chevere",
   "mano", "wn", "chamo", "vrg", "manito", "hermano", "muchachos", "mijo", "jaja",
   "nwr de bellos", "de verdad nwr", "que nota mano", "todo bien pana",
 ];
 
-const SLANG_INTENSITY = [
-  "sin ninguna jerga venezolana, en español neutro y cercano",
-  `con una sola palabra o expresión coloquial venezolana suelta de forma natural en cualquier parte de la frase (elige libremente entre estilos como: ${VENEZUELAN_SLANG_EXAMPLES.join(", ")}, u otras similares), nunca forzada`,
-  `con dos expresiones coloquiales venezolanas como máximo, bien naturales, como si lo escribiera alguien de la calle sin pensarlo mucho (puedes inspirarte en: ${VENEZUELAN_SLANG_EXAMPLES.join(", ")}, u otras parecidas)`,
+const FEMALE_SLANG_EXAMPLES = [
+  "nwr", "increíble de verdad", "pana", "que buenos", "amiga",
+  "gracias por todo de vrdd", "que fino", "bien chevere", "chamo", "wn",
+  "jaja", "nwr de bellos", "de verdad nwr", "que nota", "todo bien",
 ];
+
+function buildSlangIntensity(isFemale: boolean): string[] {
+  const pool = isFemale ? FEMALE_SLANG_EXAMPLES : MALE_SLANG_EXAMPLES;
+  return [
+    "sin ninguna jerga venezolana, en español neutro y cercano",
+    `con una sola palabra o expresión coloquial venezolana suelta de forma natural en cualquier parte de la frase (elige libremente entre estilos como: ${pool.join(", ")}, u otras similares), nunca forzada`,
+    `con dos expresiones coloquiales venezolanas como máximo, bien naturales, como si lo escribiera alguien de la calle sin pensarlo mucho (puedes inspirarte en: ${pool.join(", ")}, u otras parecidas)`,
+  ];
+}
 
 const STRUCTURE_PATTERNS = [
   "estructura: una sola frase larga sin pausas, como si lo escribiera de corrido sin pensar",
@@ -370,7 +379,9 @@ function buildPrompt(productName: string, category: string, excludeNames: string
   const structure = STRUCTURE_PATTERNS[Math.floor(Math.random() * STRUCTURE_PATTERNS.length)];
   const punctuation = PUNCTUATION_STYLES[Math.floor(Math.random() * PUNCTUATION_STYLES.length)];
   const emojiInstruction = buildEmojiInstruction();
-  const slang = SLANG_INTENSITY[Math.floor(Math.random() * SLANG_INTENSITY.length)];
+  const reviewerIsFemale = Math.random() < 0.34;
+  const slangPool = buildSlangIntensity(reviewerIsFemale);
+  const slang = slangPool[Math.floor(Math.random() * slangPool.length)];
   const lengthTier = Math.random();
   const lengthWords = lengthTier < 0.35
     ? 5 + Math.floor(Math.random() * 8)   // muy cortos: 5-12 palabras
@@ -398,10 +409,11 @@ function buildPrompt(productName: string, category: string, excludeNames: string
     : "";
   const recentExclude = excludeNames.slice(-30);
   const excludeLine = recentExclude.length ? `- NUNCA uses ninguno de estos nombres y apellidos que ya se usaron antes (elige uno completamente distinto): ${recentExclude.join(", ")}.` : "";
+  const genderFirstNames = reviewerIsFemale ? FEMALE_FIRST_NAMES : MALE_FIRST_NAMES;
   const nameStyleRoll = Math.random();
   const nameStyleInstruction = nameStyleRoll < 0.07
-    ? `- EXCEPCIÓN DE NOMBRE (poco frecuente): en este comentario usa SOLO un nombre de pila corto o un apodo/diminutivo venezolano, SIN apellido. Puede ser un nombre simple (ej: "Pedro", "Alex", "Mel") o una forma corta/apodo (ej: "Javi", "Eddy", "Pedri", "Kike", "Fabi", "Andy", "Nano", "Toño", "Vale", "Suri", "Popo", "Mari", "Fran"), u otro similar inventado en ese mismo estilo. Nunca agregues apellido en este caso.`
-    : `- El nombre debe ser un nombre venezolano realista, en el estilo de estos ejemplos: ${SAMPLE_REVIEW_NAMES.join(", ")}. Usa la MAYOR variedad posible de nombres y apellidos, evitando siempre los más obvios o repetidos.`;
+    ? `- EXCEPCIÓN DE NOMBRE (poco frecuente): en este comentario usa SOLO un nombre de pila corto o un apodo/diminutivo venezolano de ${reviewerIsFemale?"MUJER":"HOMBRE"}, SIN apellido. Inspírate en nombres como: ${genderFirstNames.slice(0,25).join(", ")}, usando una forma corta o diminutivo natural de ese mismo género. Nunca agregues apellido en este caso.`
+    : `- El nombre debe ser un nombre venezolano realista de ${reviewerIsFemale?"MUJER":"HOMBRE"}. Usa un nombre de pila inspirado en esta lista: ${genderFirstNames.slice(0,30).join(", ")}, combinado con un apellido de esta lista: ${LAST_NAMES.slice(0,25).join(", ")}. Usa la MAYOR variedad posible de nombres y apellidos, evitando siempre los más obvios o repetidos.`;
   return `Genera una reseña de cliente en español (Venezuela) para este producto de accesorios: "${productName}" (categoría: ${catLabel(category)}).
 Responde ÚNICAMENTE con un JSON válido, sin texto adicional ni backticks, con este formato exacto:
 {"name":"...","email":"...","stars":5,"comment":"..."}
@@ -415,6 +427,7 @@ ${excludeLine}
 - Para este comentario específico, ${opening}, con ${tone}, y ${focus}. Además, ${structure}, y ${punctuation}.
 ${giftLine}
 - Habla la jerga ${slang}
+- REGLA DE GÉNERO Y JERGA: el nombre generado es de ${reviewerIsFemale?"una MUJER":"un HOMBRE"}. Si es mujer, NUNCA uses expresiones como "sisas", "mano", "hermano" o "manito" (suenan masculinas); en su lugar, si quieres un toque coloquial, usa expresiones más neutras como "pana", "chamo", "que fino", "de verdad nwr" o "que nota". Si es hombre, sí puedes usar libremente cualquiera de esas expresiones.
 ${emojiInstruction}
 ${cityLine}
 - IMPORTANTE — RIGOR POR ARTÍCULO: este producto ya tiene o tendrá otras reseñas generadas de forma independiente. Es CRÍTICO que esta reseña en particular sea irreconocible en su forma frente a cualquier otra reseña típica del mismo artículo: no repitas el mismo orden de ideas, el mismo tipo de arranque, el mismo largo de frase ni el mismo cierre que usarías por defecto. Imagina que ya existen 10 reseñas distintas de este mismo producto y la tuya debe notarse a simple vista como diferente en ritmo, forma y construcción de frase, no solo en las palabras usadas.
