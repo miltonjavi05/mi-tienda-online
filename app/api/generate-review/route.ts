@@ -117,7 +117,7 @@ function generateCreativeEmail(fullName: string): string {
   const clean = stripAccents(fullName.toLowerCase()).replace(/[^a-z\s]/g, "");
   const parts = clean.split(/\s+/).filter(Boolean);
   const first = parts[0] || "user";
-  const last = parts[1] || "";
+  const last = parts[1] || pick(EMAIL_WORDS);
   const num2 = () => String(randomInt(1, 99));
   const num4 = () => String(randomInt(1980, 2010));
   const word = () => pick(EMAIL_WORDS);
@@ -140,12 +140,26 @@ function generateCreativeEmail(fullName: string): string {
   return `${local}@${domain}`;
 }
 
-function generateRandomPastDate(maxDaysAgo = 1095): Date {
-  const daysAgo = randomInt(0, maxDaysAgo);
-  const d = new Date();
-  d.setDate(d.getDate() - daysAgo);
-  d.setHours(randomInt(8, 22), randomInt(0, 59), 0, 0);
-  return d;
+function generateRandomPastDate(): Date {
+  const r = Math.random();
+  let year: number;
+  if (r < 0.08) year = 2024;
+  else if (r < 0.45) year = 2025;
+  else year = 2026;
+
+  let month: number, day: number;
+  if (year === 2024) {
+    month = randomInt(6, 12); // solo la parte más tardía de 2024
+    day = randomInt(1, 28);
+  } else if (year === 2025) {
+    month = randomInt(1, 12);
+    day = randomInt(1, 28);
+  } else {
+    const now = new Date();
+    month = randomInt(1, now.getMonth() + 1);
+    day = month === now.getMonth() + 1 ? randomInt(1, now.getDate()) : randomInt(1, 28);
+  }
+  return new Date(year, month - 1, day, randomInt(8, 22), randomInt(0, 59), 0, 0);
 }
 
 function pickWeightedStars(): number {
@@ -384,11 +398,15 @@ function buildPrompt(productName: string, category: string, excludeNames: string
     : "";
   const recentExclude = excludeNames.slice(-30);
   const excludeLine = recentExclude.length ? `- NUNCA uses ninguno de estos nombres y apellidos que ya se usaron antes (elige uno completamente distinto): ${recentExclude.join(", ")}.` : "";
+  const nameStyleRoll = Math.random();
+  const nameStyleInstruction = nameStyleRoll < 0.07
+    ? `- EXCEPCIÓN DE NOMBRE (poco frecuente): en este comentario usa SOLO un nombre de pila corto o un apodo/diminutivo venezolano, SIN apellido. Puede ser un nombre simple (ej: "Pedro", "Alex", "Mel") o una forma corta/apodo (ej: "Javi", "Eddy", "Pedri", "Kike", "Fabi", "Andy", "Nano", "Toño", "Vale", "Suri", "Popo", "Mari", "Fran"), u otro similar inventado en ese mismo estilo. Nunca agregues apellido en este caso.`
+    : `- El nombre debe ser un nombre venezolano realista, en el estilo de estos ejemplos: ${SAMPLE_REVIEW_NAMES.join(", ")}. Usa la MAYOR variedad posible de nombres y apellidos, evitando siempre los más obvios o repetidos.`;
   return `Genera una reseña de cliente en español (Venezuela) para este producto de accesorios: "${productName}" (categoría: ${catLabel(category)}).
 Responde ÚNICAMENTE con un JSON válido, sin texto adicional ni backticks, con este formato exacto:
 {"name":"...","email":"...","stars":5,"comment":"..."}
 Reglas:
-- El nombre debe ser un nombre venezolano realista, en el estilo de estos ejemplos: ${SAMPLE_REVIEW_NAMES.join(", ")}. Usa la MAYOR variedad posible de nombres y apellidos, evitando siempre los más obvios o repetidos.
+${nameStyleInstruction}
 ${excludeLine}
 - Cada palabra del nombre debe empezar con mayúscula y el resto en minúscula.
 - El correo debe estar completamente en minúsculas, basado en el nombre (sin tildes ni espacios), con dominio gmail.com, hotmail.com o outlook.com.

@@ -660,6 +660,19 @@ async function generateAIReview(productName:string,category:string,existingNames
   return d;
 }
   
+function generateWeightedReviewDate():number{
+  const r=Math.random();
+  let year:number;
+  if(r<0.08)year=2024;
+  else if(r<0.45)year=2025;
+  else year=2026;
+  let month:number,day:number;
+  if(year===2024){month=Math.floor(Math.random()*(12-6+1))+6;day=Math.floor(Math.random()*28)+1;}
+  else if(year===2025){month=Math.floor(Math.random()*12)+1;day=Math.floor(Math.random()*28)+1;}
+  else{const now=new Date();month=Math.floor(Math.random()*(now.getMonth()+1))+1;day=month===now.getMonth()+1?Math.floor(Math.random()*now.getDate())+1:Math.floor(Math.random()*28)+1;}
+  return new Date(year,month-1,day,Math.floor(Math.random()*15)+8,Math.floor(Math.random()*60),0,0).getTime();
+}
+
 function formatTimeLeft(expiresAt:number):string{
   const ms=expiresAt-Date.now();
   if(ms<=0)return"Expirado";
@@ -1558,6 +1571,7 @@ const[acAvatarUrl,setAcAvatarUrl]=useState("");
 const[acAvatarUploading,setAcAvatarUploading]=useState(false);
 const acAvatarRef=useRef<HTMLInputElement>(null);
 const[acFakeEmail,setAcFakeEmail]=useState("");
+const[acDate,setAcDate]=useState("");
 const[acPhotoUploading,setAcPhotoUploading]=useState(false);
 const[acSaving,setAcSaving]=useState(false);
 const[acGenerating,setAcGenerating]=useState(false);
@@ -2494,7 +2508,7 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
           }
           usedNames.push(result.name);
           try{
-            await fsAddToCollection("product_comments",{productId:prod.id,productName:prod.name,name:result.name,email:result.email,comment:result.comment,stars:result.stars,createdAt:Date.now()-Math.floor(Math.random()*1095)*86400000,photoUrl:"",avatarUrl:"",isAdmin:false});
+            await fsAddToCollection("product_comments",{productId:prod.id,productName:prod.name,name:result.name,email:result.email,comment:result.comment,stars:result.stars,createdAt:generateWeightedReviewDate(),photoUrl:"",avatarUrl:"",isAdmin:false});
             totalCreated++;
           }catch(err){
             setBulkGenErr("Error guardando en Firestore: "+(err instanceof Error?err.message:"desconocido"));
@@ -2520,19 +2534,19 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     if(!acName.trim()||!acText.trim()){setAcErr("Ingresa nombre y comentario.");return;}
     setAcSaving(true);
     try{
-      const createdAt=Date.now();
+      const createdAt=acDate?new Date(acDate).getTime():Date.now();
       await fsAddToCollection("product_comments",{productId:prod.id,productName:prod.name,name:acName.trim(),email:acFakeEmail.trim(),comment:acText.trim(),stars:acStars,createdAt,photoUrl:acPhotoUrl,avatarUrl:acAvatarUrl,isAdmin:false});
       setAcOk("✓ Comentario publicado correctamente");
       allCommentsLoaded.current=false;
       await loadAllComments(true);
-      setAcText("");setAcPhotoUrl("");setAcAvatarUrl("");setAcStars(5);setAcFakeEmail("");
+      setAcText("");setAcPhotoUrl("");setAcAvatarUrl("");setAcStars(5);setAcFakeEmail("");setAcDate("");
       setTimeout(()=>setAcOk(""),2500);
     }catch(err){
       setAcErr("Error: "+(err instanceof Error?err.message:"desconocido"));
     }finally{
       setAcSaving(false);
     }
-  },[products,acProductId,acName,acText,acStars,acPhotoUrl,acAvatarUrl,loadAllComments]);
+  },[products,acProductId,acName,acText,acStars,acPhotoUrl,acAvatarUrl,acDate,loadAllComments]);
 
   const loadBulkDrafts=useCallback((cat:string)=>{
     const map:Record<string,{name:string;description:string}>={};
@@ -4227,6 +4241,10 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   <button type="button" onClick={generateAdminCommentAI} disabled={!acProductId||acGenerating} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.5rem",background:"linear-gradient(135deg,#4dabf7 0%,#2a6bb0 100%)",color:"#fff",border:"none",borderRadius:8,padding:"0.75rem",cursor:(!acProductId||acGenerating)?"not-allowed":"pointer",fontFamily:"inherit",fontSize:12,fontWeight:800,letterSpacing:1,opacity:(!acProductId||acGenerating)?0.5:1}}>{acGenerating?"Generando…":"🤖 GENERAR RESEÑA CON IA"}</button>
                   <input placeholder="Nombre a mostrar" value={acName} onChange={e=>setAcName(e.target.value)} style={S.input}/>
                   <input placeholder="Correo a mostrar (opcional)" value={acFakeEmail} onChange={e=>setAcFakeEmail(e.target.value)} style={S.input}/>
+                  <div>
+                    <p style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#333",margin:"0 0 0.4rem"}}>FECHA DEL COMENTARIO (OPCIONAL — VACÍO = AHORA)</p>
+                    <input type="datetime-local" value={acDate} onChange={e=>setAcDate(e.target.value)} style={{...S.input,appearance:"auto" as any}}/>
+                  </div>
                   <div>
                     <p style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#333",margin:"0 0 0.5rem"}}>FOTO DE PERFIL DEL CLIENTE (OPCIONAL)</p>
                     <input ref={acAvatarRef} type="file" accept="image/*" onChange={handleAcAvatarChange} disabled={acAvatarUploading} style={{display:"none"}} id="ac-avatar-input"/>
