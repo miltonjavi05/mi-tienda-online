@@ -1546,7 +1546,7 @@ const[fStock,setFStock]          =useState("1");
 const[fUnitsSold,setFUnitsSold]  =useState("");
 const[fVariantGroupId,setFVariantGroupId]=useState("");
 const[fMainVariantLabel,setFMainVariantLabel]=useState("");
-const[fColors,setFColors]=useState<{id?:string;label:string;img:string;uploading?:boolean;description?:string;discount?:string;price?:string;name?:string;existingSearch?:string}[]>([]);const colorFileRefs=useRef<Record<number,HTMLInputElement|null>>({});
+const[fColors,setFColors]=useState<{id?:string;label:string;img:string;uploading?:boolean;description?:string;discount?:string;price?:string;name?:string;existingSearch?:string;existingCatFilter?:string}[]>([]);const colorFileRefs=useRef<Record<number,HTMLInputElement|null>>({});
 const[editingCouponId,setEditingCouponId]=useState<string|null>(null);
 const[couponCode,setCouponCode]  =useState("");
 const[couponType,setCouponType]  =useState<"general"|"product"|"category">("general");
@@ -1997,6 +1997,7 @@ const updateColorDiscount=(idx:number,discount:string)=>setFColors(prev=>prev.ma
 const updateColorPrice=(idx:number,price:string)=>setFColors(prev=>prev.map((c,i)=>i===idx?{...c,price}:c));
 const updateColorName=(idx:number,name:string)=>setFColors(prev=>prev.map((c,i)=>i===idx?{...c,name}:c));
 const updateColorExistingSearch=(idx:number,val:string)=>setFColors(prev=>prev.map((c,i)=>i===idx?{...c,existingSearch:val}:c));
+const updateColorExistingCatFilter=(idx:number,val:string)=>setFColors(prev=>prev.map((c,i)=>i===idx?{...c,existingCatFilter:val}:c));
 const linkExistingProductAsColor=(idx:number,prod:Product)=>{
   setFColors(prev=>prev.map((c,i)=>i===idx?{...c,id:prod.id,img:prod.img,existingSearch:""}:c));
 };
@@ -3598,16 +3599,23 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
         </div>
       ):(
         <div style={{marginBottom:"0.5rem"}}>
-          <input placeholder="🔎 Buscar producto ya existente para usarlo como este color…" value={c.existingSearch||""} onChange={e=>updateColorExistingSearch(i,e.target.value)} style={S.input}/>
-          {!!(c.existingSearch&&c.existingSearch.trim())&&(
+          <div style={{display:"flex",gap:6,marginBottom:6}}>
+            <select value={c.existingCatFilter||"ALL"} onChange={e=>updateColorExistingCatFilter(i,e.target.value)} style={{...S.input,flex:"0 0 140px",appearance:"auto" as any,fontSize:11,padding:"0.5rem 0.6rem"}}>
+              <option value="ALL">Todas las categorías</option>
+              <optgroup label="── LENTES">{LENTES_SUBCATS.map(s=><option key={s} value={s}>{catLabel(s)}</option>)}</optgroup>
+              <optgroup label="── OTROS">{SHOP_CATS.filter(cc=>cc!=="LENTES").map(cc=><option key={cc} value={cc}>{catLabel(cc)}</option>)}</optgroup>
+            </select>
+            <input placeholder="🔎 Buscar producto ya existente…" value={c.existingSearch||""} onChange={e=>updateColorExistingSearch(i,e.target.value)} style={{...S.input,flex:1}}/>
+          </div>
+          {!!((c.existingSearch&&c.existingSearch.trim())||(c.existingCatFilter&&c.existingCatFilter!=="ALL"))&&(
             <div style={{marginTop:4,maxHeight:160,overflowY:"auto",background:"#161616",border:"1px solid #222",borderRadius:6}}>
-              {products.filter(p=>p.id!==editing?.id&&!fColors.some(fc=>fc.id===p.id)&&p.name.toLowerCase().includes((c.existingSearch||"").toLowerCase())).slice(0,8).map(p=>(
+              {products.filter(p=>p.id!==editing?.id&&!fColors.some(fc=>fc.id===p.id)&&(!(c.existingCatFilter&&c.existingCatFilter!=="ALL")||p.category===c.existingCatFilter)&&p.name.toLowerCase().includes((c.existingSearch||"").toLowerCase())).slice(0,8).map(p=>(
                 <button key={p.id} type="button" onClick={()=>linkExistingProductAsColor(i,p)} style={{display:"flex",alignItems:"center",gap:8,width:"100%",background:"none",border:"none",borderBottom:"1px solid #1e1e1e",padding:"0.4rem 0.6rem",cursor:"pointer",textAlign:"left",fontFamily:"inherit"}}>
                   <img src={optImg(p.img,60)} alt="" style={{width:28,height:28,borderRadius:4,objectFit:"cover",flexShrink:0}} draggable={false}/>
-                  <span style={{fontSize:11,color:"#ccc"}}>{p.name} <span style={{color:"#555"}}>· ${p.price.toFixed(2)}</span></span>
+                  <span style={{fontSize:11,color:"#ccc"}}>{p.name} <span style={{color:"#555"}}>· {catLabel(p.category)} · ${p.price.toFixed(2)}</span></span>
                 </button>
               ))}
-              {products.filter(p=>p.id!==editing?.id&&!fColors.some(fc=>fc.id===p.id)&&p.name.toLowerCase().includes((c.existingSearch||"").toLowerCase())).length===0&&(
+              {products.filter(p=>p.id!==editing?.id&&!fColors.some(fc=>fc.id===p.id)&&(!(c.existingCatFilter&&c.existingCatFilter!=="ALL")||p.category===c.existingCatFilter)&&p.name.toLowerCase().includes((c.existingSearch||"").toLowerCase())).length===0&&(
                 <p style={{margin:0,padding:"0.5rem 0.6rem",fontSize:11,color:"#444"}}>Sin resultados</p>
               )}
             </div>
