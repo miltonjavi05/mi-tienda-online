@@ -1545,8 +1545,8 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
 const[fStock,setFStock]          =useState("1");
 const[fUnitsSold,setFUnitsSold]  =useState("");
 const[fVariantGroupId,setFVariantGroupId]=useState("");
-const[fColors,setFColors]=useState<{id?:string;label:string;img:string;uploading?:boolean}[]>([]);
-const colorFileRefs=useRef<Record<number,HTMLInputElement|null>>({});
+const[fMainVariantLabel,setFMainVariantLabel]=useState("");
+const[fColors,setFColors]=useState<{id?:string;label:string;img:string;uploading?:boolean;description?:string;discount?:string}[]>([]);const colorFileRefs=useRef<Record<number,HTMLInputElement|null>>({});
 const[editingCouponId,setEditingCouponId]=useState<string|null>(null);
 const[couponCode,setCouponCode]  =useState("");
 const[couponType,setCouponType]  =useState<"general"|"product"|"category">("general");
@@ -1983,8 +1983,8 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
 
   const doLogin=()=>{if(adminEmail===ADMIN_EMAIL&&adminPwd===ADMIN_PASSWORD){setAdminLogged(true);setAdminErr("");setAdminSec("menu");}else setAdminErr("Credenciales incorrectas");};
   const doLogout=()=>{setAdminLogged(false);setAdminEmail("");setAdminPwd("");setMainView("fokus");if(typeof window!=="undefined")window.history.pushState("","","/");};
-  const resetForm = () => {setEditing(null);setFName("");setFDesc("");setFPrice("");setFCat("");setFFile(null);setFPrev("");setFErr("");setFOk("");setFGallery([]);setFActive(true);setFDiscount("");setFCode("");setFStock("1");setFUnitsSold("");setFVariantGroupId("");setFColors([]);if(fileRef.current)fileRef.current.value="";};
-  const startEdit = (p:Product) => {setEditing(p);setFName(p.name);setFDesc(p.description||"");setFPrice(String(p.price));setFCat(p.category);setFPrev(p.img);setFFile(null);setFGallery(p.images||[]);setFActive(p.active!==false);setFDiscount(p.discount&&p.discount>0?String(p.discount):"");setFCode(p.code||"");setFStock(p.stock!==undefined?String(p.stock):"0");setFUnitsSold(p.unitsSold&&p.unitsSold>0?String(p.unitsSold):"");setFVariantGroupId(p.variantGroup||"");setFColors(p.variantGroup?products.filter(x=>x.variantGroup===p.variantGroup&&x.id!==p.id).map(x=>({id:x.id,label:x.variantLabel||"",img:x.img})):[]);setFErr("");setFOk("");if(fileRef.current)fileRef.current.value="";setTimeout(()=>formRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),50);};
+  const resetForm = () => {setEditing(null);setFName("");setFDesc("");setFPrice("");setFCat("");setFFile(null);setFPrev("");setFErr("");setFOk("");setFGallery([]);setFActive(true);setFDiscount("");setFCode("");setFStock("1");setFUnitsSold("");setFVariantGroupId("");setFMainVariantLabel("");setFColors([]);if(fileRef.current)fileRef.current.value="";};
+  const startEdit = (p:Product) => {setEditing(p);setFName(p.name);setFDesc(p.description||"");setFPrice(String(p.price));setFCat(p.category);setFPrev(p.img);setFFile(null);setFGallery(p.images||[]);setFActive(p.active!==false);setFDiscount(p.discount&&p.discount>0?String(p.discount):"");setFCode(p.code||"");setFStock(p.stock!==undefined?String(p.stock):"0");setFUnitsSold(p.unitsSold&&p.unitsSold>0?String(p.unitsSold):"");setFVariantGroupId(p.variantGroup||"");setFMainVariantLabel(p.variantLabel||"");setFColors(p.variantGroup?products.filter(x=>x.variantGroup===p.variantGroup&&x.id!==p.id).map(x=>({id:x.id,label:x.variantLabel||"",img:x.img,description:x.description||"",discount:x.discount&&x.discount>0?String(x.discount):""})):[]);setFErr("");setFOk("");if(fileRef.current)fileRef.current.value="";setTimeout(()=>formRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),50);};
   const onFileChange=async(e:React.ChangeEvent<HTMLInputElement>)=>{const raw=e.target.files?.[0];if(!raw)return;const file=await cropImageToSquare(raw);setFFile(file);const r=new FileReader();r.onload=ev=>setFPrev(ev.target?.result as string);r.readAsDataURL(file);};
   const onGalleryFilesChange=async(e:React.ChangeEvent<HTMLInputElement>)=>{const files=Array.from(e.target.files||[]);if(!files.length)return;setFGalleryUploading(true);try{const urls=await Promise.all(files.map(async f=>uploadImg(await cropImageToSquare(f))));setFGallery(prev=>[...prev,...urls]);}catch{setFErr("Error subiendo alguna de las fotos adicionales.");}finally{setFGalleryUploading(false);if(galleryFileRef.current)galleryFileRef.current.value="";}};
   const makeGalleryImageMain=(idx:number)=>{setFGallery(prevGal=>{const url=prevGal[idx];const newGal=[...prevGal];newGal.splice(idx,1);if(fPrev)newGal.push(fPrev);setFPrev(url);setFFile(null);return newGal;});};
@@ -1992,6 +1992,8 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
   const moveGalleryImage=(idx:number,dir:-1|1)=>{setFGallery(prev=>{const arr=[...prev];const ni=idx+dir;if(ni<0||ni>=arr.length)return prev;[arr[idx],arr[ni]]=[arr[ni],arr[idx]];return arr;});};
   const addColorRow=()=>{if(fColors.length===0&&!editing?.variantGroup&&!fVariantGroupId)setFVariantGroupId(generateVariantGroupId());setFColors(prev=>[...prev,{label:"",img:""}]);};
   const updateColorLabel=(idx:number,label:string)=>setFColors(prev=>prev.map((c,i)=>i===idx?{...c,label}:c));
+const updateColorDescription=(idx:number,description:string)=>setFColors(prev=>prev.map((c,i)=>i===idx?{...c,description}:c));
+const updateColorDiscount=(idx:number,discount:string)=>setFColors(prev=>prev.map((c,i)=>i===idx?{...c,discount}:c));
   const removeColorRow=async(idx:number)=>{const row=fColors[idx];if(row.id){if(!confirm("¿Eliminar este color? Se borrará el producto asociado."))return;try{await fsDelete(row.id);invalidateProductsCache();}catch{}}setFColors(prev=>prev.filter((_,i)=>i!==idx));};
   const onColorFileChange=async(idx:number,e:React.ChangeEvent<HTMLInputElement>)=>{const raw=e.target.files?.[0];if(!raw)return;setFColors(prev=>prev.map((c,i)=>i===idx?{...c,uploading:true}:c));try{const file=await cropImageToSquare(raw);const url=await uploadImg(file);setFColors(prev=>prev.map((c,i)=>i===idx?{...c,img:url,uploading:false}:c));}catch{setFColors(prev=>prev.map((c,i)=>i===idx?{...c,uploading:false}:c));}if(colorFileRefs.current[idx])colorFileRefs.current[idx]!.value="";};
   const toggleProductActive=async(p:Product)=>{const newActive=p.active===false;setProducts(prev=>{const upd=prev.map(x=>x.id===p.id?{...x,active:newActive}:x);setCachedProducts(upd);return upd;});try{await fsUpdate(p.id,{active:newActive});invalidateProductsCache();}catch{}};
@@ -2127,13 +2129,11 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
       let imgUrl=fPrev;
       if(fFile)imgUrl=await uploadImg(fFile);
       const groupId=editing?.variantGroup||fVariantGroupId||(validColors.length>0?generateVariantGroupId():"");
-      const data={name:fName.trim(),description:fDesc.trim(),price:parseFloat(fPrice),category:fCat.toUpperCase(),img:imgUrl,active:fActive,discount:fDiscount?Math.max(0,Math.min(95,parseFloat(fDiscount))):0,images:fGallery,code:fCode.trim()?fCode.trim().toUpperCase():("FK-"+Date.now().toString(36).slice(-6).toUpperCase()),stock:fStock!==""?Math.max(0,parseInt(fStock)||0):1,unitsSold:fUnitsSold!==""?Math.max(0,parseInt(fUnitsSold)||0):0,variantGroup:groupId,variantLabel:editing?.variantLabel||""};
-      if(editing){await fsUpdate(editing.id,data);setFOk("✓ Producto actualizado");}
+      const data={name:fName.trim(),description:fDesc.trim(),price:parseFloat(fPrice),category:fCat.toUpperCase(),img:imgUrl,active:fActive,discount:fDiscount?Math.max(0,Math.min(95,parseFloat(fDiscount))):0,images:fGallery,code:fCode.trim()?fCode.trim().toUpperCase():("FK-"+Date.now().toString(36).slice(-6).toUpperCase()),stock:fStock!==""?Math.max(0,parseInt(fStock)||0):1,unitsSold:fUnitsSold!==""?Math.max(0,parseInt(fUnitsSold)||0):0,variantGroup:groupId,variantLabel:fMainVariantLabel.trim()};      if(editing){await fsUpdate(editing.id,data);setFOk("✓ Producto actualizado");}
       else{await fsAdd(data);setFOk("✓ Producto agregado");}
       for(let i=0;i<validColors.length;i++){
         const c=validColors[i];
-        const colorData={name:fName.trim(),description:fDesc.trim(),price:parseFloat(fPrice),category:fCat.toUpperCase(),img:c.img,active:fActive,discount:fDiscount?Math.max(0,Math.min(95,parseFloat(fDiscount))):0,stock:fStock!==""?Math.max(0,parseInt(fStock)||0):1,variantGroup:groupId,variantLabel:c.label.trim()};
-        if(c.id)await fsUpdate(c.id,colorData);
+         const colorData={name:fName.trim(),description:(c.description||"").trim()||fDesc.trim(),price:parseFloat(fPrice),category:fCat.toUpperCase(),img:c.img,active:fActive,discount:c.discount&&parseFloat(c.discount)>0?Math.max(0,Math.min(95,parseFloat(c.discount))):0,stock:fStock!==""?Math.max(0,parseInt(fStock)||0):1,variantGroup:groupId,variantLabel:c.label.trim()};        if(c.id)await fsUpdate(c.id,colorData);
         else await fsAdd({...colorData,images:[],code:"FK-"+(Date.now()+i+1).toString(36).slice(-6).toUpperCase()});
       }
       invalidateProductsCache();
@@ -3558,17 +3558,23 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
   <input placeholder="Ej: 250 (vacío = número aleatorio automático)" type="number" min="0" step="1" value={fUnitsSold} onChange={e=>setFUnitsSold(e.target.value)} style={S.input}/>
   <p style={{margin:"0.6rem 0 0",fontSize:10,color:"#555",lineHeight:1.5}}>Si lo dejas vacío, se muestra un número automático (+50, +100, +200 o +1000 vendidos) que no cambia entre visitas.</p>
 </div>
-<div style={{background:"linear-gradient(135deg,#0a1420 0%,#0e0e0e 100%)",borderRadius:8,padding:"1rem",border:"1px solid #1a2a3a"}}>
+ <div style={{background:"linear-gradient(135deg,#0a1420 0%,#0e0e0e 100%)",borderRadius:8,padding:"1rem",border:"1px solid #1a2a3a"}}>
+  <p style={{color:"#4dabf7",fontSize:9,letterSpacing:2,margin:"0 0 0.6rem",fontWeight:800}}>🎨 COLOR DE ESTE ARTÍCULO (OPCIONAL)</p>
+  <input placeholder="Nombre del color de este artículo (ej: Negro)" value={fMainVariantLabel} onChange={e=>setFMainVariantLabel(e.target.value)} style={{...S.input,marginBottom:"0.85rem"}}/>
   <p style={{color:"#4dabf7",fontSize:9,letterSpacing:2,margin:"0 0 0.6rem",fontWeight:800}}>🎨 OTROS COLORES DE ESTE PRODUCTO (OPCIONAL)</p>
-  <p style={{color:"#555",fontSize:10,margin:"0 0 0.75rem",lineHeight:1.5}}>Agrega cada color adicional con su nombre y su foto. El cliente podrá cambiar de color desde la ficha del producto.</p>
+  <p style={{color:"#555",fontSize:10,margin:"0 0 0.75rem",lineHeight:1.5}}>Agrega cada color adicional con su nombre, foto, descripción y oferta propia. El cliente podrá cambiar de color desde la ficha del producto.</p>
   {fColors.map((c,i)=>(
-    <div key={i} style={{display:"flex",alignItems:"center",gap:"0.5rem",marginBottom:"0.6rem",background:"#0e0e0e",border:"1px solid #1a1a1a",borderRadius:8,padding:"0.5rem"}}>
-      <input ref={el=>{colorFileRefs.current[i]=el;}} type="file" accept="image/*" onChange={e=>onColorFileChange(i,e)} style={{display:"none"}} id={`color-file-${i}`}/>
-      <label htmlFor={`color-file-${i}`} style={{width:44,height:44,borderRadius:6,overflow:"hidden",flexShrink:0,background:"#161616",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",border:"1px solid #222"}}>
-        {c.uploading?<div style={{width:12,height:12,border:"2px solid #333",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/>:c.img?<img src={c.img} alt="" style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/>:<IcCamera s={16} c="#555"/>}
-      </label>
-      <input placeholder="Nombre del color (ej: Rojo con Negro)" value={c.label} onChange={e=>updateColorLabel(i,e.target.value)} style={{...S.input,flex:1}}/>
-      <button type="button" onClick={()=>removeColorRow(i)} style={{background:"none",border:"1px solid #2a1515",color:"#cc3333",borderRadius:6,width:30,height:30,cursor:"pointer",flexShrink:0,fontSize:13}}>✕</button>
+    <div key={i} style={{marginBottom:"0.6rem",background:"#0e0e0e",border:"1px solid #1a1a1a",borderRadius:8,padding:"0.5rem"}}>
+      <div style={{display:"flex",alignItems:"center",gap:"0.5rem",marginBottom:"0.5rem"}}>
+        <input ref={el=>{colorFileRefs.current[i]=el;}} type="file" accept="image/*" onChange={e=>onColorFileChange(i,e)} style={{display:"none"}} id={`color-file-${i}`}/>
+        <label htmlFor={`color-file-${i}`} style={{width:44,height:44,borderRadius:6,overflow:"hidden",flexShrink:0,background:"#161616",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",border:"1px solid #222"}}>
+          {c.uploading?<div style={{width:12,height:12,border:"2px solid #333",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/>:c.img?<img src={c.img} alt="" style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/>:<IcCamera s={16} c="#555"/>}
+        </label>
+        <input placeholder="Nombre del color (ej: Rojo con Negro)" value={c.label} onChange={e=>updateColorLabel(i,e.target.value)} style={{...S.input,flex:1}}/>
+        <button type="button" onClick={()=>removeColorRow(i)} style={{background:"none",border:"1px solid #2a1515",color:"#cc3333",borderRadius:6,width:30,height:30,cursor:"pointer",flexShrink:0,fontSize:13}}>✕</button>
+      </div>
+      <textarea placeholder="Descripción para este color (opcional, si vacío usa la del producto principal)" value={c.description||""} onChange={e=>updateColorDescription(i,e.target.value)} rows={2} style={{...S.input,resize:"vertical" as any,lineHeight:1.6,marginBottom:"0.5rem"}}/>
+      <input placeholder="% de descuento para este color (vacío = sin oferta)" type="number" min="0" max="95" value={c.discount||""} onChange={e=>updateColorDiscount(i,e.target.value)} style={S.input}/>
     </div>
   ))}
   <button type="button" onClick={addColorRow} style={{background:"#1a1a1a",color:"#4dabf7",border:"1px solid #2a2a2a",borderRadius:8,padding:"0.55rem 1rem",cursor:"pointer",fontSize:11,fontWeight:800,fontFamily:"inherit"}}>+ AGREGAR COLOR</button>
