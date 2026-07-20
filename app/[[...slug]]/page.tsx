@@ -451,7 +451,7 @@ const GLOBAL_CSS = `
   .hr * { -webkit-user-select: none; user-select: none; }
   .admin-list { -webkit-user-select: none; user-select: none; }
   select { -webkit-appearance: auto; appearance: auto; }
-  input[type="datetime-local"], input[type="date"] { min-width: 0; max-width: 100%; width: 100%; box-sizing: border-box; flex: 1 1 auto; }
+  input[type="datetime-local"], input[type="date"] { display: block; min-width: 0; width: 100% !important; box-sizing: border-box; }
   .avatar-ring { position: relative; display: inline-flex; align-items: center; justify-content: center; }
   .avatar-ring::after { content:''; position:absolute; inset:-3px; border-radius:50%; border:2px solid rgba(255,255,255,0.15); pointer-events:none; }
   @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
