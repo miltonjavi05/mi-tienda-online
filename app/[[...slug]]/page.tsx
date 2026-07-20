@@ -448,6 +448,10 @@ const GLOBAL_CSS = `
   }
   .pm-scroll { contain: layout style paint; transform: translatez(0); }
   .pm-content { contain: layout paint; }
+  @media(hover:hover) and (pointer:fine){
+    .hr { contain: layout style paint; transform: translatez(0); }
+    .hr-wrap { contain: layout paint; }
+  }
   .ts { -webkit-overflow-scrolling: touch; contain: layout style; }
   .hr { -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
   .hr * { -webkit-user-select: none; user-select: none; }
