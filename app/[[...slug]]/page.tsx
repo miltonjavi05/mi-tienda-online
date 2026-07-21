@@ -1658,6 +1658,18 @@ const[bulkDeleteExcludedCats,setBulkDeleteExcludedCats]=useState<string[]>([]);
 const[acErr,setAcErr]=useState("");
 const[acOk,setAcOk]=useState("");
 const acPhotoRef=useRef<HTMLInputElement>(null);
+const[bulkExcelMode,setBulkExcelMode]=useState<"category"|"product">("category");
+const[bulkExcelCat,setBulkExcelCat]=useState("ALL");
+const[bulkExcelPerProduct,setBulkExcelPerProduct]=useState("3");
+const[bulkExcelProductId,setBulkExcelProductId]=useState("");
+const[bulkExcelProductSearch,setBulkExcelProductSearch]=useState("");
+const[bulkExcelProductCatFilter,setBulkExcelProductCatFilter]=useState("ALL");
+const[bulkExcelRows,setBulkExcelRows]=useState<{name:string;email:string;dateStr:string;stars:string;comment:string}[]>([]);
+const[bulkExcelFileMsg,setBulkExcelFileMsg]=useState("");
+const[bulkExcelSaving,setBulkExcelSaving]=useState(false);
+const[bulkExcelErr,setBulkExcelErr]=useState("");
+const[bulkExcelOk,setBulkExcelOk]=useState("");
+const bulkExcelFileRef=useRef<HTMLInputElement>(null);
 const[editingCommentId,setEditingCommentId]=useState<string|null>(null);
 const[ecName,setEcName]=useState("");
 const[ecEmail,setEcEmail]=useState("");
@@ -2696,6 +2708,103 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
       setAcSaving(false);
     }
   },[products,acProductId,acName,acText,acStars,acPhotoUrl,acAvatarUrl,acDate,loadAllComments]);
+
+  const parseFlexDate=useCallback((raw:string):number=>{
+    const trimmed=String(raw||"").trim();
+    if(!trimmed)return generateWeightedReviewDate();
+    if(/^\d+(\.\d+)?$/.test(trimmed)){
+      const serial=parseFloat(trimmed);
+      if(serial>20000&&serial<60000)return Math.round((serial-25569)*86400*1000);
+    }
+    const d=new Date(trimmed);
+    if(!isNaN(d.getTime()))return d.getTime();
+    const m=trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+    if(m){
+      const day=parseInt(m[1]),month=parseInt(m[2])-1,year=parseInt(m[3].length===2?"20"+m[3]:m[3]);
+      const d2=new Date(year,month,day,Math.floor(Math.random()*15)+8,Math.floor(Math.random()*60));
+      if(!isNaN(d2.getTime()))return d2.getTime();
+    }
+    return generateWeightedReviewDate();
+  },[]);
+
+  const handleBulkCommentExcelFile=useCallback(async(e:React.ChangeEvent<HTMLInputElement>)=>{
+    const file=e.target.files?.[0];
+    if(!file)return;
+    setBulkExcelErr("");setBulkExcelFileMsg("Leyendo archivo…");
+    try{
+      const ext=file.name.split(".").pop()?.toLowerCase()||"";
+      let rows:string[][]=[];
+      if(ext==="csv"){
+        const text=await file.text();
+        rows=text.split(/\r?\n/).filter(l=>l.trim()!=="").map(l=>l.split(",").map(c=>c.trim().replace(/^"|"$/g,"")));
+        if(rows.length&&/nombre/i.test(rows[0][0]||""))rows=rows.slice(1);
+      }else{
+        const XLSX=await loadXLSXLib();
+        const buf=await file.arrayBuffer();
+        const wb=XLSX.read(buf,{type:"array"});
+        const sheet=wb.Sheets[wb.SheetNames[0]];
+        const data:any[][]=XLSX.utils.sheet_to_json(sheet,{header:1,defval:""});
+        rows=data.filter(r=>Array.isArray(r)&&r.some(c=>String(c).trim()!=="")).map(r=>r.map(c=>String(c).trim()));
+        if(rows.length&&/nombre/i.test(rows[0][0]||""))rows=rows.slice(1);
+      }
+      const parsed=rows.map(r=>({name:r[0]||"",email:r[1]||"",dateStr:r[2]||"",stars:r[3]||"5",comment:r[4]||""})).filter(r=>r.name&&r.comment);
+      setBulkExcelRows(parsed);
+      setBulkExcelFileMsg(parsed.length?`✓ Se detectaron ${parsed.length} comentario(s) en el archivo.`:"No se detectaron filas válidas (revisa que tengan nombre y comentario).");
+    }catch(err){
+      setBulkExcelErr("Error al leer el archivo: "+(err instanceof Error?err.message:"desconocido"));
+      setBulkExcelFileMsg("");
+    }finally{
+      if(bulkExcelFileRef.current)bulkExcelFileRef.current.value="";
+    }
+  },[]);
+
+  const saveBulkExcelComments=useCallback(async()=>{
+    setBulkExcelErr("");setBulkExcelOk("");
+    if(!bulkExcelRows.length){setBulkExcelErr("Sube primero un archivo con comentarios.");return;}
+    let assignments:{product:Product;row:{name:string;email:string;dateStr:string;stars:string;comment:string}}[]=[];
+    if(bulkExcelMode==="category"){
+      if(bulkExcelCat==="ALL"){setBulkExcelErr("Selecciona la categoría.");return;}
+      const perProduct=Math.max(1,parseInt(bulkExcelPerProduct)||0);
+      if(!perProduct){setBulkExcelErr("Indica cuántos comentarios le tocan a cada artículo.");return;}
+      const catProducts=products.filter(p=>p.category===bulkExcelCat);
+      if(!catProducts.length){setBulkExcelErr("No hay productos en esa categoría.");return;}
+      let idx=0;
+      for(const prod of catProducts){
+        for(let i=0;i<perProduct;i++){
+          if(idx>=bulkExcelRows.length)break;
+          assignments.push({product:prod,row:bulkExcelRows[idx]});
+          idx++;
+        }
+        if(idx>=bulkExcelRows.length)break;
+      }
+      if(!assignments.length){setBulkExcelErr("No hay suficientes filas en el archivo para distribuir.");return;}
+    }else{
+      const prod=products.find(p=>p.id===bulkExcelProductId);
+      if(!prod){setBulkExcelErr("Selecciona el producto.");return;}
+      assignments=bulkExcelRows.map(row=>({product:prod,row}));
+    }
+    setBulkExcelSaving(true);
+    let created=0;
+    try{
+      for(const a of assignments){
+        const stars=Math.max(1,Math.min(5,parseInt(a.row.stars)||5));
+        const createdAt=parseFlexDate(a.row.dateStr);
+        try{
+          await fsAddToCollection("product_comments",{productId:a.product.id,productName:a.product.name,name:capitalizeName(a.row.name),email:a.row.email.trim(),comment:a.row.comment.trim(),stars,createdAt,photoUrl:"",avatarUrl:"",isAdmin:false});
+          created++;
+        }catch{ /* continúa con el resto */ }
+        await new Promise(res=>setTimeout(res,150));
+      }
+      setBulkExcelOk(`✓ Se publicaron ${created} de ${assignments.length} comentario(s) correctamente.`);
+      allCommentsLoaded.current=false;
+      await loadAllComments(true);
+      setBulkExcelRows([]);setBulkExcelFileMsg("");
+    }catch(err){
+      setBulkExcelErr("Error al guardar: "+(err instanceof Error?err.message:"desconocido"));
+    }finally{
+      setBulkExcelSaving(false);
+    }
+  },[bulkExcelRows,bulkExcelMode,bulkExcelCat,bulkExcelPerProduct,bulkExcelProductId,products,parseFlexDate,loadAllComments]);
 
   const loadBulkDrafts=useCallback((cat:string)=>{
     const map:Record<string,{name:string;description:string}>={};
@@ -4486,6 +4595,46 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   {acOk&&<div style={{color:"#55cc77",fontSize:12,background:"#081e0e",padding:"0.65rem 1rem",borderRadius:8}}>{acOk}</div>}
                   <button onClick={submitAdminComment} disabled={acSaving} style={{...S.adminBtn,opacity:acSaving?0.5:1,cursor:acSaving?"not-allowed":"pointer"}}>{acSaving?"Publicando...":"Publicar reseña"}</button>
                 </div>
+              </div>
+              <div style={{background:"linear-gradient(135deg,#0a1420 0%,#0e0e0e 100%)",borderRadius:14,padding:"1.25rem",border:"1px solid #1a2a3a",marginBottom:"1.25rem"}}>
+                <p style={{color:"#4dabf7",fontSize:9,fontWeight:800,letterSpacing:2.5,margin:"0 0 0.5rem"}}>📊 CARGA MASIVA DE COMENTARIOS DESDE EXCEL</p>
+                <p style={{color:"#666",fontSize:11,margin:"0 0 0.85rem",lineHeight:1.6}}>Sube un Excel/CSV con columnas: <strong style={{color:"#8ab4e8"}}>nombre, correo, fecha, estrellas (1-5), comentario</strong>. Si eliges "por categoría", indica cuántos comentarios le tocan a cada artículo y se irán repartiendo en orden.</p>
+                <div style={{display:"flex",gap:"0.5rem",marginBottom:"0.85rem",flexWrap:"wrap"}}>
+                  <button type="button" onClick={()=>setBulkExcelMode("category")} style={{flex:1,minWidth:140,background:bulkExcelMode==="category"?"#fff":"#111",color:bulkExcelMode==="category"?"#080808":"#666",border:`1px solid ${bulkExcelMode==="category"?"#fff":"#222"}`,borderRadius:8,padding:"0.65rem",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:800}}>🗂️ POR CATEGORÍA</button>
+                  <button type="button" onClick={()=>setBulkExcelMode("product")} style={{flex:1,minWidth:140,background:bulkExcelMode==="product"?"#fff":"#111",color:bulkExcelMode==="product"?"#080808":"#666",border:`1px solid ${bulkExcelMode==="product"?"#fff":"#222"}`,borderRadius:8,padding:"0.65rem",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:800}}>🎯 POR PRODUCTO ESPECÍFICO</button>
+                </div>
+                {bulkExcelMode==="category"?(
+                  <div style={{display:"flex",flexDirection:"column",gap:"0.6rem",marginBottom:"0.85rem"}}>
+                    <select value={bulkExcelCat} onChange={e=>setBulkExcelCat(e.target.value)} style={{...S.input,appearance:"auto" as any}}>
+                      <option value="ALL">Selecciona la categoría *</option>
+                      <optgroup label="── LENTES">{LENTES_SUBCATS.map(s=><option key={s} value={s}>{catLabel(s)}</option>)}</optgroup>
+                      <optgroup label="── OTROS">{SHOP_CATS.filter(c=>c!=="LENTES").map(c=><option key={c} value={c}>{catLabel(c)}</option>)}</optgroup>
+                    </select>
+                    <input placeholder="¿Cuántos comentarios le tocan a cada artículo? *" type="number" min="1" value={bulkExcelPerProduct} onChange={e=>setBulkExcelPerProduct(e.target.value)} style={S.input}/>
+                    {bulkExcelCat!=="ALL"&&<p style={{margin:0,fontSize:10,color:"#555"}}>Esta categoría tiene {products.filter(p=>p.category===bulkExcelCat).length} artículo(s). Necesitas al menos {products.filter(p=>p.category===bulkExcelCat).length*Math.max(1,parseInt(bulkExcelPerProduct)||0)} filas en el archivo para cubrirlos todos.</p>}
+                  </div>
+                ):(
+                  <div style={{display:"flex",flexDirection:"column",gap:"0.6rem",marginBottom:"0.85rem"}}>
+                    <select value={bulkExcelProductCatFilter} onChange={e=>{setBulkExcelProductCatFilter(e.target.value);setBulkExcelProductId("");}} style={{...S.input,appearance:"auto" as any}}>
+                      <option value="ALL">Todas las categorías</option>
+                      <optgroup label="── LENTES">{LENTES_SUBCATS.map(s=><option key={s} value={s}>{catLabel(s)}</option>)}</optgroup>
+                      <optgroup label="── OTROS">{SHOP_CATS.filter(c=>c!=="LENTES").map(c=><option key={c} value={c}>{catLabel(c)}</option>)}</optgroup>
+                    </select>
+                    <input placeholder="🔎 Buscar producto…" value={bulkExcelProductSearch} onChange={e=>setBulkExcelProductSearch(e.target.value)} style={S.input}/>
+                    <select value={bulkExcelProductId} onChange={e=>setBulkExcelProductId(e.target.value)} style={{...S.input,appearance:"auto" as any}}>
+                      <option value="">Selecciona el producto *</option>
+                      {products.filter(p=>(bulkExcelProductCatFilter==="ALL"||p.category===bulkExcelProductCatFilter)&&p.name.toLowerCase().includes(bulkExcelProductSearch.toLowerCase())).map(p=><option key={p.id} value={p.id}>{p.name} — {catLabel(p.category)}</option>)}
+                    </select>
+                  </div>
+                )}
+                <input ref={bulkExcelFileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleBulkCommentExcelFile} style={{display:"none"}} id="bulk-excel-comments-input"/>
+                <label htmlFor="bulk-excel-comments-input" style={{display:"inline-flex",alignItems:"center",gap:"0.5rem",background:"linear-gradient(135deg,#4dabf7 0%,#2a6bb0 100%)",color:"#fff",padding:"0.75rem 1.25rem",borderRadius:8,cursor:"pointer",fontSize:12,fontWeight:800,letterSpacing:1,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}><IcUpload s={16} c="#fff"/> SUBIR EXCEL / CSV</label>
+                {bulkExcelFileMsg&&<p style={{margin:"0.75rem 0 0",fontSize:11,color:"#4dabf7",lineHeight:1.6}}>{bulkExcelFileMsg}</p>}
+                {bulkExcelErr&&<div style={{color:"#ff5555",fontSize:12,background:"#1e0808",padding:"0.65rem 1rem",borderRadius:8,marginTop:"0.75rem"}}>{bulkExcelErr}</div>}
+                {bulkExcelOk&&<div style={{color:"#55cc77",fontSize:12,background:"#081e0e",padding:"0.65rem 1rem",borderRadius:8,marginTop:"0.75rem"}}>{bulkExcelOk}</div>}
+                {bulkExcelRows.length>0&&(
+                  <button onClick={saveBulkExcelComments} disabled={bulkExcelSaving} style={{...S.adminBtn,marginTop:"0.85rem",opacity:bulkExcelSaving?0.5:1,cursor:bulkExcelSaving?"not-allowed":"pointer"}}>{bulkExcelSaving?"Publicando...":`Distribuir y publicar ${bulkExcelRows.length} comentario(s)`}</button>
+                )}
               </div>
               <div style={{background:"linear-gradient(135deg,#1e0a0a 0%,#0e0e0e 100%)",borderRadius:14,padding:"1.25rem",border:"1px solid #3a1515",marginBottom:"1.25rem"}}>
                 <p style={{color:"#ff8888",fontSize:9,fontWeight:800,letterSpacing:2.5,margin:"0 0 0.5rem"}}>🗑️ BORRAR POR CATEGORÍA</p>
