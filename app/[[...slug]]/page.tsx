@@ -3498,7 +3498,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
             <div ref={payMethodRef} style={{marginTop:"1.5rem"}}>
               <div style={{background:"linear-gradient(135deg,#0f0f0f 0%,#111 100%)",border:"1px solid #2a2a2a",borderRadius:10,padding:"0.85rem 1rem",marginBottom:"0.85rem",display:"flex",alignItems:"center",gap:"0.75rem"}}>
                 <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap",flex:1}}>
-                  {[{n:"3.000+",l:"Pedidos"},{ n:"4.9 ★",l:"Valoración"},{n:"23",l:"Estados"}].map(({n,l})=>(
+                  {[{n:"15.000+",l:"Pedidos"},{ n:"4.9 ★",l:"Valoración"},{n:"23",l:"Estados"}].map(({n,l})=>(
                     <div key={l} style={{textAlign:"center",background:"rgba(255,255,255,0.04)",border:"1px solid #2a2a2a",borderRadius:8,padding:"0.4rem 0.75rem",flex:1}}>
                       <p style={{margin:0,fontSize:13,fontWeight:900,color:"#fff"}}>{n}</p>
                       <p style={{margin:0,fontSize:8,color:"#555",letterSpacing:1}}>{l.toUpperCase()}</p>
