@@ -733,7 +733,8 @@ const LazyImg=memo(function LazyImg({src,alt,fit="cover"}:{src:string;alt:string
       <img
         src={optImg(src,600)}
         alt={alt}
-        loading="lazy"
+        loading="eager"
+        fetchPriority="high"
         decoding="async"
         onLoad={()=>setLoaded(true)}
         style={{
