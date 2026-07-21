@@ -1654,6 +1654,7 @@ const[bulkGenMsg,setBulkGenMsg]=useState("");
 const[bulkGenErr,setBulkGenErr]=useState("");
 const[bulkGenCatFilter,setBulkGenCatFilter]=useState("ALL");
 const[bulkDeleteCatFilter,setBulkDeleteCatFilter]=useState("ALL");
+const[bulkDeleteExcludedCats,setBulkDeleteExcludedCats]=useState<string[]>([]);
 const[acErr,setAcErr]=useState("");
 const[acOk,setAcOk]=useState("");
 const acPhotoRef=useRef<HTMLInputElement>(null);
@@ -2478,6 +2479,43 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     }
   },[allComments,bulkDeleteCatFilter,products,loadAllComments]);
 
+  const toggleBulkDeleteExcludedCat=(cat:string)=>{setBulkDeleteExcludedCats(prev=>prev.includes(cat)?prev.filter(c=>c!==cat):[...prev,cat]);};
+
+  const bulkDeleteExceptCategories=useCallback(async()=>{
+    if(!bulkDeleteExcludedCats.length){alert("Selecciona al menos una categoría para conservar.");return;}
+    const keepProductIds=new Set(products.filter(p=>bulkDeleteExcludedCats.includes(p.category)).map(p=>p.id));
+    const toDelete=allComments.filter(c=>!keepProductIds.has(c.productId));
+    if(!toDelete.length){alert("No hay comentarios de otras categorías para eliminar.");return;}
+    const keptLabels=bulkDeleteExcludedCats.map(catLabel).join(", ");
+    if(!confirm(`Esto eliminará ${toDelete.length} comentario(s) de TODAS las categorías EXCEPTO: ${keptLabels}. ¿Continuar?`))return;
+    setBulkDeleteRunning(true);
+    const deletedIds:string[]=[];
+    const failedIds:string[]=[];
+    try{
+      for(const c of toDelete){
+        try{
+          await fsDeleteDoc("product_comments",c.id);
+          deletedIds.push(c.id);
+        }catch{
+          failedIds.push(c.id);
+        }
+        await new Promise(res=>setTimeout(res,120));
+      }
+      const deletedSet=new Set(deletedIds);
+      setAllComments(prev=>prev.filter(c=>!deletedSet.has(c.id)));
+      setProductComments(prev=>prev.filter(c=>!deletedSet.has(c.id)));
+      allCommentsLoaded.current=false;
+      await loadAllComments(true);
+      if(failedIds.length){
+        alert(`Se eliminaron ${deletedIds.length} comentario(s). ${failedIds.length} no se pudieron eliminar (revisa las reglas de Firestore para 'product_comments').`);
+      }
+    }catch(err){
+      alert("Error al eliminar: "+(err instanceof Error?err.message:"desconocido"));
+    }finally{
+      setBulkDeleteRunning(false);
+    }
+  },[allComments,bulkDeleteExcludedCats,products,loadAllComments]);
+
   const startEditComment=useCallback((c:ProductComment)=>{
     setEditingCommentId(c.id);
     setEcName(c.name);
@@ -2552,31 +2590,11 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     finally{setAcAvatarUploading(false);if(acAvatarRef.current)acAvatarRef.current.value="";}
   },[]);
 
-  const generateAdminCommentAI=useCallback(async()=>{
-    const prod=products.find(p=>p.id===acProductId);
-    if(!prod){setAcErr("Selecciona un producto primero.");return;}
-    setAcErr("");setAcGenerating(true);
-    try{
-      await loadAllComments();
-      const existingNames=[...new Set(allComments.map(c=>c.name).filter(Boolean))];
-      const result=await generateAIReview(prod.name,prod.category,existingNames);
-      if(!result){setAcErr("No se pudo generar la reseña. Intenta de nuevo.");return;}
-      setAcName(result.name);
-      setAcFakeEmail(result.email);
-      setAcStars(result.stars);
-      setAcText(result.comment);
-      setAcDate(generateRandomAdminReviewDateStr());
-    }catch(err){
-      setAcErr(err instanceof Error?`No se pudo generar la reseña: ${err.message}`:"Error al generar la reseña con IA.");
-    }finally{
-      setAcGenerating(false);
-    }
-  },[products,acProductId,allComments,loadAllComments]);
-
-  const bulkGenerateAllComments=useCallback(async()=>{
-    const catFilteredProducts=bulkGenCatFilter==="ALL"?products:products.filter(p=>p.category===bulkGenCatFilter);
+  const bulkGenerateAllComments=useCallback(async(catOverride?:string)=>{
+    const cat=catOverride??bulkGenCatFilter;
+    const catFilteredProducts=cat==="ALL"?products:products.filter(p=>p.category===cat);
     if(!catFilteredProducts.length){alert("No hay productos en esa categoría.");return;}
-    const catLabelText=bulkGenCatFilter==="ALL"?"todas las categorías":catLabel(bulkGenCatFilter);
+    const catLabelText=cat==="ALL"?"todas las categorías":catLabel(cat);
     const progressSet=new Set(getBulkGenProgress());
     let toProcess=catFilteredProducts.filter(p=>!progressSet.has(p.id));
     const isTopUp=toProcess.length===0;
@@ -2625,13 +2643,38 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
         saveBulkGenProgress(Array.from(progressSet));
       }
       setBulkGenMsg(isTopUp?`✓ Se agregaron ${totalCreated} reseñas adicionales a los ${catFilteredProducts.length} productos de "${catLabelText}".`:`✓ Se crearon ${totalCreated} reseñas nuevas. Progreso: ${progressSet.size}/${catFilteredProducts.length} productos completados en "${catLabelText}".`);
-      if(progressSet.size>=catFilteredProducts.length)clearBulkGenProgress();
       allCommentsLoaded.current=false;
       await loadAllComments(true);
     }finally{
       setBulkGenLoading(false);
     }
   },[products,loadAllComments,bulkGenCatFilter,allComments]);
+
+  const generateAdminCommentAI=useCallback(async()=>{
+    if(!acProductId){
+      setAcErr("");
+      await bulkGenerateAllComments(acCatFilter);
+      return;
+    }
+    const prod=products.find(p=>p.id===acProductId);
+    if(!prod){setAcErr("Selecciona un producto primero.");return;}
+    setAcErr("");setAcGenerating(true);
+    try{
+      await loadAllComments();
+      const existingNames=[...new Set(allComments.map(c=>c.name).filter(Boolean))];
+      const result=await generateAIReview(prod.name,prod.category,existingNames);
+      if(!result){setAcErr("No se pudo generar la reseña. Intenta de nuevo.");return;}
+      setAcName(result.name);
+      setAcFakeEmail(result.email);
+      setAcStars(result.stars);
+      setAcText(result.comment);
+      setAcDate(generateRandomAdminReviewDateStr());
+    }catch(err){
+      setAcErr(err instanceof Error?`No se pudo generar la reseña: ${err.message}`:"Error al generar la reseña con IA.");
+    }finally{
+      setAcGenerating(false);
+    }
+  },[products,acProductId,acCatFilter,allComments,loadAllComments,bulkGenerateAllComments]);
 
   const submitAdminComment=useCallback(async()=>{
     setAcErr("");setAcOk("");
@@ -4388,7 +4431,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   <optgroup label="── LENTES">{LENTES_SUBCATS.map(s=><option key={s} value={s}>{catLabel(s)}</option>)}</optgroup>
                   <optgroup label="── OTROS">{SHOP_CATS.filter(c=>c!=="LENTES").map(c=><option key={c} value={c}>{catLabel(c)}</option>)}</optgroup>
                 </select>
-                <button onClick={bulkGenerateAllComments} disabled={bulkGenLoading} style={{...S.adminBtn,background:"linear-gradient(135deg,#4dabf7 0%,#2a6bb0 100%)",opacity:bulkGenLoading?0.5:1,cursor:bulkGenLoading?"not-allowed":"pointer"}}>{bulkGenLoading?"Generando…":(bulkGenCatFilter==="ALL"?"🤖 Generar para todos los productos":`🤖 Generar solo para "${catLabel(bulkGenCatFilter)}"`)}</button>
+                <button onClick={()=>bulkGenerateAllComments()} disabled={bulkGenLoading} style={{...S.adminBtn,background:"linear-gradient(135deg,#4dabf7 0%,#2a6bb0 100%)",opacity:bulkGenLoading?0.5:1,cursor:bulkGenLoading?"not-allowed":"pointer"}}>{bulkGenLoading?"Generando…":(bulkGenCatFilter==="ALL"?"🤖 Generar para todos los productos":`🤖 Generar solo para "${catLabel(bulkGenCatFilter)}"`)}</button>
                 {bulkGenMsg&&<p style={{margin:"0.75rem 0 0",fontSize:11,color:"#4dabf7",lineHeight:1.6}}>{bulkGenMsg}</p>}
                 {bulkGenErr&&<p style={{margin:"0.75rem 0 0",fontSize:11,color:"#ff8888",background:"#1e0808",borderRadius:8,padding:"0.5rem 0.75rem"}}>{bulkGenErr}</p>}
               </div>
@@ -4405,7 +4448,9 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                     <option value="">Selecciona el producto *</option>
                     {products.filter(p=>(acCatFilter==="ALL"||p.category===acCatFilter)&&p.name.toLowerCase().includes(acProductSearch.toLowerCase())).map(p=><option key={p.id} value={p.id}>{p.name} — {catLabel(p.category)}</option>)}
                   </select>
-                  <button type="button" onClick={generateAdminCommentAI} disabled={!acProductId||acGenerating} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.5rem",background:"linear-gradient(135deg,#4dabf7 0%,#2a6bb0 100%)",color:"#fff",border:"none",borderRadius:8,padding:"0.75rem",cursor:(!acProductId||acGenerating)?"not-allowed":"pointer",fontFamily:"inherit",fontSize:12,fontWeight:800,letterSpacing:1,opacity:(!acProductId||acGenerating)?0.5:1}}>{acGenerating?"Generando…":"🤖 GENERAR RESEÑA CON IA"}</button>
+                  <button type="button" onClick={generateAdminCommentAI} disabled={acGenerating||bulkGenLoading} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.5rem",background:"linear-gradient(135deg,#4dabf7 0%,#2a6bb0 100%)",color:"#fff",border:"none",borderRadius:8,padding:"0.75rem",cursor:(acGenerating||bulkGenLoading)?"not-allowed":"pointer",fontFamily:"inherit",fontSize:12,fontWeight:800,letterSpacing:1,opacity:(acGenerating||bulkGenLoading)?0.5:1}}>{acGenerating?"Generando…":bulkGenLoading?"Generando por categoría…":!acProductId?`🤖 GENERAR PARA "${acCatFilter==="ALL"?"TODAS LAS CATEGORÍAS":catLabel(acCatFilter)}"`:"🤖 GENERAR RESEÑA CON IA"}</button>
+                  {!acProductId&&bulkGenMsg&&<p style={{margin:"0.25rem 0 0",fontSize:11,color:"#4dabf7",lineHeight:1.6}}>{bulkGenMsg}</p>}
+                  {!acProductId&&bulkGenErr&&<p style={{margin:"0.25rem 0 0",fontSize:11,color:"#ff8888",background:"#1e0808",borderRadius:8,padding:"0.5rem 0.75rem"}}>{bulkGenErr}</p>}
                   <input placeholder="Nombre a mostrar" value={acName} onChange={e=>setAcName(e.target.value)} style={S.input}/>
                   <input placeholder="Correo a mostrar (opcional)" value={acFakeEmail} onChange={e=>setAcFakeEmail(e.target.value)} style={S.input}/>
                   <div>
@@ -4454,6 +4499,18 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   <button onClick={bulkDeleteByCategory} disabled={bulkDeleteRunning||bulkDeleteCatFilter==="ALL"} style={{flex:1,minWidth:150,background:"#cc3333",color:"#fff",border:"none",borderRadius:8,padding:"0.8rem",cursor:(bulkDeleteRunning||bulkDeleteCatFilter==="ALL")?"not-allowed":"pointer",fontFamily:"inherit",fontSize:12,fontWeight:800,opacity:(bulkDeleteRunning||bulkDeleteCatFilter==="ALL")?0.5:1}}>{bulkDeleteRunning?"Eliminando…":"Borrar solo esta categoría"}</button>
                   <button onClick={bulkDeleteExceptCategory} disabled={bulkDeleteRunning||bulkDeleteCatFilter==="ALL"} style={{flex:1,minWidth:150,background:"#7a1a1a",color:"#fff",border:"1px solid #cc3333",borderRadius:8,padding:"0.8rem",cursor:(bulkDeleteRunning||bulkDeleteCatFilter==="ALL")?"not-allowed":"pointer",fontFamily:"inherit",fontSize:12,fontWeight:800,opacity:(bulkDeleteRunning||bulkDeleteCatFilter==="ALL")?0.5:1}}>{bulkDeleteRunning?"Eliminando…":"Borrar todo EXCEPTO esta"}</button>
                 </div>
+              </div>
+
+              <div style={{background:"linear-gradient(135deg,#1e0a0a 0%,#0e0e0e 100%)",borderRadius:14,padding:"1.25rem",border:"1px solid #3a1515",marginBottom:"1.25rem"}}>
+                <p style={{color:"#ff8888",fontSize:9,fontWeight:800,letterSpacing:2.5,margin:"0 0 0.5rem"}}>🗑️ BORRAR TODO EXCLUYENDO VARIAS CATEGORÍAS</p>
+                <p style={{color:"#666",fontSize:11,margin:"0 0 0.85rem",lineHeight:1.6}}>Selecciona una o varias categorías para conservar; se eliminarán los comentarios de todas las demás.</p>
+                <div style={{display:"flex",flexWrap:"wrap",gap:"0.4rem",marginBottom:"0.85rem"}}>
+                  {[...LENTES_SUBCATS,...SHOP_CATS.filter(c=>c!=="LENTES")].map(cat=>{
+                    const excluded=bulkDeleteExcludedCats.includes(cat);
+                    return(<button key={cat} type="button" onClick={()=>toggleBulkDeleteExcludedCat(cat)} style={{background:excluded?"#0d1e0d":"#161616",color:excluded?"#4caf50":"#666",border:`1px solid ${excluded?"#2a4a2a":"#222"}`,padding:"0.3rem 0.65rem",borderRadius:20,fontSize:9,fontWeight:800,letterSpacing:0.5,cursor:"pointer",fontFamily:"inherit"}}>{excluded?"✓ ":""}{catLabel(cat)}</button>);
+                  })}
+                </div>
+                <button onClick={bulkDeleteExceptCategories} disabled={bulkDeleteRunning||bulkDeleteExcludedCats.length===0} style={{background:"#7a1a1a",color:"#fff",border:"1px solid #cc3333",borderRadius:8,padding:"0.8rem",width:"100%",cursor:(bulkDeleteRunning||bulkDeleteExcludedCats.length===0)?"not-allowed":"pointer",fontFamily:"inherit",fontSize:12,fontWeight:800,opacity:(bulkDeleteRunning||bulkDeleteExcludedCats.length===0)?0.5:1}}>{bulkDeleteRunning?"Eliminando…":"Borrar todo EXCEPTO las categorías seleccionadas"}</button>
               </div>
               <div style={{background:"linear-gradient(135deg,#1e0a0a 0%,#0e0e0e 100%)",borderRadius:14,padding:"1.25rem",border:"1px solid #3a1515",marginBottom:"1.25rem"}}>
                 <p style={{color:"#ff8888",fontSize:9,fontWeight:800,letterSpacing:2.5,margin:"0 0 0.5rem"}}>🗑️ BORRAR TODO MENOS UN PRODUCTO</p>
