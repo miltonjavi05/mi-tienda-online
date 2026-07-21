@@ -194,7 +194,7 @@ const OPENING_STYLES = [
   "empieza hablando del precio o de que esperaba que fuera más caro para lo que es",
   "empieza contando que había comprado antes un artículo del mismo tipo (la misma categoría exacta: si es un arete, otro arete; si es un reloj, otro reloj; nunca mezcles categorías distintas) en otra tienda y no le gustó la calidad, y que este quedó muchísimo mejor",
   "empieza con una frase corta a modo de titular, y el resto del comentario la desarrolla",
-  "empieza contando que fue un regalo sorpresa que ni el que lo recibió esperaba",
+  "empieza contando que lo compró como regalo sorpresa para otra persona, y esa persona (no quien escribe la reseña) fue quien no se lo esperaba — quien escribe siempre es quien compró y pidió el producto, nunca el que lo recibió de sorpresa",
   "empieza quejándose brevemente de un detalle menor (demora, empaque simple) que igual no opaca lo positivo",
   "empieza quejándose de sí mismo por haber tardado tanto en comprarlo",
 ];
