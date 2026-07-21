@@ -291,10 +291,13 @@ const CATEGORY_BENEFIT_EXAMPLES: Record<string, string[]> = {
     "qué rica sensación da girarlo cuando estoy ansioso",
   ],
   "LENTES·ANTI-LUZ-AZUL": [
-    "ya las pantallas no me joden tanto la vista",
-    "ahora sí es verdad que voy a cuidar mi vista",
-    "ya no me canso tanto al jugar en la compu",
-    "me gusta ver muchos videos en la tele y ahora no me duele la cabeza",
+    "estaba jugando GTA V en la play hasta tarde y no se me cansó la vista",
+    "paso horas trabajando en la pc y ya no me arden tanto los ojos",
+    "veo series en la tele hasta tarde y no me duele tanto la cabeza",
+    "estudio de noche en la laptop y ya no se me cansa tanto la vista",
+    "leo en el cel antes de dormir y ya no me arden los ojos",
+    "jugaba en la compu y se me cansaba la vista, con estos ya no",
+    "trabajo todo el día frente a la pantalla y ahora no llego tan cansado de la vista",
   ],
   "PULSERAS": [
     "qué calidad tan brutal tiene esta pulsera",
@@ -510,6 +513,7 @@ ${categoryBenefitLine}
 ${giftLine}
 - Habla la jerga ${slang}
 - REGLA DE GÉNERO Y JERGA: el nombre generado es de ${reviewerIsFemale?"una MUJER":"un HOMBRE"}. Si es mujer, NUNCA uses expresiones como "sisas", "mano", "hermano" o "manito" (suenan masculinas); en su lugar, si quieres un toque coloquial, usa expresiones más neutras como "pana", "chamo", "que fino", "de verdad nwr" o "que nota". Si es hombre, sí puedes usar libremente cualquiera de esas expresiones.
+- REGLA SOBRE "QUEDÉ"/"QUEDÓ": si usas "quedé" o "quedó", casi siempre di CÓMO quedó (ej: "quedé feliz", "quedé súper emocionada", "quedé conectada con la marca", "quedé adicta a la tienda", "quedó encantado", "quedó fascinada"). Nunca la dejes suelta pegada a una jerga sin sentido como "quedé de verdad nwr". Solo en pocas ocasiones, como excepción, puedes dejar "quedé" sola sin remate porque en Venezuela a veces se usa así de corta. También puedes usar alternativas como "amo esta tienda", "los amé" (refiriéndose al accesorio), o contar que combinó esta compra con otra de la tienda y que "quedó bello" el conjunto.
 ${emojiInstruction}
 ${cityLine}
 - IMPORTANTE — RIGOR POR ARTÍCULO: este producto ya tiene o tendrá otras reseñas generadas de forma independiente. Es CRÍTICO que esta reseña en particular sea irreconocible en su forma frente a cualquier otra reseña típica del mismo artículo: no repitas el mismo orden de ideas, el mismo tipo de arranque, el mismo largo de frase ni el mismo cierre que usarías por defecto. Imagina que ya existen 10 reseñas distintas de este mismo producto y la tuya debe notarse a simple vista como diferente en ritmo, forma y construcción de frase, no solo en las palabras usadas.
