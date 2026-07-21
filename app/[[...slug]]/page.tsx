@@ -274,6 +274,24 @@ async function fsUpdateDoc(collection:string,id:string,p:Record<string,unknown>)
 async function fsDeleteDoc(collection:string,id:string):Promise<void>{const r=await fetch(`${fsBase()}/${collection}/${id}`,{method:"DELETE"});if(!r.ok){const t=await r.text().catch(()=>"");throw new Error(`No se pudo eliminar (${r.status}): ${t}`);}}
 async function fsAddToCollection(collection:string,data:Record<string,unknown>):Promise<void>{const fields=Object.fromEntries(Object.entries(data).map(([k,v])=>[k,toFs(v as unknown)]));const r=await fetch(`${fsBase()}/${collection}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fields})});if(!r.ok)throw new Error(await r.text());}
 async function fsGetCollection(collection:string,pageSize=300):Promise<Array<Record<string,unknown>&{id:string}>>{const r=await fetch(`${fsBase()}/${collection}?pageSize=${pageSize}`);if(!r.ok)throw new Error(await r.text());const d=await r.json() as{documents?:FsDoc[]};return(d.documents||[]).map(doc=>{const fields=doc.fields||{};const obj:Record<string,unknown>={};Object.entries(fields).forEach(([k,v])=>{obj[k]=fromFs(v);});return{...obj,id:doc.name.split("/").pop() as string};});}
+async function fsGetCollectionAll(collection:string):Promise<Array<Record<string,unknown>&{id:string}>>{
+  const out:Array<Record<string,unknown>&{id:string}>=[];
+  let pageToken:string|undefined=undefined;
+  do{
+    const url:string=`${fsBase()}/${collection}?pageSize=300${pageToken?`&pageToken=${encodeURIComponent(pageToken)}`:""}`;
+    const r=await fetch(url);
+    if(!r.ok)throw new Error(await r.text());
+    const d=await r.json() as{documents?:FsDoc[];nextPageToken?:string};
+    (d.documents||[]).forEach(doc=>{
+      const fields=doc.fields||{};
+      const obj:Record<string,unknown>={};
+      Object.entries(fields).forEach(([k,v])=>{obj[k]=fromFs(v);});
+      out.push({...obj,id:doc.name.split("/").pop() as string});
+    });
+    pageToken=d.nextPageToken;
+  }while(pageToken);
+  return out;
+}
 async function fsSaveUser(uid:string,data:Record<string,unknown>,idToken?:string):Promise<void>{const fields=Object.fromEntries(Object.entries(data).map(([k,v])=>[k,toFs(v as unknown)]));const mask=Object.keys(data).map(k=>`updateMask.fieldPaths=${encodeURIComponent(k)}`).join("&");const headers:Record<string,string>={"Content-Type":"application/json"};if(idToken)headers["Authorization"]=`Bearer ${idToken}`;const r=await fetch(`${fsBase()}/users/${uid}?${mask}`,{method:"PATCH",headers,body:JSON.stringify({fields})});if(!r.ok)throw new Error(await r.text());}
 async function refreshIdToken(refreshToken:string):Promise<{idToken:string;localId:string}|null>{try{const r=await fetch(`https://securetoken.googleapis.com/v1/token?key=${FIREBASE_CONFIG.apiKey}`,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:`grant_type=refresh_token&refresh_token=${encodeURIComponent(refreshToken)}`});const d=await r.json() as{id_token?:string;user_id?:string};if(!r.ok||!d.id_token)return null;return{idToken:d.id_token,localId:d.user_id!};}catch{return null;}}
 async function authSignUp(email:string,password:string,displayName:string):Promise<{idToken:string;localId:string;refreshToken:string}>{const r=await fetch(`${AUTH_BASE}:signUp?key=${FIREBASE_CONFIG.apiKey}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password,returnSecureToken:true})});const d=await r.json() as{idToken?:string;localId?:string;refreshToken?:string;error?:{message:string}};if(!r.ok||d.error)throw new Error(d.error?.message||"Error al registrar");await fetch(`${AUTH_BASE}:update?key=${FIREBASE_CONFIG.apiKey}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({idToken:d.idToken,displayName,returnSecureToken:false})});return{idToken:d.idToken!,localId:d.localId!,refreshToken:d.refreshToken!};}
@@ -2210,7 +2228,7 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     if(!confirm("¿Eliminar este producto? También se eliminarán sus reseñas."))return;
     await fsDelete(id);
     try{
-      const allComments=await fsGetCollection("product_comments",2000);
+      const allComments=await fsGetCollectionAll("product_comments");
       const toDelete=allComments.filter(c=>c.productId===id);
       for(const c of toDelete){
         try{await fsDeleteDoc("product_comments",c.id);}catch{}
