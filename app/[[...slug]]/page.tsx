@@ -3524,7 +3524,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
               const pm=PAYMENT_METHODS.find(m=>m.id===payMethod)!;
               const isBs=pm.id==="pagomovil_bv"||pm.id==="pagomovil_ba";
               const amountLabel=isBs?(bcvRate?`Bs. ${Math.round(totalPrice*bcvRate).toLocaleString("es-VE")}`:"Cargando tasa…"):`$${totalPrice.toFixed(2)}`;
-              const trustCounts:Record<string,number>={binance:3900,pagomovil_bv:8700,pagomovil_ba:6400,zinli:3900};
+              const trustCounts:Record<string,number>={binance:3900,pagomovil_bv:8700,pagomovil_ba:6400,zinli:2900};
               const trustCount=trustCounts[pm.id]??3000;
               return(
                 <div ref={payDetailsRef} style={{marginTop:"1rem",background:"linear-gradient(135deg,#141410 0%,#0a0a0a 100%)",borderRadius:14,border:"2px solid #3a3520",overflow:"hidden",boxShadow:"0 8px 28px rgba(255,212,59,0.08), inset 0 1px 0 rgba(255,255,255,0.05)",scrollMarginTop:`${navH+12}px`}}>
