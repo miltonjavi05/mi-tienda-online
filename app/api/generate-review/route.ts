@@ -259,15 +259,17 @@ const COMMENT_FOCUS_STYLES = [
   "concéntrate en el orgullo de comprar en una tienda venezolana o local, apoyando algo hecho o vendido en el país",
 ];
 
-const GIFT_RECIPIENTS_MALE = [
-  "mi hijo", "mi esposo", "mi novio", "mi papá", "mi hermano", "mi cuñado", "mi tío",
+const GIFT_RECIPIENTS_MALE_NONROMANTIC = [
+  "mi hijo", "mi papá", "mi hermano", "mi cuñado", "mi tío",
   "mi mejor amigo", "mi suegro", "mi primo", "mi nieto", "mi yerno", "mi compadre",
-  "un amigo del trabajo", "mi ahijado", "mi abuelo",
+  "un amigo del trabajo", "mi ahijado", "mi abuelo", "mi sobrino", "un pana del trabajo",
 ];
-const GIFT_RECIPIENTS_FEMALE = [
-  "mi esposa", "mi novia", "mi mamá", "mi hermana", "mi hija", "mi cuñada", "mi tía",
-  "mi mejor amiga", "mi suegra", "mi prima", "mi abuela",
+const GIFT_RECIPIENTS_FEMALE_NONROMANTIC = [
+  "mi mamá", "mi hermana", "mi hija", "mi cuñada", "mi tía",
+  "mi mejor amiga", "mi suegra", "mi prima", "mi abuela", "mi sobrina", "mi ahijada",
 ];
+const GIFT_RECIPIENTS_MALE_ROMANTIC = ["mi esposo", "mi novio"];
+const GIFT_RECIPIENTS_FEMALE_ROMANTIC = ["mi esposa", "mi novia"];
 const GIFT_PHRASE_TEMPLATES = [
   "le regalé {producto} a {persona} y le encantó",
   "le regalé un par de {producto} a {persona}",
@@ -277,6 +279,8 @@ const GIFT_PHRASE_TEMPLATES = [
   "fue un regalo para {persona} y la reacción valió la pena",
   "se lo di a {persona} de sorpresa y casi llora",
   "le compré esto y otra cosa más a {persona}, quedó encantado",
+  "me tocó {persona} en el intercambio de regalos y le regalé esto",
+  "le tocó regalarle a {persona} en el amigo secreto y elegí esto",
 ];
 
 const VENEZUELAN_CITIES = [
@@ -309,10 +313,11 @@ const FEMALE_SLANG_EXAMPLES = [
 
 function buildSlangIntensity(isFemale: boolean): string[] {
   const pool = isFemale ? FEMALE_SLANG_EXAMPLES : MALE_SLANG_EXAMPLES;
+  const naturalWarning = "IMPORTANTE: nunca pegues la expresión coloquial al final de la frase separada por una coma como si fuera una etiqueta o vocativo suelto (ej: NUNCA escribas algo como 'buenos y no tan caros, pana' o 'me encantaron, mano', eso se lee forzado y falso). En vez de eso, intégrala dentro de la construcción natural de la oración, como la usaría alguien realmente hablando (ej: 'de pana que me encantaron', 'está bien chevere el precio', 'nwr quedé encantado', 'que fino quedaron'). Solo puedes ponerla como vocativo al inicio de la frase si tiene sentido real de estar llamando a alguien (ej: 'pana, quedé full contento'), nunca como cierre pegado con coma.";
   return [
     "sin ninguna jerga venezolana, en español neutro y cercano",
-    `con una sola palabra o expresión coloquial venezolana suelta de forma natural en cualquier parte de la frase (elige libremente entre estilos como: ${pool.join(", ")}, u otras similares), nunca forzada`,
-    `con dos expresiones coloquiales venezolanas como máximo, bien naturales, como si lo escribiera alguien de la calle sin pensarlo mucho (puedes inspirarte en: ${pool.join(", ")}, u otras parecidas)`,
+    `con una sola palabra o expresión coloquial venezolana suelta de forma natural en cualquier parte de la frase (elige libremente entre estilos como: ${pool.join(", ")}, u otras similares), nunca forzada. ${naturalWarning}`,
+    `con dos expresiones coloquiales venezolanas como máximo, bien naturales, como si lo escribiera alguien de la calle sin pensarlo mucho (puedes inspirarte en: ${pool.join(", ")}, u otras parecidas). ${naturalWarning}`,
   ];
 }
 
@@ -389,10 +394,21 @@ function buildPrompt(productName: string, category: string, excludeNames: string
     ? 13 + Math.floor(Math.random() * 15) // medianos: 13-27 palabras
     : 28 + Math.floor(Math.random() * 15); // largos: 28-42 palabras
   const isGiftComment = Math.random() < 0.12;
-  const giftIsForFemale = Math.random() < 0.10; // 90% hombres, 10% mujeres
-  const giftRecipient = giftIsForFemale
-    ? GIFT_RECIPIENTS_FEMALE[Math.floor(Math.random() * GIFT_RECIPIENTS_FEMALE.length)]
-    : GIFT_RECIPIENTS_MALE[Math.floor(Math.random() * GIFT_RECIPIENTS_MALE.length)];
+  const isRomanticGift = Math.random() < 0.3;
+  let giftRecipient: string;
+  if (isRomanticGift) {
+    const oppositeGenderPool = reviewerIsFemale ? GIFT_RECIPIENTS_MALE_ROMANTIC : GIFT_RECIPIENTS_FEMALE_ROMANTIC;
+    const sameGenderPool = reviewerIsFemale ? GIFT_RECIPIENTS_FEMALE_ROMANTIC : GIFT_RECIPIENTS_MALE_ROMANTIC;
+    const useSameGenderMinority = Math.random() < 0.05; // muy pequeña minoría
+    giftRecipient = useSameGenderMinority
+      ? sameGenderPool[Math.floor(Math.random() * sameGenderPool.length)]
+      : oppositeGenderPool[Math.floor(Math.random() * oppositeGenderPool.length)];
+  } else {
+    const giftIsForFemale = Math.random() < 0.10; // 90% hombres, 10% mujeres
+    giftRecipient = giftIsForFemale
+      ? GIFT_RECIPIENTS_FEMALE_NONROMANTIC[Math.floor(Math.random() * GIFT_RECIPIENTS_FEMALE_NONROMANTIC.length)]
+      : GIFT_RECIPIENTS_MALE_NONROMANTIC[Math.floor(Math.random() * GIFT_RECIPIENTS_MALE_NONROMANTIC.length)];
+  }
   const giftPhraseExample = GIFT_PHRASE_TEMPLATES[Math.floor(Math.random() * GIFT_PHRASE_TEMPLATES.length)]
     .replace("{persona}", giftRecipient);
   const giftLine = isGiftComment
