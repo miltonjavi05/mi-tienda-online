@@ -2207,8 +2207,21 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
   };
 
   const delProd=async(id:string)=>{
-    if(!confirm("¿Eliminar este producto?"))return;
+    if(!confirm("¿Eliminar este producto? También se eliminarán sus reseñas."))return;
     await fsDelete(id);
+    try{
+      const allComments=await fsGetCollection("product_comments",2000);
+      const toDelete=allComments.filter(c=>c.productId===id);
+      for(const c of toDelete){
+        try{await fsDeleteDoc("product_comments",c.id);}catch{}
+      }
+      if(toDelete.length){
+        const deletedSet=new Set(toDelete.map(c=>c.id));
+        setAllComments(prev=>prev.filter(c=>!deletedSet.has(c.id)));
+        setProductComments(prev=>prev.filter(c=>!deletedSet.has(c.id)));
+        allCommentsLoaded.current=false;
+      }
+    }catch{ /* silencioso: el producto ya se eliminó igual */ }
     invalidateProductsCache();
     productsAlreadyLoaded.current = false;
     await loadProducts(true);
