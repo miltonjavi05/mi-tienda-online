@@ -725,7 +725,7 @@ function PwdInput({value,onChange,placeholder,onKeyDown,autoComplete}:{value:str
 }
 
 // ─── LAZY IMAGE ───────────────────────────────────────────────────────────────
-const LazyImg=memo(function LazyImg({src,alt,fit="cover"}:{src:string;alt:string;fit?:"cover"|"contain"}){
+const LazyImg=memo(function LazyImg({src,alt,fit="cover",priority=false}:{src:string;alt:string;fit?:"cover"|"contain";priority?:boolean}){
   const[loaded,setLoaded]=useState(false);
   return(
     <div style={{position:"relative",width:"100%",height:"100%",pointerEvents:"none"}}>
@@ -733,8 +733,8 @@ const LazyImg=memo(function LazyImg({src,alt,fit="cover"}:{src:string;alt:string
       <img
         src={optImg(src,600)}
         alt={alt}
-        loading="eager"
-        fetchPriority="high"
+        loading={priority?"eager":"lazy"}
+        fetchPriority={priority?"high":"auto"}
         decoding="async"
         onLoad={()=>setLoaded(true)}
         style={{
