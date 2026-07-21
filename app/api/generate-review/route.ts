@@ -396,7 +396,7 @@ function buildPrompt(productName: string, category: string, excludeNames: string
   const giftPhraseExample = GIFT_PHRASE_TEMPLATES[Math.floor(Math.random() * GIFT_PHRASE_TEMPLATES.length)]
     .replace("{persona}", giftRecipient);
   const giftLine = isGiftComment
-    ? `- En este comentario en particular, cuenta que el producto fue (o incluye) un REGALO para ${giftRecipient}. Redacta esa parte con tus propias palabras y de forma natural, inspirándote libremente en el estilo de este ejemplo sin copiarlo literalmente: "${giftPhraseExample}". Puedes mencionar solo el regalo, o combinarlo con otro comentario sobre la tienda o la calidad.`
+    ? `- En este comentario en particular, cuenta que el producto fue (o incluye) un REGALO para ${giftRecipient}. Redacta esa parte con tus propias palabras y de forma natural, inspirándote libremente en el estilo de este ejemplo sin copiarlo literalmente: "${giftPhraseExample}". Puedes mencionar solo el regalo, o combinarlo con otro comentario sobre la tienda o la calidad. REGLA DE COHERENCIA OBLIGATORIA: como el producto es un regalo para ${giftRecipient}, NUNCA hables en primera persona de estar usándolo tú mismo (nada de "llevo días usándolo", "lo uso todos los días", "me queda perfecto puesto"), porque quien lo usa es ${giftRecipient}, no quien escribe la reseña. Si quieres mencionar el uso o cómo le queda, hazlo siempre en tercera persona sobre ${giftRecipient} (ej: "le queda increíble", "lo usa a cada rato", "se ve súper bien con ellos"), nunca sobre ti mismo.`
     : "";
   const mentionCity = Math.random() < 0.25;
   const mentionStateInstead = Math.random() < 0.35; // dentro del 25%, a veces usa estado en vez de ciudad
