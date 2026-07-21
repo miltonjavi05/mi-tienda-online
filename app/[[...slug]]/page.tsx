@@ -470,8 +470,8 @@ const GLOBAL_CSS = `
   @keyframes spin { to{transform:rotate(360deg)} }
   @keyframes tyCheck { from{stroke-dashoffset:40} to{stroke-dashoffset:0} }
   @keyframes badgeShimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
-  @keyframes viewIn { 0%{opacity:0; transform:translateY(10px) scale(0.99); filter:blur(4px);} 60%{filter:blur(0px);} 100%{opacity:1; transform:translateY(0) scale(1); filter:blur(0);} }
-  .pv { animation: viewIn 0.5s cubic-bezier(0.16,1,0.3,1) both; will-change: transform, opacity; }
+  @keyframes viewIn { 0%{opacity:0; transform:translateY(10px) scale(0.99);} 100%{opacity:1; transform:translateY(0) scale(1);} }
+  .pv { animation: viewIn 0.3s cubic-bezier(0.16,1,0.3,1) both; will-change: opacity, transform; }
 
   /* ── ADMIN CAT SCROLL — rueda de mouse en desktop ── */
   .admin-cat-scroll {
