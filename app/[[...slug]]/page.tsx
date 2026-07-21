@@ -4587,7 +4587,6 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   <IcHeart s={18} filled={isFavorite(selectedProduct.id)}/>
                 </button>
               </div>
-              {selectedProduct.code&&<p style={{fontSize:10,color:"#333",margin:"0 0 0.5rem",fontFamily:"monospace",letterSpacing:1}}>Código: {selectedProduct.code}</p>}
               {selectedProduct.description&&<p style={{fontSize:13,color:"#555",margin:"0 0 0.65rem",lineHeight:1.6}}>{selectedProduct.description}</p>}
               {selectedProduct.discount&&selectedProduct.discount>0?(
                 <div style={{display:"flex",alignItems:"baseline",gap:10,marginBottom:"0.4rem",flexWrap:"wrap"}}>
