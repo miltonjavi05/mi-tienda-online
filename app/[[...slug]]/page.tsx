@@ -731,7 +731,7 @@ const LazyImg=memo(function LazyImg({src,alt,fit="cover",priority=false}:{src:st
     <div style={{position:"relative",width:"100%",height:"100%",pointerEvents:"none"}}>
       {!loaded&&<div style={{position:"absolute",inset:0,background:"#161616"}}/>}
       <img
-        src={optImg(src,600)}
+        src={optImg(src,340)}
         alt={alt}
         loading={priority?"eager":"lazy"}
         fetchPriority={priority?"high":"auto"}
