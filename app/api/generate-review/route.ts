@@ -250,7 +250,7 @@ const COMMENT_FOCUS_STYLES = [
   "concéntrate en lo bonito o cuidado que llegó el empaque, con una frase corta y espontánea tipo cumplido directo",
   "concéntrate en decir explícitamente que la experiencia de compra en esta tienda online fue excelente, mencionando que fue directo desde la página web",
   "concéntrate en decir que confió en la tienda tal cual se veía en las fotos o en la página, y que la realidad no lo defraudó",
-  "concéntrate en que ya se siente fiel a la marca, que le gusta cómo se ve el logo, el estilo general de la tienda o cómo maneja sus redes",
+  "concéntrate en que ya se siente identificado con la marca, algo como 'me identifico con la marca', 'me siento identificada con fokus', 'soy team fokus', 'me encanta su identidad de marca' o 'excelentes productos los que ofrecen', sin mencionar el logo puntualmente",
   "concéntrate en contar una pequeña anécdota puntual con el accesorio (una salida, un comentario que le hicieron usándolo, una situación graciosa o curiosa)",
   "concéntrate en combinar DOS de estos aspectos a la vez de forma natural, sin que se sienta forzado: por ejemplo calidad + rapidez de envío, o diseño + atención, o precio + confianza, eligiendo tú la combinación",
   "concéntrate en lo cómodo que resulta usar el producto en el día a día, más allá de cómo se ve",
