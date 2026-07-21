@@ -77,6 +77,7 @@ interface Product {
   img: string;
   description?: string;
   order?: number;
+  active?: boolean;
 }
 
 // ── Firestore REST ────────────────────────────────────────────────────────────
@@ -98,6 +99,7 @@ function docToProduct(doc: FsDoc): Product {
     img:         (fromFsVal(f.img         ?? { nullValue: null }) as string) || "",
     description: (fromFsVal(f.description ?? { nullValue: null }) as string) || "",
     order:       (fromFsVal(f.order       ?? { nullValue: null }) as number) || 0,
+    active:      f.active !== undefined ? (fromFsVal(f.active) as boolean) : true,
   };
 }
 
@@ -199,7 +201,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const valid = products.filter(p => p.img && p.name && p.price > 0);
+    const valid = products.filter(p => p.img && p.name && p.price > 0 && p.active !== false);
     const items = valid.map(productToItem).join("");
 
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
