@@ -470,8 +470,8 @@ const GLOBAL_CSS = `
   @keyframes spin { to{transform:rotate(360deg)} }
   @keyframes tyCheck { from{stroke-dashoffset:40} to{stroke-dashoffset:0} }
   @keyframes badgeShimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
-  @keyframes viewIn { 0%{opacity:0; transform:translateY(10px) scale(0.99);} 100%{opacity:1; transform:translateY(0) scale(1);} }
-  .pv { animation: viewIn 0.3s cubic-bezier(0.16,1,0.3,1) both; will-change: opacity, transform; }
+  @keyframes viewIn { 0%{opacity:0;} 100%{opacity:1;} }
+  .pv { animation: viewIn 0.15s ease-out both; will-change: opacity; }
 
   /* ── ADMIN CAT SCROLL — rueda de mouse en desktop ── */
   .admin-cat-scroll {
@@ -3187,7 +3187,7 @@ const filteredComments=useMemo(()=>allComments.filter(c=>{
 
       {/* TIENDA */}
       {isShop&&(
-        <main style={{paddingTop:navH,background:C.bg}}>
+        <main className="pv" style={{paddingTop:navH,background:C.bg}}>
           
       <div style={{position:"sticky",top:stickyTop,zIndex:100,background:"rgba(8,8,8,0.97)",borderBottom:`1px solid ${C.border}`,backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)"}}>
             <NativeTabs
