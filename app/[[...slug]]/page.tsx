@@ -557,8 +557,8 @@ const GLOBAL_CSS = `
     .fg { grid-template-columns: repeat(3,1fr) !important; }
     .cg { grid-template-columns: repeat(3,1fr) !important; }
   }
-  @media(min-width:1400px){
-    .shop-container { max-width: 96vw !important; }
+  @media(min-width:900px){
+    .shop-container { max-width: min(96vw, 1900px) !important; }
   }
 
   /* ── home: adaptado a pantallas grandes ── */
