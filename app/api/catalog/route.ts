@@ -21,7 +21,7 @@ import { NextResponse } from "next/server";
 // ── Config ────────────────────────────────────────────────────────────────────
 const FIREBASE_PROJECT = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "fokus-16a0c";
 const SITE_URL         = process.env.NEXT_PUBLIC_SITE_URL || "https://fokus-accesorios.vercel.app";
-const CURRENCY         = " USD"; // espacio para formato, se usa en priceFormatted sin espacio
+const CURRENCY         = "USD";
 const BRAND            = "Fokus";
 const CONDITION        = "new";
 const AVAILABILITY     = "in stock";
@@ -38,18 +38,10 @@ const AVAILABILITY     = "in stock";
 function optImgMeta(url: string): string {
   if (!url) return url;
   if (!url.includes("cloudinary.com")) return url;
-  // Forzar JPG real: fl_progressive + f_jpg + desactivar auto-formato
-  // Meta crawler NO acepta WebP, necesitamos JPG garantizado
-  let transformed = url.replace(
+  return url.replace(
     /\/upload\/([^/]+\/)?/,
-    "/upload/w_800,h_800,c_fill,g_center,q_85,f_jpg,fl_progressive/"
+    "/upload/w_800,h_800,c_fill,g_center,q_85,f_jpg/"
   );
-  // Eliminar cualquier parámetro de formato automático que pueda interferir
-  transformed = transformed.replace(/,f_auto/g, "");
-  transformed = transformed.replace(/,f_webp/g, "");
-  // Asegurar que no haya doble slash
-  transformed = transformed.replace(/\/\/upload\//, "/upload/");
-  return transformed;
 }
 
 /**
@@ -174,9 +166,6 @@ function productToItem(p: Product): string {
     ? esc(p.description.trim())
     : esc(`${p.name} — ${pType}. Disponible en Fokus Venezuela. Envios a todo el pais.`);
 
-  // Meta requiere que el precio NO tenga espacio entre número y moneda
-  const priceFormatted = `${p.price.toFixed(2)}${CURRENCY}`;
-
   return `
   <item>
     <g:id>${esc(p.id)}</g:id>
@@ -186,18 +175,12 @@ function productToItem(p: Product): string {
     <g:image_link>${imgSquare}</g:image_link>
     <g:additional_image_link>${imgFallback}</g:additional_image_link>
     <g:availability>${AVAILABILITY}</g:availability>
-    <g:price>${priceFormatted}</g:price>
+    <g:price>${p.price.toFixed(2)} ${CURRENCY}</g:price>
     <g:brand>${BRAND}</g:brand>
     <g:condition>${CONDITION}</g:condition>
     <g:google_product_category>${esc(googleCat)}</g:google_product_category>
     <g:product_type>${esc(pType)}</g:product_type>
     <g:item_group_id>${esc(p.id)}</g:item_group_id>
-    <g:identifier_exists>no</g:identifier_exists>
-    <g:shipping>
-      <g:country>VE</g:country>
-      <g:service>Standard</g:service>
-      <g:price>0.00 USD</g:price>
-    </g:shipping>
   </item>`;
 }
 
