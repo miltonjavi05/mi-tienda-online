@@ -283,6 +283,59 @@ const GIFT_PHRASE_TEMPLATES = [
   "le tocó regalarle a {persona} en el amigo secreto y elegí esto",
 ];
 
+const CATEGORY_BENEFIT_EXAMPLES: Record<string, string[]> = {
+  "ANILLOS": [
+    "desde que lo compré juego mucho con él para los nervios",
+    "lo uso cuando estoy estresado y me relaja bastante",
+    "me encanta girarlo, me quita el aburrimiento",
+    "qué rica sensación da girarlo cuando estoy ansioso",
+  ],
+  "LENTES·ANTI-LUZ-AZUL": [
+    "ya las pantallas no me joden tanto la vista",
+    "ahora sí es verdad que voy a cuidar mi vista",
+    "ya no me canso tanto al jugar en la compu",
+    "me gusta ver muchos videos en la tele y ahora no me duele la cabeza",
+  ],
+  "PULSERAS": [
+    "qué calidad tan brutal tiene esta pulsera",
+    "esta 3 en 1 está demasiado original",
+    "la mandé a grabar y quedó bella",
+  ],
+  "RELOJES": [
+    "ahora nunca llego tarde jaja",
+  ],
+  "ARETES": [
+    "no había visto aretes tan originales y de tan buena calidad en otro lado",
+  ],
+  "BILLETERAS": [
+    "mandé a grabar mi billetera y quedó espectacular",
+    "ya llevo mucho tiempo con ella y de verdad me gusta esta marca, está brutal",
+  ],
+  "COLLARES": [
+    "ya había comprado en otra tienda y se le peló o perdió el color",
+    "en esta llevo ya 9 meses y está con el brillo original, intacto",
+    "lo metí hasta en la piscina y sigue igual",
+    "lo llevé a la playa y sigue igual",
+  ],
+  "LENTES·MOTORIZADOS": [
+    "ahora protejo mi vista cuando manejo, ya no me entra basura ni piedritas",
+    "me gusta usarlos con el casco",
+    "combinan con el color de mi moto",
+  ],
+  "LENTES·SOL": [
+    "estos cuadran full en la playa",
+    "ya los llevé a un playeo y todo bello",
+    "los llevé a la piscinada de mi promo de la uni y se ven aesthetic",
+    "se los vi puestos a un actor famoso y me gustaron",
+  ],
+  "LENTES·FOTOCROMATICOS": [
+    "ahora protejo mi vista del sol",
+    "se oscurecen bien rápido",
+    "me gusta cómo cambian de tono",
+    "me gusta cómo se ven claritos y también oscuros",
+  ],
+};
+
 const VENEZUELAN_CITIES = [
   "Caracas","Maracaibo","Valencia","Barquisimeto","Maracay","Ciudad Guayana","Puerto Ordaz",
   "San Cristóbal","Maturín","Barcelona","Puerto La Cruz","Turmero","Ciudad Bolívar","Cumaná",
@@ -377,6 +430,17 @@ function buildEmojiInstruction(): string {
   return `- Este comentario SÍ debe llevar emojis: usa exactamente estos ${count} emoji(s) → ${chosen.join(" ")} (puedes repetir alguno si el conteo lo requiere, o usar variantes similares del mismo estilo). Para su ubicación, ${placement}. Sobre el criterio de selección, ${relevance}. Los emojis deben sentirse naturales y espontáneos, nunca forzados ni puestos todos en el mismo patrón que otros comentarios — la posición y agrupación deben variar completamente de una reseña a otra.`;
 }
 
+function buildCategoryBenefitLine(category: string): string {
+  const key = (category || "").toUpperCase();
+  const examples = CATEGORY_BENEFIT_EXAMPLES[key];
+  if (!examples || !examples.length) return "";
+  if (Math.random() < 0.4) {
+    const chosen = pick(examples);
+    return `- Si en este comentario vas a mencionar un beneficio concreto del producto, puedes inspirarte libremente (sin copiarla literal, adáptala a tu propio estilo y palabras) en una idea como esta: "${chosen}".`;
+  }
+  return "";
+}
+
 function buildPrompt(productName: string, category: string, excludeNames: string[] = []): string {
   const opening = OPENING_STYLES[Math.floor(Math.random() * OPENING_STYLES.length)];
   const tone = TONE_STYLES[Math.floor(Math.random() * TONE_STYLES.length)];
@@ -423,6 +487,7 @@ function buildPrompt(productName: string, category: string, excludeNames: string
       ? `- En este comentario en particular, menciona de forma natural que lo pidió desde el estado ${state} (u otro estado de Venezuela que tú elijas) y cómo fue la experiencia de recibirlo ahí.`
       : `- En este comentario en particular, menciona de forma natural que lo pidió desde ${city} (u otra ciudad de Venezuela que tú elijas) y cómo fue la experiencia de recibirlo ahí.`
     : "";
+  const categoryBenefitLine = buildCategoryBenefitLine(category);
   const recentExclude = excludeNames.slice(-30);
   const excludeLine = recentExclude.length ? `- NUNCA uses ninguno de estos nombres y apellidos que ya se usaron antes (elige uno completamente distinto): ${recentExclude.join(", ")}.` : "";
   const genderFirstNames = reviewerIsFemale ? FEMALE_FIRST_NAMES : MALE_FIRST_NAMES;
@@ -441,6 +506,7 @@ ${excludeLine}
 - Las estrellas deben ser mayormente 5, con menor frecuencia 4, y en muy pocas ocasiones 3. Sin importar la calificación (incluso si es 3), el comentario debe sonar igual de positivo, bien escrito y satisfecho que uno de 5 estrellas — la calificación no debe bajar la calidad ni el tono del texto.
 - El comentario debe tener aproximadamente ${lengthWords} palabras, respeta ese largo con fidelidad y NUNCA lo excedas por mucho. En el conjunto general de reseñas debe haber una mezcla real: algunas muy cortas y directas (una frase de 5-12 palabras, como "ame la tienda, todo bello" o "que buena calidad, la recomiendo"), muchas de largo medio y breves, y unas pocas un poco más largas pero siempre concisas, yendo al punto sin relleno ni vueltas innecesarias. ningún comentario debe sentirse como un párrafo extenso: incluso los más largos deben leerse rápido, como algo que alguien escribe en menos de un minuto desde el celular.
 - Para este comentario específico, ${opening}, con ${tone}, y ${focus}. Además, ${structure}, y ${punctuation}.
+${categoryBenefitLine}
 ${giftLine}
 - Habla la jerga ${slang}
 - REGLA DE GÉNERO Y JERGA: el nombre generado es de ${reviewerIsFemale?"una MUJER":"un HOMBRE"}. Si es mujer, NUNCA uses expresiones como "sisas", "mano", "hermano" o "manito" (suenan masculinas); en su lugar, si quieres un toque coloquial, usa expresiones más neutras como "pana", "chamo", "que fino", "de verdad nwr" o "que nota". Si es hombre, sí puedes usar libremente cualquiera de esas expresiones.
