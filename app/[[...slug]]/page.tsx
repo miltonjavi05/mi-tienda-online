@@ -557,9 +557,6 @@ const GLOBAL_CSS = `
     .fg { grid-template-columns: repeat(3,1fr) !important; }
     .cg { grid-template-columns: repeat(3,1fr) !important; }
   }
-  @media(min-width:900px){
-    .shop-container { max-width: min(96vw, 1900px) !important; }
-  }
 
   /* ── home: adaptado a pantallas grandes ── */
   @media(min-width:900px){
@@ -3237,7 +3234,7 @@ const filteredComments=useMemo(()=>allComments.filter(c=>{
               </div>
             )}
           </div>
-          <div className="shop-container" style={{maxWidth:1200,margin:"0 auto",padding:"0.75rem 1rem 5rem"}}>
+          <div style={{maxWidth:1200,margin:"0 auto",padding:"0.75rem 1rem 5rem"}}>
             {loading?(
               <div className="pg" style={{display:"grid",gap:"1rem"}}>{Array.from({length:8}).map((_,i)=><SkeletonCard key={i}/>)}</div>
             ):shopFilter==="TODO"?(
@@ -4723,4 +4720,4 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
       {!isAdmin&&!selectedProduct&&<DraggableWA/>} 
     </div>
   );
-}            
+} 
