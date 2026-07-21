@@ -3187,7 +3187,7 @@ const filteredComments=useMemo(()=>allComments.filter(c=>{
 
       {/* TIENDA */}
       {isShop&&(
-        <main className="pv" style={{paddingTop:navH,background:C.bg}}>
+        <main style={{paddingTop:navH,background:C.bg}}>
           
       <div style={{position:"sticky",top:stickyTop,zIndex:100,background:"rgba(8,8,8,0.97)",borderBottom:`1px solid ${C.border}`,backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)"}}>
             <NativeTabs
