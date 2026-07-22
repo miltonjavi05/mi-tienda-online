@@ -228,6 +228,7 @@ export async function GET(request: Request) {
     });
   } catch (err) {
     console.error("[catalog feed]", err);
-    return new NextResponse("Error generating catalog feed", { status: 500 });
+    const msg = err instanceof Error ? err.message : String(err);
+    return new NextResponse(`Error generating catalog feed: ${msg}`, { status: 500 });
   }
 }
