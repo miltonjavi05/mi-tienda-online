@@ -1632,6 +1632,8 @@ const allCommentsLoaded=useRef(false);
 const[commentsDateFilter,setCommentsDateFilter]=useState<"all"|"hoy"|"7d"|"30d"|"90d">("all");
 const[commentsCatFilter,setCommentsCatFilter]=useState("ALL");
 const[commentsProductFilter,setCommentsProductFilter]=useState("ALL");
+const[commentsSearchText,setCommentsSearchText]=useState("");
+const[commentsStarsFilter,setCommentsStarsFilter]=useState("ALL");
 const[bulkKeepProductId,setBulkKeepProductId]=useState("");
 const[bulkDeleteRunning,setBulkDeleteRunning]=useState(false);
 const[acProductId,setAcProductId]=useState("");
@@ -3070,15 +3072,26 @@ const commentsPeriodCutoff=useMemo(()=>{
   const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-(daysBack-1));
   return d.getTime();
 },[commentsDateFilter]);
-const filteredComments=useMemo(()=>allComments.filter(c=>{
-  if(c.createdAt<commentsPeriodCutoff)return false;
-  if(commentsProductFilter!=="ALL")return c.productId===commentsProductFilter;
-  if(commentsCatFilter!=="ALL"){
-    const prod=products.find(p=>p.id===c.productId);
-    if(!prod||prod.category!==commentsCatFilter)return false;
-  }
-  return true;
-}),[allComments,commentsPeriodCutoff,commentsCatFilter,commentsProductFilter,products]);
+const filteredComments=useMemo(()=>{
+  const searchLower=commentsSearchText.trim().toLowerCase();
+  return allComments.filter(c=>{
+    if(c.createdAt<commentsPeriodCutoff)return false;
+    if(commentsProductFilter!=="ALL"&&c.productId!==commentsProductFilter)return false;
+    if(commentsCatFilter!=="ALL"){
+      const prod=products.find(p=>p.id===c.productId);
+      if(!prod||prod.category!==commentsCatFilter)return false;
+    }
+    if(commentsStarsFilter!=="ALL"&&String(c.stars||5)!==commentsStarsFilter)return false;
+    if(searchLower){
+      const inName=c.name.toLowerCase().includes(searchLower);
+      const inComment=c.comment.toLowerCase().includes(searchLower);
+      const inProduct=(c.productName||"").toLowerCase().includes(searchLower);
+      const inEmail=(c.email||"").toLowerCase().includes(searchLower);
+      if(!inName&&!inComment&&!inProduct&&!inEmail)return false;
+    }
+    return true;
+  });
+},[allComments,commentsPeriodCutoff,commentsCatFilter,commentsProductFilter,commentsStarsFilter,commentsSearchText,products]);
 
   const periodCutoff=useMemo(()=>{
     if(statsPeriod==="all")return 0;
@@ -4685,7 +4698,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                     <button key={p.id} onClick={()=>setCommentsDateFilter(p.id)} style={{background:commentsDateFilter===p.id?"#fff":"#161616",color:commentsDateFilter===p.id?"#080808":"#666",border:`1px solid ${commentsDateFilter===p.id?"#fff":"#222"}`,padding:"0.3rem 0.75rem",borderRadius:20,fontSize:9,fontWeight:800,letterSpacing:1,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>{p.l}</button>
                   ))}
                 </div>
-                <div style={{display:"flex",gap:"0.5rem",marginBottom:"1rem",flexWrap:"wrap"}}>
+                  <div style={{display:"flex",gap:"0.5rem",marginBottom:"0.75rem",flexWrap:"wrap"}}>
                   <select value={commentsCatFilter} onChange={e=>{setCommentsCatFilter(e.target.value);setCommentsProductFilter("ALL");}} style={{...S.input,flex:1,minWidth:160,appearance:"auto" as any}}>
                     <option value="ALL">Todas las categorías</option>
                     <optgroup label="── LENTES">{LENTES_SUBCATS.map(s=><option key={s} value={s}>{catLabel(s)}</option>)}</optgroup>
@@ -4694,6 +4707,17 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   <select value={commentsProductFilter} onChange={e=>setCommentsProductFilter(e.target.value)} style={{...S.input,flex:1,minWidth:160,appearance:"auto" as any}}>
                     <option value="ALL">Todos los artículos</option>
                     {products.filter(p=>commentsCatFilter==="ALL"||p.category===commentsCatFilter).map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </div>
+                <div style={{display:"flex",gap:"0.5rem",marginBottom:"1rem",flexWrap:"wrap"}}>
+                  <input placeholder="🔎 Buscar por nombre, comentario, producto o correo…" value={commentsSearchText} onChange={e=>setCommentsSearchText(e.target.value)} style={{...S.input,flex:2,minWidth:200}}/>
+                  <select value={commentsStarsFilter} onChange={e=>setCommentsStarsFilter(e.target.value)} style={{...S.input,flex:1,minWidth:120,appearance:"auto" as any}}>
+                    <option value="ALL">Todas las estrellas</option>
+                    <option value="5">⭐⭐⭐⭐⭐ (5)</option>
+                    <option value="4">⭐⭐⭐⭐ (4)</option>
+                    <option value="3">⭐⭐⭐ (3)</option>
+                    <option value="2">⭐⭐ (2)</option>
+                    <option value="1">⭐ (1)</option>
                   </select>
                 </div>
                 {allCommentsLoading&&!filteredComments.length?(
