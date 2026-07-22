@@ -148,6 +148,10 @@ function productType(cat: string): string {
 }
 
 // ── XML escape ────────────────────────────────────────────────────────────────
+function slugify(text: string): string {
+  return text.toString().normalize("nfd").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
 function esc(str: string): string {
   return str
     .replace(/&/g,  "&amp;")
@@ -163,7 +167,8 @@ function productToItem(p: Product): string {
   const pType       = productType(p.category);
   const imgSquare   = esc(optImgMeta(p.img));
   const imgFallback = esc(optImgFallback(p.img));
-  const productUrl  = esc(`${SITE_URL}/?product=${encodeURIComponent(p.id)}`);
+  const slug = slugify(p.name);
+  const productUrl = esc(`${SITE_URL}/producto/${slug ? slug + "-" : ""}${p.id}`);
   const desc = p.description?.trim()
     ? esc(p.description.trim())
     : esc(`${p.name} — ${pType}. Disponible en Fokus Venezuela. Envios a todo el pais.`);
