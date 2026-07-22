@@ -20,7 +20,7 @@ import { NextResponse } from "next/server";
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const FIREBASE_PROJECT = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "fokus-16a0c";
-const SITE_URL         = process.env.NEXT_PUBLIC_SITE_URL || "https://fokus-accesorios.vercel.app";
+const SITE_URL         = process.env.NEXT_PUBLIC_SITE_URL || "https://fokusaccesorios.shop";
 const CURRENCY         = "USD";
 const BRAND            = "Fokus";
 const CONDITION        = "new";
