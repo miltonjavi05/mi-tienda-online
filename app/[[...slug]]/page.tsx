@@ -567,6 +567,7 @@ const GLOBAL_CSS = `
     .home-hero img[width="64"] { width: 80px !important; height: 80px !important; }
     .home-hero h1 { font-size: 62px !important; }
     .home-hero p { font-size: 15px !important; }
+    .home-collections-row { flex-wrap: wrap !important; overflow-x: visible !important; justify-content: center !important; max-width: 640px !important; margin-left: auto !important; margin-right: auto !important; }
     .home-cards-row { display: flex !important; gap: 1.25rem !important; align-items: stretch !important; max-width: 780px !important; }
     .home-cards-row > div { margin: 0 !important; flex: 1 !important; max-width: none !important; }
   }
@@ -3407,7 +3408,7 @@ const filteredComments=useMemo(()=>{
               ].map(c=>({...c,img:products.find(p=>p.category===c.key&&p.active!==false)?.img})).filter(c=>!!c.img);
               if(!navCats.length)return null;
               return(
-                <div style={{display:"flex",flexWrap:"wrap",gap:"1.5rem",justifyContent:"center",padding:"0 0.5rem",marginBottom:"2.25rem",maxWidth:640,marginLeft:"auto",marginRight:"auto"}}>
+                <div className="ts home-collections-row" style={{display:"flex",gap:"1.35rem",overflowX:"auto",justifyContent:"flex-start",padding:"0 0.25rem 0.35rem",marginBottom:"2.25rem",WebkitOverflowScrolling:"touch"}}>
                   {navCats.map((c,i)=>(
                     <button key={c.key} onClick={()=>{setShopFilter(c.key as ShopFilter);setLentesOpen(c.key.startsWith("LENTES·"));setMainView("shop");}} style={{flexShrink:0,background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:8,fontFamily:"inherit",WebkitTapHighlightColor:"transparent",animation:"scaleIn 0.4s ease both",animationDelay:`${i*0.05}s`,width:66}}>
                       <div className="pc" style={{width:64,height:64,borderRadius:"50%",overflow:"hidden",position:"relative",background:"#111",boxShadow:"0 0 0 1px rgba(255,255,255,0.16), 0 0 0 4px rgba(255,255,255,0.035), 0 10px 26px rgba(0,0,0,0.55)"}}>
