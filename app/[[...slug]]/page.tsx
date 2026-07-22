@@ -2372,7 +2372,7 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     if(allCommentsLoaded.current&&!force)return;
     setAllCommentsLoading(true);
     try{
-      const raw=await fsGetCollection("product_comments",2000);
+      const raw=await fsGetCollectionAll("product_comments");
       const list:ProductComment[]=raw.map(r=>({id:r.id,productId:(r.productId as string)||"",productName:(r.productName as string)||"",name:(r.name as string)||"",email:(r.email as string)||"",comment:(r.comment as string)||"",stars:Number(r.stars)||5,createdAt:Number(r.createdAt)||0,photoUrl:(r.photoUrl as string)||"",photoUrls:Array.isArray(r.photoUrls)?(r.photoUrls as string[]):[],avatarUrl:(r.avatarUrl as string)||"",isAdmin:!!r.isAdmin}));
       list.sort((a,b)=>b.createdAt-a.createdAt);
       setAllComments(list);
