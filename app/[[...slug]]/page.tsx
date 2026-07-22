@@ -1747,7 +1747,7 @@ const interestLoaded=useRef(false);
   const[leadsList,setLeadsList]=useState<Array<Record<string,unknown>&{id:string}>>([]);
   const[statsLoading,setStatsLoading]=useState(false);
   const[statsErr,setStatsErr]=useState("");
-  const[statsPeriod,setStatsPeriod]=useState<"7d"|"30d"|"90d"|"all">("30d");
+  const[statsPeriod,setStatsPeriod]=useState<"hoy"|"7d"|"30d"|"90d"|"all">("30d");
   const[statsCategory,setStatsCategory]=useState("ALL");
   const statsLoaded=useRef(false);
 const couponsLoaded=useRef(false);
@@ -3103,7 +3103,7 @@ const filteredComments=useMemo(()=>{
 
   const periodCutoff=useMemo(()=>{
     if(statsPeriod==="all")return 0;
-    const daysBack=statsPeriod==="7d"?7:statsPeriod==="30d"?30:90;
+    const daysBack=statsPeriod==="hoy"?1:statsPeriod==="7d"?7:statsPeriod==="30d"?30:90;
     const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-(daysBack-1));
     return d.getTime();
   },[statsPeriod]);
@@ -3202,7 +3202,7 @@ const filteredComments=useMemo(()=>{
     const payMethodCounts:Record<string,number>={};
     onlineSales.forEach(s=>{const pm=(s.payMethod as string)||"Sin especificar";payMethodCounts[pm]=(payMethodCounts[pm]||0)+1;});
     const topPayMethod=Object.entries(payMethodCounts).sort((a,b)=>b[1]-a[1])[0]?.[0]||"—";
-    const bucketCount=statsPeriod==="7d"?7:statsPeriod==="30d"?30:statsPeriod==="90d"?13:12;
+    const bucketCount=statsPeriod==="hoy"?1:statsPeriod==="7d"?7:statsPeriod==="30d"?30:statsPeriod==="90d"?13:12;
     const bucketDays=statsPeriod==="90d"?7:statsPeriod==="all"?30:1;
     const allForChart=onlineSales.concat(offlineSales);
     const days:{label:string;total:number}[]=[];
@@ -4035,7 +4035,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
               </div>
 
               <div style={{display:"flex",gap:"0.4rem",marginBottom:"0.75rem",flexWrap:"wrap"}}>
-                {[{id:"7d" as const,l:"7 DÍAS"},{id:"30d" as const,l:"30 DÍAS"},{id:"90d" as const,l:"90 DÍAS"},{id:"all" as const,l:"TODO"}].map(p=>(
+                {[{id:"hoy" as const,l:"HOY"},{id:"7d" as const,l:"7 DÍAS"},{id:"30d" as const,l:"30 DÍAS"},{id:"90d" as const,l:"90 DÍAS"},{id:"all" as const,l:"TODO"}].map(p=>(
                   <button key={p.id} onClick={()=>setStatsPeriod(p.id)} style={{background:statsPeriod===p.id?"#fff":"#161616",color:statsPeriod===p.id?"#080808":"#666",border:`1px solid ${statsPeriod===p.id?"#fff":"#222"}`,padding:"0.4rem 0.9rem",borderRadius:20,fontSize:10,fontWeight:800,letterSpacing:1,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",transition:"all 0.15s"}}>{p.l}</button>
                 ))}
               </div>
