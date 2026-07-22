@@ -3388,7 +3388,84 @@ const filteredComments=useMemo(()=>{
 
             <h1 className="fokus-logo" style={{fontSize:46,marginBottom:"0.85rem",color:C.accent,lineHeight:1}}>FOKUS</h1>
             <p style={{fontSize:14,color:"#444",lineHeight:1.7,maxWidth:300,margin:"0 auto 1rem"}}>Cada detalle +<br/>Calidad, diseño y actitud.</p>
+            {(()=>{
+              const navCats=[
+                {key:"RELOJES",label:"Relojes"},
+                {key:"LENTES·SOL",label:"Sol"},
+                {key:"LENTES·ANTI-LUZ-AZUL",label:"Anti Luz"},
+                {key:"LENTES·MOTORIZADOS",label:"Moto"},
+                {key:"PULSERAS",label:"Pulseras"},
+                {key:"COLLARES",label:"Collares"},
+              ].map(c=>({...c,img:products.find(p=>p.category===c.key&&p.active!==false)?.img})).filter(c=>!!c.img);
+              if(!navCats.length)return null;
+              return(
+                <div className="ts" style={{display:"flex",gap:"1rem",overflowX:"auto",justifyContent:navCats.length<=5?"center":"flex-start",padding:"0 0.25rem 0.35rem",marginBottom:"1.5rem",WebkitOverflowScrolling:"touch"}}>
+                  {navCats.map((c,i)=>(
+                    <button key={c.key} onClick={()=>{setShopFilter(c.key as ShopFilter);setLentesOpen(c.key.startsWith("LENTES·"));setMainView("shop");}} style={{flexShrink:0,background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:6,fontFamily:"inherit",WebkitTapHighlightColor:"transparent",animation:"scaleIn 0.4s ease both",animationDelay:`${i*0.06}s`}}>
+                      <div className="pc" style={{width:56,height:56,borderRadius:"50%",overflow:"hidden",border:"1px solid rgba(255,255,255,0.14)",background:"#111",position:"relative"}}>
+                        <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={c.img as string} alt={c.label}/></div>
+                        <div className="io" style={{position:"absolute",inset:0}}/>
+                      </div>
+                      <span style={{fontSize:8,fontWeight:800,letterSpacing:0.8,color:"#555",whiteSpace:"nowrap"}}>{c.label.toUpperCase()}</span>
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
             <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={{...S.darkBtn,fontSize:11,padding:"1.1rem 2.8rem",letterSpacing:3,borderRadius:3,marginBottom:"2rem"}}>VER COLECCIÓN →</button>
+          </div>
+          {(()=>{
+            const homeCats=[
+              {key:"RELOJES",label:"Relojes"},
+              {key:"LENTES·SOL",label:"Lentes de Sol"},
+              {key:"LENTES·ANTI-LUZ-AZUL",label:"Anti Luz Azul"},
+              {key:"LENTES·FOTOCROMATICOS",label:"Fotocromáticos"},
+              {key:"LENTES·MOTORIZADOS",label:"Para Motos"},
+              {key:"PULSERAS",label:"Pulseras"},
+              {key:"COLLARES",label:"Collares"},
+              {key:"ANILLOS",label:"Anillos"},
+              {key:"ARETES",label:"Aretes"},
+              {key:"BILLETERAS",label:"Billeteras"},
+            ].map(c=>({...c,img:products.find(p=>p.category===c.key&&p.active!==false)?.img})).filter(c=>!!c.img);
+            const bestsellers=products.filter(p=>p.bestseller&&p.active!==false);
+            const showcase=bestsellers.length>0?bestsellers:products.filter(p=>p.active!==false).slice(0,10);
+            return(
+              <>
+                {homeCats.length>0&&(
+                  <div style={{maxWidth:1000,margin:"0 auto",padding:"0 1.25rem 2.75rem"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:"1rem"}}>
+                      <h2 className="fokus-logo" style={{fontSize:16,margin:0,color:"#fff",letterSpacing:1}}>COLECCIONES</h2>
+                      <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={{background:"none",border:"none",color:"#444",fontSize:10,fontWeight:800,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>VER TODO →</button>
+                    </div>
+                    <div className="cg" style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:"0.75rem"}}>
+                      {homeCats.map((c,i)=>(
+                        <div key={c.key} className="pc" onClick={()=>{setShopFilter(c.key as ShopFilter);setLentesOpen(c.key.startsWith("LENTES·"));setMainView("shop");}} style={{cursor:"pointer",position:"relative",borderRadius:16,overflow:"hidden",aspectRatio:"3/4",background:"#111",animation:"slideUp 0.45s ease both",animationDelay:`${i*0.05}s`,WebkitTapHighlightColor:"transparent"}}>
+                          <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={c.img as string} alt={c.label}/></div>
+                          <div className="io" style={{position:"absolute",inset:0}}/>
+                          <div style={{position:"absolute",inset:0,background:"linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.05) 55%, transparent 100%)",pointerEvents:"none"}}/>
+                          <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"0.9rem"}}>
+                            <p style={{margin:"0 0 3px",fontSize:8,fontWeight:800,letterSpacing:2,color:"rgba(255,255,255,0.45)"}}>COLECCIÓN</p>
+                            <h3 style={{margin:"0 0 5px",fontSize:15,fontWeight:900,color:"#fff",letterSpacing:0.3}}>{c.label}</h3>
+                            <span style={{fontSize:8,fontWeight:800,letterSpacing:1,color:"#fff",borderBottom:"1px solid rgba(255,255,255,0.4)",paddingBottom:2}}>VER →</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {showcase.length>0&&(
+                  <div style={{maxWidth:1000,margin:"0 auto",padding:"0 1.25rem 2.75rem"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.85rem",borderBottom:`1px solid ${C.border}`,paddingBottom:"0.5rem"}}>
+                      <h2 style={{fontSize:11,fontWeight:800,letterSpacing:3,margin:0,color:"#555"}}>{bestsellers.length>0?"MÁS VENDIDOS":"DESTACADOS"}</h2>
+                      <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={{background:"none",border:"none",fontSize:10,color:"#333",cursor:"pointer",fontFamily:"inherit",letterSpacing:1,fontWeight:700,WebkitTapHighlightColor:"transparent"}}>VER TODOS</button>
+                    </div>
+                    <HRow products={showcase} onSelect={openProd} onBuyNow={openProd} fmtPrice={fmtPrice} isFavorite={isFavorite} onToggleFavorite={toggleFavorite}/>
+                  </div>
+                )}
+              </>
+            );
+          })()}
+          <div className="home-hero" style={{maxWidth:760,margin:"0 auto",padding:"0 1.5rem"}}>
             <div className="home-cards-row" style={{maxWidth:360,margin:"0 auto 2rem"}}><div style={{background:"linear-gradient(135deg,rgba(255,255,255,0.04) 0%,rgba(255,255,255,0.01) 100%)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:14,padding:"0.85rem 1.25rem",display:"flex",alignItems:"center",gap:"0.85rem",position:"relative",overflow:"hidden",boxShadow:"0 0 32px rgba(255,255,255,0.02), inset 0 1px 0 rgba(255,255,255,0.05)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"}}><div style={{position:"absolute",inset:0,background:"linear-gradient(90deg,transparent 0%,rgba(76,175,80,0.04) 50%,transparent 100%)",backgroundSize:"200% 100%",animation:"badgeShimmer 3s ease infinite",pointerEvents:"none"}}/><div style={{width:38,height:38,borderRadius:10,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><IcTruck s={20} c="rgba(255,255,255,0.6)"/></div><div style={{textAlign:"left",position:"relative",flex:1}}><p style={{margin:"0 0 2px",fontSize:11,fontWeight:900,color:"rgba(255,255,255,0.75)",letterSpacing:1.5}}>ENVÍOS A TODA VENEZUELA</p><p style={{margin:0,fontSize:10,color:"rgba(255,255,255,0.25)"}}>Llegamos a cualquier estado del país</p></div><div style={{width:6,height:6,borderRadius:"50%",background:"rgba(255,255,255,0.5)",boxShadow:"0 0 0 3px rgba(255,255,255,0.08)",animation:"pulseRing 2s infinite",flexShrink:0}}/></div><div style={{background:"linear-gradient(135deg,rgba(255,255,255,0.03) 0%,rgba(255,255,255,0.01) 100%)",border:"1px solid #1e1e1e",borderRadius:14,padding:"1rem 1.25rem",position:"relative",overflow:"hidden",marginTop:"1.5rem"}}><div style={{position:"absolute",inset:0,background:"linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.02) 50%,transparent 100%)",backgroundSize:"200% 100%",animation:"badgeShimmer 4s ease infinite",pointerEvents:"none"}}/><div style={{display:"flex",alignItems:"center",gap:"0.75rem",marginBottom:"0.6rem",position:"relative"}}><div style={{width:32,height:32,borderRadius:8,background:"rgba(255,255,255,0.04)",border:"1px solid #2a2a2a",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div><div style={{flex:1}}><p style={{margin:0,fontSize:11,fontWeight:900,color:"rgba(255,255,255,0.6)",letterSpacing:1.5}}>GRABADOS LÁSER</p><p style={{margin:0,fontSize:9,color:"#2a2a2a",letterSpacing:0.5}}>Personalización exclusiva</p></div><span/></div><p style={{margin:0,fontSize:11,color:"#444",lineHeight:1.75,position:"relative"}}>Personalizamos tu <span style={{color:"rgba(255,255,255,0.3)",fontWeight:700}}>reloj</span>, <span style={{color:"rgba(255,255,255,0.3)",fontWeight:700}}>pulsera</span>, <span style={{color:"rgba(255,255,255,0.3)",fontWeight:700}}>collar</span> y <span style={{color:"rgba(255,255,255,0.3)",fontWeight:700}}>billetera</span> con tu nombre, fecha o diseño especial.</p></div></div>
             <div style={{display:"flex",justifyContent:"center",gap:"0.75rem",marginTop:"3rem"}}><a href={SOCIAL.instagram} target="_blank" rel="noreferrer" className="sl" style={S.socialA}><IcIG s={18}/></a><a href={SOCIAL.tiktok} target="_blank" rel="noreferrer" className="sl" style={S.socialA}><IcTT s={18}/></a><a href={SOCIAL.facebook} target="_blank" rel="noreferrer" className="sl" style={S.socialA}><IcFB s={18}/></a><a href={SOCIAL.whatsapp} target="_blank" rel="noreferrer" className="sl" style={{...S.socialA,border:"1px solid #1e2e1e",background:"#0e1e0e"}}><IcWA s={18}/></a></div>
           </div>
