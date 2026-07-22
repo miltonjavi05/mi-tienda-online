@@ -1519,6 +1519,28 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   useEffect(()=>{if(typeof window!=="undefined"&&(window as any).fbq)(window as any).fbq("track","PageView");},[mainView]);
   useEffect(()=>{setModalImgIdx(0);},[selectedProduct?.id]);
 
+  useEffect(()=>{
+    if(!selectedProduct)return;
+    if(typeof window==="undefined")return;
+    const scrollY=window.scrollY;
+    const{body}=document;
+    const prevPosition=body.style.position;
+    const prevTop=body.style.top;
+    const prevWidth=body.style.width;
+    const prevOverflow=body.style.overflow;
+    body.style.position="fixed";
+    body.style.top=`-${scrollY}px`;
+    body.style.width="100%";
+    body.style.overflow="hidden";
+    return()=>{
+      body.style.position=prevPosition;
+      body.style.top=prevTop;
+      body.style.width=prevWidth;
+      body.style.overflow=prevOverflow;
+      window.scrollTo(0,scrollY);
+    };
+  },[selectedProduct]);
+
   // ─── URL ↔ ESTADO: cada apartado con su propio link + back/forward sin trabarse ──
   const isPoppingRef = useRef(false);
   const selectedProductRef = useRef<Product|null>(null);
@@ -3392,7 +3414,7 @@ const filteredComments=useMemo(()=>{
               <h1 className="fokus-logo" style={{position:"relative",fontSize:50,margin:0,color:C.accent,lineHeight:1,textShadow:"0 0 44px rgba(255,255,255,0.16)"}}>FOKUS</h1>
             </div>
             <div style={{width:38,height:1,background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.4),transparent)",margin:"0.9rem auto 1.15rem"}}/>
-            <p style={{fontSize:13,color:"#777",lineHeight:1.6,maxWidth:270,margin:"0 auto 1.75rem",fontWeight:600,letterSpacing:0.4}}>La experiencia de compra en accesorios más exclusiva de Venezuela.</p>
+            <p style={{fontSize:13,color:"#777",lineHeight:1.6,maxWidth:270,margin:"0 auto 1.75rem",fontWeight:600,letterSpacing:0.4}}>Cada detalle +</p>
             {(()=>{
               const navCats=[
                 {key:"RELOJES",label:"Relojes"},
