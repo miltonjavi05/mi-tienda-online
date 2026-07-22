@@ -1958,7 +1958,7 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
   const loadProductComments=useCallback(async(productId:string)=>{
     setCommentsLoading(true);
     try{
-      const all=await fsGetCollection("product_comments",300);
+      const all=await fsGetCollectionAll("product_comments");
       const filtered=all.filter(c=>c.productId===productId).map(c=>({id:c.id,productId:(c.productId as string)||"",productName:(c.productName as string)||"",name:(c.name as string)||"",email:(c.email as string)||"",comment:(c.comment as string)||"",stars:Number(c.stars)||5,createdAt:Number(c.createdAt)||0,photoUrl:(c.photoUrl as string)||"",photoUrls:Array.isArray(c.photoUrls)?(c.photoUrls as string[]):[],avatarUrl:(c.avatarUrl as string)||"",isAdmin:!!c.isAdmin})) as ProductComment[];
       filtered.sort((a,b)=>b.createdAt-a.createdAt);
       setProductComments(filtered);
