@@ -2768,14 +2768,19 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
       if(!perProduct){setBulkExcelErr("Indica cuántos comentarios le tocan a cada artículo.");return;}
       const catProducts=products.filter(p=>p.category===bulkExcelCat);
       if(!catProducts.length){setBulkExcelErr("No hay productos en esa categoría.");return;}
-      let idx=0;
+      const rowsQueue=[...bulkExcelRows];
       for(const prod of catProducts){
         for(let i=0;i<perProduct;i++){
-          if(idx>=bulkExcelRows.length)break;
-          assignments.push({product:prod,row:bulkExcelRows[idx]});
-          idx++;
+          if(!rowsQueue.length)break;
+          assignments.push({product:prod,row:rowsQueue.shift()!});
         }
-        if(idx>=bulkExcelRows.length)break;
+        if(!rowsQueue.length)break;
+      }
+      let ri=0;
+      while(rowsQueue.length){
+        const prod=catProducts[ri%catProducts.length];
+        assignments.push({product:prod,row:rowsQueue.shift()!});
+        ri++;
       }
       if(!assignments.length){setBulkExcelErr("No hay suficientes filas en el archivo para distribuir.");return;}
     }else{
