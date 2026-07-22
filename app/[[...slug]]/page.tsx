@@ -1958,8 +1958,16 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
   const loadProductComments=useCallback(async(productId:string)=>{
     setCommentsLoading(true);
     try{
-      const all=await fsGetCollectionAll("product_comments");
-      const filtered=all.filter(c=>c.productId===productId).map(c=>({id:c.id,productId:(c.productId as string)||"",productName:(c.productName as string)||"",name:(c.name as string)||"",email:(c.email as string)||"",comment:(c.comment as string)||"",stars:Number(c.stars)||5,createdAt:Number(c.createdAt)||0,photoUrl:(c.photoUrl as string)||"",photoUrls:Array.isArray(c.photoUrls)?(c.photoUrls as string[]):[],avatarUrl:(c.avatarUrl as string)||"",isAdmin:!!c.isAdmin})) as ProductComment[];
+      const r=await fetch(`${fsBase()}:runQuery`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({structuredQuery:{from:[{collectionId:"product_comments"}],where:{fieldFilter:{field:{fieldPath:"productId"},op:"EQUAL",value:{stringValue:productId}}}}})});
+      const d=await r.json() as Array<{document?:FsDoc}>;
+      const filtered=(d||[]).filter(x=>x.document).map(x=>{
+        const doc=x.document as FsDoc;
+        const f=doc.fields||{};
+        const raw:Record<string,unknown>={};
+        Object.entries(f).forEach(([k,v])=>{raw[k]=fromFs(v);});
+        raw.id=doc.name.split("/").pop() as string;
+        return raw;
+      }).map((c:Record<string,unknown>)=>({id:c.id as string,productId:(c.productId as string)||"",productName:(c.productName as string)||"",name:(c.name as string)||"",email:(c.email as string)||"",comment:(c.comment as string)||"",stars:Number(c.stars)||5,createdAt:Number(c.createdAt)||0,photoUrl:(c.photoUrl as string)||"",photoUrls:Array.isArray(c.photoUrls)?(c.photoUrls as string[]):[],avatarUrl:(c.avatarUrl as string)||"",isAdmin:!!c.isAdmin})) as ProductComment[];
       filtered.sort((a,b)=>b.createdAt-a.createdAt);
       setProductComments(filtered);
     }catch{
