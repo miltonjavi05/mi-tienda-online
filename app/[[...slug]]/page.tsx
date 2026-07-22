@@ -456,7 +456,8 @@ const GLOBAL_CSS = `
   input, select, textarea { font-size: 16px !important; }
   button, a { -webkit-tap-highlight-color: transparent; }
   img { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
-  .ts::-webkit-scrollbar, .hr::-webkit-scrollbar { display: none; }
+  .ts, .hr { scrollbar-width: none; -ms-overflow-style: none; overscroll-behavior-x: contain; }
+  .ts::-webkit-scrollbar, .hr::-webkit-scrollbar { display: none; width: 0; height: 0; }
   @media(hover:hover) and (pointer:fine){
     .pm-scroll::-webkit-scrollbar { display: block; width: 8px; }
     .pm-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -490,7 +491,7 @@ const GLOBAL_CSS = `
   @keyframes badgeShimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
   @keyframes railBounceRight { 0%{transform:translateX(0)} 35%{transform:translateX(-16px)} 65%{transform:translateX(5px)} 100%{transform:translateX(0)} }
   @keyframes railBounceLeft { 0%{transform:translateX(0)} 35%{transform:translateX(16px)} 65%{transform:translateX(-5px)} 100%{transform:translateX(0)} }
-  @keyframes cardSweep { 0%{transform:translateX(-260%) skewX(-14deg);opacity:0} 18%{opacity:1} 100%{transform:translateX(360%) skewX(-14deg);opacity:0} }
+  @keyframes cardSweep { 0%{transform:translateX(-140%) skewX(-9deg);opacity:0} 30%{opacity:0.9} 65%{opacity:0.4} 100%{transform:translateX(200%) skewX(-9deg);opacity:0} }
   @keyframes viewIn { 0%{opacity:0;} 100%{opacity:1;} }
   .pv { animation: viewIn 0.15s ease-out both; will-change: opacity; }
 
@@ -910,11 +911,11 @@ const CollectionCard=memo(function CollectionCard({cat,onClick,index}:{cat:{key:
   },[]);
   const delay=Math.min(index*35,180);
   return(
-    <div ref={ref} className="pc" onClick={onClick} style={{cursor:"pointer",position:"relative",borderRadius:16,overflow:"hidden",aspectRatio:"3/4",background:"#111",WebkitTapHighlightColor:"transparent",opacity:vis?1:0,transform:vis?"translateY(0) scale(1)":"translateY(20px) scale(0.96)",transition:`opacity 0.32s cubic-bezier(0.16,1,0.3,1) ${delay}ms, transform 0.36s cubic-bezier(0.16,1,0.3,1) ${delay}ms`,willChange:"transform,opacity"}}>
+    <div ref={ref} className="pc" onClick={onClick} style={{cursor:"pointer",position:"relative",borderRadius:16,overflow:"hidden",aspectRatio:"3/4",background:"#111",WebkitTapHighlightColor:"transparent",opacity:vis?1:0,transform:vis?"translateY(0) scale(1)":"translateY(26px) scale(0.94)",filter:vis?"blur(0px)":"blur(6px)",transition:`opacity 0.55s cubic-bezier(0.19,1,0.22,1) ${delay}ms, transform 0.6s cubic-bezier(0.19,1,0.22,1) ${delay}ms, filter 0.55s cubic-bezier(0.19,1,0.22,1) ${delay}ms`,willChange:"transform,opacity,filter"}}>
       <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={cat.img} alt={cat.label}/></div>
       <div className="io" style={{position:"absolute",inset:0}}/>
       <div style={{position:"absolute",inset:0,background:"linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.05) 55%, transparent 100%)",pointerEvents:"none"}}/>
-      {vis&&<div key={cycle} style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden"}}><div style={{position:"absolute",top:0,left:0,width:"38%",height:"100%",background:"linear-gradient(115deg,transparent 0%,rgba(255,255,255,0.32) 50%,transparent 100%)",animation:`cardSweep 0.65s cubic-bezier(0.16,1,0.3,1) ${delay+60}ms both`}}/></div>}
+      {vis&&<div key={cycle} style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden"}}><div style={{position:"absolute",top:0,left:0,width:"55%",height:"100%",background:"linear-gradient(120deg,transparent 0%,rgba(255,255,255,0.16) 45%,rgba(255,255,255,0.05) 55%,transparent 100%)",filter:"blur(1.5px)",animation:`cardSweep 1.1s cubic-bezier(0.19,1,0.22,1) ${delay+90}ms both`}}/></div>}
       <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"0.9rem"}}>
         <p style={{margin:"0 0 3px",fontSize:8,fontWeight:800,letterSpacing:2,color:"rgba(255,255,255,0.45)"}}>COLECCIÓN</p>
         <h3 style={{margin:"0 0 5px",fontSize:15,fontWeight:900,color:"#fff",letterSpacing:0.3}}>{cat.label}</h3>
@@ -944,12 +945,12 @@ const IconOrb=memo(function IconOrb({img,label,onClick,index}:{img:string;label:
   },[]);
   const delay=Math.min(index*30,160);
   return(
-    <div ref={ref} style={{flexShrink:0,opacity:vis?1:0,transform:vis?"translateY(0) scale(1)":"translateY(14px) scale(0.85)",transition:`opacity 0.3s cubic-bezier(0.16,1,0.3,1) ${delay}ms, transform 0.34s cubic-bezier(0.16,1,0.3,1) ${delay}ms`,willChange:"transform,opacity"}}>
-      <button onClick={onClick} style={{background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:8,fontFamily:"inherit",WebkitTapHighlightColor:"transparent",width:66}}>
+    <div ref={ref} style={{flexShrink:0,opacity:vis?1:0,transform:vis?"translateY(0) scale(1)":"translateY(18px) scale(0.88)",filter:vis?"blur(0px)":"blur(5px)",transition:`opacity 0.5s cubic-bezier(0.19,1,0.22,1) ${delay}ms, transform 0.55s cubic-bezier(0.19,1,0.22,1) ${delay}ms, filter 0.5s cubic-bezier(0.19,1,0.22,1) ${delay}ms`,willChange:"transform,opacity,filter"}}>
+      <button onClick={onClick} style={{background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:8,fontFamily:"inherit",WebkitTapHighlightColor:"transparent",outline:"none",width:66,touchAction:"manipulation"}}>
         <div className="pc" style={{width:64,height:64,borderRadius:"50%",overflow:"hidden",position:"relative",background:"#111",boxShadow:"0 0 0 1px rgba(255,255,255,0.16), 0 0 0 4px rgba(255,255,255,0.035), 0 10px 26px rgba(0,0,0,0.55)"}}>
           <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={img} alt={label}/></div>
           <div className="io" style={{position:"absolute",inset:0}}/>
-          {vis&&<div key={cycle} style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden",borderRadius:"50%"}}><div style={{position:"absolute",top:0,left:0,width:"45%",height:"100%",background:"linear-gradient(115deg,transparent 0%,rgba(255,255,255,0.4) 50%,transparent 100%)",animation:`cardSweep 0.6s cubic-bezier(0.16,1,0.3,1) ${delay+50}ms both`}}/></div>}
+          {vis&&<div key={cycle} style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden",borderRadius:"50%"}}><div style={{position:"absolute",top:0,left:0,width:"60%",height:"100%",background:"linear-gradient(120deg,transparent 0%,rgba(255,255,255,0.22) 45%,rgba(255,255,255,0.06) 55%,transparent 100%)",filter:"blur(1px)",animation:`cardSweep 1s cubic-bezier(0.19,1,0.22,1) ${delay+70}ms both`}}/></div>}
         </div>
         <span style={{fontSize:8,fontWeight:800,letterSpacing:0.8,color:"#666",whiteSpace:"nowrap"}}>{label.toUpperCase()}</span>
       </button>
@@ -3521,7 +3522,7 @@ const filteredComments=useMemo(()=>{
               ].map(c=>({...c,img:products.find(p=>p.category===c.key&&p.active!==false)?.img})).filter(c=>!!c.img);
               if(!navCats.length)return null;
               return(
-                <div className="ts home-collections-row" style={{display:"flex",gap:"1.1rem",overflowX:"auto",justifyContent:"flex-start",padding:"0 0.25rem 0.35rem",marginBottom:"2.25rem",WebkitOverflowScrolling:"touch"}}>
+                <div className="ts home-collections-row" style={{display:"flex",gap:"1.1rem",overflowX:"auto",justifyContent:"flex-start",padding:"0 0.25rem 0.35rem",marginBottom:"2.25rem",WebkitOverflowScrolling:"touch",touchAction:"pan-x",overscrollBehaviorX:"contain",WebkitTapHighlightColor:"transparent",outline:"none"} as React.CSSProperties}>
                   {navCats.map((c,i)=>(
                     <IconOrb key={c.key} img={c.img as string} label={c.label} index={i} onClick={()=>{setShopFilter(c.key as ShopFilter);setLentesOpen(c.key.startsWith("LENTES·"));setMainView("shop");}}/>
                   ))}
