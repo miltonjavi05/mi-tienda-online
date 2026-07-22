@@ -488,6 +488,8 @@ const GLOBAL_CSS = `
   @keyframes spin { to{transform:rotate(360deg)} }
   @keyframes tyCheck { from{stroke-dashoffset:40} to{stroke-dashoffset:0} }
   @keyframes badgeShimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+  @keyframes railBounceRight { 0%{transform:translateX(0)} 35%{transform:translateX(-16px)} 65%{transform:translateX(5px)} 100%{transform:translateX(0)} }
+  @keyframes railBounceLeft { 0%{transform:translateX(0)} 35%{transform:translateX(16px)} 65%{transform:translateX(-5px)} 100%{transform:translateX(0)} }
   @keyframes viewIn { 0%{opacity:0;} 100%{opacity:1;} }
   .pv { animation: viewIn 0.15s ease-out both; will-change: opacity; }
 
@@ -887,20 +889,70 @@ const HCard=memo(function HCard({product,onClick,onBuyNow,fmtPrice,isFav,onToggl
   );
 });
 
+// ─── COLLECTION CARD (REVEAL AL SCROLL) ───────────────────────────────────────
+const CollectionCard=memo(function CollectionCard({cat,onClick,index}:{cat:{key:string;label:string;img:string};onClick:()=>void;index:number}){
+  const[vis,setVis]=useState(false);
+  const ref=useRef<HTMLDivElement>(null);
+  useEffect(()=>{
+    const el=ref.current;
+    if(!el)return;
+    const obs=new IntersectionObserver(([entry])=>{
+      if(entry.isIntersecting){setVis(true);obs.disconnect();}
+    },{rootMargin:"0px 0px -60px 0px",threshold:0.15});
+    obs.observe(el);
+    return()=>obs.disconnect();
+  },[]);
+  const delay=Math.min(index*80,320);
+  return(
+    <div ref={ref} className="pc" onClick={onClick} style={{cursor:"pointer",position:"relative",borderRadius:16,overflow:"hidden",aspectRatio:"3/4",background:"#111",WebkitTapHighlightColor:"transparent",opacity:vis?1:0,filter:vis?"blur(0px)":"blur(6px)",transform:vis?"translateY(0) scale(1)":"translateY(38px) scale(0.94)",transition:`opacity 0.7s cubic-bezier(0.22,1,0.36,1) ${delay}ms, filter 0.7s ease ${delay}ms, transform 0.7s cubic-bezier(0.22,1,0.36,1) ${delay}ms`}}>
+      <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={cat.img} alt={cat.label}/></div>
+      <div className="io" style={{position:"absolute",inset:0}}/>
+      <div style={{position:"absolute",inset:0,background:"linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.05) 55%, transparent 100%)",pointerEvents:"none"}}/>
+      <div style={{position:"absolute",top:0,left:0,right:0,height:1,background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.25),transparent)",opacity:vis?1:0,transition:`opacity 0.9s ease ${delay+220}ms`,pointerEvents:"none"}}/>
+      <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"0.9rem"}}>
+        <p style={{margin:"0 0 3px",fontSize:8,fontWeight:800,letterSpacing:2,color:"rgba(255,255,255,0.45)"}}>COLECCIÓN</p>
+        <h3 style={{margin:"0 0 5px",fontSize:15,fontWeight:900,color:"#fff",letterSpacing:0.3}}>{cat.label}</h3>
+        <span style={{fontSize:8,fontWeight:800,letterSpacing:1,color:"#fff",borderBottom:"1px solid rgba(255,255,255,0.4)",paddingBottom:2}}>VER →</span>
+      </div>
+    </div>
+  );
+});
+
 // ─── HORIZONTAL ROW ───────────────────────────────────────────────────────────
 const HRow=memo(function HRow({products,onSelect,onBuyNow,fmtPrice,isFavorite,onToggleFavorite}:{products:Product[];onSelect:(p:Product)=>void;onBuyNow:(p:Product)=>void;fmtPrice:(n:number)=>string;isFavorite?:(id:string)=>boolean;onToggleFavorite?:(id:string)=>void}){
   const rowRef=useRef<HTMLDivElement>(null);
   const[showLeft,setShowLeft]=useState(false);
   const[showRight,setShowRight]=useState(false);
+  const[bounce,setBounce]=useState<"left"|"right"|null>(null);
+  const bounceTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
+  const stopTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const updateArrows=useCallback(()=>{const el=rowRef.current;if(!el)return;setShowLeft(el.scrollLeft>8);setShowRight(el.scrollLeft<el.scrollWidth-el.clientWidth-8);},[]);
-  useEffect(()=>{const el=rowRef.current;if(!el)return;updateArrows();el.addEventListener("scroll",updateArrows,{passive:true});const ro=new ResizeObserver(updateArrows);ro.observe(el);return()=>{el.removeEventListener("scroll",updateArrows);ro.disconnect();};},[updateArrows,products]);
+  const handleScroll=useCallback(()=>{
+    updateArrows();
+    const el=rowRef.current;if(!el)return;
+    if(stopTimer.current)clearTimeout(stopTimer.current);
+    stopTimer.current=setTimeout(()=>{
+      const max=el.scrollWidth-el.clientWidth;
+      if(max<=4)return;
+      if(el.scrollLeft<=1){
+        setBounce("left");
+        if(bounceTimer.current)clearTimeout(bounceTimer.current);
+        bounceTimer.current=setTimeout(()=>setBounce(null),520);
+      }else if(el.scrollLeft>=max-1){
+        setBounce("right");
+        if(bounceTimer.current)clearTimeout(bounceTimer.current);
+        bounceTimer.current=setTimeout(()=>setBounce(null),520);
+      }
+    },140);
+  },[updateArrows]);
+  useEffect(()=>{const el=rowRef.current;if(!el)return;updateArrows();el.addEventListener("scroll",handleScroll,{passive:true});const ro=new ResizeObserver(updateArrows);ro.observe(el);return()=>{el.removeEventListener("scroll",handleScroll);ro.disconnect();if(bounceTimer.current)clearTimeout(bounceTimer.current);if(stopTimer.current)clearTimeout(stopTimer.current);};},[updateArrows,handleScroll,products]);
   const scrollBy=useCallback((dir:number)=>{rowRef.current?.scrollBy({left:dir*320,behavior:"smooth"});},[]);
   const arrowBase:React.CSSProperties={position:"absolute",top:"50%",transform:"translateY(-50%)",zIndex:10,width:34,height:34,borderRadius:"50%",background:"rgba(20,20,20,0.92)",border:"1px solid #2a2a2a",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",backdropFilter:"blur(8px)",boxShadow:"0 2px 12px rgba(0,0,0,0.5)"};
   return(
     <div className="hr-wrap" style={{position:"relative"}}>
       <button onClick={()=>scrollBy(-1)} className={`hr-arrow${showLeft?" hr-arrow-visible":""}`} style={{...arrowBase,left:-4}} aria-label="Anterior"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
       <button onClick={()=>scrollBy(1)} className={`hr-arrow${showRight?" hr-arrow-visible":""}`} style={{...arrowBase,right:-4}} aria-label="Siguiente"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
-      <div ref={rowRef} className="hr" style={{display:"flex",gap:"0.75rem",overflowX:"scroll",overflowY:"hidden",paddingBottom:"0.5rem",paddingLeft:"0.25rem",paddingRight:"1rem",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",touchAction:"pan-x pan-y",userSelect:"none",WebkitUserSelect:"none",scrollSnapType:"x proximity"} as React.CSSProperties}>
+      <div ref={rowRef} className="hr" style={{display:"flex",gap:"0.75rem",overflowX:"scroll",overflowY:"hidden",paddingBottom:"0.5rem",paddingLeft:"0.25rem",paddingRight:"1rem",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",touchAction:"pan-x pan-y",userSelect:"none",WebkitUserSelect:"none",scrollSnapType:"x proximity",animation:bounce==="right"?"railBounceRight 0.5s cubic-bezier(0.22,1,0.36,1)":bounce==="left"?"railBounceLeft 0.5s cubic-bezier(0.22,1,0.36,1)":"none"} as React.CSSProperties}>
         {products.map(p=>(<div key={p.id} style={{scrollSnapAlign:"start",flexShrink:0}}><HCard product={p} onClick={()=>onSelect(p)} onBuyNow={()=>onBuyNow(p)} fmtPrice={fmtPrice} isFav={isFavorite?isFavorite(p.id):false} onToggleFavorite={onToggleFavorite}/></div>))}
       </div>
     </div>
@@ -3473,16 +3525,7 @@ const filteredComments=useMemo(()=>{
                     </div>
                     <div className="cg" style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:"0.75rem"}}>
                       {homeCats.map((c,i)=>(
-                        <div key={c.key} className="pc" onClick={()=>{setShopFilter(c.key as ShopFilter);setLentesOpen(c.key.startsWith("LENTES·"));setMainView("shop");}} style={{cursor:"pointer",position:"relative",borderRadius:16,overflow:"hidden",aspectRatio:"3/4",background:"#111",animation:"slideUp 0.45s ease both",animationDelay:`${i*0.05}s`,WebkitTapHighlightColor:"transparent"}}>
-                          <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={c.img as string} alt={c.label}/></div>
-                          <div className="io" style={{position:"absolute",inset:0}}/>
-                          <div style={{position:"absolute",inset:0,background:"linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.05) 55%, transparent 100%)",pointerEvents:"none"}}/>
-                          <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"0.9rem"}}>
-                            <p style={{margin:"0 0 3px",fontSize:8,fontWeight:800,letterSpacing:2,color:"rgba(255,255,255,0.45)"}}>COLECCIÓN</p>
-                            <h3 style={{margin:"0 0 5px",fontSize:15,fontWeight:900,color:"#fff",letterSpacing:0.3}}>{c.label}</h3>
-                            <span style={{fontSize:8,fontWeight:800,letterSpacing:1,color:"#fff",borderBottom:"1px solid rgba(255,255,255,0.4)",paddingBottom:2}}>VER →</span>
-                          </div>
-                        </div>
+                        <CollectionCard key={c.key} cat={{key:c.key,label:c.label,img:c.img as string}} index={i} onClick={()=>{setShopFilter(c.key as ShopFilter);setLentesOpen(c.key.startsWith("LENTES·"));setMainView("shop");}}/>
                       ))}
                     </div>
                   </div>
