@@ -490,6 +490,7 @@ const GLOBAL_CSS = `
   @keyframes badgeShimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
   @keyframes railBounceRight { 0%{transform:translateX(0)} 35%{transform:translateX(-16px)} 65%{transform:translateX(5px)} 100%{transform:translateX(0)} }
   @keyframes railBounceLeft { 0%{transform:translateX(0)} 35%{transform:translateX(16px)} 65%{transform:translateX(-5px)} 100%{transform:translateX(0)} }
+  @keyframes cardSweep { 0%{transform:translateX(-260%) skewX(-14deg);opacity:0} 18%{opacity:1} 100%{transform:translateX(360%) skewX(-14deg);opacity:0} }
   @keyframes viewIn { 0%{opacity:0;} 100%{opacity:1;} }
   .pv { animation: viewIn 0.15s ease-out both; will-change: opacity; }
 
@@ -889,31 +890,69 @@ const HCard=memo(function HCard({product,onClick,onBuyNow,fmtPrice,isFav,onToggl
   );
 });
 
-// ─── COLLECTION CARD (REVEAL AL SCROLL) ───────────────────────────────────────
+// ─── COLLECTION CARD (REVEAL RÁPIDO, RETRIGGER BIDIRECCIONAL) ─────────────────
 const CollectionCard=memo(function CollectionCard({cat,onClick,index}:{cat:{key:string;label:string;img:string};onClick:()=>void;index:number}){
   const[vis,setVis]=useState(false);
+  const[cycle,setCycle]=useState(0);
+  const wasVis=useRef(false);
   const ref=useRef<HTMLDivElement>(null);
   useEffect(()=>{
     const el=ref.current;
     if(!el)return;
     const obs=new IntersectionObserver(([entry])=>{
-      if(entry.isIntersecting){setVis(true);obs.disconnect();}
-    },{rootMargin:"0px 0px -60px 0px",threshold:0.15});
+      const now=entry.isIntersecting;
+      setVis(now);
+      if(now&&!wasVis.current)setCycle(c=>c+1);
+      wasVis.current=now;
+    },{rootMargin:"-10% 0px -10% 0px",threshold:0.01});
     obs.observe(el);
     return()=>obs.disconnect();
   },[]);
-  const delay=Math.min(index*80,320);
+  const delay=Math.min(index*35,180);
   return(
-    <div ref={ref} className="pc" onClick={onClick} style={{cursor:"pointer",position:"relative",borderRadius:16,overflow:"hidden",aspectRatio:"3/4",background:"#111",WebkitTapHighlightColor:"transparent",opacity:vis?1:0,filter:vis?"blur(0px)":"blur(6px)",transform:vis?"translateY(0) scale(1)":"translateY(38px) scale(0.94)",transition:`opacity 0.7s cubic-bezier(0.22,1,0.36,1) ${delay}ms, filter 0.7s ease ${delay}ms, transform 0.7s cubic-bezier(0.22,1,0.36,1) ${delay}ms`}}>
+    <div ref={ref} className="pc" onClick={onClick} style={{cursor:"pointer",position:"relative",borderRadius:16,overflow:"hidden",aspectRatio:"3/4",background:"#111",WebkitTapHighlightColor:"transparent",opacity:vis?1:0,transform:vis?"translateY(0) scale(1)":"translateY(20px) scale(0.96)",transition:`opacity 0.32s cubic-bezier(0.16,1,0.3,1) ${delay}ms, transform 0.36s cubic-bezier(0.16,1,0.3,1) ${delay}ms`,willChange:"transform,opacity"}}>
       <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={cat.img} alt={cat.label}/></div>
       <div className="io" style={{position:"absolute",inset:0}}/>
       <div style={{position:"absolute",inset:0,background:"linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.05) 55%, transparent 100%)",pointerEvents:"none"}}/>
-      <div style={{position:"absolute",top:0,left:0,right:0,height:1,background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.25),transparent)",opacity:vis?1:0,transition:`opacity 0.9s ease ${delay+220}ms`,pointerEvents:"none"}}/>
+      {vis&&<div key={cycle} style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden"}}><div style={{position:"absolute",top:0,left:0,width:"38%",height:"100%",background:"linear-gradient(115deg,transparent 0%,rgba(255,255,255,0.32) 50%,transparent 100%)",animation:`cardSweep 0.65s cubic-bezier(0.16,1,0.3,1) ${delay+60}ms both`}}/></div>}
       <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"0.9rem"}}>
         <p style={{margin:"0 0 3px",fontSize:8,fontWeight:800,letterSpacing:2,color:"rgba(255,255,255,0.45)"}}>COLECCIÓN</p>
         <h3 style={{margin:"0 0 5px",fontSize:15,fontWeight:900,color:"#fff",letterSpacing:0.3}}>{cat.label}</h3>
         <span style={{fontSize:8,fontWeight:800,letterSpacing:1,color:"#fff",borderBottom:"1px solid rgba(255,255,255,0.4)",paddingBottom:2}}>VER →</span>
       </div>
+    </div>
+  );
+});
+
+// ─── ICON ORB (CIRCULITOS DE ACCESORIOS, MISMO REVEAL) ────────────────────────
+const IconOrb=memo(function IconOrb({img,label,onClick,index}:{img:string;label:string;onClick:()=>void;index:number}){
+  const[vis,setVis]=useState(false);
+  const[cycle,setCycle]=useState(0);
+  const wasVis=useRef(false);
+  const ref=useRef<HTMLDivElement>(null);
+  useEffect(()=>{
+    const el=ref.current;
+    if(!el)return;
+    const obs=new IntersectionObserver(([entry])=>{
+      const now=entry.isIntersecting;
+      setVis(now);
+      if(now&&!wasVis.current)setCycle(c=>c+1);
+      wasVis.current=now;
+    },{rootMargin:"-8% 0px -8% 0px",threshold:0.01});
+    obs.observe(el);
+    return()=>obs.disconnect();
+  },[]);
+  const delay=Math.min(index*30,160);
+  return(
+    <div ref={ref} style={{flexShrink:0,opacity:vis?1:0,transform:vis?"translateY(0) scale(1)":"translateY(14px) scale(0.85)",transition:`opacity 0.3s cubic-bezier(0.16,1,0.3,1) ${delay}ms, transform 0.34s cubic-bezier(0.16,1,0.3,1) ${delay}ms`,willChange:"transform,opacity"}}>
+      <button onClick={onClick} style={{background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:8,fontFamily:"inherit",WebkitTapHighlightColor:"transparent",width:66}}>
+        <div className="pc" style={{width:64,height:64,borderRadius:"50%",overflow:"hidden",position:"relative",background:"#111",boxShadow:"0 0 0 1px rgba(255,255,255,0.16), 0 0 0 4px rgba(255,255,255,0.035), 0 10px 26px rgba(0,0,0,0.55)"}}>
+          <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={img} alt={label}/></div>
+          <div className="io" style={{position:"absolute",inset:0}}/>
+          {vis&&<div key={cycle} style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden",borderRadius:"50%"}}><div style={{position:"absolute",top:0,left:0,width:"45%",height:"100%",background:"linear-gradient(115deg,transparent 0%,rgba(255,255,255,0.4) 50%,transparent 100%)",animation:`cardSweep 0.6s cubic-bezier(0.16,1,0.3,1) ${delay+50}ms both`}}/></div>}
+        </div>
+        <span style={{fontSize:8,fontWeight:800,letterSpacing:0.8,color:"#666",whiteSpace:"nowrap"}}>{label.toUpperCase()}</span>
+      </button>
     </div>
   );
 });
@@ -3482,15 +3521,9 @@ const filteredComments=useMemo(()=>{
               ].map(c=>({...c,img:products.find(p=>p.category===c.key&&p.active!==false)?.img})).filter(c=>!!c.img);
               if(!navCats.length)return null;
               return(
-                <div className="ts home-collections-row" style={{display:"flex",gap:"1.35rem",overflowX:"auto",justifyContent:"flex-start",padding:"0 0.25rem 0.35rem",marginBottom:"2.25rem",WebkitOverflowScrolling:"touch"}}>
+                <div className="ts home-collections-row" style={{display:"flex",gap:"1.1rem",overflowX:"auto",justifyContent:"flex-start",padding:"0 0.25rem 0.35rem",marginBottom:"2.25rem",WebkitOverflowScrolling:"touch"}}>
                   {navCats.map((c,i)=>(
-                    <button key={c.key} onClick={()=>{setShopFilter(c.key as ShopFilter);setLentesOpen(c.key.startsWith("LENTES·"));setMainView("shop");}} style={{flexShrink:0,background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:8,fontFamily:"inherit",WebkitTapHighlightColor:"transparent",animation:"scaleIn 0.4s ease both",animationDelay:`${i*0.05}s`,width:66}}>
-                      <div className="pc" style={{width:64,height:64,borderRadius:"50%",overflow:"hidden",position:"relative",background:"#111",boxShadow:"0 0 0 1px rgba(255,255,255,0.16), 0 0 0 4px rgba(255,255,255,0.035), 0 10px 26px rgba(0,0,0,0.55)"}}>
-                        <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={c.img as string} alt={c.label}/></div>
-                        <div className="io" style={{position:"absolute",inset:0}}/>
-                      </div>
-                      <span style={{fontSize:8,fontWeight:800,letterSpacing:0.8,color:"#666",whiteSpace:"nowrap"}}>{c.label.toUpperCase()}</span>
-                    </button>
+                    <IconOrb key={c.key} img={c.img as string} label={c.label} index={i} onClick={()=>{setShopFilter(c.key as ShopFilter);setLentesOpen(c.key.startsWith("LENTES·"));setMainView("shop");}}/>
                   ))}
                 </div>
               );
