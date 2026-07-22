@@ -3383,36 +3383,47 @@ const filteredComments=useMemo(()=>{
                 textTransform:"uppercase" as const,
                 position:"relative",
                 whiteSpace:"nowrap",
-              }}>ACCESORIOS PARA CABALLERO</span>
+              }}>ACCESORIOS EXCLUSIVOS PARA CABALLERO</span>
             </div>
 
-            <h1 className="fokus-logo" style={{fontSize:46,marginBottom:"0.85rem",color:C.accent,lineHeight:1}}>FOKUS</h1>
-            <p style={{fontSize:14,color:"#444",lineHeight:1.7,maxWidth:300,margin:"0 auto 1rem"}}>Cada detalle +<br/>Calidad, diseño y actitud.</p>
+            <div style={{position:"relative",display:"inline-block",marginBottom:"0.5rem"}}>
+              <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:280,height:140,background:"radial-gradient(circle, rgba(255,255,255,0.10) 0%, transparent 70%)",pointerEvents:"none",filter:"blur(6px)"}}/>
+              <h1 className="fokus-logo" style={{position:"relative",fontSize:50,margin:0,color:C.accent,lineHeight:1,textShadow:"0 0 44px rgba(255,255,255,0.16)"}}>FOKUS</h1>
+            </div>
+            <div style={{width:38,height:1,background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.4),transparent)",margin:"0.9rem auto 1.15rem"}}/>
+            <p style={{fontSize:13,color:"#777",lineHeight:1.6,maxWidth:270,margin:"0 auto 1.75rem",fontWeight:600,letterSpacing:0.4}}>La experiencia de compra en accesorios más exclusiva de Venezuela.</p>
             {(()=>{
               const navCats=[
                 {key:"RELOJES",label:"Relojes"},
                 {key:"LENTES·SOL",label:"Sol"},
                 {key:"LENTES·ANTI-LUZ-AZUL",label:"Anti Luz"},
+                {key:"LENTES·FOTOCROMATICOS",label:"Fotocromáticos"},
                 {key:"LENTES·MOTORIZADOS",label:"Moto"},
                 {key:"PULSERAS",label:"Pulseras"},
                 {key:"COLLARES",label:"Collares"},
+                {key:"ANILLOS",label:"Anillos"},
+                {key:"ARETES",label:"Aretes"},
+                {key:"BILLETERAS",label:"Billeteras"},
               ].map(c=>({...c,img:products.find(p=>p.category===c.key&&p.active!==false)?.img})).filter(c=>!!c.img);
               if(!navCats.length)return null;
               return(
-                <div className="ts" style={{display:"flex",gap:"1rem",overflowX:"auto",justifyContent:navCats.length<=5?"center":"flex-start",padding:"0 0.25rem 0.35rem",marginBottom:"1.5rem",WebkitOverflowScrolling:"touch"}}>
+                <div style={{display:"flex",flexWrap:"wrap",gap:"1.5rem",justifyContent:"center",padding:"0 0.5rem",marginBottom:"2.25rem",maxWidth:640,marginLeft:"auto",marginRight:"auto"}}>
                   {navCats.map((c,i)=>(
-                    <button key={c.key} onClick={()=>{setShopFilter(c.key as ShopFilter);setLentesOpen(c.key.startsWith("LENTES·"));setMainView("shop");}} style={{flexShrink:0,background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:6,fontFamily:"inherit",WebkitTapHighlightColor:"transparent",animation:"scaleIn 0.4s ease both",animationDelay:`${i*0.06}s`}}>
-                      <div className="pc" style={{width:56,height:56,borderRadius:"50%",overflow:"hidden",border:"1px solid rgba(255,255,255,0.14)",background:"#111",position:"relative"}}>
+                    <button key={c.key} onClick={()=>{setShopFilter(c.key as ShopFilter);setLentesOpen(c.key.startsWith("LENTES·"));setMainView("shop");}} style={{flexShrink:0,background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:8,fontFamily:"inherit",WebkitTapHighlightColor:"transparent",animation:"scaleIn 0.4s ease both",animationDelay:`${i*0.05}s`,width:66}}>
+                      <div className="pc" style={{width:64,height:64,borderRadius:"50%",overflow:"hidden",position:"relative",background:"#111",boxShadow:"0 0 0 1px rgba(255,255,255,0.16), 0 0 0 4px rgba(255,255,255,0.035), 0 10px 26px rgba(0,0,0,0.55)"}}>
                         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={c.img as string} alt={c.label}/></div>
                         <div className="io" style={{position:"absolute",inset:0}}/>
                       </div>
-                      <span style={{fontSize:8,fontWeight:800,letterSpacing:0.8,color:"#555",whiteSpace:"nowrap"}}>{c.label.toUpperCase()}</span>
+                      <span style={{fontSize:8,fontWeight:800,letterSpacing:0.8,color:"#666",whiteSpace:"nowrap"}}>{c.label.toUpperCase()}</span>
                     </button>
                   ))}
                 </div>
               );
             })()}
-            <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={{...S.darkBtn,fontSize:11,padding:"1.1rem 2.8rem",letterSpacing:3,borderRadius:3,marginBottom:"2rem"}}>VER COLECCIÓN →</button>
+            <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={{position:"relative",overflow:"hidden",background:"linear-gradient(180deg,#ffffff 0%,#e9e9e9 100%)",color:"#080808",border:"none",fontSize:11,fontWeight:900,letterSpacing:3,padding:"1.15rem 2.9rem",borderRadius:4,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",boxShadow:"0 10px 30px rgba(255,255,255,0.12), inset 0 1px 0 rgba(255,255,255,0.9)",marginBottom:"2rem"}}>
+              <span style={{position:"absolute",inset:0,background:"linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.55) 50%,transparent 100%)",backgroundSize:"200% 100%",animation:"badgeShimmer 2.8s ease infinite",pointerEvents:"none",mixBlendMode:"overlay" as any}}/>
+              <span style={{position:"relative"}}>VER COLECCIÓN →</span>
+            </button>
           </div>
           {(()=>{
             const homeCats=[
