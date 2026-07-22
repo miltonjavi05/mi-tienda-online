@@ -824,15 +824,12 @@ const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,index,fmtP
     obs.observe(el);
     return()=>obs.disconnect();
   },[]);
-  const revealDelay=Math.min(index*35,180);
-  const fromSide=index%2===0?-50:50;
-  const fromRot=index%2===0?-2:2;
+  const revealDelay=Math.min(index*22,110);
   return(
-    <div ref={revealRef} className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:vis?1:0,transform:vis?"translateX(0) translateY(0) scale(1) rotate(0deg)":`translateX(${fromSide}px) translateY(28px) scale(0.92) rotate(${fromRot}deg)`,filter:vis?"blur(0px)":"blur(6px)",transition:`opacity 0.6s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, transform 0.65s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, filter 0.6s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms`,willChange:"transform,opacity,filter"}}>
+    <div ref={revealRef} className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:vis?1:0,transform:vis?"translateY(0) scale(1)":"translateY(10px) scale(0.98)",transition:`opacity 0.3s cubic-bezier(0.16,1,0.3,1) ${revealDelay}ms, transform 0.3s cubic-bezier(0.16,1,0.3,1) ${revealDelay}ms`,willChange:"transform,opacity"}}>
       <div onClick={onClick} style={{background:"#111",aspectRatio:"1",overflow:"hidden",borderRadius:10,position:"relative",marginBottom:"0.55rem"}}>
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
-        {vis&&<div key={cycle} style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden"}}><div style={{position:"absolute",top:0,left:0,width:"55%",height:"100%",background:"linear-gradient(120deg,transparent 0%,rgba(255,255,255,0.14) 45%,rgba(255,255,255,0.04) 55%,transparent 100%)",filter:"blur(1.5px)",animation:`cardSweep 1s cubic-bezier(0.19,1,0.22,1) ${revealDelay+80}ms both`}}/></div>}
         {!!product.discount&&product.discount>0&&<DiscountBadge percent={product.discount} issuper={isSuperOffer(product.discount)}/>}
         {product.bestseller&&<BestsellerBadge/>}
         {getAllImages(product).length>1&&<GalleryBadge/>}
@@ -882,13 +879,12 @@ const HCard=memo(function HCard({product,onClick,onBuyNow,index,fmtPrice,isFav,o
     obs.observe(el);
     return()=>obs.disconnect();
   },[]);
-  const revealDelay=Math.min((index??0)*30,160);
+  const revealDelay=Math.min((index??0)*18,90);
   return(
-    <div ref={revealRef} className="hc" style={{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:vis?1:0,transform:vis?"translateY(0) scale(1)":"translateY(18px) scale(0.88)",filter:vis?"blur(0px)":"blur(5px)",transition:`opacity 0.5s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, transform 0.55s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, filter 0.5s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms`,willChange:"transform,opacity,filter"}}>
+    <div ref={revealRef} className="hc" style={{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:vis?1:0,transform:vis?"translateY(0) scale(1)":"translateY(8px) scale(0.99)",transition:`opacity 0.26s cubic-bezier(0.16,1,0.3,1) ${revealDelay}ms, transform 0.26s cubic-bezier(0.16,1,0.3,1) ${revealDelay}ms`,willChange:"transform,opacity"}}>
       <div onClick={onClick} style={{background:"#111",width:152,height:152,overflow:"hidden",marginBottom:"0.55rem",borderRadius:10,position:"relative",cursor:"pointer"}}>
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
-        {vis&&<div key={cycle} style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden",borderRadius:10}}><div style={{position:"absolute",top:0,left:0,width:"55%",height:"100%",background:"linear-gradient(120deg,transparent 0%,rgba(255,255,255,0.14) 45%,rgba(255,255,255,0.04) 55%,transparent 100%)",filter:"blur(1.5px)",animation:`cardSweep 1s cubic-bezier(0.19,1,0.22,1) ${revealDelay+80}ms both`}}/></div>}
         {!!product.discount&&product.discount>0&&<DiscountBadge percent={product.discount} issuper={isSuperOffer(product.discount)}/>}
         {product.bestseller&&<BestsellerBadge/>}
         {getAllImages(product).length>1&&<GalleryBadge/>}
