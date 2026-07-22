@@ -3523,7 +3523,7 @@ const filteredComments=useMemo(()=>{
               ].map(c=>({...c,img:products.find(p=>p.category===c.key&&p.active!==false)?.img})).filter(c=>!!c.img);
               if(!navCats.length)return null;
               return(
-                <div className="ts home-collections-row" style={{display:"flex",gap:"1.1rem",overflowX:"auto",overflowY:"hidden",justifyContent:"flex-start",padding:"0.4rem 1.75rem 0.75rem 0.25rem",marginBottom:"2.25rem",WebkitOverflowScrolling:"touch",touchAction:"pan-x",overscrollBehaviorX:"contain",overscrollBehaviorY:"none",WebkitTapHighlightColor:"transparent",outline:"none",background:"transparent"} as React.CSSProperties}>
+                <div className="ts home-collections-row" style={{display:"flex",gap:"1.1rem",overflowX:"auto",overflowY:"hidden",justifyContent:"flex-start",padding:"0.4rem 1.75rem 0.75rem 0.25rem",marginBottom:"2.25rem",WebkitOverflowScrolling:"touch",touchAction:"pan-x pan-y",overscrollBehaviorX:"contain",overscrollBehaviorY:"none",WebkitTapHighlightColor:"transparent",outline:"none",background:"transparent"} as React.CSSProperties}>
                   {navCats.map((c,i)=>(
                     <IconOrb key={c.key} img={c.img as string} label={c.label} index={i} onClick={()=>{setShopFilter(c.key as ShopFilter);setLentesOpen(c.key.startsWith("LENTES·"));setMainView("shop");}}/>
                   ))}
