@@ -187,9 +187,9 @@ function getCookie(name: string): string {
 }
 function getFbcFromUrl(): string {
   if (typeof window === "undefined") return "";
-  const params = new URLSearchParams(window.location.search);
-  const fbclid = params.get("fbclid");
-  if (!fbclid) return "";
+  const match = window.location.search.match(/[?&]fbclid=([^&]+)/);
+  if (!match) return "";
+  const fbclid = match[1];
   return `fb.1.${Date.now()}.${fbclid}`;
 }
 async function trackViewContent(product: Product, userEmail?: string): Promise<void> {
