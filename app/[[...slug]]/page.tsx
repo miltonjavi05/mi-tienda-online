@@ -807,12 +807,32 @@ const NativeTabs=memo(function NativeTabs({items,active,onSelect,renderItem,heig
 });
 
 // ─── PRODUCT CARD (GRID) ──────────────────────────────────────────────────────
-const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,fmtPrice,isFav,onToggleFavorite}:{product:Product;onClick:()=>void;onBuyNow:()=>void;index:number;fmtPrice:(n:number)=>string;isFav?:boolean;onToggleFavorite?:(id:string)=>void}){
+const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,index,fmtPrice,isFav,onToggleFavorite}:{product:Product;onClick:()=>void;onBuyNow:()=>void;index:number;fmtPrice:(n:number)=>string;isFav?:boolean;onToggleFavorite?:(id:string)=>void}){
+  const[vis,setVis]=useState(false);
+  const[cycle,setCycle]=useState(0);
+  const wasVis=useRef(false);
+  const revealRef=useRef<HTMLDivElement>(null);
+  useEffect(()=>{
+    const el=revealRef.current;
+    if(!el)return;
+    const obs=new IntersectionObserver(([entry])=>{
+      const now=entry.isIntersecting;
+      setVis(now);
+      if(now&&!wasVis.current)setCycle(c=>c+1);
+      wasVis.current=now;
+    },{rootMargin:"-6% 0px -6% 0px",threshold:0.01});
+    obs.observe(el);
+    return()=>obs.disconnect();
+  },[]);
+  const revealDelay=Math.min(index*35,180);
+  const fromSide=index%2===0?-50:50;
+  const fromRot=index%2===0?-2:2;
   return(
-    <div className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column"}}>
+    <div ref={revealRef} className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:vis?1:0,transform:vis?"translateX(0) translateY(0) scale(1) rotate(0deg)":`translateX(${fromSide}px) translateY(28px) scale(0.92) rotate(${fromRot}deg)`,filter:vis?"blur(0px)":"blur(6px)",transition:`opacity 0.6s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, transform 0.65s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, filter 0.6s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms`,willChange:"transform,opacity,filter"}}>
       <div onClick={onClick} style={{background:"#111",aspectRatio:"1",overflow:"hidden",borderRadius:10,position:"relative",marginBottom:"0.55rem"}}>
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
+        {vis&&<div key={cycle} style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden"}}><div style={{position:"absolute",top:0,left:0,width:"55%",height:"100%",background:"linear-gradient(120deg,transparent 0%,rgba(255,255,255,0.14) 45%,rgba(255,255,255,0.04) 55%,transparent 100%)",filter:"blur(1.5px)",animation:`cardSweep 1s cubic-bezier(0.19,1,0.22,1) ${revealDelay+80}ms both`}}/></div>}
         {!!product.discount&&product.discount>0&&<DiscountBadge percent={product.discount} issuper={isSuperOffer(product.discount)}/>}
         {product.bestseller&&<BestsellerBadge/>}
         {getAllImages(product).length>1&&<GalleryBadge/>}
@@ -845,12 +865,30 @@ const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,fmtPrice,i
 });
 
 // ─── HORIZONTAL CARD ─────────────────────────────────────────────────────────
-const HCard=memo(function HCard({product,onClick,onBuyNow,fmtPrice,isFav,onToggleFavorite}:{product:Product;onClick:()=>void;onBuyNow:()=>void;fmtPrice:(n:number)=>string;isFav?:boolean;onToggleFavorite?:(id:string)=>void}){
+const HCard=memo(function HCard({product,onClick,onBuyNow,index,fmtPrice,isFav,onToggleFavorite}:{product:Product;onClick:()=>void;onBuyNow:()=>void;index?:number;fmtPrice:(n:number)=>string;isFav?:boolean;onToggleFavorite?:(id:string)=>void}){
+  const[vis,setVis]=useState(false);
+  const[cycle,setCycle]=useState(0);
+  const wasVis=useRef(false);
+  const revealRef=useRef<HTMLDivElement>(null);
+  useEffect(()=>{
+    const el=revealRef.current;
+    if(!el)return;
+    const obs=new IntersectionObserver(([entry])=>{
+      const now=entry.isIntersecting;
+      setVis(now);
+      if(now&&!wasVis.current)setCycle(c=>c+1);
+      wasVis.current=now;
+    },{rootMargin:"-8% 0px -8% 0px",threshold:0.01});
+    obs.observe(el);
+    return()=>obs.disconnect();
+  },[]);
+  const revealDelay=Math.min((index??0)*30,160);
   return(
-    <div className="hc" style={{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column"}}>
+    <div ref={revealRef} className="hc" style={{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:vis?1:0,transform:vis?"translateY(0) scale(1)":"translateY(18px) scale(0.88)",filter:vis?"blur(0px)":"blur(5px)",transition:`opacity 0.5s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, transform 0.55s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, filter 0.5s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms`,willChange:"transform,opacity,filter"}}>
       <div onClick={onClick} style={{background:"#111",width:152,height:152,overflow:"hidden",marginBottom:"0.55rem",borderRadius:10,position:"relative",cursor:"pointer"}}>
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
+        {vis&&<div key={cycle} style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden",borderRadius:10}}><div style={{position:"absolute",top:0,left:0,width:"55%",height:"100%",background:"linear-gradient(120deg,transparent 0%,rgba(255,255,255,0.14) 45%,rgba(255,255,255,0.04) 55%,transparent 100%)",filter:"blur(1.5px)",animation:`cardSweep 1s cubic-bezier(0.19,1,0.22,1) ${revealDelay+80}ms both`}}/></div>}
         {!!product.discount&&product.discount>0&&<DiscountBadge percent={product.discount} issuper={isSuperOffer(product.discount)}/>}
         {product.bestseller&&<BestsellerBadge/>}
         {getAllImages(product).length>1&&<GalleryBadge/>}
@@ -994,7 +1032,7 @@ const HRow=memo(function HRow({products,onSelect,onBuyNow,fmtPrice,isFavorite,on
       <button onClick={()=>scrollBy(-1)} className={`hr-arrow${showLeft?" hr-arrow-visible":""}`} style={{...arrowBase,left:-4}} aria-label="Anterior"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
       <button onClick={()=>scrollBy(1)} className={`hr-arrow${showRight?" hr-arrow-visible":""}`} style={{...arrowBase,right:-4}} aria-label="Siguiente"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
       <div ref={rowRef} className="hr" style={{display:"flex",gap:"0.75rem",overflowX:"scroll",overflowY:"hidden",paddingBottom:"0.5rem",paddingLeft:"0.25rem",paddingRight:"1rem",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",touchAction:"pan-x pan-y",userSelect:"none",WebkitUserSelect:"none",scrollSnapType:"x proximity",animation:bounce==="right"?"railBounceRight 0.5s cubic-bezier(0.22,1,0.36,1)":bounce==="left"?"railBounceLeft 0.5s cubic-bezier(0.22,1,0.36,1)":"none"} as React.CSSProperties}>
-        {products.map(p=>(<div key={p.id} style={{scrollSnapAlign:"start",flexShrink:0}}><HCard product={p} onClick={()=>onSelect(p)} onBuyNow={()=>onBuyNow(p)} fmtPrice={fmtPrice} isFav={isFavorite?isFavorite(p.id):false} onToggleFavorite={onToggleFavorite}/></div>))}
+        {products.map((p,idx)=>(<div key={p.id} style={{scrollSnapAlign:"start",flexShrink:0}}><HCard product={p} index={idx} onClick={()=>onSelect(p)} onBuyNow={()=>onBuyNow(p)} fmtPrice={fmtPrice} isFav={isFavorite?isFavorite(p.id):false} onToggleFavorite={onToggleFavorite}/></div>))}
       </div>
     </div>
   );
