@@ -588,7 +588,7 @@ const GLOBAL_CSS = `
   /* ── home: adaptado a pantallas grandes ── */
   @media(min-width:900px){
     .home-hero { max-width: 980px !important; padding-top: 3rem !important; padding-left: 2rem !important; padding-right: 2rem !important; }
-    .home-hero img[width="64"] { width: 80px !important; height: 80px !important; }
+    .home-hero .fokus-hero-logo-frame { width: 80px !important; height: 80px !important; }
     .home-hero h1 { font-size: 62px !important; }
     .home-hero p { font-size: 15px !important; }
     .home-collections-row { flex-wrap: wrap !important; overflow-x: visible !important; justify-content: center !important; max-width: 640px !important; margin-left: auto !important; margin-right: auto !important; }
@@ -663,7 +663,7 @@ const FokusLogoHero=memo(function FokusLogoHero(){
         <span aria-hidden="true" style={{position:"absolute",width:76,height:76,borderRadius:"50%",background:"conic-gradient(from 0deg, transparent 0%, rgba(255,255,255,0.9) 8%, transparent 18%, transparent 50%, rgba(255,255,255,0.5) 58%, transparent 68%, transparent 100%)",maskImage:"radial-gradient(circle, transparent 64%, black 65%, black 78%, transparent 79%)",WebkitMaskImage:"radial-gradient(circle, transparent 64%, black 65%, black 78%, transparent 79%)",animation:mounted?"logoIrisSpinReverse 5s linear infinite":"none",pointerEvents:"none"}}/>
         <span aria-hidden="true" style={{position:"absolute",width:88,height:88,borderRadius:"50%",background:"radial-gradient(circle, rgba(255,255,255,0.18) 0%, transparent 68%)",animation:mounted?"logoApertureBreathe 3.2s ease-in-out infinite":"none",pointerEvents:"none"}}/>
         {burst>0&&<span key={burst} aria-hidden="true" style={{position:"absolute",width:64,height:64,borderRadius:"50%",border:"1px solid rgba(255,255,255,0.55)",animation:"logoFocusBurst 0.6s cubic-bezier(0.16,1,0.3,1) both",pointerEvents:"none"}}/>}
-        <span style={{position:"relative",width:64,height:64,borderRadius:"50%",overflow:"hidden",display:"block",transform:burst>0?"scale(1.1)":"scale(1)",transition:"transform 0.45s cubic-bezier(0.34,1.56,0.64,1)"}}>
+        <span className="fokus-hero-logo-frame" style={{position:"relative",width:64,height:64,borderRadius:"50%",overflow:"hidden",display:"block",transform:burst>0?"scale(1.1)":"scale(1)",transition:"transform 0.45s cubic-bezier(0.34,1.56,0.64,1)"}}>
           <img className="fokus-logo-img" src="/favicon.png" alt="Fokus" width={64} height={64} style={{objectFit:"contain",filter:"brightness(1.1)",pointerEvents:"none",width:"100%",height:"100%",display:"block",transition:"transform 0.35s ease"}} draggable={false}/>
         </span>
       </button>
@@ -858,14 +858,15 @@ const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,index,fmtP
   useEffect(()=>{
     const el=revealRef.current;
     if(!el)return;
-    const obs=new IntersectionObserver(([entry])=>{setRatio(entry.intersectionRatio);},{threshold:[0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1],rootMargin:"-4% 0px -4% 0px"});
+    const obs=new IntersectionObserver(([entry])=>{setRatio(entry.intersectionRatio);},{threshold:[0,0.05,0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.45,0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95,1],rootMargin:"-38% 0px -38% 0px"});
     obs.observe(el);
     return()=>obs.disconnect();
   },[]);
-  const premiumScale=0.9+ratio*0.1;
-  const premiumY=(1-ratio)*16;
+  const premiumScale=1+ratio*0.34;
+  const premiumY=-ratio*8;
+  const isSpotlight=ratio>0.5;
   return(
-    <div ref={revealRef} className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:1,filter:"none",transform:`translateY(${premiumY}px) scale(${premiumScale})`,transition:"transform 0.22s cubic-bezier(0.34,1.56,0.64,1)",willChange:"transform"}}>
+    <div ref={revealRef} className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:1,transform:`translateY(${premiumY}px) scale(${premiumScale})`,transformOrigin:"center center",zIndex:isSpotlight?5:1,filter:isSpotlight?"drop-shadow(0 20px 36px rgba(255,255,255,0.14))":"none",transition:"transform 0.3s cubic-bezier(0.22,1,0.36,1), filter 0.3s ease",willChange:"transform"}}>
       <div onClick={onClick} style={{background:"#111",aspectRatio:"1",overflow:"hidden",borderRadius:10,position:"relative",marginBottom:"0.55rem"}}>
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
