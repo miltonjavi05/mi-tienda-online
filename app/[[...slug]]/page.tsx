@@ -828,7 +828,7 @@ const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,index,fmtP
   const fromSide=index%2===0?-50:50;
   const fromRot=index%2===0?-2:2;
   return(
-    <div ref={revealRef} className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:vis?1:0,transform:vis?"translateX(0) translateY(0) scale(1) rotate(0deg)":`translateX(${fromSide}px) translateY(28px) scale(0.92) rotate(${fromRot}deg)`,filter:vis?"blur(0px)":"blur(6px)",transition:`opacity 0.6s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, transform 0.65s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, filter 0.6s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms`,willChange:"transform,opacity,filter"}}>
+    <div ref={revealRef} className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:1,transform:"none",filter:"none"}}>
       <div onClick={onClick} style={{background:"#111",aspectRatio:"1",overflow:"hidden",borderRadius:10,position:"relative",marginBottom:"0.55rem"}}>
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
@@ -884,7 +884,7 @@ const HCard=memo(function HCard({product,onClick,onBuyNow,index,fmtPrice,isFav,o
   },[]);
   const revealDelay=Math.min((index??0)*30,160);
   return(
-    <div ref={revealRef} className="hc" style={{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:vis?1:0,transform:vis?"translateY(0) scale(1)":"translateY(18px) scale(0.88)",filter:vis?"blur(0px)":"blur(5px)",transition:`opacity 0.5s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, transform 0.55s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, filter 0.5s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms`,willChange:"transform,opacity,filter"}}>
+    <div ref={revealRef} className="hc" style={{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:1,transform:"none",filter:"none"}}>
       <div onClick={onClick} style={{background:"#111",width:152,height:152,overflow:"hidden",marginBottom:"0.55rem",borderRadius:10,position:"relative",cursor:"pointer"}}>
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
@@ -951,7 +951,7 @@ const CollectionCard=memo(function CollectionCard({cat,onClick,index}:{cat:{key:
   const fromSide=index%2===0?-64:64;
   const fromRot=index%2===0?-3:3;
   return(
-    <div ref={ref} className="pc" onClick={onClick} style={{cursor:"pointer",position:"relative",borderRadius:16,overflow:"hidden",aspectRatio:"3/4",background:"#111",WebkitTapHighlightColor:"transparent",opacity:vis?1:0,transform:vis?"translateX(0) translateY(0) scale(1) rotate(0deg)":`translateX(${fromSide}px) translateY(34px) scale(0.9) rotate(${fromRot}deg)`,filter:vis?"blur(0px)":"blur(8px)",transition:`opacity 0.65s cubic-bezier(0.19,1,0.22,1) ${delay}ms, transform 0.7s cubic-bezier(0.19,1,0.22,1) ${delay}ms, filter 0.65s cubic-bezier(0.19,1,0.22,1) ${delay}ms`,willChange:"transform,opacity,filter"}}>    <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={cat.img} alt={cat.label}/></div>
+    <div ref={ref} className="pc" onClick={onClick} style={{cursor:"pointer",position:"relative",borderRadius:16,overflow:"hidden",aspectRatio:"3/4",background:"#111",WebkitTapHighlightColor:"transparent",opacity:1,transform:"none",filter:"none"}}>    <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={cat.img} alt={cat.label}/></div>
       <div className="io" style={{position:"absolute",inset:0}}/>
       <div style={{position:"absolute",inset:0,background:"linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.05) 55%, transparent 100%)",pointerEvents:"none"}}/>
       {vis&&<div key={cycle} style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden"}}><div style={{position:"absolute",top:0,left:0,width:"55%",height:"100%",background:"linear-gradient(120deg,transparent 0%,rgba(255,255,255,0.16) 45%,rgba(255,255,255,0.05) 55%,transparent 100%)",filter:"blur(1.5px)",animation:`cardSweep 1.1s cubic-bezier(0.19,1,0.22,1) ${delay+90}ms both`}}/></div>}
@@ -984,7 +984,7 @@ const IconOrb=memo(function IconOrb({img,label,onClick,index}:{img:string;label:
   },[]);
   const delay=Math.min(index*30,160);
   return(
-    <div ref={ref} style={{flexShrink:0,overflow:"visible",opacity:vis?1:0,transform:vis?"translateY(0) scale(1)":"translateY(18px) scale(0.88)",filter:vis?"blur(0px)":"blur(5px)",transition:`opacity 0.5s cubic-bezier(0.19,1,0.22,1) ${delay}ms, transform 0.55s cubic-bezier(0.19,1,0.22,1) ${delay}ms, filter 0.5s cubic-bezier(0.19,1,0.22,1) ${delay}ms`,willChange:"transform,opacity,filter"}}>
+    <div ref={ref} style={{flexShrink:0,overflow:"visible",opacity:1,transform:"none",filter:"none"}}>
       <button onClick={onClick} style={{background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:8,fontFamily:"inherit",WebkitTapHighlightColor:"transparent",outline:"none",width:66,touchAction:"manipulation"}}>
         <div className="pc" style={{width:64,height:64,borderRadius:"50%",overflow:"hidden",position:"relative",background:"#111",boxShadow:"0 0 0 1px rgba(255,255,255,0.16), 0 0 0 4px rgba(255,255,255,0.035), 0 10px 26px rgba(0,0,0,0.55)"}}>
           <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={img} alt={label}/></div>
