@@ -500,6 +500,14 @@ const GLOBAL_CSS = `
   @keyframes viewIn { 0%{opacity:0;} 100%{opacity:1;} }
   .pv { animation: viewIn 0.15s ease-out both; will-change: opacity; }
 
+  @keyframes logoRingBurst { 0%{transform:scale(0.55);opacity:0.9;} 100%{transform:scale(2.1);opacity:0;} }
+  @keyframes logoGlowPulse { 0%,100%{opacity:0.35;transform:scale(0.94);} 50%{opacity:0.85;transform:scale(1.08);} }
+  @keyframes logoShineSweep { 0%,12%{left:-120%;opacity:0;} 20%{opacity:1;} 46%{left:220%;opacity:0;} 100%{left:220%;opacity:0;} }
+  @media(hover:hover) and (pointer:fine){
+    .fokus-logo-btn:hover { filter: drop-shadow(0 0 20px rgba(255,255,255,0.4)); }
+    .fokus-logo-btn:hover img { transform: scale(1.05); }
+  }
+
   /* ── ADMIN CAT SCROLL — rueda de mouse en desktop ── */
   .admin-cat-scroll {
     -webkit-overflow-scrolling: touch;
@@ -627,6 +635,32 @@ const StarRow=memo(function StarRow({value,onChange,size=15}:{value:number;onCha
           <IcStar s={size} filled={n<=value}/>
         </button>
       ))}
+    </div>
+  );
+});
+
+// ─── FOKUS LOGO HERO (INTERACTIVO, ENTRADA ULTRA PREMIUM) ────────────────────
+const FokusLogoHero=memo(function FokusLogoHero(){
+  const[mounted,setMounted]=useState(false);
+  const[burst,setBurst]=useState(0);
+  useEffect(()=>{const t=setTimeout(()=>setMounted(true),40);return()=>clearTimeout(t);},[]);
+  return(
+    <div style={{marginBottom:"1rem",display:"flex",justifyContent:"center"}}>
+      <button
+        onClick={()=>setBurst(b=>b+1)}
+        aria-label="Fokus"
+        className="fokus-logo-btn"
+        style={{position:"relative",background:"none",border:"none",padding:0,cursor:"pointer",width:64,height:64,WebkitTapHighlightColor:"transparent",display:"flex",alignItems:"center",justifyContent:"center",opacity:mounted?1:0,transform:mounted?"scale(1) rotate(0deg)":"scale(0.25) rotate(-32deg)",filter:mounted?"blur(0px)":"blur(10px)",transition:"opacity 0.9s cubic-bezier(0.16,1,0.3,1), transform 1s cubic-bezier(0.16,1,0.3,1), filter 0.9s cubic-bezier(0.16,1,0.3,1)"}}
+      >
+        {mounted&&<span style={{position:"absolute",inset:-10,borderRadius:"50%",border:"1px solid rgba(255,255,255,0.5)",animation:"logoRingBurst 1.1s cubic-bezier(0.16,1,0.3,1) 0.05s both",pointerEvents:"none"}}/>}
+        {mounted&&<span style={{position:"absolute",inset:-10,borderRadius:"50%",border:"1px solid rgba(255,255,255,0.3)",animation:"logoRingBurst 1.1s cubic-bezier(0.16,1,0.3,1) 0.2s both",pointerEvents:"none"}}/>}
+        {burst>0&&<span key={burst} style={{position:"absolute",inset:-14,borderRadius:"50%",border:"1px solid rgba(255,255,255,0.65)",animation:"logoRingBurst 0.6s cubic-bezier(0.16,1,0.3,1) both",pointerEvents:"none"}}/>}
+        <span style={{position:"absolute",inset:-18,borderRadius:"50%",background:"radial-gradient(circle, rgba(255,255,255,0.16) 0%, transparent 70%)",animation:mounted?"logoGlowPulse 3.2s ease-in-out infinite":"none",pointerEvents:"none"}}/>
+        <span style={{position:"relative",width:64,height:64,display:"block",transform:burst>0?"scale(1.12) rotate(4deg)":"scale(1)",transition:"transform 0.45s cubic-bezier(0.34,1.56,0.64,1)",overflow:"hidden",borderRadius:"50%"}}>
+          <img src="/favicon.png" alt="Fokus" width={64} height={64} style={{objectFit:"contain",filter:"brightness(1.1)",pointerEvents:"none",width:"100%",height:"100%",display:"block",transition:"transform 0.3s ease"}} draggable={false}/>
+          <span style={{position:"absolute",top:0,left:"-120%",width:"55%",height:"100%",background:"linear-gradient(115deg,transparent 0%,rgba(255,255,255,0.85) 45%,transparent 100%)",mixBlendMode:"overlay" as any,animation:mounted?"logoShineSweep 3.8s ease-in-out infinite":"none",pointerEvents:"none"}}/>
+        </span>
+      </button>
     </div>
   );
 });
@@ -1683,6 +1717,8 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   useEffect(()=>{const upd=()=>{if(navRef.current)setNavH(navRef.current.offsetHeight);};upd();const ro=new ResizeObserver(upd);if(navRef.current)ro.observe(navRef.current);return()=>ro.disconnect();},[mainView,lentesOpen,searchOpen]);
 
   useEffect(()=>{initMetaPixel();},[]);
+  const[navMounted,setNavMounted]=useState(false);
+  useEffect(()=>{const t=setTimeout(()=>setNavMounted(true),650);return()=>clearTimeout(t);},[]);
   useEffect(()=>{
     if(!currentUser?.uid){setFavorites([]);return;}
     fsGetUser(currentUser.uid).then(d=>setFavorites(d.favorites||[])).catch(()=>{});
@@ -3492,7 +3528,7 @@ const filteredComments=useMemo(()=>{
         </div>
         {!isAdmin&&(
           <NativeTabs items={TABS.map(t=>t.id)} active={mainView} onSelect={id=>{setMainView(id as MainView);if(id==="shop")setShopFilter("TODO");}} height={TABS_H}
-            renderItem={(id,a)=>{const l=TABS.find(t=>t.id===id)?.l??id;return<span className="nb" style={{display:"flex",alignItems:"center",padding:"0 1.4rem",height:"100%",borderBottom:a?"2px solid #fff":"2px solid transparent",fontSize:10,fontWeight:800,letterSpacing:2.5,color:a?"#fff":"#444",whiteSpace:"nowrap",transition:"color 0.15s,border-color 0.15s"}}>{l}</span>;}}/>
+            renderItem={(id,a)=>{const l=TABS.find(t=>t.id===id)?.l??id;const isGrabados=id==="grabados";return<span className="nb" style={{display:"flex",alignItems:"center",padding:"0 1.4rem",height:"100%",borderBottom:a?"2px solid #fff":"2px solid transparent",fontSize:10,fontWeight:800,letterSpacing:2.5,color:a?"#fff":"#444",whiteSpace:"nowrap",transition:isGrabados?"color 0.15s,border-color 0.15s,opacity 0.75s cubic-bezier(0.16,1,0.3,1) 0.1s,transform 0.75s cubic-bezier(0.16,1,0.3,1) 0.1s":"color 0.15s,border-color 0.15s",opacity:isGrabados?(navMounted?1:0):1,transform:isGrabados?(navMounted?"translateY(0)":"translateY(-16px)"):"none"}}>{l}</span>;}}/>
         )}
         {searchOpen&&(
           <div style={{background:"#111",borderTop:`1px solid ${C.border}`,padding:"0.55rem 1rem"}}>
@@ -3550,7 +3586,7 @@ const filteredComments=useMemo(()=>{
       {mainView==="fokus"&&(
         <main className="pv" style={{paddingTop:navH,background:C.bg}}>
           <div className="home-hero" style={{maxWidth:760,margin:"0 auto",padding:"1.25rem 1.5rem 0",textAlign:"center",animation:"slideUp 0.5s ease"}}>
-            <div style={{marginBottom:"1rem"}}><img src="/favicon.png" alt="Fokus" width={64} height={64} style={{objectFit:"contain",filter:"brightness(1.1)",pointerEvents:"none"}} draggable={false}/></div>
+            <FokusLogoHero/>
 
             {/* ── ETIQUETA PREMIUM "ACCESORIOS PARA CABALLERO" ── */}
             <div style={{
