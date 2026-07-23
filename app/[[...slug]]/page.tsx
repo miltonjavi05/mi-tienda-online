@@ -1,4 +1,4 @@
-  "use client";
+ "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
 import { usePathname } from "next/navigation";
@@ -491,7 +491,6 @@ const GLOBAL_CSS = `
   @keyframes badgeShimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
   @keyframes railBounceRight { 0%{transform:translateX(0)} 35%{transform:translateX(-16px)} 65%{transform:translateX(5px)} 100%{transform:translateX(0)} }
   @keyframes railBounceLeft { 0%{transform:translateX(0)} 35%{transform:translateX(16px)} 65%{transform:translateX(-5px)} 100%{transform:translateX(0)} }
-  @keyframes cardBounceIn { 0%{opacity:0;transform:scale(0.4) translateY(46px);} 50%{opacity:1;transform:scale(1.12) translateY(-10px);} 72%{transform:scale(0.94) translateY(4px);} 88%{transform:scale(1.03) translateY(-2px);} 100%{opacity:1;transform:scale(1) translateY(0);} }
   @keyframes cardSweep { 0%{transform:translateX(-140%) skewX(-9deg);opacity:0} 30%{opacity:0.9} 65%{opacity:0.4} 100%{transform:translateX(200%) skewX(-9deg);opacity:0} }
   @keyframes viewIn { 0%{opacity:0;} 100%{opacity:1;} }
   .pv { animation: viewIn 0.15s ease-out both; will-change: opacity; }
@@ -811,27 +810,29 @@ const NativeTabs=memo(function NativeTabs({items,active,onSelect,renderItem,heig
 const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,index,fmtPrice,isFav,onToggleFavorite}:{product:Product;onClick:()=>void;onBuyNow:()=>void;index:number;fmtPrice:(n:number)=>string;isFav?:boolean;onToggleFavorite?:(id:string)=>void}){
   const[vis,setVis]=useState(false);
   const[cycle,setCycle]=useState(0);
+  const wasVis=useRef(false);
   const revealRef=useRef<HTMLDivElement>(null);
   useEffect(()=>{
     const el=revealRef.current;
     if(!el)return;
     const obs=new IntersectionObserver(([entry])=>{
-      if(entry.isIntersecting){
-        setVis(true);
-        setCycle(1);
-        obs.disconnect();
-      }
+      const now=entry.isIntersecting;
+      setVis(now);
+      if(now&&!wasVis.current)setCycle(c=>c+1);
+      wasVis.current=now;
     },{rootMargin:"-6% 0px -6% 0px",threshold:0.01});
     obs.observe(el);
     return()=>obs.disconnect();
   },[]);
-  const bounceDelay=Math.min(index*40,220);
+  const revealDelay=Math.min(index*35,180);
+  const fromSide=index%2===0?-50:50;
+  const fromRot=index%2===0?-2:2;
   return(
-    <div ref={revealRef} className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:vis?1:0,transform:vis?"translateY(0) scale(1)":"translateY(24px) scale(0.9)",filter:vis?"blur(0px)":"blur(6px)",transition:`opacity 0.5s cubic-bezier(0.19,1,0.22,1) ${bounceDelay}ms, transform 0.55s cubic-bezier(0.19,1,0.22,1) ${bounceDelay}ms, filter 0.5s cubic-bezier(0.19,1,0.22,1) ${bounceDelay}ms`,willChange:"transform,opacity,filter"}}>
+    <div ref={revealRef} className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:vis?1:0,transform:vis?"translateX(0) translateY(0) scale(1) rotate(0deg)":`translateX(${fromSide}px) translateY(28px) scale(0.92) rotate(${fromRot}deg)`,filter:vis?"blur(0px)":"blur(6px)",transition:`opacity 0.6s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, transform 0.65s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, filter 0.6s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms`,willChange:"transform,opacity,filter"}}>
       <div onClick={onClick} style={{background:"#111",aspectRatio:"1",overflow:"hidden",borderRadius:10,position:"relative",marginBottom:"0.55rem"}}>
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
-        {vis&&<div key={cycle} style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden",borderRadius:10}}><div style={{position:"absolute",top:0,left:0,width:"60%",height:"100%",background:"linear-gradient(120deg,transparent 0%,rgba(255,255,255,0.22) 45%,rgba(255,255,255,0.06) 55%,transparent 100%)",filter:"blur(1px)",animation:`cardSweep 1s cubic-bezier(0.19,1,0.22,1) ${bounceDelay+70}ms both`}}/></div>}
+        {vis&&<div key={cycle} style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden"}}><div style={{position:"absolute",top:0,left:0,width:"55%",height:"100%",background:"linear-gradient(120deg,transparent 0%,rgba(255,255,255,0.14) 45%,rgba(255,255,255,0.04) 55%,transparent 100%)",filter:"blur(1.5px)",animation:`cardSweep 1s cubic-bezier(0.19,1,0.22,1) ${revealDelay+80}ms both`}}/></div>}
         {!!product.discount&&product.discount>0&&<DiscountBadge percent={product.discount} issuper={isSuperOffer(product.discount)}/>}
         {product.bestseller&&<BestsellerBadge/>}
         {getAllImages(product).length>1&&<GalleryBadge/>}
@@ -867,16 +868,16 @@ const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,index,fmtP
 const HCard=memo(function HCard({product,onClick,onBuyNow,index,fmtPrice,isFav,onToggleFavorite}:{product:Product;onClick:()=>void;onBuyNow:()=>void;index?:number;fmtPrice:(n:number)=>string;isFav?:boolean;onToggleFavorite?:(id:string)=>void}){
   const[vis,setVis]=useState(false);
   const[cycle,setCycle]=useState(0);
+  const wasVis=useRef(false);
   const revealRef=useRef<HTMLDivElement>(null);
   useEffect(()=>{
     const el=revealRef.current;
     if(!el)return;
     const obs=new IntersectionObserver(([entry])=>{
-      if(entry.isIntersecting){
-        setVis(true);
-        setCycle(1);
-        obs.disconnect();
-      }
+      const now=entry.isIntersecting;
+      setVis(now);
+      if(now&&!wasVis.current)setCycle(c=>c+1);
+      wasVis.current=now;
     },{rootMargin:"-8% 0px -8% 0px",threshold:0.01});
     obs.observe(el);
     return()=>obs.disconnect();
@@ -887,7 +888,7 @@ const HCard=memo(function HCard({product,onClick,onBuyNow,index,fmtPrice,isFav,o
       <div onClick={onClick} style={{background:"#111",width:152,height:152,overflow:"hidden",marginBottom:"0.55rem",borderRadius:10,position:"relative",cursor:"pointer"}}>
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
-        {vis&&<div key={cycle} style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden",borderRadius:10}}><div style={{position:"absolute",top:0,left:0,width:"60%",height:"100%",background:"linear-gradient(120deg,transparent 0%,rgba(255,255,255,0.22) 45%,rgba(255,255,255,0.06) 55%,transparent 100%)",filter:"blur(1px)",animation:`cardSweep 1s cubic-bezier(0.19,1,0.22,1) ${revealDelay+70}ms both`}}/></div>}
+        {vis&&<div key={cycle} style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden",borderRadius:10}}><div style={{position:"absolute",top:0,left:0,width:"55%",height:"100%",background:"linear-gradient(120deg,transparent 0%,rgba(255,255,255,0.14) 45%,rgba(255,255,255,0.04) 55%,transparent 100%)",filter:"blur(1.5px)",animation:`cardSweep 1s cubic-bezier(0.19,1,0.22,1) ${revealDelay+80}ms both`}}/></div>}
         {!!product.discount&&product.discount>0&&<DiscountBadge percent={product.discount} issuper={isSuperOffer(product.discount)}/>}
         {product.bestseller&&<BestsellerBadge/>}
         {getAllImages(product).length>1&&<GalleryBadge/>}
@@ -932,16 +933,16 @@ const HCard=memo(function HCard({product,onClick,onBuyNow,index,fmtPrice,isFav,o
 const CollectionCard=memo(function CollectionCard({cat,onClick,index}:{cat:{key:string;label:string;img:string};onClick:()=>void;index:number}){
   const[vis,setVis]=useState(false);
   const[cycle,setCycle]=useState(0);
+  const wasVis=useRef(false);
   const ref=useRef<HTMLDivElement>(null);
   useEffect(()=>{
     const el=ref.current;
     if(!el)return;
     const obs=new IntersectionObserver(([entry])=>{
-      if(entry.isIntersecting){
-        setVis(true);
-        setCycle(1);
-        obs.disconnect();
-      }
+      const now=entry.isIntersecting;
+      setVis(now);
+      if(now&&!wasVis.current)setCycle(c=>c+1);
+      wasVis.current=now;
     },{rootMargin:"-10% 0px -10% 0px",threshold:0.01});
     obs.observe(el);
     return()=>obs.disconnect();
@@ -5190,4 +5191,4 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
       {!isAdmin&&!selectedProduct&&<DraggableWA/>} 
     </div>
   );
-}           
+}                
