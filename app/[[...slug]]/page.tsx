@@ -493,7 +493,6 @@ const GLOBAL_CSS = `
   @keyframes railBounceLeft { 0%{transform:translateX(0)} 35%{transform:translateX(16px)} 65%{transform:translateX(-5px)} 100%{transform:translateX(0)} }
   @keyframes cardSweep { 0%{transform:translateX(-140%) skewX(-9deg);opacity:0} 30%{opacity:0.9} 65%{opacity:0.4} 100%{transform:translateX(200%) skewX(-9deg);opacity:0} }
   @keyframes cardBounceIn { 0%{transform:translateY(26px) scale(0.9)} 45%{transform:translateY(-9px) scale(1.045)} 68%{transform:translateY(3px) scale(0.985)} 85%{transform:translateY(-2px) scale(1.01)} 100%{transform:translateY(0) scale(1)} }
-  @keyframes cardBounceIn { 0%{transform:translateY(26px) scale(0.9)} 45%{transform:translateY(-9px) scale(1.045)} 68%{transform:translateY(3px) scale(0.985)} 85%{transform:translateY(-2px) scale(1.01)} 100%{transform:translateY(0) scale(1)} }
   @keyframes viewIn { 0%{opacity:0;} 100%{opacity:1;} }
   .pv { animation: viewIn 0.15s ease-out both; will-change: opacity; }
 
@@ -810,31 +809,23 @@ const NativeTabs=memo(function NativeTabs({items,active,onSelect,renderItem,heig
 
 // ─── PRODUCT CARD (GRID) ──────────────────────────────────────────────────────
 const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,index,fmtPrice,isFav,onToggleFavorite}:{product:Product;onClick:()=>void;onBuyNow:()=>void;index:number;fmtPrice:(n:number)=>string;isFav?:boolean;onToggleFavorite?:(id:string)=>void}){
-  const[vis,setVis]=useState(false);
-  const[cycle,setCycle]=useState(0);
-  const wasVis=useRef(false);
+  const[ratio,setRatio]=useState(0);
   const revealRef=useRef<HTMLDivElement>(null);
   useEffect(()=>{
     const el=revealRef.current;
     if(!el)return;
-    const obs=new IntersectionObserver(([entry])=>{
-      const now=entry.isIntersecting;
-      setVis(now);
-      if(now&&!wasVis.current)setCycle(c=>c+1);
-      wasVis.current=now;
-    },{rootMargin:"-6% 0px -6% 0px",threshold:0.01});
+    const obs=new IntersectionObserver(([entry])=>{setRatio(entry.intersectionRatio);},{threshold:[0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1],rootMargin:"-4% 0px -4% 0px"});
     obs.observe(el);
     return()=>obs.disconnect();
   },[]);
-  const revealDelay=Math.min(index*16,100);
-  const fromSide=index%2===0?-50:50;
-  const fromRot=index%2===0?-2:2;
+  const premiumScale=0.9+ratio*0.1;
+  const premiumY=(1-ratio)*16;
   return(
-    <div ref={revealRef} className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:1,filter:"none",transform:vis?"none":"translateY(26px) scale(0.9)",animation:vis?`cardBounceIn 0.55s cubic-bezier(0.22,1,0.36,1) ${revealDelay}ms both`:"none",willChange:"transform"}}>
+    <div ref={revealRef} className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:1,filter:"none",transform:`translateY(${premiumY}px) scale(${premiumScale})`,transition:"transform 0.22s cubic-bezier(0.34,1.56,0.64,1)",willChange:"transform"}}>
       <div onClick={onClick} style={{background:"#111",aspectRatio:"1",overflow:"hidden",borderRadius:10,position:"relative",marginBottom:"0.55rem"}}>
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
-        {vis&&<div key={cycle} style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden"}}><div style={{position:"absolute",top:0,left:0,width:"55%",height:"100%",background:"linear-gradient(120deg,transparent 0%,rgba(255,255,255,0.14) 45%,rgba(255,255,255,0.04) 55%,transparent 100%)",filter:"blur(1.5px)",animation:`cardSweep 1s cubic-bezier(0.19,1,0.22,1) ${revealDelay+80}ms both`}}/></div>}
+        {ratio>0.05&&<div style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden"}}><div style={{position:"absolute",top:0,left:0,width:"55%",height:"100%",background:"linear-gradient(120deg,transparent 0%,rgba(255,255,255,0.14) 45%,rgba(255,255,255,0.04) 55%,transparent 100%)",filter:"blur(1.5px)",animation:"cardSweep 1s cubic-bezier(0.19,1,0.22,1) both"}}/></div>}
         {!!product.discount&&product.discount>0&&<DiscountBadge percent={product.discount} issuper={isSuperOffer(product.discount)}/>}
         {product.bestseller&&<BestsellerBadge/>}
         {getAllImages(product).length>1&&<GalleryBadge/>}
