@@ -3644,6 +3644,7 @@ const filteredComments=useMemo(()=>{
             )}
           </div>
           <div className="shop-container" style={{maxWidth:1200,margin:"0 auto",padding:"0.75rem 1rem 5rem"}}>
+            <div key={shopFilter} style={{animation:"cardBounceIn 0.55s cubic-bezier(0.22,1,0.36,1) both"}}>
             {loading?(
               <div className="pg" style={{display:"grid",gap:"1rem"}}>{Array.from({length:8}).map((_,i)=><SkeletonCard key={i}/>)}</div>
             ):shopFilter==="TODO"?(
@@ -3679,6 +3680,7 @@ const filteredComments=useMemo(()=>{
                 );
               })
             )}
+            </div>
           </div>
           <Footer setMainView={setMainView} setShopFilter={setShopFilter}/>
         </main>
