@@ -858,16 +858,14 @@ const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,index,fmtP
   useEffect(()=>{
     const el=revealRef.current;
     if(!el)return;
-    const obs=new IntersectionObserver(([entry])=>{setRatio(entry.intersectionRatio);},{threshold:[0,0.05,0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.45,0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95,1],rootMargin:"-38% 0px -38% 0px"});
+    const obs=new IntersectionObserver(([entry])=>{setRatio(entry.intersectionRatio);},{threshold:[0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1],rootMargin:"-34% 0px -34% 0px"});
     obs.observe(el);
     return()=>obs.disconnect();
   },[]);
-  const premiumScale=1+ratio*0.34;
-  const premiumY=-ratio*8;
-  const isSpotlight=ratio>0.5;
+  const isSpotlight=ratio>0.55;
   return(
-    <div ref={revealRef} className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:1,transform:`translateY(${premiumY}px) scale(${premiumScale})`,transformOrigin:"center center",zIndex:isSpotlight?5:1,filter:isSpotlight?"drop-shadow(0 20px 36px rgba(255,255,255,0.14))":"none",transition:"transform 0.3s cubic-bezier(0.22,1,0.36,1), filter 0.3s ease",willChange:"transform"}}>
-      <div onClick={onClick} style={{background:"#111",aspectRatio:"1",overflow:"hidden",borderRadius:10,position:"relative",marginBottom:"0.55rem"}}>
+    <div ref={revealRef} className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:1}}>
+      <div onClick={onClick} style={{background:"#111",aspectRatio:"1",overflow:"hidden",borderRadius:10,position:"relative",marginBottom:"0.55rem",transform:isSpotlight?"scale(1.14)":"scale(1)",transformOrigin:"center center",zIndex:isSpotlight?5:1,boxShadow:isSpotlight?"0 22px 40px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.08)":"none",transition:"transform 0.55s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.5s ease",willChange:"transform"}}>
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
         {ratio>0.05&&<div style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden"}}><div style={{position:"absolute",top:0,left:0,width:"55%",height:"100%",background:"linear-gradient(120deg,transparent 0%,rgba(255,255,255,0.14) 45%,rgba(255,255,255,0.04) 55%,transparent 100%)",filter:"blur(1.5px)",animation:"cardSweep 1s cubic-bezier(0.19,1,0.22,1) both"}}/></div>}
