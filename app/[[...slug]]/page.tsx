@@ -809,12 +809,29 @@ const NativeTabs=memo(function NativeTabs({items,active,onSelect,renderItem,heig
 
 // ─── PRODUCT CARD (GRID) ──────────────────────────────────────────────────────
 const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,index,fmtPrice,isFav,onToggleFavorite}:{product:Product;onClick:()=>void;onBuyNow:()=>void;index:number;fmtPrice:(n:number)=>string;isFav?:boolean;onToggleFavorite?:(id:string)=>void}){
+  const[vis,setVis]=useState(false);
+  const[cycle,setCycle]=useState(0);
+  const revealRef=useRef<HTMLDivElement>(null);
+  useEffect(()=>{
+    const el=revealRef.current;
+    if(!el)return;
+    const obs=new IntersectionObserver(([entry])=>{
+      if(entry.isIntersecting){
+        setVis(true);
+        setCycle(1);
+        obs.disconnect();
+      }
+    },{rootMargin:"-6% 0px -6% 0px",threshold:0.01});
+    obs.observe(el);
+    return()=>obs.disconnect();
+  },[]);
   const bounceDelay=Math.min(index*40,220);
   return(
-    <div className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",animation:`cardBounceIn 0.55s cubic-bezier(0.22,1,0.36,1) ${bounceDelay}ms both`,willChange:"transform,opacity"}}>
+    <div ref={revealRef} className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:vis?1:0,transform:vis?"translateY(0) scale(1)":"translateY(24px) scale(0.9)",filter:vis?"blur(0px)":"blur(6px)",transition:`opacity 0.5s cubic-bezier(0.19,1,0.22,1) ${bounceDelay}ms, transform 0.55s cubic-bezier(0.19,1,0.22,1) ${bounceDelay}ms, filter 0.5s cubic-bezier(0.19,1,0.22,1) ${bounceDelay}ms`,willChange:"transform,opacity,filter"}}>
       <div onClick={onClick} style={{background:"#111",aspectRatio:"1",overflow:"hidden",borderRadius:10,position:"relative",marginBottom:"0.55rem"}}>
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
+        {vis&&<div key={cycle} style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden",borderRadius:10}}><div style={{position:"absolute",top:0,left:0,width:"60%",height:"100%",background:"linear-gradient(120deg,transparent 0%,rgba(255,255,255,0.22) 45%,rgba(255,255,255,0.06) 55%,transparent 100%)",filter:"blur(1px)",animation:`cardSweep 1s cubic-bezier(0.19,1,0.22,1) ${bounceDelay+70}ms both`}}/></div>}
         {!!product.discount&&product.discount>0&&<DiscountBadge percent={product.discount} issuper={isSuperOffer(product.discount)}/>}
         {product.bestseller&&<BestsellerBadge/>}
         {getAllImages(product).length>1&&<GalleryBadge/>}
@@ -850,16 +867,16 @@ const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,index,fmtP
 const HCard=memo(function HCard({product,onClick,onBuyNow,index,fmtPrice,isFav,onToggleFavorite}:{product:Product;onClick:()=>void;onBuyNow:()=>void;index?:number;fmtPrice:(n:number)=>string;isFav?:boolean;onToggleFavorite?:(id:string)=>void}){
   const[vis,setVis]=useState(false);
   const[cycle,setCycle]=useState(0);
-  const wasVis=useRef(false);
   const revealRef=useRef<HTMLDivElement>(null);
   useEffect(()=>{
     const el=revealRef.current;
     if(!el)return;
     const obs=new IntersectionObserver(([entry])=>{
-      const now=entry.isIntersecting;
-      setVis(now);
-      if(now&&!wasVis.current)setCycle(c=>c+1);
-      wasVis.current=now;
+      if(entry.isIntersecting){
+        setVis(true);
+        setCycle(1);
+        obs.disconnect();
+      }
     },{rootMargin:"-8% 0px -8% 0px",threshold:0.01});
     obs.observe(el);
     return()=>obs.disconnect();
@@ -915,16 +932,16 @@ const HCard=memo(function HCard({product,onClick,onBuyNow,index,fmtPrice,isFav,o
 const CollectionCard=memo(function CollectionCard({cat,onClick,index}:{cat:{key:string;label:string;img:string};onClick:()=>void;index:number}){
   const[vis,setVis]=useState(false);
   const[cycle,setCycle]=useState(0);
-  const wasVis=useRef(false);
   const ref=useRef<HTMLDivElement>(null);
   useEffect(()=>{
     const el=ref.current;
     if(!el)return;
     const obs=new IntersectionObserver(([entry])=>{
-      const now=entry.isIntersecting;
-      setVis(now);
-      if(now&&!wasVis.current)setCycle(c=>c+1);
-      wasVis.current=now;
+      if(entry.isIntersecting){
+        setVis(true);
+        setCycle(1);
+        obs.disconnect();
+      }
     },{rootMargin:"-10% 0px -10% 0px",threshold:0.01});
     obs.observe(el);
     return()=>obs.disconnect();
