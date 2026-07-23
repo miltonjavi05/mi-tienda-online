@@ -207,6 +207,13 @@ export async function GET(request: Request) {
     }
 
     const valid = products.filter(p => p.img && p.name && p.price > 0 && p.active !== false);
+
+    await Promise.allSettled(
+      valid.map(p =>
+        fetch(optImgMeta(p.img), { cache: "no-store" }).catch(() => {})
+      )
+    );
+
     const items = valid.map(productToItem).join("");
 
     const xml = `<?xml version="1.0" encoding="UTF-8"?>

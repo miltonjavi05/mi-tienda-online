@@ -332,7 +332,7 @@ function loadFacebookScript():Promise<any>{
   });
 }
 async function fsGetUser(uid:string):Promise<{photoURL:string;favorites:string[]}>{try{const r=await fetch(`${fsBase()}/users/${uid}`);if(!r.ok)return{photoURL:"",favorites:[]};const d=await r.json() as FsDoc;const rawFav=fromFs(d.fields?.favorites??{nullValue:null}) as string[]|null;return{photoURL:(fromFs(d.fields?.photoURL??{nullValue:null}) as string)||"",favorites:Array.isArray(rawFav)?rawFav:[]};}catch{return{photoURL:"",favorites:[]};}}
-async function uploadImg(file:File,preset=CLOUDINARY_PRESET):Promise<string>{const fd=new FormData();fd.append("file",file);fd.append("upload_preset",preset);const r=await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`,{method:"POST",body:fd});if(!r.ok)throw new Error("Error subiendo imagen");return((await r.json()) as{secure_url:string}).secure_url;}
+async function uploadImg(file:File,preset=CLOUDINARY_PRESET):Promise<string>{const fd=new FormData();fd.append("file",file);fd.append("upload_preset",preset);fd.append("eager","w_800,h_800,c_fill,g_center,q_85,f_jpg");fd.append("eager_async","true");const r=await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`,{method:"POST",body:fd});if(!r.ok)throw new Error("Error subiendo imagen");return((await r.json()) as{secure_url:string}).secure_url;}
 function cropImageToSquare(file:File):Promise<File>{
   return new Promise(resolve=>{
     const url=URL.createObjectURL(file);
@@ -865,14 +865,21 @@ const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,index,fmtP
 });
 
 // ─── HORIZONTAL CARD ─────────────────────────────────────────────────────────
-const HCard=memo(function HCard({product,onClick,onBuyNow,index,fmtPrice,isFav,onToggleFavorite,animate=true}:{product:Product;onClick:()=>void;onBuyNow:()=>void;index?:number;fmtPrice:(n:number)=>string;isFav?:boolean;onToggleFavorite?:(id:string)=>void;animate?:boolean}){
+const HCard=memo(function HCard({product,onClick,onBuyNow,index,fmtPrice,isFav,onToggleFavorite,animate=true}:{product:Product;onClick:()=>void;onBuyNow:()=>void;index?:number;fmtPrice:(n:number)=>string;isFav?:boolean;onToggleFavorite?:(id:string)=>void;animate?:boolean|"premium"}){
   const[vis,setVis]=useState(false);
   const[cycle,setCycle]=useState(0);
+  const[ratio,setRatio]=useState(1);
   const wasVis=useRef(false);
   const revealRef=useRef<HTMLDivElement>(null);
+  const isPremium=animate==="premium";
   useEffect(()=>{
     const el=revealRef.current;
     if(!el)return;
+    if(isPremium){
+      const obs=new IntersectionObserver(([entry])=>{setRatio(entry.intersectionRatio);},{root:el.closest(".hr"),threshold:[0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1],rootMargin:"0px -2% 0px -2%"});
+      obs.observe(el);
+      return()=>obs.disconnect();
+    }
     const obs=new IntersectionObserver(([entry])=>{
       const now=entry.isIntersecting;
       setVis(now);
@@ -881,10 +888,12 @@ const HCard=memo(function HCard({product,onClick,onBuyNow,index,fmtPrice,isFav,o
     },{rootMargin:"-8% 0px -8% 0px",threshold:0.01});
     obs.observe(el);
     return()=>obs.disconnect();
-  },[]);
+  },[isPremium]);
   const revealDelay=Math.min((index??0)*30,160);
+  const premiumScale=0.88+ratio*0.12;
+  const premiumY=(1-ratio)*10;
   return(
-    <div ref={revealRef} className="hc" style={animate?{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:vis?1:0,transform:vis?"translateY(0) scale(1)":"translateY(18px) scale(0.88)",filter:vis?"blur(0px)":"blur(5px)",transition:`opacity 0.5s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, transform 0.55s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, filter 0.5s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms`,willChange:"transform,opacity,filter"}:{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:1,transform:"none",filter:"none"}}>
+    <div ref={revealRef} className="hc" style={isPremium?{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:1,transform:`translateY(${premiumY}px) scale(${premiumScale})`,filter:"none",transition:"transform 0.22s cubic-bezier(0.34,1.56,0.64,1)",willChange:"transform"}:animate?{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:vis?1:0,transform:vis?"translateY(0) scale(1)":"translateY(18px) scale(0.88)",filter:vis?"blur(0px)":"blur(5px)",transition:`opacity 0.5s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, transform 0.55s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, filter 0.5s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms`,willChange:"transform,opacity,filter"}:{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:1,transform:"none",filter:"none"}}>
       <div onClick={onClick} style={{background:"#111",width:152,height:152,overflow:"hidden",marginBottom:"0.55rem",borderRadius:10,position:"relative",cursor:"pointer"}}>
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
@@ -998,7 +1007,7 @@ const IconOrb=memo(function IconOrb({img,label,onClick,index}:{img:string;label:
 });
 
 // ─── HORIZONTAL ROW ───────────────────────────────────────────────────────────
-const HRow=memo(function HRow({products,onSelect,onBuyNow,fmtPrice,isFavorite,onToggleFavorite,animate=true}:{products:Product[];onSelect:(p:Product)=>void;onBuyNow:(p:Product)=>void;fmtPrice:(n:number)=>string;isFavorite?:(id:string)=>boolean;onToggleFavorite?:(id:string)=>void;animate?:boolean}){
+ const HRow=memo(function HRow({products,onSelect,onBuyNow,fmtPrice,isFavorite,onToggleFavorite,animate=true}:{products:Product[];onSelect:(p:Product)=>void;onBuyNow:(p:Product)=>void;fmtPrice:(n:number)=>string;isFavorite?:(id:string)=>boolean;onToggleFavorite?:(id:string)=>void;animate?:boolean|"premium"}){
   const rowRef=useRef<HTMLDivElement>(null);
   const[showLeft,setShowLeft]=useState(false);
   const[showRight,setShowRight]=useState(false);
@@ -3655,7 +3664,7 @@ const filteredComments=useMemo(()=>{
                       <h2 style={{fontSize:11,fontWeight:800,letterSpacing:3,margin:0,color:"#555"}}>{isLC?`LENTES · ${catLabel(cat).toUpperCase()}`:catLabel(cat).toUpperCase()}</h2>
                       <button onClick={()=>{setShopFilter(cat as ShopFilter);setLentesOpen(isLC);scrollTop();}} style={{background:"none",border:"none",fontSize:10,color:"#333",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",letterSpacing:1,fontWeight:700}}>VER TODOS</button>
                     </div>
-                    <HRow products={prods} onSelect={openProd} onBuyNow={openProd} fmtPrice={fmtPrice} animate={false}/>
+                    <HRow products={prods} onSelect={openProd} onBuyNow={openProd} fmtPrice={fmtPrice} animate="premium"/>
                   </div>
                 );
               })
