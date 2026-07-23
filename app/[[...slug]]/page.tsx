@@ -824,11 +824,11 @@ const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,index,fmtP
     obs.observe(el);
     return()=>obs.disconnect();
   },[]);
-  const revealDelay=Math.min(index*35,180);
+  const revealDelay=Math.min(index*18,110);
   const fromSide=index%2===0?-50:50;
   const fromRot=index%2===0?-2:2;
   return(
-    <div ref={revealRef} className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:1,transform:"none",filter:"none"}}>
+    <div ref={revealRef} className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:1,filter:"none",transform:vis?"translateY(0) scale(1)":"translateY(24px) scale(0.93)",transition:`transform 0.38s cubic-bezier(0.34,1.56,0.64,1) ${revealDelay}ms`,willChange:"transform"}}>
       <div onClick={onClick} style={{background:"#111",aspectRatio:"1",overflow:"hidden",borderRadius:10,position:"relative",marginBottom:"0.55rem"}}>
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
