@@ -497,6 +497,10 @@ const GLOBAL_CSS = `
   @keyframes laserGlowPulse { 0%,100%{opacity:0.75;} 50%{opacity:1;} }
   @keyframes flameFlicker { 0%,100%{transform:scale(1) rotate(-2deg);filter:drop-shadow(0 0 4px rgba(255,140,20,0.8)) drop-shadow(0 0 10px rgba(255,60,0,0.6));} 25%{transform:scale(1.08) rotate(2deg);filter:drop-shadow(0 0 6px rgba(255,180,40,0.95)) drop-shadow(0 0 14px rgba(255,90,0,0.7));} 50%{transform:scale(0.95) rotate(-3deg);filter:drop-shadow(0 0 3px rgba(255,120,10,0.7)) drop-shadow(0 0 8px rgba(255,50,0,0.5));} 75%{transform:scale(1.05) rotate(3deg);filter:drop-shadow(0 0 7px rgba(255,190,60,1)) drop-shadow(0 0 16px rgba(255,100,0,0.75));} }
   @keyframes flameGlowPulse { 0%,100%{box-shadow:0 8px 26px rgba(255,90,0,0.28), 0 0 0 1px rgba(255,120,40,0.25) inset;} 50%{box-shadow:0 10px 34px rgba(255,110,0,0.45), 0 0 0 1px rgba(255,150,60,0.4) inset;} }
+  @keyframes verColHaloSpin { to{transform:rotate(360deg);} }
+  @keyframes verColPulse { 0%,100%{opacity:0.5;transform:scale(0.94);} 50%{opacity:1;transform:scale(1.06);} }
+  @keyframes verColArrowNudge { 0%,100%{transform:translateX(0);} 50%{transform:translateX(5px);} }
+  @keyframes verColTextGlow { 0%,100%{letter-spacing:3px;} 50%{letter-spacing:4px;} }
   @keyframes viewIn { 0%{opacity:0;} 100%{opacity:1;} }
   .pv { animation: viewIn 0.15s ease-out both; will-change: opacity; }
 
@@ -3676,10 +3680,14 @@ const filteredComments=useMemo(()=>{
                 </div>
               );
             })()}
-            <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={{position:"relative",overflow:"hidden",background:"linear-gradient(180deg,#ffffff 0%,#e9e9e9 100%)",color:"#080808",border:"none",fontSize:11,fontWeight:900,letterSpacing:3,padding:"1.15rem 2.9rem",borderRadius:4,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",boxShadow:"0 10px 30px rgba(255,255,255,0.12), inset 0 1px 0 rgba(255,255,255,0.9)",marginBottom:"2rem"}}>
-              <span style={{position:"absolute",inset:0,background:"linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.55) 50%,transparent 100%)",backgroundSize:"200% 100%",animation:"badgeShimmer 2.8s ease infinite",pointerEvents:"none",mixBlendMode:"overlay" as any}}/>
-              <span style={{position:"relative"}}>VER COLECCIÓN →</span>
-            </button>
+            <div style={{position:"relative",display:"inline-block",marginBottom:"2rem",borderRadius:8}}>
+              <div aria-hidden="true" style={{position:"absolute",inset:-16,borderRadius:24,background:"radial-gradient(circle, rgba(255,255,255,0.14) 0%, transparent 70%)",filter:"blur(3px)",animation:"verColPulse 2.8s ease-in-out infinite",pointerEvents:"none"}}/>
+              <div aria-hidden="true" style={{position:"absolute",inset:-2,borderRadius:10,padding:"2px",background:"conic-gradient(from 0deg, transparent 0%, rgba(255,255,255,0.95) 10%, transparent 24%, transparent 100%)",WebkitMask:"linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",WebkitMaskComposite:"xor",maskComposite:"exclude" as any,animation:"verColHaloSpin 2.4s linear infinite",pointerEvents:"none"}}/>
+              <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={{position:"relative",overflow:"hidden",background:"#ffffff",color:"#080808",border:"none",fontSize:11,fontWeight:900,letterSpacing:3,padding:"1.15rem 2.9rem",borderRadius:8,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",boxShadow:"0 16px 40px rgba(255,255,255,0.16), inset 0 1px 0 rgba(255,255,255,1)",animation:"verColTextGlow 2.8s ease-in-out infinite"}}>
+                <span style={{position:"absolute",inset:0,background:"linear-gradient(115deg,transparent 0%,rgba(8,8,8,0.06) 50%,transparent 100%)",backgroundSize:"200% 100%",animation:"badgeShimmer 3.2s ease infinite",pointerEvents:"none"}}/>
+                <span style={{position:"relative",display:"inline-flex",alignItems:"center",gap:"0.65rem"}}>VER COLECCIÓN <span style={{display:"inline-block",animation:"verColArrowNudge 1.5s ease-in-out infinite"}}>→</span></span>
+              </button>
+            </div>
           </div>
           {(()=>{
             const homeCats=[
