@@ -502,6 +502,7 @@ const GLOBAL_CSS = `
   @keyframes focusRingPulse { 0%{opacity:0.55;transform:scale(0.92);} 70%{opacity:0;transform:scale(1.35);} 100%{opacity:0;transform:scale(1.35);} }
   @keyframes verColArrowNudge { 0%,100%{transform:translateX(0);} 50%{transform:translateX(5px);} }
   @keyframes viewIn { 0%{opacity:0;} 100%{opacity:1;} }
+  @keyframes plusPremiumGlow { 0%,100%{opacity:0.75;transform:scale(1);text-shadow:0 0 0px rgba(255,255,255,0);} 50%{opacity:1;transform:scale(1.22);text-shadow:0 0 12px rgba(255,255,255,0.85),0 0 22px rgba(255,255,255,0.35);} }
   .pv { animation: viewIn 0.15s ease-out both; will-change: opacity; }
 
   @keyframes logoIrisSpin { to{transform:rotate(360deg);} }
@@ -587,7 +588,7 @@ const GLOBAL_CSS = `
   /* ── home: adaptado a pantallas grandes ── */
   @media(min-width:900px){
     .home-hero { max-width: 980px !important; padding-top: 3rem !important; padding-left: 2rem !important; padding-right: 2rem !important; }
-    .home-hero img[width="64"] { width: 80px !important; height: 80px !important; }
+    .home-hero .fokus-hero-logo-frame { width: 80px !important; height: 80px !important; }
     .home-hero h1 { font-size: 62px !important; }
     .home-hero p { font-size: 15px !important; }
     .home-collections-row { flex-wrap: wrap !important; overflow-x: visible !important; justify-content: center !important; max-width: 640px !important; margin-left: auto !important; margin-right: auto !important; }
@@ -662,7 +663,7 @@ const FokusLogoHero=memo(function FokusLogoHero(){
         <span aria-hidden="true" style={{position:"absolute",width:76,height:76,borderRadius:"50%",background:"conic-gradient(from 0deg, transparent 0%, rgba(255,255,255,0.9) 8%, transparent 18%, transparent 50%, rgba(255,255,255,0.5) 58%, transparent 68%, transparent 100%)",maskImage:"radial-gradient(circle, transparent 64%, black 65%, black 78%, transparent 79%)",WebkitMaskImage:"radial-gradient(circle, transparent 64%, black 65%, black 78%, transparent 79%)",animation:mounted?"logoIrisSpinReverse 5s linear infinite":"none",pointerEvents:"none"}}/>
         <span aria-hidden="true" style={{position:"absolute",width:88,height:88,borderRadius:"50%",background:"radial-gradient(circle, rgba(255,255,255,0.18) 0%, transparent 68%)",animation:mounted?"logoApertureBreathe 3.2s ease-in-out infinite":"none",pointerEvents:"none"}}/>
         {burst>0&&<span key={burst} aria-hidden="true" style={{position:"absolute",width:64,height:64,borderRadius:"50%",border:"1px solid rgba(255,255,255,0.55)",animation:"logoFocusBurst 0.6s cubic-bezier(0.16,1,0.3,1) both",pointerEvents:"none"}}/>}
-        <span style={{position:"relative",width:64,height:64,borderRadius:"50%",overflow:"hidden",display:"block",transform:burst>0?"scale(1.1)":"scale(1)",transition:"transform 0.45s cubic-bezier(0.34,1.56,0.64,1)"}}>
+        <span className="fokus-hero-logo-frame" style={{position:"relative",width:64,height:64,borderRadius:"50%",overflow:"hidden",display:"block",transform:burst>0?"scale(1.1)":"scale(1)",transition:"transform 0.45s cubic-bezier(0.34,1.56,0.64,1)"}}>
           <img className="fokus-logo-img" src="/favicon.png" alt="Fokus" width={64} height={64} style={{objectFit:"contain",filter:"brightness(1.1)",pointerEvents:"none",width:"100%",height:"100%",display:"block",transition:"transform 0.35s ease"}} draggable={false}/>
         </span>
       </button>
@@ -3659,7 +3660,7 @@ const filteredComments=useMemo(()=>{
               <h1 className="fokus-logo" style={{position:"relative",fontSize:50,margin:0,color:C.accent,lineHeight:1,textShadow:"0 0 44px rgba(255,255,255,0.16)"}}>FOKUS</h1>
             </div>
             <div style={{width:38,height:1,background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.4),transparent)",margin:"0.9rem auto 1.15rem"}}/>
-            <p style={{fontSize:13,color:"#777",lineHeight:1.6,maxWidth:270,margin:"0 auto 1.75rem",fontWeight:600,letterSpacing:0.4}}>Cada detalle +</p>
+            <p style={{fontSize:13,color:"#777",lineHeight:1.6,maxWidth:270,margin:"0 auto 1.75rem",fontWeight:600,letterSpacing:0.4}}>Cada detalle <span style={{display:"inline-block",fontWeight:900,color:"#fff",transformOrigin:"center",animation:"plusPremiumGlow 2.8s ease-in-out infinite"}}>+</span></p>
             {(()=>{
               const navCats=[
                 {key:"RELOJES",label:"Relojes"},
