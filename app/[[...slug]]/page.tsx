@@ -492,7 +492,7 @@ const GLOBAL_CSS = `
   @keyframes railBounceRight { 0%{transform:translateX(0)} 35%{transform:translateX(-16px)} 65%{transform:translateX(5px)} 100%{transform:translateX(0)} }
   @keyframes railBounceLeft { 0%{transform:translateX(0)} 35%{transform:translateX(16px)} 65%{transform:translateX(-5px)} 100%{transform:translateX(0)} }
   @keyframes cardSweep { 0%{transform:translateX(-140%) skewX(-9deg);opacity:0} 30%{opacity:0.9} 65%{opacity:0.4} 100%{transform:translateX(200%) skewX(-9deg);opacity:0} }
-  @keyframes cardBounceIn { 0%{transform:translateY(26px) scale(0.9)} 45%{transform:translateY(-9px) scale(1.045)} 68%{transform:translateY(3px) scale(0.985)} 85%{transform:translateY(-2px) scale(1.01)} 100%{transform:translateY(0) scale(1)} }
+  @keyframes cardBounceIn { 0%{opacity:0;transform:translateY(14px) scale(0.975)} 55%{opacity:1;transform:translateY(-2px) scale(1.006)} 100%{opacity:1;transform:translateY(0) scale(1)} }
   @keyframes viewIn { 0%{opacity:0;} 100%{opacity:1;} }
   .pv { animation: viewIn 0.15s ease-out both; will-change: opacity; }
 
@@ -814,14 +814,14 @@ const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,index,fmtP
   useEffect(()=>{
     const el=revealRef.current;
     if(!el)return;
-    const obs=new IntersectionObserver(([entry])=>{setRatio(entry.intersectionRatio);},{threshold:[0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1],rootMargin:"-4% 0px -4% 0px"});
+    const obs=new IntersectionObserver(([entry])=>{setRatio(entry.intersectionRatio);},{threshold:Array.from({length:51},(_,i)=>i/50),rootMargin:"-4% 0px -4% 0px"});
     obs.observe(el);
     return()=>obs.disconnect();
   },[]);
   const premiumScale=0.9+ratio*0.1;
   const premiumY=(1-ratio)*16;
   return(
-    <div ref={revealRef} className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:1,filter:"none",transform:`translateY(${premiumY}px) scale(${premiumScale})`,transition:"transform 0.22s cubic-bezier(0.34,1.56,0.64,1)",willChange:"transform"}}>
+    <div ref={revealRef} className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:1,filter:"none",transform:`translateY(${premiumY}px) scale(${premiumScale})`,transition:"transform 0.12s cubic-bezier(0.22,1,0.36,1)",willChange:"transform"}}>
       <div onClick={onClick} style={{background:"#111",aspectRatio:"1",overflow:"hidden",borderRadius:10,position:"relative",marginBottom:"0.55rem"}}>
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
@@ -869,7 +869,7 @@ const HCard=memo(function HCard({product,onClick,onBuyNow,index,fmtPrice,isFav,o
     const el=revealRef.current;
     if(!el)return;
     if(isPremium){
-      const obs=new IntersectionObserver(([entry])=>{setRatio(entry.intersectionRatio);},{root:el.closest(".hr"),threshold:[0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1],rootMargin:"0px -2% 0px -2%"});
+      const obs=new IntersectionObserver(([entry])=>{setRatio(entry.intersectionRatio);},{root:el.closest(".hr"),threshold:Array.from({length:51},(_,i)=>i/50),rootMargin:"0px -2% 0px -2%"});
       obs.observe(el);
       return()=>obs.disconnect();
     }
@@ -886,7 +886,7 @@ const HCard=memo(function HCard({product,onClick,onBuyNow,index,fmtPrice,isFav,o
   const premiumScale=0.88+ratio*0.12;
   const premiumY=(1-ratio)*10;
   return(
-    <div ref={revealRef} className="hc" style={isPremium?{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:1,transform:`translateY(${premiumY}px) scale(${premiumScale})`,filter:"none",transition:"transform 0.22s cubic-bezier(0.34,1.56,0.64,1)",willChange:"transform"}:animate?{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:vis?1:0,transform:vis?"translateY(0) scale(1)":"translateY(18px) scale(0.88)",filter:vis?"blur(0px)":"blur(5px)",transition:`opacity 0.5s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, transform 0.55s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, filter 0.5s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms`,willChange:"transform,opacity,filter"}:{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:1,transform:"none",filter:"none"}}>
+    <div ref={revealRef} className="hc" style={isPremium?{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:1,transform:`translateY(${premiumY}px) scale(${premiumScale})`,filter:"none",transition:"transform 0.12s cubic-bezier(0.22,1,0.36,1)",willChange:"transform"}:animate?{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:vis?1:0,transform:vis?"translateY(0) scale(1)":"translateY(18px) scale(0.88)",filter:vis?"blur(0px)":"blur(5px)",transition:`opacity 0.5s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, transform 0.55s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, filter 0.5s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms`,willChange:"transform,opacity,filter"}:{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:1,transform:"none",filter:"none"}}>
       <div onClick={onClick} style={{background:"#111",width:152,height:152,overflow:"hidden",marginBottom:"0.55rem",borderRadius:10,position:"relative",cursor:"pointer"}}>
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
@@ -3644,7 +3644,7 @@ const filteredComments=useMemo(()=>{
             )}
           </div>
           <div className="shop-container" style={{maxWidth:1200,margin:"0 auto",padding:"0.75rem 1rem 5rem"}}>
-            <div key={shopFilter} style={{animation:"cardBounceIn 0.55s cubic-bezier(0.22,1,0.36,1) both"}}>
+            <div key={shopFilter} style={{animation:"cardBounceIn 0.3s cubic-bezier(0.16,1,0.3,1) both"}}>
             {loading?(
               <div className="pg" style={{display:"grid",gap:"1rem"}}>{Array.from({length:8}).map((_,i)=><SkeletonCard key={i}/>)}</div>
             ):shopFilter==="TODO"?(
