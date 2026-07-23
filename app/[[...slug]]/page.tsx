@@ -1240,16 +1240,38 @@ function AuthModal({onClose,onSuccess}:{onClose:()=>void;onSuccess:(u:UserData)=
 // ─── COMMUNITY CARD ───────────────────────────────────────────────────────────
 const CommunityCard=memo(function CommunityCard({post,onClick,index}:{post:typeof COMMUNITY_POSTS[0];onClick:()=>void;index:number}){
   const[vis,setVis]=useState(false),[loaded,setLoaded]=useState(false);
+  const[revealDir,setRevealDir]=useState<"up"|"down">("up");
+  const wasVis=useRef(false);
   const ref=useRef<HTMLDivElement>(null);
-  useEffect(()=>{const el=ref.current;if(!el)return;const obs=new IntersectionObserver(([e])=>{if(e.isIntersecting){setVis(true);obs.disconnect();}},{rootMargin:"100px"});obs.observe(el);return()=>obs.disconnect();},[]);
+  const lastY=useRef(0);
+  useEffect(()=>{
+    const el=ref.current;
+    if(!el)return;
+    const obs=new IntersectionObserver(([e])=>{
+      const now=e.isIntersecting;
+      const scrollDir=window.scrollY>lastY.current?"down":"up";
+      lastY.current=window.scrollY;
+      setRevealDir(scrollDir);
+      setVis(now);
+      if(now&&!wasVis.current)wasVis.current=true;
+    },{rootMargin:"-5% 0px -5% 0px",threshold:0.05});
+    obs.observe(el);
+    return()=>obs.disconnect();
+  },[]);
   const tagColors:Record<string,{bg:string;color:string}>={"ARETES":{bg:"rgba(168,85,247,0.15)",color:"#c084fc"},"COLLARES":{bg:"rgba(251,191,36,0.12)",color:"#fbbf24"},"PULSERAS":{bg:"rgba(34,211,238,0.12)",color:"#22d3ee"},"RESEÑA":{bg:"rgba(74,222,128,0.12)",color:"#4ade80"},"RELOJES":{bg:"rgba(251,113,133,0.12)",color:"#fb7185"}};
   const tc=tagColors[post.tag]||{bg:"rgba(255,255,255,0.08)",color:"#aaa"};
+  const isLeft=index%2===0;
+  const fromX=isLeft?-120:120;
+  const fromY=revealDir==="down"?60:-60;
+  const fromRot=isLeft?-6:6;
+  const delay=Math.min(index*90,350);
   return(
-    <div ref={ref} onClick={onClick} style={{cursor:"pointer",opacity:vis?1:0,transform:vis?"translateY(0) scale(1)":"translateY(20px) scale(0.97)",transition:`opacity 0.45s ease ${Math.min(index*60,300)}ms, transform 0.45s ease ${Math.min(index*60,300)}ms`,borderRadius:16,overflow:"hidden",background:"#0d0d0d",border:"1px solid #1a1a1a",position:"relative"}} className="cc">
+    <div ref={ref} onClick={onClick} style={{cursor:"pointer",opacity:vis?1:0,transform:vis?"translateX(0) translateY(0) rotate(0deg) scale(1)":`translateX(${fromX}px) translateY(${fromY}px) rotate(${fromRot}deg) scale(0.88)`,filter:vis?"blur(0px)":"blur(12px)",transition:`opacity 0.85s cubic-bezier(0.19,1,0.22,1) ${delay}ms, transform 0.9s cubic-bezier(0.19,1,0.22,1) ${delay}ms, filter 0.7s cubic-bezier(0.19,1,0.22,1) ${delay}ms`,borderRadius:16,overflow:"hidden",background:"#0d0d0d",border:"1px solid #1a1a1a",position:"relative",willChange:"transform,opacity,filter"}} className="cc">
       <div style={{position:"relative",aspectRatio:"9/16",overflow:"hidden",background:"#111"}}>
         {!loaded&&<div style={{position:"absolute",inset:0,background:"linear-gradient(90deg,#141414 0%,#1e1e1e 50%,#141414 100%)",backgroundSize:"200% 100%",animation:"shimmer 1.4s infinite"}}/>}
         {vis&&<img src={post.img} alt={post.caption} loading="lazy" decoding="async" onLoad={()=>setLoaded(true)} style={{width:"100%",height:"100%",objectFit:"cover",display:"block",opacity:loaded?1:0,transition:"opacity 0.3s ease",pointerEvents:"none",userSelect:"none",WebkitUserSelect:"none",WebkitTouchCallout:"none"} as React.CSSProperties} draggable={false}/>}
         <div style={{position:"absolute",inset:0,background:"linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 50%, transparent 100%)",pointerEvents:"none"}}/>
+        {vis&&<div style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden"}}><div style={{position:"absolute",top:0,left:isLeft?"-60%":"60%",width:"80%",height:"100%",background:"linear-gradient(120deg,transparent 0%,rgba(255,255,255,0.12) 45%,rgba(255,255,255,0.03) 55%,transparent 100%)",filter:"blur(2px)",animation:`cardSweep 1.2s cubic-bezier(0.19,1,0.22,1) ${delay+150}ms both`}}/></div>}
         <div style={{position:"absolute",top:10,left:10}}><span style={{background:tc.bg,color:tc.color,fontSize:9,fontWeight:800,letterSpacing:1.5,padding:"3px 9px",borderRadius:20,backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",border:`1px solid ${tc.color}30`}}>{post.tag}</span></div>
         <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"0.85rem"}}>
           <p style={{margin:"0 0 3px",fontSize:12,fontWeight:700,color:"#fff",lineHeight:1.35,textShadow:"0 1px 4px rgba(0,0,0,0.8)"}}>{post.caption}</p>
