@@ -492,6 +492,8 @@ const GLOBAL_CSS = `
   @keyframes railBounceRight { 0%{transform:translateX(0)} 35%{transform:translateX(-16px)} 65%{transform:translateX(5px)} 100%{transform:translateX(0)} }
   @keyframes railBounceLeft { 0%{transform:translateX(0)} 35%{transform:translateX(16px)} 65%{transform:translateX(-5px)} 100%{transform:translateX(0)} }
   @keyframes cardSweep { 0%{transform:translateX(-140%) skewX(-9deg);opacity:0} 30%{opacity:0.9} 65%{opacity:0.4} 100%{transform:translateX(200%) skewX(-9deg);opacity:0} }
+  @keyframes cardBounceIn { 0%{transform:translateY(26px) scale(0.9)} 45%{transform:translateY(-9px) scale(1.045)} 68%{transform:translateY(3px) scale(0.985)} 85%{transform:translateY(-2px) scale(1.01)} 100%{transform:translateY(0) scale(1)} }
+  @keyframes cardBounceIn { 0%{transform:translateY(26px) scale(0.9)} 45%{transform:translateY(-9px) scale(1.045)} 68%{transform:translateY(3px) scale(0.985)} 85%{transform:translateY(-2px) scale(1.01)} 100%{transform:translateY(0) scale(1)} }
   @keyframes viewIn { 0%{opacity:0;} 100%{opacity:1;} }
   .pv { animation: viewIn 0.15s ease-out both; will-change: opacity; }
 
@@ -824,11 +826,11 @@ const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,index,fmtP
     obs.observe(el);
     return()=>obs.disconnect();
   },[]);
-  const revealDelay=Math.min(index*18,110);
+  const revealDelay=Math.min(index*16,100);
   const fromSide=index%2===0?-50:50;
   const fromRot=index%2===0?-2:2;
   return(
-    <div ref={revealRef} className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:1,filter:"none",transform:vis?"translateY(0) scale(1)":"translateY(24px) scale(0.93)",transition:`transform 0.38s cubic-bezier(0.34,1.56,0.64,1) ${revealDelay}ms`,willChange:"transform"}}>
+    <div ref={revealRef} className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:1,filter:"none",transform:vis?"none":"translateY(26px) scale(0.9)",animation:vis?`cardBounceIn 0.55s cubic-bezier(0.22,1,0.36,1) ${revealDelay}ms both`:"none",willChange:"transform"}}>
       <div onClick={onClick} style={{background:"#111",aspectRatio:"1",overflow:"hidden",borderRadius:10,position:"relative",marginBottom:"0.55rem"}}>
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
