@@ -502,6 +502,7 @@ const GLOBAL_CSS = `
   @keyframes focusRingPulse { 0%{opacity:0.55;transform:scale(0.92);} 70%{opacity:0;transform:scale(1.35);} 100%{opacity:0;transform:scale(1.35);} }
   @keyframes verColArrowNudge { 0%,100%{transform:translateX(0);} 50%{transform:translateX(5px);} }
   @keyframes viewIn { 0%{opacity:0;} 100%{opacity:1;} }
+  @keyframes plusPremiumGrow { 0%,100%{transform:scale(1) rotate(0deg);text-shadow:0 0 0px rgba(255,255,255,0);} 45%{transform:scale(1.75) rotate(90deg);text-shadow:0 0 18px rgba(255,255,255,0.95),0 0 34px rgba(255,255,255,0.4);} 70%{transform:scale(1.75) rotate(90deg);text-shadow:0 0 18px rgba(255,255,255,0.95),0 0 34px rgba(255,255,255,0.4);} 100%{transform:scale(1) rotate(0deg);}}
   .pv { animation: viewIn 0.15s ease-out both; will-change: opacity; }
 
   @keyframes logoIrisSpin { to{transform:rotate(360deg);} }
@@ -3659,7 +3660,7 @@ const filteredComments=useMemo(()=>{
               <h1 className="fokus-logo" style={{position:"relative",fontSize:50,margin:0,color:C.accent,lineHeight:1,textShadow:"0 0 44px rgba(255,255,255,0.16)"}}>FOKUS</h1>
             </div>
             <div style={{width:38,height:1,background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.4),transparent)",margin:"0.9rem auto 1.15rem"}}/>
-            <p style={{fontSize:13,color:"#777",lineHeight:1.6,maxWidth:270,margin:"0 auto 1.75rem",fontWeight:600,letterSpacing:0.4}}>Cada detalle +</p>
+            <p style={{fontSize:13,color:"#777",lineHeight:1.6,maxWidth:270,margin:"0 auto 1.75rem",fontWeight:600,letterSpacing:0.4}}>Cada detalle <span style={{display:"inline-block",fontWeight:900,color:"#fff",transformOrigin:"center",animation:"plusPremiumGrow 3.2s cubic-bezier(0.65,0,0.35,1) infinite"}}>+</span></p>
             {(()=>{
               const navCats=[
                 {key:"RELOJES",label:"Relojes"},
