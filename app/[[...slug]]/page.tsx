@@ -1282,6 +1282,38 @@ const CommunityCard=memo(function CommunityCard({post,onClick,index}:{post:typeo
   );
 });
 
+// ─── GRABADO CARD (REVEAL PREMIUM DESDE LA DERECHA, BIDIRECCIONAL) ────────────
+const GrabadoCard=memo(function GrabadoCard({item,index}:{item:{img:string;caption:string};index:number}){
+  const[vis,setVis]=useState(false);
+  const[revealDir,setRevealDir]=useState<"up"|"down">("up");
+  const ref=useRef<HTMLDivElement>(null);
+  const lastY=useRef(0);
+  useEffect(()=>{
+    const el=ref.current;
+    if(!el)return;
+    const obs=new IntersectionObserver(([e])=>{
+      const now=e.isIntersecting;
+      const scrollDir=window.scrollY>lastY.current?"down":"up";
+      lastY.current=window.scrollY;
+      setRevealDir(scrollDir);
+      setVis(now);
+    },{rootMargin:"-5% 0px -5% 0px",threshold:0.05});
+    obs.observe(el);
+    return()=>obs.disconnect();
+  },[]);
+  const fromX=120;
+  const fromY=revealDir==="down"?60:-60;
+  const fromRot=6;
+  const delay=Math.min(index*90,350);
+  return(
+    <div ref={ref} style={{borderRadius:14,overflow:"hidden",background:"#0d0d0d",border:"1px solid #1a1a1a",position:"relative",aspectRatio:"1",cursor:"pointer",opacity:vis?1:0,transform:vis?"translateX(0) translateY(0) rotate(0deg) scale(1)":`translateX(${fromX}px) translateY(${fromY}px) rotate(${fromRot}deg) scale(0.88)`,filter:vis?"blur(0px)":"blur(12px)",transition:`opacity 0.85s cubic-bezier(0.19,1,0.22,1) ${delay}ms, transform 0.9s cubic-bezier(0.19,1,0.22,1) ${delay}ms, filter 0.7s cubic-bezier(0.19,1,0.22,1) ${delay}ms`,willChange:"transform,opacity,filter"}} className="cc">
+      <img src={item.img} alt={item.caption} loading="lazy" style={{width:"100%",height:"100%",objectFit:"cover",display:"block",pointerEvents:"none"} as React.CSSProperties} draggable={false}/>
+      <div style={{position:"absolute",inset:0,background:"linear-gradient(to top,rgba(0,0,0,0.7) 0%,transparent 60%)",pointerEvents:"none"}}/>
+      <p style={{position:"absolute",bottom:10,left:12,right:12,margin:0,fontSize:11,fontWeight:700,color:"#fff",lineHeight:1.3}}>{item.caption}</p>
+    </div>
+  );
+});
+
 // ─── COMMUNITY LIGHTBOX ───────────────────────────────────────────────────────
 function CommunityLightbox({post,onClose,onPrev,onNext,hasPrev,hasNext}:{post:typeof COMMUNITY_POSTS[0];onClose:()=>void;onPrev:()=>void;onNext:()=>void;hasPrev:boolean;hasNext:boolean}){
   useEffect(()=>{const h=(e:KeyboardEvent)=>{if(e.key==="Escape")onClose();if(e.key==="ArrowLeft"&&hasPrev)onPrev();if(e.key==="ArrowRight"&&hasNext)onNext();};window.addEventListener("keydown",h);return()=>window.removeEventListener("keydown",h);},[onClose,onPrev,onNext,hasPrev,hasNext]);
