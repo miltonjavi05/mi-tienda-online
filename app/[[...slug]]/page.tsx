@@ -865,7 +865,7 @@ const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,index,fmtP
 });
 
 // ─── HORIZONTAL CARD ─────────────────────────────────────────────────────────
-const HCard=memo(function HCard({product,onClick,onBuyNow,index,fmtPrice,isFav,onToggleFavorite}:{product:Product;onClick:()=>void;onBuyNow:()=>void;index?:number;fmtPrice:(n:number)=>string;isFav?:boolean;onToggleFavorite?:(id:string)=>void}){
+const HCard=memo(function HCard({product,onClick,onBuyNow,index,fmtPrice,isFav,onToggleFavorite,animate=true}:{product:Product;onClick:()=>void;onBuyNow:()=>void;index?:number;fmtPrice:(n:number)=>string;isFav?:boolean;onToggleFavorite?:(id:string)=>void;animate?:boolean}){
   const[vis,setVis]=useState(false);
   const[cycle,setCycle]=useState(0);
   const wasVis=useRef(false);
@@ -884,7 +884,7 @@ const HCard=memo(function HCard({product,onClick,onBuyNow,index,fmtPrice,isFav,o
   },[]);
   const revealDelay=Math.min((index??0)*30,160);
   return(
-    <div ref={revealRef} className="hc" style={{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:1,transform:"none",filter:"none"}}>
+    <div ref={revealRef} className="hc" style={animate?{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:vis?1:0,transform:vis?"translateY(0) scale(1)":"translateY(18px) scale(0.88)",filter:vis?"blur(0px)":"blur(5px)",transition:`opacity 0.5s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, transform 0.55s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, filter 0.5s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms`,willChange:"transform,opacity,filter"}:{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:1,transform:"none",filter:"none"}}>
       <div onClick={onClick} style={{background:"#111",width:152,height:152,overflow:"hidden",marginBottom:"0.55rem",borderRadius:10,position:"relative",cursor:"pointer"}}>
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
@@ -951,7 +951,7 @@ const CollectionCard=memo(function CollectionCard({cat,onClick,index}:{cat:{key:
   const fromSide=index%2===0?-64:64;
   const fromRot=index%2===0?-3:3;
   return(
-    <div ref={ref} className="pc" onClick={onClick} style={{cursor:"pointer",position:"relative",borderRadius:16,overflow:"hidden",aspectRatio:"3/4",background:"#111",WebkitTapHighlightColor:"transparent",opacity:1,transform:"none",filter:"none"}}>    <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={cat.img} alt={cat.label}/></div>
+    <div ref={ref} className="pc" onClick={onClick} style={{cursor:"pointer",position:"relative",borderRadius:16,overflow:"hidden",aspectRatio:"3/4",background:"#111",WebkitTapHighlightColor:"transparent",opacity:vis?1:0,transform:vis?"translateX(0) translateY(0) scale(1) rotate(0deg)":`translateX(${fromSide}px) translateY(34px) scale(0.9) rotate(${fromRot}deg)`,filter:vis?"blur(0px)":"blur(8px)",transition:`opacity 0.65s cubic-bezier(0.19,1,0.22,1) ${delay}ms, transform 0.7s cubic-bezier(0.19,1,0.22,1) ${delay}ms, filter 0.65s cubic-bezier(0.19,1,0.22,1) ${delay}ms`,willChange:"transform,opacity,filter"}}>    <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={cat.img} alt={cat.label}/></div>
       <div className="io" style={{position:"absolute",inset:0}}/>
       <div style={{position:"absolute",inset:0,background:"linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.05) 55%, transparent 100%)",pointerEvents:"none"}}/>
       {vis&&<div key={cycle} style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden"}}><div style={{position:"absolute",top:0,left:0,width:"55%",height:"100%",background:"linear-gradient(120deg,transparent 0%,rgba(255,255,255,0.16) 45%,rgba(255,255,255,0.05) 55%,transparent 100%)",filter:"blur(1.5px)",animation:`cardSweep 1.1s cubic-bezier(0.19,1,0.22,1) ${delay+90}ms both`}}/></div>}
@@ -984,7 +984,7 @@ const IconOrb=memo(function IconOrb({img,label,onClick,index}:{img:string;label:
   },[]);
   const delay=Math.min(index*30,160);
   return(
-    <div ref={ref} style={{flexShrink:0,overflow:"visible",opacity:1,transform:"none",filter:"none"}}>
+    <div ref={ref} style={{flexShrink:0,overflow:"visible",opacity:vis?1:0,transform:vis?"translateY(0) scale(1)":"translateY(18px) scale(0.88)",filter:vis?"blur(0px)":"blur(5px)",transition:`opacity 0.5s cubic-bezier(0.19,1,0.22,1) ${delay}ms, transform 0.55s cubic-bezier(0.19,1,0.22,1) ${delay}ms, filter 0.5s cubic-bezier(0.19,1,0.22,1) ${delay}ms`,willChange:"transform,opacity,filter"}}>
       <button onClick={onClick} style={{background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:8,fontFamily:"inherit",WebkitTapHighlightColor:"transparent",outline:"none",width:66,touchAction:"manipulation"}}>
         <div className="pc" style={{width:64,height:64,borderRadius:"50%",overflow:"hidden",position:"relative",background:"#111",boxShadow:"0 0 0 1px rgba(255,255,255,0.16), 0 0 0 4px rgba(255,255,255,0.035), 0 10px 26px rgba(0,0,0,0.55)"}}>
           <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={img} alt={label}/></div>
@@ -998,7 +998,7 @@ const IconOrb=memo(function IconOrb({img,label,onClick,index}:{img:string;label:
 });
 
 // ─── HORIZONTAL ROW ───────────────────────────────────────────────────────────
-const HRow=memo(function HRow({products,onSelect,onBuyNow,fmtPrice,isFavorite,onToggleFavorite}:{products:Product[];onSelect:(p:Product)=>void;onBuyNow:(p:Product)=>void;fmtPrice:(n:number)=>string;isFavorite?:(id:string)=>boolean;onToggleFavorite?:(id:string)=>void}){
+const HRow=memo(function HRow({products,onSelect,onBuyNow,fmtPrice,isFavorite,onToggleFavorite,animate=true}:{products:Product[];onSelect:(p:Product)=>void;onBuyNow:(p:Product)=>void;fmtPrice:(n:number)=>string;isFavorite?:(id:string)=>boolean;onToggleFavorite?:(id:string)=>void;animate?:boolean}){
   const rowRef=useRef<HTMLDivElement>(null);
   const[showLeft,setShowLeft]=useState(false);
   const[showRight,setShowRight]=useState(false);
@@ -1032,7 +1032,7 @@ const HRow=memo(function HRow({products,onSelect,onBuyNow,fmtPrice,isFavorite,on
       <button onClick={()=>scrollBy(-1)} className={`hr-arrow${showLeft?" hr-arrow-visible":""}`} style={{...arrowBase,left:-4}} aria-label="Anterior"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
       <button onClick={()=>scrollBy(1)} className={`hr-arrow${showRight?" hr-arrow-visible":""}`} style={{...arrowBase,right:-4}} aria-label="Siguiente"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
       <div ref={rowRef} className="hr" style={{display:"flex",gap:"0.75rem",overflowX:"scroll",overflowY:"hidden",paddingBottom:"0.5rem",paddingLeft:"0.25rem",paddingRight:"1rem",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",touchAction:"pan-x pan-y",userSelect:"none",WebkitUserSelect:"none",scrollSnapType:"x proximity",animation:bounce==="right"?"railBounceRight 0.5s cubic-bezier(0.22,1,0.36,1)":bounce==="left"?"railBounceLeft 0.5s cubic-bezier(0.22,1,0.36,1)":"none"} as React.CSSProperties}>
-        {products.map((p,idx)=>(<div key={p.id} style={{scrollSnapAlign:"start",flexShrink:0}}><HCard product={p} index={idx} onClick={()=>onSelect(p)} onBuyNow={()=>onBuyNow(p)} fmtPrice={fmtPrice} isFav={isFavorite?isFavorite(p.id):false} onToggleFavorite={onToggleFavorite}/></div>))}
+        {products.map((p,idx)=>(<div key={p.id} style={{scrollSnapAlign:"start",flexShrink:0}}><HCard product={p} index={idx} onClick={()=>onSelect(p)} onBuyNow={()=>onBuyNow(p)} fmtPrice={fmtPrice} isFav={isFavorite?isFavorite(p.id):false} onToggleFavorite={onToggleFavorite} animate={animate}/></div>))}
       </div>
     </div>
   );
@@ -3655,7 +3655,7 @@ const filteredComments=useMemo(()=>{
                       <h2 style={{fontSize:11,fontWeight:800,letterSpacing:3,margin:0,color:"#555"}}>{isLC?`LENTES · ${catLabel(cat).toUpperCase()}`:catLabel(cat).toUpperCase()}</h2>
                       <button onClick={()=>{setShopFilter(cat as ShopFilter);setLentesOpen(isLC);scrollTop();}} style={{background:"none",border:"none",fontSize:10,color:"#333",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",letterSpacing:1,fontWeight:700}}>VER TODOS</button>
                     </div>
-                    <HRow products={prods} onSelect={openProd} onBuyNow={openProd} fmtPrice={fmtPrice}/>
+                    <HRow products={prods} onSelect={openProd} onBuyNow={openProd} fmtPrice={fmtPrice} animate={false}/>
                   </div>
                 );
               })
