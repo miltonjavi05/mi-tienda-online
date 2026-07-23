@@ -447,8 +447,8 @@ const S={
 
 // ─── GLOBAL STYLES ────────────────────────────────────────────────────────────
 const GLOBAL_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@700;800&display=swap');
-  .fokus-logo { font-family:'Rajdhani',Arial,sans-serif; font-weight:800; letter-spacing:2px; transform:skewX(-10deg); display:inline-block; }
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&display=swap');
+  .fokus-logo { font-family:'Playfair Display',Georgia,serif; font-weight:800; letter-spacing:3px; display:inline-block; }
   @keyframes superPulse { 0%{box-shadow:0 4px 18px rgba(255,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.35);} 50%{box-shadow:0 4px 30px rgba(255,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.5);} 100%{box-shadow:0 4px 18px rgba(255,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.35);} }
   *, *::before, *::after { box-sizing: border-box; }
   html { overflow-y: scroll; scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
@@ -504,9 +504,10 @@ const GLOBAL_CSS = `
   @keyframes viewIn { 0%{opacity:0;} 100%{opacity:1;} }
   .pv { animation: viewIn 0.15s ease-out both; will-change: opacity; }
 
-  @keyframes logoRingSpin { to{transform:rotate(360deg);} }
-  @keyframes logoGlowPulse { 0%,100%{opacity:0.35;transform:scale(0.94);} 50%{opacity:0.85;transform:scale(1.08);} }
-  @keyframes logoGlowBurst { 0%{transform:scale(0.6);opacity:0.9;} 100%{transform:scale(1.9);opacity:0;} }
+  @keyframes logoIrisSpin { to{transform:rotate(360deg);} }
+  @keyframes logoIrisSpinReverse { to{transform:rotate(-360deg);} }
+  @keyframes logoApertureBreathe { 0%,100%{opacity:0.4;transform:scale(0.97);} 50%{opacity:0.9;transform:scale(1.04);} }
+  @keyframes logoFocusBurst { 0%{transform:scale(0.55);opacity:0.85;} 100%{transform:scale(2);opacity:0;} }
   @keyframes logoPopIn { 0%{transform:scale(0.4);opacity:0;filter:blur(10px);} 60%{transform:scale(1.08);opacity:1;filter:blur(0px);} 100%{transform:scale(1);opacity:1;filter:blur(0px);} }
   .fokus-logo-btn, .fokus-logo-btn:focus, .fokus-logo-btn:focus-visible { outline:none !important; -webkit-tap-highlight-color:transparent; }
   @media(hover:hover) and (pointer:fine){
@@ -657,9 +658,10 @@ const FokusLogoHero=memo(function FokusLogoHero(){
         className="fokus-logo-btn"
         style={{position:"relative",background:"none",border:"none",padding:0,cursor:"pointer",width:76,height:76,WebkitTapHighlightColor:"transparent",display:"flex",alignItems:"center",justifyContent:"center",opacity:mounted?1:0,animation:mounted?"logoPopIn 0.85s cubic-bezier(0.16,1,0.3,1) both":"none"}}
       >
-        <span aria-hidden="true" style={{position:"absolute",width:76,height:76,borderRadius:"50%",background:"conic-gradient(from 0deg, transparent 0%, rgba(255,255,255,0.95) 12%, transparent 26%, transparent 100%)",maskImage:"radial-gradient(circle, transparent 62%, black 63%)",WebkitMaskImage:"radial-gradient(circle, transparent 62%, black 63%)",animation:mounted?"logoRingSpin 3.4s linear infinite":"none",pointerEvents:"none"}}/>
-        <span aria-hidden="true" style={{position:"absolute",width:88,height:88,borderRadius:"50%",background:"radial-gradient(circle, rgba(255,255,255,0.18) 0%, transparent 68%)",animation:mounted?"logoGlowPulse 3s ease-in-out infinite":"none",pointerEvents:"none"}}/>
-        {burst>0&&<span key={burst} aria-hidden="true" style={{position:"absolute",width:64,height:64,borderRadius:"50%",border:"1px solid rgba(255,255,255,0.55)",animation:"logoGlowBurst 0.6s cubic-bezier(0.16,1,0.3,1) both",pointerEvents:"none"}}/>}
+        <span aria-hidden="true" style={{position:"absolute",width:80,height:80,borderRadius:"50%",border:"1px dashed rgba(255,255,255,0.28)",animation:mounted?"logoIrisSpin 14s linear infinite":"none",pointerEvents:"none"}}/>
+        <span aria-hidden="true" style={{position:"absolute",width:76,height:76,borderRadius:"50%",background:"conic-gradient(from 0deg, transparent 0%, rgba(255,255,255,0.9) 8%, transparent 18%, transparent 50%, rgba(255,255,255,0.5) 58%, transparent 68%, transparent 100%)",maskImage:"radial-gradient(circle, transparent 64%, black 65%, black 78%, transparent 79%)",WebkitMaskImage:"radial-gradient(circle, transparent 64%, black 65%, black 78%, transparent 79%)",animation:mounted?"logoIrisSpinReverse 5s linear infinite":"none",pointerEvents:"none"}}/>
+        <span aria-hidden="true" style={{position:"absolute",width:88,height:88,borderRadius:"50%",background:"radial-gradient(circle, rgba(255,255,255,0.18) 0%, transparent 68%)",animation:mounted?"logoApertureBreathe 3.2s ease-in-out infinite":"none",pointerEvents:"none"}}/>
+        {burst>0&&<span key={burst} aria-hidden="true" style={{position:"absolute",width:64,height:64,borderRadius:"50%",border:"1px solid rgba(255,255,255,0.55)",animation:"logoFocusBurst 0.6s cubic-bezier(0.16,1,0.3,1) both",pointerEvents:"none"}}/>}
         <span style={{position:"relative",width:64,height:64,borderRadius:"50%",overflow:"hidden",display:"block",transform:burst>0?"scale(1.1)":"scale(1)",transition:"transform 0.45s cubic-bezier(0.34,1.56,0.64,1)"}}>
           <img className="fokus-logo-img" src="/favicon.png" alt="Fokus" width={64} height={64} style={{objectFit:"contain",filter:"brightness(1.1)",pointerEvents:"none",width:"100%",height:"100%",display:"block",transition:"transform 0.35s ease"}} draggable={false}/>
         </span>
@@ -1208,7 +1210,7 @@ const Footer=memo(function Footer({setMainView,setShopFilter}:{setMainView:(v:Ma
           <div>
             <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:"0.65rem"}}><img src="/favicon.png" alt="Fokus" width={20} height={20} style={{objectFit:"contain",pointerEvents:"none"}} draggable={false}/><span style={{fontWeight:900,fontSize:12,letterSpacing:5,color:"#fff"}}>FOKUS</span></div>
             <p style={{fontSize:11,color:"#333",lineHeight:1.7,margin:"0 0 0.85rem",maxWidth:180}}>Accesorios con actitud.<br/>Cada detalle +</p>
-            <div style={{display:"flex",gap:"0.45rem"}}><a href={SOCIAL.instagram} target="_blank" rel="noreferrer" className="sl" style={sA}><IcIG s={14}/></a><a href={SOCIAL.facebook} target="_blank" rel="noreferrer" className="sl" style={sA}><IcFB s={14}/></a><a href={SOCIAL.tiktok} target="_blank" rel="noreferrer" className="sl" style={sA}><IcTT s={14}/></a><a href={SOCIAL.whatsapp} target="_blank" rel="noreferrer" className="sl" style={{...sA,background:"rgba(37,211,102,0.08)",borderColor:"rgba(37,211,102,0.15)"}}><IcWA s={14}/></a></div>
+            <div style={{display:"flex",gap:"0.45rem"}}><a href={SOCIAL.instagram} target="_blank" rel="noreferrer" className="sl" style={sA}><IcIG s={14}/></a><a href={SOCIAL.facebook} target="_blank" rel="noreferrer" className="sl" style={sA}><IcFB s={14}/></a><a href={SOCIAL.tiktok} target="_blank" rel="noreferrer" className="sl" style={sA}><IcTT s={14}/></a><a href={SOCIAL.whatsapp} target="_blank" rel="noreferrer" className="sl" style={{...sA,background:"rgba(255,255,255,0.06)",borderColor:"rgba(255,255,255,0.14)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)"}}><IcWA s={14}/></a></div>
           </div>
           <div>
             <p style={{fontSize:9,fontWeight:800,letterSpacing:3,color:"#2a2a2a",marginBottom:"0.75rem"}}>TIENDA</p>
@@ -1216,7 +1218,7 @@ const Footer=memo(function Footer({setMainView,setShopFilter}:{setMainView:(v:Ma
           </div>
           <div>
             <p style={{fontSize:9,fontWeight:800,letterSpacing:3,color:"#2a2a2a",marginBottom:"0.75rem"}}>CONTACTO</p>
-            <a href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent("Hola! Quiero más información sobre los productos de Fokus 🖤")}`} target="_blank" rel="noreferrer" style={{display:"inline-flex",alignItems:"center",gap:"0.45rem",background:"#0d1e0d",color:"#4caf50",padding:"0.55rem 0.9rem",borderRadius:8,fontSize:11,fontWeight:700,textDecoration:"none",marginBottom:"0.75rem",border:"1px solid #162516"}} data-fokus-tracked="true" onClick={()=>trackLeadWhatsApp("footer_contacto")}><IcWA s={12} c="#4caf50"/> WhatsApp</a>
+            <a href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent("Hola! Quiero más información sobre los productos de Fokus 🖤")}`} target="_blank" rel="noreferrer" style={{display:"inline-flex",alignItems:"center",gap:"0.45rem",background:"rgba(255,255,255,0.06)",color:"#fff",padding:"0.55rem 0.9rem",borderRadius:8,fontSize:11,fontWeight:700,textDecoration:"none",marginBottom:"0.75rem",border:"1px solid rgba(255,255,255,0.14)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)"}} data-fokus-tracked="true" onClick={()=>trackLeadWhatsApp("footer_contacto")}><IcWA s={12} c="#fff"/> WhatsApp</a>
             <div style={{display:"flex",flexDirection:"column",gap:"0.2rem"}}><p style={{fontSize:10,color:"#2a2a2a",margin:0}}>miltonjavi05@gmail.com</p><p style={{fontSize:10,color:"#2a2a2a",margin:0}}>+58 424-300-5733</p></div>
           </div>
         </div>
