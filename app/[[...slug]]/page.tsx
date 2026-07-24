@@ -561,33 +561,34 @@ const GLOBAL_CSS = `
       transform-origin: center center;
       animation: pcscrollfocus linear both;
       animation-timeline: view(block);
-      animation-range: cover 5% cover 95%;
+      animation-range: cover 10% cover 90%;
       will-change: transform, opacity, filter;
       backface-visibility: hidden;
       -webkit-backface-visibility: hidden;
       contain: layout paint style;
     }
     @keyframes pcscrollfocus {
-      0%   { transform: scale3d(0.86,0.86,1) translatey(18px) translatez(0); opacity: 0.55; filter: brightness(0.8) saturate(0.82); }
-      14%  { transform: scale3d(0.94,0.94,1) translatey(8px) translatez(0);  opacity: 0.8; filter: brightness(0.92) saturate(0.94); }
-      50%  { transform: scale3d(1.07,1.07,1) translatey(0) translatez(0); opacity: 1;    filter: brightness(1.1) saturate(1.18); }
-      86%  { transform: scale3d(0.94,0.94,1) translatey(-8px) translatez(0); opacity: 0.8; filter: brightness(0.92) saturate(0.94); }
-      100% { transform: scale3d(0.86,0.86,1) translatey(-18px) translatez(0); opacity: 0.55; filter: brightness(0.8) saturate(0.82); }
+      0%   { transform: scale3d(0.91,0.91,1) translatey(13px) translatez(0); opacity: 0.72; filter: brightness(0.88) saturate(0.92); }
+      14%  { transform: scale3d(0.96,0.96,1) translatey(6px) translatez(0);  opacity: 0.88; filter: brightness(0.95) saturate(0.97); }
+      50%  { transform: scale3d(1.045,1.045,1) translatey(0) translatez(0); opacity: 1;    filter: brightness(1.05) saturate(1.1); }
+      86%  { transform: scale3d(0.96,0.96,1) translatey(-6px) translatez(0); opacity: 0.88; filter: brightness(0.95) saturate(0.97); }
+      100% { transform: scale3d(0.91,0.91,1) translatey(-13px) translatez(0); opacity: 0.72; filter: brightness(0.88) saturate(0.92); }
     }
     .hc-scroll-focus {
       transform-origin: center center;
       animation: hcscrollfocus linear both;
-      animation-timeline: view(block);
-      animation-range: cover 5% cover 95%;
-      will-change: transform, opacity, filter;
+      animation-timeline: view(inline);
+      animation-range: cover 8% cover 92%;
+      will-change: transform, filter;
       backface-visibility: hidden;
       -webkit-backface-visibility: hidden;
       contain: layout paint style;
+      box-shadow: 0 14px 30px rgba(0,0,0,0.35);
     }
     @keyframes hcscrollfocus {
-      0%   { transform: scale3d(0.82,0.82,1) translatey(20px) translatez(0); opacity: 0.5; filter: brightness(0.78); }
-      50%  { transform: scale3d(1.03,1.03,1) translatey(0) translatez(0); opacity: 1; filter: brightness(1.06); }
-      100% { transform: scale3d(0.82,0.82,1) translatey(-20px) translatez(0); opacity: 0.5; filter: brightness(0.78); }
+      0%   { transform: scale3d(0.86,0.86,1) translatey(14px) translatez(0); filter: brightness(0.86); }
+      50%  { transform: scale3d(1,1,1) translatey(0) translatez(0); filter: brightness(1); }
+      100% { transform: scale3d(0.86,0.86,1) translatey(14px) translatez(0); filter: brightness(0.86); }
     }
   }
 
