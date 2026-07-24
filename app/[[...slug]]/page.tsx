@@ -598,7 +598,7 @@ const GLOBAL_CSS = `
 
   @supports (animation-timeline: view()) {
     .pc-lentes-fix.pc-scroll-focus {
-      animation-range: cover 32% cover 90% !important;
+      animation-range: cover 42% cover 90% !important;
     }
   }
 
