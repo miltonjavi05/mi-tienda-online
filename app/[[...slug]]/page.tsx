@@ -3528,7 +3528,7 @@ const filteredComments=useMemo(()=>{
     if(modalPushedRef.current)window.history.replaceState({fokusModal:true},"",path);
     else{window.history.pushState({fokusModal:true},"",path);modalPushedRef.current=true;}
   },[currentUser?.email]);
-  const modalBuyNow=useCallback((p:Product)=>{closeProdModal();handleBuyNow(p);},[closeProdModal,handleBuyNow]);
+  const modalBuyNow=useCallback((p:Product)=>{skipScrollRestoreRef.current=true;closeProdModal();handleBuyNow(p);},[closeProdModal,handleBuyNow]);
   const userReady=currentUser!==undefined;
 
   if(isTY&&orderSnap){
