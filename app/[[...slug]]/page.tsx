@@ -3583,12 +3583,14 @@ const filteredComments=useMemo(()=>{
               {rateLoading?"Cargando tasa BCV…":bcvRate?`1 USD = ${bcvRate.toLocaleString("es-VE",{minimumFractionDigits:2,maximumFractionDigits:2})} Bs · BCV`:"Tasa BCV"}
             </span>
           </div>
+          {(isShop||isCart)&&(
           <button
             onClick={()=>{if(!showBs)fetchBcvRate();setShowBs(s=>!s);}}
             style={{display:"flex",alignItems:"center",gap:5,background:showBs?"#fff":"#1a1a1a",color:showBs?"#080808":"#888",border:`1px solid ${showBs?"#fff":"#2a2a2a"}`,borderRadius:20,padding:"2px 11px",fontSize:9,fontWeight:900,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",flexShrink:0,transition:"all 0.15s",WebkitTapHighlightColor:"transparent",touchAction:"manipulation"}}
           >
             {showBs?"VER EN USD ↕":"VER EN BS ↕"}
           </button>
+          )}
         </div>
       </nav>
 
