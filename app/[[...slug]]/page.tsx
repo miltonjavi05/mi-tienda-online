@@ -5308,13 +5308,13 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                 <Footer setMainView={setMainView} setShopFilter={setShopFilter}/>
               </div>
             </div>
-            <div className="pm-footer-bar" style={{flexshrink:0,padding:"1rem 1.5rem 1.5rem",background:"#111",bordertop:"1px solid #1e1e1e",display:"flex",flexdirection:"column",gap:"0.6rem",boxshadow:"0 -8px 24px rgba(0,0,0,0.4)",position:"relative"}}>
+            <div className="pm-footer-bar" style={{flexShrink:0,padding:"1rem 1.5rem 1.5rem",background:"#111",borderTop:"1px solid #1e1e1e",display:"flex",flexDirection:"column",gap:"0.6rem",boxShadow:"0 -8px 24px rgba(0,0,0,0.4)",position:"relative"}}>
               {addedFlash&&(
-                <div style={{position:"absolute",bottom:"100%",left:"1.5rem",right:"1.5rem",marginBottom:"0.6rem",display:"flex",alignItems:"center",gap:8,background:"#0d1e0d",border:"1px solid #2a4a2a",borderRadius:10,padding:"0.65rem 0.9rem",animation:"slideUp 0.25s cubic-bezier(0.34,1.3,0.64,1)",boxshadow:"0 8px 24px rgba(0,0,0,0.5)",zindex:5}}>
-                  <div style={{width:20,height:20,borderradius:"50%",background:"#4caf50",display:"flex",alignitems:"center",justifycontent:"center",flexshrink:0}}>
-                    <svg width="11" height="11" viewbox="0 0 24 24" fill="none" stroke="#080808" strokewidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                <div style={{position:"absolute",bottom:"100%",left:"1.5rem",right:"1.5rem",marginBottom:"0.6rem",display:"flex",alignItems:"center",gap:8,background:"#0d1e0d",border:"1px solid #2a4a2a",borderRadius:10,padding:"0.65rem 0.9rem",animation:"slideUp 0.25s cubic-bezier(0.34,1.3,0.64,1)",boxShadow:"0 8px 24px rgba(0,0,0,0.5)",zIndex:5}}>
+                  <div style={{width:20,height:20,borderRadius:"50%",background:"#4caf50",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#080808" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
                   </div>
-                  <span style={{fontsize:12,fontweight:800,color:"#4caf50"}}>agregado al carrito ({modalqty} unidad{modalqty>1?"es":""})</span>
+                  <span style={{fontSize:12,fontWeight:800,color:"#4caf50"}}>Agregado al carrito ({modalQty} unidad{modalQty>1?"es":""})</span>
                 </div>
               )}
               <div style={{display:"flex",alignItems:"center",gap:"0.6rem"}}>
