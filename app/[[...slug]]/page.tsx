@@ -563,18 +563,20 @@ const GLOBAL_CSS = `
       transform-style: preserve-3d;
       animation: pcscrollfocus linear both;
       animation-timeline: view(block);
-      animation-range: cover 8% cover 92%;
-      will-change: transform, opacity, filter;
+      animation-range: cover 14% cover 86%;
+      will-change: transform, opacity, filter, box-shadow;
       backface-visibility: hidden;
       -webkit-backface-visibility: hidden;
       contain: layout paint style;
     }
     @keyframes pcscrollfocus {
-      0%   { transform: scale3d(0.8,0.8,1) translatey(30px) translatez(0) rotatey(-9deg); opacity: 0.5; filter: brightness(0.78) saturate(0.82) blur(2.5px); }
-      18%  { transform: scale3d(0.93,0.93,1) translatey(10px) translatez(0) rotatey(-3deg); opacity: 0.85; filter: brightness(0.92) saturate(0.94) blur(0.6px); }
-      50%  { transform: scale3d(1.06,1.06,1) translatey(0) translatez(0) rotatey(0deg); opacity: 1; filter: brightness(1.07) saturate(1.14) blur(0px); }
-      82%  { transform: scale3d(0.93,0.93,1) translatey(-10px) translatez(0) rotatey(3deg); opacity: 0.85; filter: brightness(0.92) saturate(0.94) blur(0.6px); }
-      100% { transform: scale3d(0.8,0.8,1) translatey(-30px) translatez(0) rotatey(9deg); opacity: 0.5; filter: brightness(0.78) saturate(0.82) blur(2.5px); }
+      0%   { transform: scale3d(0.82,0.82,1) translatey(34px) translatez(0) rotatey(-13deg) rotatex(4deg); opacity: 0.74; filter: brightness(0.74) saturate(0.75) blur(3px); box-shadow: 0 6px 16px rgba(0,0,0,0.25); }
+      15%  { transform: scale3d(0.9,0.9,1) translatey(18px) translatez(0) rotatey(-7deg) rotatex(2deg); opacity: 0.86; filter: brightness(0.86) saturate(0.88) blur(1.4px); box-shadow: 0 10px 22px rgba(0,0,0,0.3); }
+      35%  { transform: scale3d(1.02,1.02,1) translatey(4px) translatez(0) rotatey(-2deg) rotatex(0.5deg); opacity: 0.97; filter: brightness(1) saturate(1.06) blur(0.2px); box-shadow: 0 16px 30px rgba(0,0,0,0.4); }
+      50%  { transform: scale3d(1.11,1.11,1) translatey(0) translatez(0) rotatey(0deg) rotatex(0deg); opacity: 1; filter: brightness(1.12) saturate(1.22) blur(0px); box-shadow: 0 22px 42px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06); }
+      65%  { transform: scale3d(1.02,1.02,1) translatey(-4px) translatez(0) rotatey(2deg) rotatex(-0.5deg); opacity: 0.97; filter: brightness(1) saturate(1.06) blur(0.2px); box-shadow: 0 16px 30px rgba(0,0,0,0.4); }
+      85%  { transform: scale3d(0.9,0.9,1) translatey(-18px) translatez(0) rotatey(7deg) rotatex(-2deg); opacity: 0.86; filter: brightness(0.86) saturate(0.88) blur(1.4px); box-shadow: 0 10px 22px rgba(0,0,0,0.3); }
+      100% { transform: scale3d(0.82,0.82,1) translatey(-34px) translatez(0) rotatey(13deg) rotatex(-4deg); opacity: 0.74; filter: brightness(0.74) saturate(0.75) blur(3px); box-shadow: 0 6px 16px rgba(0,0,0,0.25); }
     }
     .hc-scroll-focus {
       transform-origin: center center;
