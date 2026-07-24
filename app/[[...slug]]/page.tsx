@@ -561,34 +561,33 @@ const GLOBAL_CSS = `
       transform-origin: center center;
       animation: pcscrollfocus linear both;
       animation-timeline: view(block);
-      animation-range: cover 10% cover 90%;
+      animation-range: cover 5% cover 95%;
       will-change: transform, opacity, filter;
       backface-visibility: hidden;
       -webkit-backface-visibility: hidden;
       contain: layout paint style;
     }
     @keyframes pcscrollfocus {
-      0%   { transform: scale3d(0.91,0.91,1) translatey(13px) translatez(0); opacity: 0.72; filter: brightness(0.88) saturate(0.92); }
-      14%  { transform: scale3d(0.96,0.96,1) translatey(6px) translatez(0);  opacity: 0.88; filter: brightness(0.95) saturate(0.97); }
-      50%  { transform: scale3d(1.045,1.045,1) translatey(0) translatez(0); opacity: 1;    filter: brightness(1.05) saturate(1.1); }
-      86%  { transform: scale3d(0.96,0.96,1) translatey(-6px) translatez(0); opacity: 0.88; filter: brightness(0.95) saturate(0.97); }
-      100% { transform: scale3d(0.91,0.91,1) translatey(-13px) translatez(0); opacity: 0.72; filter: brightness(0.88) saturate(0.92); }
+      0%   { transform: scale3d(0.86,0.86,1) translatey(18px) translatez(0); opacity: 0.55; filter: brightness(0.8) saturate(0.82); }
+      14%  { transform: scale3d(0.94,0.94,1) translatey(8px) translatez(0);  opacity: 0.8; filter: brightness(0.92) saturate(0.94); }
+      50%  { transform: scale3d(1.07,1.07,1) translatey(0) translatez(0); opacity: 1;    filter: brightness(1.1) saturate(1.18); }
+      86%  { transform: scale3d(0.94,0.94,1) translatey(-8px) translatez(0); opacity: 0.8; filter: brightness(0.92) saturate(0.94); }
+      100% { transform: scale3d(0.86,0.86,1) translatey(-18px) translatez(0); opacity: 0.55; filter: brightness(0.8) saturate(0.82); }
     }
     .hc-scroll-focus {
       transform-origin: center center;
       animation: hcscrollfocus linear both;
-      animation-timeline: view(inline);
-      animation-range: cover 8% cover 92%;
-      will-change: transform, filter;
+      animation-timeline: view(block);
+      animation-range: cover 5% cover 95%;
+      will-change: transform, opacity, filter;
       backface-visibility: hidden;
       -webkit-backface-visibility: hidden;
       contain: layout paint style;
-      box-shadow: 0 14px 30px rgba(0,0,0,0.35);
     }
     @keyframes hcscrollfocus {
-      0%   { transform: scale3d(0.86,0.86,1) translatey(14px) translatez(0); filter: brightness(0.86); }
-      50%  { transform: scale3d(1,1,1) translatey(0) translatez(0); filter: brightness(1); }
-      100% { transform: scale3d(0.86,0.86,1) translatey(14px) translatez(0); filter: brightness(0.86); }
+      0%   { transform: scale3d(0.82,0.82,1) translatey(20px) translatez(0); opacity: 0.5; filter: brightness(0.78); }
+      50%  { transform: scale3d(1.03,1.03,1) translatey(0) translatez(0); opacity: 1; filter: brightness(1.06); }
+      100% { transform: scale3d(0.82,0.82,1) translatey(-20px) translatez(0); opacity: 0.5; filter: brightness(0.78); }
     }
   }
 
@@ -3576,7 +3575,7 @@ const filteredComments=useMemo(()=>{
             <input autoFocus value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} placeholder="Buscar productos…" style={{...S.input,borderRadius:8}}/>
           </div>
         )}
-        <div style={{borderTop:"1px solid #161616",padding:"0 1rem",height:36,display:"flex",alignItems:"center",justifyContent:"space-between",gap:"0.5rem"}}>
+        <div style={{borderTop:"1px solid #161616",padding:"0 1rem",height:28,display:"flex",alignItems:"center",justifyContent:"space-between",gap:"0.5rem"}}>
           <div style={{display:"flex",alignItems:"center",gap:6}}>
             <span style={{width:6,height:6,borderRadius:"50%",background:rateLoading?"#555":bcvRate?"#4caf50":"#555",flexShrink:0}}/>
             <span style={{fontSize:10,color:"#444",fontWeight:700,letterSpacing:0.5}}>
@@ -3585,7 +3584,7 @@ const filteredComments=useMemo(()=>{
           </div>
           <button
             onClick={()=>{if(!showBs)fetchBcvRate();setShowBs(s=>!s);}}
-            style={{display:"flex",alignItems:"center",gap:5,background:showBs?"#fff":"#1a1a1a",color:showBs?"#080808":"#888",border:`1px solid ${showBs?"#fff":"#2a2a2a"}`,borderRadius:20,padding:"4px 14px",fontSize:10,fontWeight:900,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",flexShrink:0,transition:"all 0.15s",WebkitTapHighlightColor:"transparent",touchAction:"manipulation"}}
+            style={{display:"flex",alignItems:"center",gap:5,background:showBs?"#fff":"#1a1a1a",color:showBs?"#080808":"#888",border:`1px solid ${showBs?"#fff":"#2a2a2a"}`,borderRadius:20,padding:"2px 11px",fontSize:9,fontWeight:900,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",flexShrink:0,transition:"all 0.15s",WebkitTapHighlightColor:"transparent",touchAction:"manipulation"}}
           >
             {showBs?"VER EN USD ↕":"VER EN BS ↕"}
           </button>
@@ -3771,8 +3770,8 @@ const filteredComments=useMemo(()=>{
               items={["TODO","LENTES",...(SHOP_CATS.filter(c=>c!=="LENTES") as string[])]}
               active={shopFilter==="TODO"?"TODO":isLentesActive?"LENTES":(SHOP_CATS.filter(c=>c!=="LENTES") as string[]).includes(shopFilter)?shopFilter:"TODO"}
               onSelect={item=>{if(item==="LENTES"){const n=!lentesOpen;setLentesOpen(n);if(n)setShopFilter("LENTES");}else{setShopFilter(item as ShopFilter);setLentesOpen(false);}scrollTop();}}
-              height={44}
-              renderItem={(item,_)=>{const a=item==="TODO"?shopFilter==="TODO":item==="LENTES"?isLentesActive:shopFilter===item;return(<span className="nb" style={{display:"flex",alignItems:"center",gap:4,padding:"0 1rem",height:44,borderBottom:a?"2px solid #fff":"2px solid transparent",fontSize:10,fontWeight:800,letterSpacing:2,color:a?"#fff":"#3e3e3e",whiteSpace:"nowrap",transition:"color 0.15s,border-color 0.15s"}}>{item}{item==="LENTES"&&<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{transition:"transform 0.2s",transform:lentesOpen?"rotate(180deg)":"rotate(0deg)"}}><polyline points="6 9 12 15 18 9"/></svg>}</span>);}}
+              height={36}
+              renderItem={(item,_)=>{const a=item==="TODO"?shopFilter==="TODO":item==="LENTES"?isLentesActive:shopFilter===item;return(<span className="nb" style={{display:"flex",alignItems:"center",gap:4,padding:"0 1rem",height:36,borderBottom:a?"2px solid #fff":"2px solid transparent",fontSize:10,fontWeight:800,letterSpacing:2,color:a?"#fff":"#3e3e3e",whiteSpace:"nowrap",transition:"color 0.15s,border-color 0.15s"}}>{item}{item==="LENTES"&&<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{transition:"transform 0.2s",transform:lentesOpen?"rotate(180deg)":"rotate(0deg)"}}><polyline points="6 9 12 15 18 9"/></svg>}</span>);}}
             />
             {lentesOpen&&(
               <div className="ts" style={{background:"#0a0a0a",borderTop:"1px solid #1a1a1a",padding:"0.55rem 1rem",display:"flex",gap:"0.45rem",overflowX:"auto",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",touchAction:"pan-x"}}>
