@@ -570,13 +570,11 @@ const GLOBAL_CSS = `
       contain: layout paint style;
     }
     @keyframes pcscrollfocus {
-      0%   { transform: scale3d(0.82,0.82,1) translatey(34px) translatez(0) rotatey(-13deg) rotatex(4deg); opacity: 0.74; filter: brightness(0.74) saturate(0.75) blur(3px); box-shadow: 0 6px 16px rgba(0,0,0,0.25); }
-      15%  { transform: scale3d(0.9,0.9,1) translatey(18px) translatez(0) rotatey(-7deg) rotatex(2deg); opacity: 0.86; filter: brightness(0.86) saturate(0.88) blur(1.4px); box-shadow: 0 10px 22px rgba(0,0,0,0.3); }
-      35%  { transform: scale3d(1.02,1.02,1) translatey(4px) translatez(0) rotatey(-2deg) rotatex(0.5deg); opacity: 0.97; filter: brightness(1) saturate(1.06) blur(0.2px); box-shadow: 0 16px 30px rgba(0,0,0,0.4); }
-      50%  { transform: scale3d(1.11,1.11,1) translatey(0) translatez(0) rotatey(0deg) rotatex(0deg); opacity: 1; filter: brightness(1.12) saturate(1.22) blur(0px); box-shadow: 0 22px 42px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06); }
-      65%  { transform: scale3d(1.02,1.02,1) translatey(-4px) translatez(0) rotatey(2deg) rotatex(-0.5deg); opacity: 0.97; filter: brightness(1) saturate(1.06) blur(0.2px); box-shadow: 0 16px 30px rgba(0,0,0,0.4); }
-      85%  { transform: scale3d(0.9,0.9,1) translatey(-18px) translatez(0) rotatey(7deg) rotatex(-2deg); opacity: 0.86; filter: brightness(0.86) saturate(0.88) blur(1.4px); box-shadow: 0 10px 22px rgba(0,0,0,0.3); }
-      100% { transform: scale3d(0.82,0.82,1) translatey(-34px) translatez(0) rotatey(13deg) rotatex(-4deg); opacity: 0.74; filter: brightness(0.74) saturate(0.75) blur(3px); box-shadow: 0 6px 16px rgba(0,0,0,0.25); }
+      0%   { transform: scale3d(0.9,0.9,1) translatey(22px) translatez(0); opacity: 0.8; filter: brightness(0.82) saturate(0.85) blur(2px); box-shadow: 0 6px 16px rgba(0,0,0,0.25); }
+      35%  { transform: scale3d(1,1,1) translatey(4px) translatez(0); opacity: 0.96; filter: brightness(1) saturate(1.04) blur(0.2px); box-shadow: 0 14px 26px rgba(0,0,0,0.4); }
+      50%  { transform: scale3d(1.04,1.04,1) translatey(0) translatez(0); opacity: 1; filter: brightness(1.08) saturate(1.15) blur(0px); box-shadow: 0 18px 34px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06); }
+      65%  { transform: scale3d(1,1,1) translatey(-4px) translatez(0); opacity: 0.96; filter: brightness(1) saturate(1.04) blur(0.2px); box-shadow: 0 14px 26px rgba(0,0,0,0.4); }
+      100% { transform: scale3d(0.9,0.9,1) translatey(-22px) translatez(0); opacity: 0.8; filter: brightness(0.82) saturate(0.85) blur(2px); box-shadow: 0 6px 16px rgba(0,0,0,0.25); }
     }
     .hc-scroll-focus {
       transform-origin: center center;
