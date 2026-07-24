@@ -935,10 +935,12 @@ const HCard=memo(function HCard({product,onClick,onBuyNow,index,fmtPrice,isFav,o
     return()=>obs.disconnect();
   },[isPremium]);
   const revealDelay=Math.min((index??0)*30,160);
-  const premiumScale=0.88+ratio*0.12;
-  const premiumY=(1-ratio)*10;
+  const premiumScale=0.86+ratio*0.14;
+  const premiumY=(1-ratio)*14;
+  const premiumShadow=`0 ${Math.round(4+ratio*16)}px ${Math.round(10+ratio*26)}px rgba(0,0,0,${(0.15+ratio*0.35).toFixed(3)})`;
+  const premiumBrightness=(0.86+ratio*0.14).toFixed(3);
   return(
-    <div ref={revealRef} className="hc" style={isPremium?{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:1,transform:`translateY(${premiumY}px) scale(${premiumScale})`,filter:"none",transition:"transform 0.22s cubic-bezier(0.34,1.56,0.64,1)",willChange:"transform"}:animate?{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:vis?1:0,transform:vis?"translateY(0) scale(1)":"translateY(18px) scale(0.88)",filter:vis?"blur(0px)":"blur(5px)",transition:`opacity 0.5s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, transform 0.55s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, filter 0.5s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms`,willChange:"transform,opacity,filter"}:{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:1,transform:"none",filter:"none"}}>
+    <div ref={revealRef} className="hc" style={isPremium?{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:1,transform:`translateY(${premiumY}px) scale(${premiumScale})`,filter:`brightness(${premiumBrightness})`,boxShadow:premiumShadow,borderRadius:14,transition:"transform 0.22s cubic-bezier(0.34,1.56,0.64,1), filter 0.22s ease, box-shadow 0.22s ease",willChange:"transform,filter"}:animate?{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:vis?1:0,transform:vis?"translateY(0) scale(1)":"translateY(18px) scale(0.88)",filter:vis?"blur(0px)":"blur(5px)",transition:`opacity 0.5s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, transform 0.55s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, filter 0.5s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms`,willChange:"transform,opacity,filter"}:{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:1,transform:"none",filter:"none"}}>
       <div onClick={onClick} style={{background:"#111",width:152,height:152,overflow:"hidden",marginBottom:"0.55rem",borderRadius:10,position:"relative",cursor:"pointer"}}>
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
@@ -959,7 +961,7 @@ const HCard=memo(function HCard({product,onClick,onBuyNow,index,fmtPrice,isFav,o
         ):(
           <p style={{margin:0,fontSize:13,fontWeight:800,color:C.accent}}>{fmtPrice(product.price)}</p>
         )}
-        <p style={{margin:"2px 0 0",fontSize:8,color:"#fff",fontWeight:900,letterSpacing:0.8,textShadow:"0 0 8px rgba(255,255,255,0.35)"}}>⚡ {getUnitsSoldLabel(product)}</p>
+        <p style={{margin:"2px 0 0",fontSize:8,color:"#fff",fontWeight:900,letterSpacing:0.8,textShadow:"0 0 8px rgba(255,255,255,0.35)",display:"inline-block",transform:isPremium?`scale(${(0.94+ratio*0.1).toFixed(3)})`:"none",transformOrigin:"left center",transition:isPremium?"transform 0.22s cubic-bezier(0.34,1.56,0.64,1)":"none"}}>⚡ {getUnitsSoldLabel(product)}</p>
       </div>
       <div style={{display:"flex",flexDirection:"column",gap:"0.3rem"}}>
         <button
@@ -1103,8 +1105,8 @@ const RevealUp=memo(function RevealUp({children,delay=0}:{children:React.ReactNo
     <div className="hr-wrap" style={{position:"relative"}}>
       <button onClick={()=>scrollBy(-1)} className={`hr-arrow${showLeft?" hr-arrow-visible":""}`} style={{...arrowBase,left:-4}} aria-label="Anterior"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
       <button onClick={()=>scrollBy(1)} className={`hr-arrow${showRight?" hr-arrow-visible":""}`} style={{...arrowBase,right:-4}} aria-label="Siguiente"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
-      <div ref={rowRef} className="hr" style={{display:"flex",gap:"0.75rem",overflowX:"scroll",overflowY:"hidden",paddingBottom:"0.5rem",paddingLeft:"0.25rem",paddingRight:"1rem",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",touchAction:"pan-x pan-y",userSelect:"none",WebkitUserSelect:"none",scrollSnapType:"x proximity",animation:bounce==="right"?"railBounceRight 0.5s cubic-bezier(0.22,1,0.36,1)":bounce==="left"?"railBounceLeft 0.5s cubic-bezier(0.22,1,0.36,1)":"none"} as React.CSSProperties}>
-        {products.map((p,idx)=>(<div key={p.id} style={{scrollSnapAlign:"start",flexShrink:0}}><HCard product={p} index={idx} onClick={()=>onSelect(p)} onBuyNow={()=>onBuyNow(p)} fmtPrice={fmtPrice} isFav={isFavorite?isFavorite(p.id):false} onToggleFavorite={onToggleFavorite} animate={animate}/></div>))}
+      <div ref={rowRef} className="hr" style={{display:"flex",gap:"0.75rem",overflowX:"scroll",overflowY:"hidden",paddingBottom:"0.5rem",paddingLeft:"0.25rem",paddingRight:"1rem",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",touchAction:"pan-x pan-y",userSelect:"none",WebkitUserSelect:"none",scrollSnapType:"x mandatory",scrollBehavior:"smooth",animation:bounce==="right"?"railBounceRight 0.5s cubic-bezier(0.22,1,0.36,1)":bounce==="left"?"railBounceLeft 0.5s cubic-bezier(0.22,1,0.36,1)":"none"} as React.CSSProperties}>
+        {products.map((p,idx)=>(<div key={p.id} style={{scrollSnapAlign:animate==="premium"?"center":"start",flexShrink:0}}><HCard product={p} index={idx} onClick={()=>onSelect(p)} onBuyNow={()=>onBuyNow(p)} fmtPrice={fmtPrice} isFav={isFavorite?isFavorite(p.id):false} onToggleFavorite={onToggleFavorite} animate={animate}/></div>))}
       </div>
     </div>
   );
