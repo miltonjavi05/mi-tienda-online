@@ -1810,6 +1810,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
       body.style.overflow=prevOverflow;
       if(skipScrollRestoreRef.current){
         skipScrollRestoreRef.current=false;
+        scrollTop();
       }else{
         window.scrollTo(0,scrollY);
       }
