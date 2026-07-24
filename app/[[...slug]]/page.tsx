@@ -1,4 +1,4 @@
-   "use client";
+ "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
 import { usePathname } from "next/navigation";
@@ -596,12 +596,6 @@ const GLOBAL_CSS = `
     }
   }
 
-  @supports (animation-timeline: view()) {
-    .pc-lentes-fix.pc-scroll-focus {
-      animation-range: cover 42% cover 90% !important;
-    }
-  }
-
   @media(hover:hover) and (pointer:fine){
     .iz { transition: transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94) !important; }
     .io { transition: background 0.3s ease !important; }
@@ -915,9 +909,9 @@ const NativeTabs=memo(function NativeTabs({items,active,onSelect,renderItem,heig
 });
 
 // ─── PRODUCT CARD (GRID) ──────────────────────────────────────────────────────
-const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,index,fmtPrice,isFav,onToggleFavorite,lentesFix}:{product:Product;onClick:()=>void;onBuyNow:()=>void;index:number;fmtPrice:(n:number)=>string;isFav?:boolean;onToggleFavorite?:(id:string)=>void;lentesFix?:boolean}){
+const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,index,fmtPrice,isFav,onToggleFavorite}:{product:Product;onClick:()=>void;onBuyNow:()=>void;index:number;fmtPrice:(n:number)=>string;isFav?:boolean;onToggleFavorite?:(id:string)=>void}){
   return(
-    <div className={lentesFix?"pc pc-scroll-focus pc-lentes-fix":"pc pc-scroll-focus"} style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:1}}>
+    <div className="pc pc-scroll-focus" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:1}}>
       <div onClick={onClick} style={{background:"#111",aspectRatio:"1",overflow:"hidden",borderRadius:10,position:"relative",marginBottom:"0.55rem"}}>
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
@@ -3841,7 +3835,7 @@ const filteredComments=useMemo(()=>{
                       <button onClick={()=>{setShopFilter(cat as ShopFilter);setLentesOpen(isLC);scrollTop();}} style={{background:"none",border:"none",fontSize:10,color:"#333",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",letterSpacing:1,fontWeight:700}}>VER TODOS</button>
                     </div>
                     <div className="pg" style={{display:"grid",gap:"1rem",alignItems:"start"}}>
-                      {prods.map((p,i)=><ProductCard key={p.id} product={p} index={i} onClick={()=>openProd(p)} onBuyNow={()=>openProd(p)} fmtPrice={fmtPrice} lentesFix={isLC}/>)}
+                      {prods.map((p,i)=><ProductCard key={p.id} product={p} index={i} onClick={()=>openProd(p)} onBuyNow={()=>openProd(p)} fmtPrice={fmtPrice}/>)}
                     </div>
                   </div>
                 );
