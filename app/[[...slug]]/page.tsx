@@ -869,15 +869,17 @@ function DraggableWA(){
   const[pos,setPos]=useState({x:0,y:0});
   const[pressed,setPressed]=useState(false);
   const[snapping,setSnapping]=useState(false);
-  const dragging=useRef(false),moved=useRef(false),startPtr=useRef({x:0,y:0}),startPos=useRef({x:0,y:0}),live=useRef({x:0,y:0}),raf=useRef(0);
+  const elRef=useRef<HTMLDivElement>(null);
+  const dragging=useRef(false),moved=useRef(false),startPtr=useRef({x:0,y:0}),startPos=useRef({x:0,y:0}),live=useRef({x:0,y:0}),raf=useRef(0),pendingDelta=useRef({dx:0,dy:0});
   const clamp=useCallback((x:number,y:number)=>({x:Math.max(MG,Math.min(window.innerWidth-BTN-MG,x)),y:Math.max(MG+80,Math.min(window.innerHeight-BTN-MG*2,y))}),[]);
   const snapToEdge=useCallback((x:number,y:number)=>{const cx=x+BTN/2;const side=cx<window.innerWidth/2?MG:window.innerWidth-BTN-MG;return{x:side,y:clamp(x,y).y};},[clamp]);
   useEffect(()=>{const p={x:window.innerWidth-BTN-MG,y:Math.round(window.innerHeight*0.78-BTN/2)};live.current=p;setPos(p);setReady(true);const onResize=()=>{if(!dragging.current){const np=snapToEdge(live.current.x,live.current.y);live.current=np;setPos({...np});}};window.addEventListener("resize",onResize,{passive:true});return()=>{window.removeEventListener("resize",onResize);};},[snapToEdge]);
+  const flush=useCallback(()=>{raf.current=0;const n=clamp(startPos.current.x+pendingDelta.current.dx,startPos.current.y+pendingDelta.current.dy);live.current=n;if(elRef.current){elRef.current.style.left=n.x+"px";elRef.current.style.top=n.y+"px";}},[clamp]);
   const onDown=useCallback((e:React.PointerEvent)=>{e.preventDefault();(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);dragging.current=true;moved.current=false;startPtr.current={x:e.clientX,y:e.clientY};startPos.current={...live.current};setPressed(true);setSnapping(false);},[]);
-  const onMove=useCallback((e:React.PointerEvent)=>{if(!dragging.current)return;e.preventDefault();const dx=e.clientX-startPtr.current.x,dy=e.clientY-startPtr.current.y;if(Math.abs(dx)>4||Math.abs(dy)>4)moved.current=true;const n=clamp(startPos.current.x+dx,startPos.current.y+dy);live.current=n;cancelAnimationFrame(raf.current);raf.current=requestAnimationFrame(()=>setPos({...n}));},[clamp]);
-  const finishDrag=useCallback(()=>{if(!dragging.current)return;dragging.current=false;setPressed(false);if(moved.current){const s=snapToEdge(live.current.x,live.current.y);live.current=s;setSnapping(true);setPos({...s});setTimeout(()=>setSnapping(false),420);}},[snapToEdge]);
+  const onMove=useCallback((e:React.PointerEvent)=>{if(!dragging.current)return;e.preventDefault();const dx=e.clientX-startPtr.current.x,dy=e.clientY-startPtr.current.y;if(Math.abs(dx)>4||Math.abs(dy)>4)moved.current=true;pendingDelta.current={dx,dy};if(!raf.current)raf.current=requestAnimationFrame(flush);},[]);
+  const finishDrag=useCallback(()=>{if(!dragging.current)return;dragging.current=false;if(raf.current){cancelAnimationFrame(raf.current);raf.current=0;flush();}setPressed(false);if(moved.current){const s=snapToEdge(live.current.x,live.current.y);live.current=s;setSnapping(true);setPos({...s});setTimeout(()=>setSnapping(false),420);}else{setPos({...live.current});}},[snapToEdge,flush]);
   const onClick=useCallback((e:React.MouseEvent)=>{if(moved.current){e.preventDefault();return;}trackLeadWhatsApp("boton_flotante");const msg=encodeURIComponent("Hola! Vi su tienda Fokus y quiero más información 🖤");window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`,"_blank","noreferrer");},[]);
-  return(<div onPointerDown={onDown} onPointerMove={onMove} onPointerUp={finishDrag} onPointerCancel={finishDrag} onClick={onClick} style={{position:"fixed",left:pos.x,top:pos.y,zIndex:500,width:BTN,height:BTN,borderRadius:"50%",background:pressed?"rgba(255,255,255,0.22)":"rgba(255,255,255,0.10)",backdropFilter:"blur(18px)",WebkitBackdropFilter:"blur(18px)",border:"1px solid rgba(255,255,255,0.20)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"grab",touchAction:"none",userSelect:"none",WebkitUserSelect:"none",visibility:ready?"visible":"hidden",transition:snapping?"left 0.38s cubic-bezier(0.25,0.46,0.45,0.94), top 0.38s cubic-bezier(0.25,0.46,0.45,0.94), background 0.2s":"background 0.2s",willChange:"left,top",boxShadow:pressed?"0 0 0 10px rgba(255,255,255,0.06)":"0 4px 24px rgba(0,0,0,0.6), 0 1px 4px rgba(0,0,0,0.4)"}}><IcWA s={BTN-14} c={pressed?"#080808":"#fff"}/></div>);
+  return(<div ref={elRef} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={finishDrag} onPointerCancel={finishDrag} onClick={onClick} style={{position:"fixed",left:pos.x,top:pos.y,zIndex:500,width:BTN,height:BTN,borderRadius:"50%",background:pressed?"rgba(255,255,255,0.22)":"rgba(255,255,255,0.10)",backdropFilter:"blur(18px)",WebkitBackdropFilter:"blur(18px)",border:"1px solid rgba(255,255,255,0.20)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"grab",touchAction:"none",userSelect:"none",WebkitUserSelect:"none",visibility:ready?"visible":"hidden",transition:snapping?"left 0.38s cubic-bezier(0.25,0.46,0.45,0.94), top 0.38s cubic-bezier(0.25,0.46,0.45,0.94), background 0.2s":"background 0.2s",willChange:"left,top",boxShadow:pressed?"0 0 0 10px rgba(255,255,255,0.06)":"0 4px 24px rgba(0,0,0,0.6), 0 1px 4px rgba(0,0,0,0.4)"}}><IcWA s={BTN-14} c={pressed?"#080808":"#fff"}/></div>);
 }
 
 // ─── NATIVE TABS ──────────────────────────────────────────────────────────────
@@ -2321,11 +2323,9 @@ const totalPrice=useMemo(()=>Math.max(0,totalPriceBeforeCoupon-couponDiscountAmo
 
   const addToCart=useCallback((product:Product,qty:number)=>{
     setCart(prev=>{const ex=prev.find(i=>i.product.id===product.id);return ex?prev.map(i=>i.product.id===product.id?{...i,qty:i.qty+qty}:i):[...prev,{product,qty}];});
-    closeProdModal();setMainViewRaw("cart");
     trackAddToCart(product,qty,currentUser?.email);
     trackProductInterest(product.id,product.name,product.category,"cart");
-    requestAnimationFrame(()=>{scrollTop();setTimeout(scrollTop,60);setTimeout(scrollTop,220);});
-  },[currentUser?.email,closeProdModal]);
+  },[currentUser?.email]);
 
   const updQty=useCallback((id:string,d:number)=>setCart(prev=>prev.map(i=>i.product.id===id?{...i,qty:i.qty+d}:i).filter(i=>i.qty>0)),[]);
 
@@ -3989,10 +3989,9 @@ const filteredComments=useMemo(()=>{
 
           {/* ── BOTÓN PREMIUM: SEGUIR COMPRANDO ── */}
           {!isProductDeepLink&&(
-          <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={{position:"relative",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",gap:"0.65rem",width:"100%",background:"linear-gradient(155deg,rgba(255,255,255,0.16) 0%,rgba(20,20,20,0.94) 45%,rgba(10,10,10,0.98) 100%)",color:"#fff",border:"1px solid rgba(255,255,255,0.25)",padding:"1.05rem",fontSize:11,fontWeight:900,letterSpacing:2.8,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",borderRadius:12,marginBottom:"1.25rem",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.18), inset 0 0 0 1px rgba(255,255,255,0.07), 0 10px 28px rgba(0,0,0,0.55)"}}>
-            <span style={{position:"absolute",inset:0,background:"linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.12) 50%,transparent 100%)",backgroundSize:"200% 100%",animation:"badgeShimmer 3s ease infinite",pointerEvents:"none"}}/>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{position:"relative",flexShrink:0}}><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
-            <span style={{position:"relative"}}>SEGUIR COMPRANDO</span>
+          <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.5rem",width:"100%",background:"transparent",color:"#666",border:`1px solid ${C.border}`,padding:"0.6rem",fontSize:10,fontWeight:700,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",borderRadius:8,marginBottom:"1.25rem"}}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
+            <span>SEGUIR COMPRANDO</span>
           </button>
           )}
 
