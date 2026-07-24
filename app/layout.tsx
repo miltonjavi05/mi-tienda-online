@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "Fokus Accesorios | Accesorios para Caballero en Venezuela",
-    description: "Tienda en línea venezolana de lentes de sol, relojes, pulseras, collares, aretes, anillos y billeteras. Envíos a toda Venezuela, compra por WhatsApp.",
+    description: "Tienda en línea venezolana de lentes de sol, relojes, pulseras, collares, aretes, anillos y billeteras. Envíos a toda Venezuela, compra desde la Web.",
     siteName: "Fokus Accesorios",
     locale: "es_VE",
     type: "website",
