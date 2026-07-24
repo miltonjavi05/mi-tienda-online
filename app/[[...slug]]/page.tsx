@@ -561,13 +561,18 @@ const GLOBAL_CSS = `
       transform-origin: center center;
       animation: pcscrollfocus linear both;
       animation-timeline: view(block);
-      animation-range: cover 8% cover 92%;
-      will-change: transform, opacity;
+      animation-range: cover 10% cover 90%;
+      will-change: transform, opacity, filter;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      contain: layout paint style;
     }
     @keyframes pcscrollfocus {
-      0%   { transform: scale(0.88) translatey(10px); opacity: 0.55; }
-      50%  { transform: scale(1.05) translatey(0);     opacity: 1; }
-      100% { transform: scale(0.88) translatey(-10px); opacity: 0.55; }
+      0%   { transform: scale3d(0.91,0.91,1) translatey(13px) translatez(0); opacity: 0.72; filter: brightness(0.88) saturate(0.92); }
+      14%  { transform: scale3d(0.96,0.96,1) translatey(6px) translatez(0);  opacity: 0.88; filter: brightness(0.95) saturate(0.97); }
+      50%  { transform: scale3d(1.045,1.045,1) translatey(0) translatez(0); opacity: 1;    filter: brightness(1.05) saturate(1.1); }
+      86%  { transform: scale3d(0.96,0.96,1) translatey(-6px) translatez(0); opacity: 0.88; filter: brightness(0.95) saturate(0.97); }
+      100% { transform: scale3d(0.91,0.91,1) translatey(-13px) translatez(0); opacity: 0.72; filter: brightness(0.88) saturate(0.92); }
     }
   }
 
