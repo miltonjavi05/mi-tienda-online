@@ -674,14 +674,14 @@ const FokusLogoHero=memo(function FokusLogoHero(){
   return(
     <div style={{marginBottom:"1rem",display:"flex",justifyContent:"center"}}>
       <button
-        onClick={e=>{setBurst(b=>b+1);(e.currentTarget as HTMLButtonElement).blur();}}
+        onClick={()=>setBurst(b=>b+1)}
         aria-label="Fokus"
         className="fokus-logo-btn"
         style={{position:"relative",background:"none",border:"none",padding:0,cursor:"pointer",width:76,height:76,WebkitTapHighlightColor:"transparent",display:"flex",alignItems:"center",justifyContent:"center",opacity:mounted?1:0,animation:mounted?"logoPopIn 0.85s cubic-bezier(0.16,1,0.3,1) both":"none"}}
       >
-        <span aria-hidden="true" style={{position:"absolute",width:80,height:80,borderRadius:"50%",border:"1px dashed rgba(255,255,255,0.28)",animation:mounted?"logoIrisSpin 14s linear infinite":"none",animationPlayState:"running",willChange:"transform",transform:"translateZ(0)",pointerEvents:"none"}}/>
-        <span aria-hidden="true" style={{position:"absolute",width:76,height:76,borderRadius:"50%",background:"conic-gradient(from 0deg, transparent 0%, rgba(255,255,255,0.9) 8%, transparent 18%, transparent 50%, rgba(255,255,255,0.5) 58%, transparent 68%, transparent 100%)",maskImage:"radial-gradient(circle, transparent 64%, black 65%, black 78%, transparent 79%)",WebkitMaskImage:"radial-gradient(circle, transparent 64%, black 65%, black 78%, transparent 79%)",animation:mounted?"logoIrisSpinReverse 5s linear infinite":"none",animationPlayState:"running",willChange:"transform",transform:"translateZ(0)",pointerEvents:"none"}}/>
-        <span aria-hidden="true" style={{position:"absolute",width:88,height:88,borderRadius:"50%",background:"radial-gradient(circle, rgba(255,255,255,0.18) 0%, transparent 68%)",animation:mounted?"logoApertureBreathe 3.2s ease-in-out infinite":"none",animationPlayState:"running",willChange:"transform,opacity",transform:"translateZ(0)",pointerEvents:"none"}}/>
+        <span aria-hidden="true" style={{position:"absolute",width:80,height:80,borderRadius:"50%",border:"1px dashed rgba(255,255,255,0.28)",animation:mounted?"logoIrisSpin 14s linear infinite":"none",pointerEvents:"none"}}/>
+        <span aria-hidden="true" style={{position:"absolute",width:76,height:76,borderRadius:"50%",background:"conic-gradient(from 0deg, transparent 0%, rgba(255,255,255,0.9) 8%, transparent 18%, transparent 50%, rgba(255,255,255,0.5) 58%, transparent 68%, transparent 100%)",maskImage:"radial-gradient(circle, transparent 64%, black 65%, black 78%, transparent 79%)",WebkitMaskImage:"radial-gradient(circle, transparent 64%, black 65%, black 78%, transparent 79%)",animation:mounted?"logoIrisSpinReverse 5s linear infinite":"none",pointerEvents:"none"}}/>
+        <span aria-hidden="true" style={{position:"absolute",width:88,height:88,borderRadius:"50%",background:"radial-gradient(circle, rgba(255,255,255,0.18) 0%, transparent 68%)",animation:mounted?"logoApertureBreathe 3.2s ease-in-out infinite":"none",pointerEvents:"none"}}/>
         {burst>0&&<span key={burst} aria-hidden="true" style={{position:"absolute",width:64,height:64,borderRadius:"50%",border:"1px solid rgba(255,255,255,0.55)",animation:"logoFocusBurst 0.6s cubic-bezier(0.16,1,0.3,1) both",pointerEvents:"none"}}/>}
         <span className="fokus-hero-logo-frame" style={{position:"relative",width:64,height:64,borderRadius:"50%",overflow:"hidden",display:"block",transform:burst>0?"scale(1.1)":"scale(1)",transition:"transform 0.45s cubic-bezier(0.34,1.56,0.64,1)"}}>
           <img className="fokus-logo-img" src="/favicon.png" alt="Fokus" width={64} height={64} style={{objectFit:"contain",filter:"brightness(1.1)",pointerEvents:"none",width:"100%",height:"100%",display:"block",transition:"transform 0.35s ease"}} draggable={false}/>
@@ -937,7 +937,7 @@ const HCard=memo(function HCard({product,onClick,onBuyNow,index,fmtPrice,isFav,o
   const revealDelay=Math.min((index??0)*30,160);
   const premiumScale=0.88+ratio*0.12;
   const premiumY=(1-ratio)*10;
-  return(  
+  return(
     <div ref={revealRef} className="hc" style={isPremium?{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:1,transform:`translateY(${premiumY}px) scale(${premiumScale})`,filter:"none",transition:"transform 0.22s cubic-bezier(0.34,1.56,0.64,1)",willChange:"transform"}:animate?{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:vis?1:0,transform:vis?"translateY(0) scale(1)":"translateY(18px) scale(0.88)",filter:vis?"blur(0px)":"blur(5px)",transition:`opacity 0.5s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, transform 0.55s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, filter 0.5s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms`,willChange:"transform,opacity,filter"}:{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:1,transform:"none",filter:"none"}}>
       <div onClick={onClick} style={{background:"#111",width:152,height:152,overflow:"hidden",marginBottom:"0.55rem",borderRadius:10,position:"relative",cursor:"pointer"}}>
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
