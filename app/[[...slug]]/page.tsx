@@ -5334,7 +5334,17 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   AGREGAR AL CARRITO
                 </button>
               </div>
-              <button onClick={()=>{addToCart(selectedProduct,modalQty);closeProdModal();setMainView("cart");}} style={{position:"relative",overflow:"hidden",width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:"0.6rem",background:"linear-gradient(180deg,#ffffff 0%,#f0f0f0 100%)",color:"#080808",border:"none",fontSize:14,fontWeight:900,letterSpacing:2.5,padding:"1.15rem",borderRadius:12,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",boxShadow:"0 10px 30px rgba(255,255,255,0.22), inset 0 1px 0 rgba(255,255,255,0.9)"}}>
+              <button onClick={()=>{
+                setCart(prev=>{
+                  const ex=prev.find(i=>i.product.id===selectedProduct.id);
+                  if(ex)return prev;
+                  trackAddToCart(selectedProduct,modalQty,currentUser?.email);
+                  trackProductInterest(selectedProduct.id,selectedProduct.name,selectedProduct.category,"cart");
+                  return [...prev,{product:selectedProduct,qty:modalQty}];
+                });
+                closeProdModal();
+                setMainView("cart");
+              }} style={{position:"relative",overflow:"hidden",width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:"0.6rem",background:"linear-gradient(180deg,#ffffff 0%,#f0f0f0 100%)",color:"#080808",border:"none",fontSize:14,fontWeight:900,letterSpacing:2.5,padding:"1.15rem",borderRadius:12,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",boxShadow:"0 10px 30px rgba(255,255,255,0.22), inset 0 1px 0 rgba(255,255,255,0.9)"}}>
                 <span style={{position:"absolute",inset:0,background:"linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.55) 50%,transparent 100%)",backgroundSize:"200% 100%",animation:"badgeShimmer 2.8s ease infinite",pointerEvents:"none",mixBlendMode:"overlay" as any}}/>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#080808" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{position:"relative",flexShrink:0}}><polyline points="20 6 9 17 4 12"/></svg>
                 <span style={{position:"relative"}}>COMPRAR AHORA</span>
