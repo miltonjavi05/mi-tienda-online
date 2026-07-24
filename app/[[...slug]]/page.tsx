@@ -576,6 +576,25 @@ const GLOBAL_CSS = `
     }
   }
 
+  @supports (animation-timeline: view()) {
+    .hc-fly-in {
+      animation: hcflyin linear both;
+      animation-timeline: view(inline);
+      animation-range: cover 0% cover 42%;
+      will-change: transform, opacity, filter;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      contain: layout paint style;
+    }
+    @keyframes hcflyin {
+      0%   { transform: scale3d(0.8,0.8,1) translate3d(58px,10px,0) rotate(4deg); opacity: 0; filter: brightness(0.75) blur(2px); }
+      42%  { transform: scale3d(1.07,1.07,1) translate3d(-9px,-4px,0) rotate(-1.3deg); opacity: 1; filter: brightness(1.08) blur(0px); }
+      68%  { transform: scale3d(0.975,0.975,1) translate3d(3px,1px,0) rotate(0.4deg); opacity: 1; filter: brightness(1) blur(0px); }
+      86%  { transform: scale3d(1.012,1.012,1) translate3d(-1px,0,0) rotate(-0.15deg); opacity: 1; filter: brightness(1) blur(0px); }
+      100% { transform: scale3d(1,1,1) translate3d(0,0,0) rotate(0deg); opacity: 1; filter: brightness(1) blur(0px); }
+    }
+  }
+
   @media(hover:hover) and (pointer:fine){
     .iz { transition: transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94) !important; }
     .io { transition: background 0.3s ease !important; }
@@ -938,7 +957,7 @@ const HCard=memo(function HCard({product,onClick,onBuyNow,index,fmtPrice,isFav,o
   const premiumScale=0.88+ratio*0.12;
   const premiumY=(1-ratio)*10;
   return(
-    <div ref={revealRef} className="hc" style={isPremium?{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:1,transform:`translateY(${premiumY}px) scale(${premiumScale})`,filter:"none",transition:"transform 0.22s cubic-bezier(0.34,1.56,0.64,1)",willChange:"transform"}:animate?{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:vis?1:0,transform:vis?"translateY(0) scale(1)":"translateY(18px) scale(0.88)",filter:vis?"blur(0px)":"blur(5px)",transition:`opacity 0.5s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, transform 0.55s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, filter 0.5s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms`,willChange:"transform,opacity,filter"}:{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:1,transform:"none",filter:"none"}}>
+    <div ref={revealRef} className="hc hc-fly-in" style={isPremium?{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:1,transform:`translateY(${premiumY}px) scale(${premiumScale})`,filter:"none",transition:"transform 0.22s cubic-bezier(0.34,1.56,0.64,1)",willChange:"transform"}:animate?{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:vis?1:0,transform:vis?"translateY(0) scale(1)":"translateY(18px) scale(0.88)",filter:vis?"blur(0px)":"blur(5px)",transition:`opacity 0.5s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, transform 0.55s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, filter 0.5s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms`,willChange:"transform,opacity,filter"}:{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:1,transform:"none",filter:"none"}}>
       <div onClick={onClick} style={{background:"#111",width:152,height:152,overflow:"hidden",marginBottom:"0.55rem",borderRadius:10,position:"relative",cursor:"pointer"}}>
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
