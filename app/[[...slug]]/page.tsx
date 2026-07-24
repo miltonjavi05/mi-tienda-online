@@ -556,6 +556,21 @@ const GLOBAL_CSS = `
   .hc:active { opacity: 0.85; }
   .nb:active { opacity: 0.6; }
 
+  @supports (animation-timeline: view()) {
+    .pc-scroll-focus {
+      transform-origin: center center;
+      animation: pcscrollfocus linear both;
+      animation-timeline: view(block);
+      animation-range: cover 8% cover 92%;
+      will-change: transform, opacity;
+    }
+    @keyframes pcscrollfocus {
+      0%   { transform: scale(0.88) translatey(10px); opacity: 0.55; }
+      50%  { transform: scale(1.05) translatey(0);     opacity: 1; }
+      100% { transform: scale(0.88) translatey(-10px); opacity: 0.55; }
+    }
+  }
+
   @media(hover:hover) and (pointer:fine){
     .iz { transition: transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94) !important; }
     .io { transition: background 0.3s ease !important; }
@@ -853,23 +868,11 @@ const NativeTabs=memo(function NativeTabs({items,active,onSelect,renderItem,heig
 
 // ─── PRODUCT CARD (GRID) ──────────────────────────────────────────────────────
 const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,index,fmtPrice,isFav,onToggleFavorite}:{product:Product;onClick:()=>void;onBuyNow:()=>void;index:number;fmtPrice:(n:number)=>string;isFav?:boolean;onToggleFavorite?:(id:string)=>void}){
-  const[ratio,setRatio]=useState(0);
-  const revealRef=useRef<HTMLDivElement>(null);
-  useEffect(()=>{
-    const el=revealRef.current;
-    if(!el)return;
-    const obs=new IntersectionObserver(([entry])=>{setRatio(entry.intersectionRatio);},{threshold:[0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1],rootMargin:"-4% 0px -4% 0px"});
-    obs.observe(el);
-    return()=>obs.disconnect();
-  },[]);
-  const premiumScale=0.9+ratio*0.1;
-  const premiumY=(1-ratio)*16;
   return(
-    <div ref={revealRef} className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:1,filter:"none",transform:`translateY(${premiumY}px) scale(${premiumScale})`,transition:"transform 0.22s cubic-bezier(0.34,1.56,0.64,1)",willChange:"transform"}}>
+    <div className="pc pc-scroll-focus" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:1}}>
       <div onClick={onClick} style={{background:"#111",aspectRatio:"1",overflow:"hidden",borderRadius:10,position:"relative",marginBottom:"0.55rem"}}>
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
-        {ratio>0.05&&<div style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden"}}><div style={{position:"absolute",top:0,left:0,width:"55%",height:"100%",background:"linear-gradient(120deg,transparent 0%,rgba(255,255,255,0.14) 45%,rgba(255,255,255,0.04) 55%,transparent 100%)",filter:"blur(1.5px)",animation:"cardSweep 1s cubic-bezier(0.19,1,0.22,1) both"}}/></div>}
         {!!product.discount&&product.discount>0&&<DiscountBadge percent={product.discount} issuper={isSuperOffer(product.discount)}/>}
         {product.bestseller&&<BestsellerBadge/>}
         {getAllImages(product).length>1&&<GalleryBadge/>}
