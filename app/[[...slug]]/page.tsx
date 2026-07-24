@@ -911,7 +911,7 @@ const NativeTabs=memo(function NativeTabs({items,active,onSelect,renderItem,heig
 // ─── PRODUCT CARD (GRID) ──────────────────────────────────────────────────────
 const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,index,fmtPrice,isFav,onToggleFavorite}:{product:Product;onClick:()=>void;onBuyNow:()=>void;index:number;fmtPrice:(n:number)=>string;isFav?:boolean;onToggleFavorite?:(id:string)=>void}){
   return(
-    <div className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:1}}>
+    <div className="pc pc-scroll-focus" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:1}}>
       <div onClick={onClick} style={{background:"#111",aspectRatio:"1",overflow:"hidden",borderRadius:10,position:"relative",marginBottom:"0.55rem"}}>
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
