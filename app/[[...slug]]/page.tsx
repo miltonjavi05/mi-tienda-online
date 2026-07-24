@@ -5308,16 +5308,22 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                 <Footer setMainView={setMainView} setShopFilter={setShopFilter}/>
               </div>
             </div>
-            <div className="pm-footer-bar" style={{flexShrink:0,padding:"1rem 1.5rem 1.5rem",background:"#111",borderTop:"1px solid #1e1e1e",display:"flex",alignItems:"center",gap:"0.75rem",boxShadow:"0 -8px 24px rgba(0,0,0,0.4)"}}>
-              <div style={{display:"flex",alignItems:"center",border:`1px solid ${C.border}`,borderRadius:8,flexShrink:0}}>
-                <button onClick={()=>setModalQty(Math.max(1,modalQty-1))} style={S.qtyBtn}>−</button>
-                <span style={{padding:"0 0.85rem",fontSize:16,color:C.text,fontWeight:700}}>{modalQty}</span>
-                <button onClick={()=>setModalQty(modalQty+1)} style={S.qtyBtn}>+</button>
-              </div>
-              <button onClick={()=>addToCart(selectedProduct,modalQty)} style={{position:"relative",overflow:"hidden",flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:"0.55rem",background:"linear-gradient(180deg,#ffffff 0%,#f0f0f0 100%)",color:"#080808",border:"none",fontSize:12,fontWeight:900,letterSpacing:2.5,padding:"1.05rem",borderRadius:12,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",boxShadow:"0 8px 24px rgba(255,255,255,0.18), inset 0 1px 0 rgba(255,255,255,0.9)"}}>
+            <div className="pm-footer-bar" style={{flexShrink:0,padding:"1rem 1.5rem 1.5rem",background:"#111",borderTop:"1px solid #1e1e1e",display:"flex",flexDirection:"column",gap:"0.6rem",boxShadow:"0 -8px 24px rgba(0,0,0,0.4)"}}>
+              <div style={{display:"flex",alignItems:"center",gap:"0.6rem"}}>
+                <div style={{display:"flex",alignItems:"center",border:`1px solid ${C.border}`,borderRadius:8,flexShrink:0}}>
+                  <button onClick={()=>setModalQty(Math.max(1,modalQty-1))} style={{...S.qtyBtn,width:32,height:32,fontSize:16}}>−</button>
+                  <span style={{padding:"0 0.6rem",fontSize:13,color:C.text,fontWeight:700}}>{modalQty}</span>
+                  <button onClick={()=>setModalQty(modalQty+1)} style={{...S.qtyBtn,width:32,height:32,fontSize:16}}>+</button>
+                </div>
+                <button onClick={()=>addToCart(selectedProduct,modalQty)} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:"0.4rem",background:"transparent",color:"#aaa",border:`1px solid ${C.border}`,fontSize:10,fontWeight:800,letterSpacing:1,padding:"0.6rem",borderRadius:8,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></SVG>
+                  AGREGAR AL CARRITO
+                </BUTTON>
+              </DIV>
+              <BUTTON ONCLICK={()=>{FOR(LET I=0;I<MODALQTY;I++)HANDLEBUYNOW(SELECTEDPRODUCT);}} STYLE={{POSITION:"RELATIVE",OVERFLOW:"HIDDEN",WIDTH:"100%",DISPLAY:"FLEX",ALIGNITEMS:"CENTER",JUSTIFYCONTENT:"CENTER",GAP:"0.6REM",BACKGROUND:"LINEAR-gradient(180deg,#ffffff 0%,#f0f0f0 100%)",color:"#080808",border:"none",fontSize:14,fontWeight:900,letterSpacing:2.5,padding:"1.15rem",borderRadius:12,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",boxShadow:"0 10px 30px rgba(255,255,255,0.22), inset 0 1px 0 rgba(255,255,255,0.9)"}}>
                 <span style={{position:"absolute",inset:0,background:"linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.55) 50%,transparent 100%)",backgroundSize:"200% 100%",animation:"badgeShimmer 2.8s ease infinite",pointerEvents:"none",mixBlendMode:"overlay" as any}}/>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#080808" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{position:"relative",flexShrink:0}}><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
-                <span style={{position:"relative"}}>AGREGAR AL CARRITO</span>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#080808" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{position:"relative",flexShrink:0}}><polyline points="20 6 9 17 4 12"/></svg>
+                <span style={{position:"relative"}}>COMPRAR AHORA</span>
               </button>
             </div>
           </div>
