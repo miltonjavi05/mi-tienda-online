@@ -511,6 +511,7 @@ const GLOBAL_CSS = `
   @keyframes logoFocusBurst { 0%{transform:scale(0.55);opacity:0.85;} 100%{transform:scale(2);opacity:0;} }
   @keyframes logoPopIn { 0%{transform:scale(0.4);opacity:0;filter:blur(10px);} 60%{transform:scale(1.08);opacity:1;filter:blur(0px);} 100%{transform:scale(1);opacity:1;filter:blur(0px);} }
   .fokus-logo-btn, .fokus-logo-btn:focus, .fokus-logo-btn:focus-visible { outline:none !important; -webkit-tap-highlight-color:transparent; }
+  .fokus-logo-btn:active .fokus-hero-logo-frame { transform: scale(1.08); }
   @media(hover:hover) and (pointer:fine){
     .fokus-logo-btn:hover .fokus-logo-img { transform: scale(1.06); }
   }
@@ -649,21 +650,18 @@ const StarRow=memo(function StarRow({value,onChange,size=15}:{value:number;onCha
 // ─── FOKUS LOGO HERO (INTERACTIVO, ENTRADA ULTRA PREMIUM) ────────────────────
 const FokusLogoHero=memo(function FokusLogoHero(){
   const[mounted,setMounted]=useState(false);
-  const[burst,setBurst]=useState(0);
   useEffect(()=>{const t=setTimeout(()=>setMounted(true),40);return()=>clearTimeout(t);},[]);
   return(
     <div style={{marginBottom:"1rem",display:"flex",justifyContent:"center"}}>
       <button
-        onClick={()=>setBurst(b=>b+1)}
         aria-label="Fokus"
         className="fokus-logo-btn"
         style={{position:"relative",background:"none",border:"none",padding:0,cursor:"pointer",width:76,height:76,WebkitTapHighlightColor:"transparent",display:"flex",alignItems:"center",justifyContent:"center",opacity:mounted?1:0,animation:mounted?"logoPopIn 0.85s cubic-bezier(0.16,1,0.3,1) both":"none"}}
       >
-        <span aria-hidden="true" style={{position:"absolute",width:80,height:80,borderRadius:"50%",border:"1px dashed rgba(255,255,255,0.28)",animation:mounted?"logoIrisSpin 14s linear infinite":"none",pointerEvents:"none"}}/>
-        <span aria-hidden="true" style={{position:"absolute",width:76,height:76,borderRadius:"50%",background:"conic-gradient(from 0deg, transparent 0%, rgba(255,255,255,0.9) 8%, transparent 18%, transparent 50%, rgba(255,255,255,0.5) 58%, transparent 68%, transparent 100%)",maskImage:"radial-gradient(circle, transparent 64%, black 65%, black 78%, transparent 79%)",WebkitMaskImage:"radial-gradient(circle, transparent 64%, black 65%, black 78%, transparent 79%)",animation:mounted?"logoIrisSpinReverse 5s linear infinite":"none",pointerEvents:"none"}}/>
-        <span aria-hidden="true" style={{position:"absolute",width:88,height:88,borderRadius:"50%",background:"radial-gradient(circle, rgba(255,255,255,0.18) 0%, transparent 68%)",animation:mounted?"logoApertureBreathe 3.2s ease-in-out infinite":"none",pointerEvents:"none"}}/>
-        {burst>0&&<span key={burst} aria-hidden="true" style={{position:"absolute",width:64,height:64,borderRadius:"50%",border:"1px solid rgba(255,255,255,0.55)",animation:"logoFocusBurst 0.6s cubic-bezier(0.16,1,0.3,1) both",pointerEvents:"none"}}/>}
-        <span className="fokus-hero-logo-frame" style={{position:"relative",width:64,height:64,borderRadius:"50%",overflow:"hidden",display:"block",transform:burst>0?"scale(1.1)":"scale(1)",transition:"transform 0.45s cubic-bezier(0.34,1.56,0.64,1)"}}>
+        <span aria-hidden="true" style={{position:"absolute",width:80,height:80,borderRadius:"50%",border:"1px dashed rgba(255,255,255,0.28)",animation:mounted?"logoIrisSpin 14s linear infinite":"none",pointerEvents:"none",willChange:"transform"}}/>
+        <span aria-hidden="true" style={{position:"absolute",width:76,height:76,borderRadius:"50%",background:"conic-gradient(from 0deg, transparent 0%, rgba(255,255,255,0.9) 8%, transparent 18%, transparent 50%, rgba(255,255,255,0.5) 58%, transparent 68%, transparent 100%)",maskImage:"radial-gradient(circle, transparent 64%, black 65%, black 78%, transparent 79%)",WebkitMaskImage:"radial-gradient(circle, transparent 64%, black 65%, black 78%, transparent 79%)",animation:mounted?"logoIrisSpinReverse 5s linear infinite":"none",pointerEvents:"none",willChange:"transform"}}/>
+        <span aria-hidden="true" style={{position:"absolute",width:88,height:88,borderRadius:"50%",background:"radial-gradient(circle, rgba(255,255,255,0.18) 0%, transparent 68%)",animation:mounted?"logoApertureBreathe 3.2s ease-in-out infinite":"none",pointerEvents:"none",willChange:"transform"}}/>
+        <span className="fokus-hero-logo-frame" style={{position:"relative",width:64,height:64,borderRadius:"50%",overflow:"hidden",display:"block",transition:"transform 0.15s ease"}}>
           <img className="fokus-logo-img" src="/favicon.png" alt="Fokus" width={64} height={64} style={{objectFit:"contain",filter:"brightness(1.1)",pointerEvents:"none",width:"100%",height:"100%",display:"block",transition:"transform 0.35s ease"}} draggable={false}/>
         </span>
       </button>
@@ -862,10 +860,11 @@ const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,index,fmtP
     obs.observe(el);
     return()=>obs.disconnect();
   },[]);
-  const premiumScale=0.9+ratio*0.1;
-  const premiumY=(1-ratio)*16;
+  const premiumScale=0.8+ratio*0.2;
+  const premiumY=(1-ratio)*34;
+  const premiumOpacity=0.35+ratio*0.65;
   return(
-    <div ref={revealRef} className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:1,filter:"none",transform:`translateY(${premiumY}px) scale(${premiumScale})`,transition:"transform 0.22s cubic-bezier(0.34,1.56,0.64,1)",willChange:"transform"}}>
+    <div ref={revealRef} className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:premiumOpacity,filter:"none",transform:`translateY(${premiumY}px) scale(${premiumScale})`,transition:"transform 0.15s cubic-bezier(0.34,1.9,0.64,1), opacity 0.15s ease-out",willChange:"transform,opacity"}}>
       <div onClick={onClick} style={{background:"#111",aspectRatio:"1",overflow:"hidden",borderRadius:10,position:"relative",marginBottom:"0.55rem"}}>
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
