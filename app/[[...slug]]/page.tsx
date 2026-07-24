@@ -1,4 +1,4 @@
-    "use client";
+  "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
 import { usePathname } from "next/navigation";
@@ -548,6 +548,7 @@ const GLOBAL_CSS = `
   }
 
   .pc, .hc, .cc { transition: transform 0.25s ease, border-color 0.2s ease, box-shadow 0.25s ease; }
+  .pg { perspective: 1400px; }
   @media(hover:hover) and (pointer:fine){
     .pc, .hc, .cc { contain: layout paint; }
   }
@@ -559,20 +560,21 @@ const GLOBAL_CSS = `
   @supports (animation-timeline: view()) {
     .pc-scroll-focus {
       transform-origin: center center;
+      transform-style: preserve-3d;
       animation: pcscrollfocus linear both;
       animation-timeline: view(block);
-      animation-range: cover 10% cover 90%;
+      animation-range: cover 8% cover 92%;
       will-change: transform, opacity, filter;
       backface-visibility: hidden;
       -webkit-backface-visibility: hidden;
       contain: layout paint style;
     }
     @keyframes pcscrollfocus {
-      0%   { transform: scale3d(0.91,0.91,1) translatey(13px) translatez(0); opacity: 0.72; filter: brightness(0.88) saturate(0.92); }
-      14%  { transform: scale3d(0.96,0.96,1) translatey(6px) translatez(0);  opacity: 0.88; filter: brightness(0.95) saturate(0.97); }
-      50%  { transform: scale3d(1.045,1.045,1) translatey(0) translatez(0); opacity: 1;    filter: brightness(1.05) saturate(1.1); }
-      86%  { transform: scale3d(0.96,0.96,1) translatey(-6px) translatez(0); opacity: 0.88; filter: brightness(0.95) saturate(0.97); }
-      100% { transform: scale3d(0.91,0.91,1) translatey(-13px) translatez(0); opacity: 0.72; filter: brightness(0.88) saturate(0.92); }
+      0%   { transform: scale3d(0.8,0.8,1) translatey(30px) translatez(0) rotatey(-9deg); opacity: 0.5; filter: brightness(0.78) saturate(0.82) blur(2.5px); }
+      18%  { transform: scale3d(0.93,0.93,1) translatey(10px) translatez(0) rotatey(-3deg); opacity: 0.85; filter: brightness(0.92) saturate(0.94) blur(0.6px); }
+      50%  { transform: scale3d(1.06,1.06,1) translatey(0) translatez(0) rotatey(0deg); opacity: 1; filter: brightness(1.07) saturate(1.14) blur(0px); }
+      82%  { transform: scale3d(0.93,0.93,1) translatey(-10px) translatez(0) rotatey(3deg); opacity: 0.85; filter: brightness(0.92) saturate(0.94) blur(0.6px); }
+      100% { transform: scale3d(0.8,0.8,1) translatey(-30px) translatez(0) rotatey(9deg); opacity: 0.5; filter: brightness(0.78) saturate(0.82) blur(2.5px); }
     }
     .hc-scroll-focus {
       transform-origin: center center;
@@ -869,16 +871,19 @@ function DraggableWA(){
   const[pos,setPos]=useState({x:0,y:0});
   const[pressed,setPressed]=useState(false);
   const[snapping,setSnapping]=useState(false);
+  const btnRef=useRef<HTMLDivElement>(null);
   const dragging=useRef(false),moved=useRef(false),startPtr=useRef({x:0,y:0}),startPos=useRef({x:0,y:0}),live=useRef({x:0,y:0}),raf=useRef(0);
   const clamp=useCallback((x:number,y:number)=>({x:Math.max(MG,Math.min(window.innerWidth-BTN-MG,x)),y:Math.max(MG+80,Math.min(window.innerHeight-BTN-MG*2,y))}),[]);
   const snapToEdge=useCallback((x:number,y:number)=>{const cx=x+BTN/2;const side=cx<window.innerWidth/2?MG:window.innerWidth-BTN-MG;return{x:side,y:clamp(x,y).y};},[clamp]);
+  const applyTransform=useCallback((x:number,y:number)=>{if(btnRef.current)btnRef.current.style.transform=`translate3d(${x}px,${y}px,0)`;},[]);
   useEffect(()=>{const p={x:window.innerWidth-BTN-MG,y:Math.round(window.innerHeight*0.78-BTN/2)};live.current=p;setPos(p);setReady(true);const onResize=()=>{if(!dragging.current){const np=snapToEdge(live.current.x,live.current.y);live.current=np;setPos({...np});}};window.addEventListener("resize",onResize,{passive:true});return()=>{window.removeEventListener("resize",onResize);};},[snapToEdge]);
+  useEffect(()=>{applyTransform(pos.x,pos.y);},[pos,applyTransform]);
   const onDown=useCallback((e:React.PointerEvent)=>{e.preventDefault();(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);dragging.current=true;moved.current=false;startPtr.current={x:e.clientX,y:e.clientY};startPos.current={...live.current};setPressed(true);setSnapping(false);},[]);
-  const onMove=useCallback((e:React.PointerEvent)=>{if(!dragging.current)return;e.preventDefault();const dx=e.clientX-startPtr.current.x,dy=e.clientY-startPtr.current.y;if(Math.abs(dx)>4||Math.abs(dy)>4)moved.current=true;const n=clamp(startPos.current.x+dx,startPos.current.y+dy);live.current=n;cancelAnimationFrame(raf.current);raf.current=requestAnimationFrame(()=>setPos({...n}));},[clamp]);
+  const onMove=useCallback((e:React.PointerEvent)=>{if(!dragging.current)return;e.preventDefault();const dx=e.clientX-startPtr.current.x,dy=e.clientY-startPtr.current.y;if(Math.abs(dx)>4||Math.abs(dy)>4)moved.current=true;const n=clamp(startPos.current.x+dx,startPos.current.y+dy);live.current=n;cancelAnimationFrame(raf.current);raf.current=requestAnimationFrame(()=>applyTransform(n.x,n.y));},[clamp,applyTransform]);
   const finishDrag=useCallback(()=>{if(!dragging.current)return;dragging.current=false;setPressed(false);if(moved.current){const s=snapToEdge(live.current.x,live.current.y);live.current=s;setSnapping(true);setPos({...s});setTimeout(()=>setSnapping(false),420);}},[snapToEdge]);
   const onClick=useCallback((e:React.MouseEvent)=>{if(moved.current){e.preventDefault();return;}trackLeadWhatsApp("boton_flotante");const msg=encodeURIComponent("Hola! Vi su tienda Fokus y quiero más información 🖤");window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`,"_blank","noreferrer");},[]);
-  return(<div onPointerDown={onDown} onPointerMove={onMove} onPointerUp={finishDrag} onPointerCancel={finishDrag} onClick={onClick} style={{position:"fixed",left:pos.x,top:pos.y,zIndex:500,width:BTN,height:BTN,borderRadius:"50%",background:pressed?"rgba(255,255,255,0.22)":"rgba(255,255,255,0.10)",backdropFilter:"blur(18px)",WebkitBackdropFilter:"blur(18px)",border:"1px solid rgba(255,255,255,0.20)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"grab",touchAction:"none",userSelect:"none",WebkitUserSelect:"none",visibility:ready?"visible":"hidden",transition:snapping?"left 0.38s cubic-bezier(0.25,0.46,0.45,0.94), top 0.38s cubic-bezier(0.25,0.46,0.45,0.94), background 0.2s":"background 0.2s",willChange:"left,top",boxShadow:pressed?"0 0 0 10px rgba(255,255,255,0.06)":"0 4px 24px rgba(0,0,0,0.6), 0 1px 4px rgba(0,0,0,0.4)"}}><IcWA s={BTN-14} c={pressed?"#080808":"#fff"}/></div>);
-}
+  return(<div ref={btnRef} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={finishDrag} onPointerCancel={finishDrag} onClick={onClick} style={{position:"fixed",left:0,top:0,zIndex:500,width:BTN,height:BTN,borderRadius:"50%",background:pressed?"rgba(255,255,255,0.22)":"rgba(255,255,255,0.10)",backdropFilter:"blur(18px)",WebkitBackdropFilter:"blur(18px)",border:"1px solid rgba(255,255,255,0.20)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"grab",touchAction:"none",userSelect:"none",WebkitUserSelect:"none",visibility:ready?"visible":"hidden",transition:snapping?"transform 0.38s cubic-bezier(0.25,0.46,0.45,0.94), background 0.2s":"background 0.2s",willChange:"transform",boxShadow:pressed?"0 0 0 10px rgba(255,255,255,0.06)":"0 4px 24px rgba(0,0,0,0.6), 0 1px 4px rgba(0,0,0,0.4)"}}><IcWA s={BTN-14} c={pressed?"#080808":"#fff"}/></div>);
+} 
 
 // ─── NATIVE TABS ──────────────────────────────────────────────────────────────
 const NativeTabs=memo(function NativeTabs({items,active,onSelect,renderItem,height=44}:{items:string[];active:string;onSelect:(v:string)=>void;renderItem:(item:string,isActive:boolean)=>React.ReactNode;height?:number;}){
@@ -3576,7 +3581,9 @@ const filteredComments=useMemo(()=>{
             <input autoFocus value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} placeholder="Buscar productos…" style={{...S.input,borderRadius:8}}/>
           </div>
         )}
-        <div style={{borderTop:"1px solid #161616",padding:"0 1rem",height:36,display:"flex",alignItems:"center",justifyContent:"space-between",gap:"0.5rem"}}>
+        <div style={{borderTop:"1px solid #161616",padding:(isShop||isCart)?"0 1rem":0,height:(isShop||isCart)?24:0,minHeight:0,margin:0,display:"flex",alignItems:"center",justifyContent:"space-between",gap:(isShop||isCart)?"0.5rem":0,overflow:(isShop||isCart)?"visible":"hidden",opacity:(isShop||isCart)?1:0,pointerEvents:(isShop||isCart)?"auto":"none"}}>
+          {(isShop||isCart)&&(
+          <>
           <div style={{display:"flex",alignItems:"center",gap:6}}>
             <span style={{width:6,height:6,borderRadius:"50%",background:rateLoading?"#555":bcvRate?"#4caf50":"#555",flexShrink:0}}/>
             <span style={{fontSize:10,color:"#444",fontWeight:700,letterSpacing:0.5}}>
@@ -3585,10 +3592,12 @@ const filteredComments=useMemo(()=>{
           </div>
           <button
             onClick={()=>{if(!showBs)fetchBcvRate();setShowBs(s=>!s);}}
-            style={{display:"flex",alignItems:"center",gap:5,background:showBs?"#fff":"#1a1a1a",color:showBs?"#080808":"#888",border:`1px solid ${showBs?"#fff":"#2a2a2a"}`,borderRadius:20,padding:"4px 14px",fontSize:10,fontWeight:900,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",flexShrink:0,transition:"all 0.15s",WebkitTapHighlightColor:"transparent",touchAction:"manipulation"}}
+            style={{display:"flex",alignItems:"center",gap:5,background:showBs?"#fff":"#1a1a1a",color:showBs?"#080808":"#888",border:`1px solid ${showBs?"#fff":"#2a2a2a"}`,borderRadius:20,padding:"2px 11px",fontSize:9,fontWeight:900,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",flexShrink:0,transition:"all 0.15s",WebkitTapHighlightColor:"transparent",touchAction:"manipulation"}}
           >
             {showBs?"VER EN USD ↕":"VER EN BS ↕"}
           </button>
+          </>
+          )}
         </div>
       </nav>
 
@@ -3771,8 +3780,8 @@ const filteredComments=useMemo(()=>{
               items={["TODO","LENTES",...(SHOP_CATS.filter(c=>c!=="LENTES") as string[])]}
               active={shopFilter==="TODO"?"TODO":isLentesActive?"LENTES":(SHOP_CATS.filter(c=>c!=="LENTES") as string[]).includes(shopFilter)?shopFilter:"TODO"}
               onSelect={item=>{if(item==="LENTES"){const n=!lentesOpen;setLentesOpen(n);if(n)setShopFilter("LENTES");}else{setShopFilter(item as ShopFilter);setLentesOpen(false);}scrollTop();}}
-              height={44}
-              renderItem={(item,_)=>{const a=item==="TODO"?shopFilter==="TODO":item==="LENTES"?isLentesActive:shopFilter===item;return(<span className="nb" style={{display:"flex",alignItems:"center",gap:4,padding:"0 1rem",height:44,borderBottom:a?"2px solid #fff":"2px solid transparent",fontSize:10,fontWeight:800,letterSpacing:2,color:a?"#fff":"#3e3e3e",whiteSpace:"nowrap",transition:"color 0.15s,border-color 0.15s"}}>{item}{item==="LENTES"&&<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{transition:"transform 0.2s",transform:lentesOpen?"rotate(180deg)":"rotate(0deg)"}}><polyline points="6 9 12 15 18 9"/></svg>}</span>);}}
+              height={30}
+              renderItem={(item,_)=>{const a=item==="TODO"?shopFilter==="TODO":item==="LENTES"?isLentesActive:shopFilter===item;return(<span className="nb" style={{display:"flex",alignItems:"center",gap:4,padding:"0 1rem",height:36,borderBottom:a?"2px solid #fff":"2px solid transparent",fontSize:10,fontWeight:800,letterSpacing:2,color:a?"#fff":"#3e3e3e",whiteSpace:"nowrap",transition:"color 0.15s,border-color 0.15s"}}>{item}{item==="LENTES"&&<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{transition:"transform 0.2s",transform:lentesOpen?"rotate(180deg)":"rotate(0deg)"}}><polyline points="6 9 12 15 18 9"/></svg>}</span>);}}
             />
             {lentesOpen&&(
               <div className="ts" style={{background:"#0a0a0a",borderTop:"1px solid #1a1a1a",padding:"0.55rem 1rem",display:"flex",gap:"0.45rem",overflowX:"auto",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",touchAction:"pan-x"}}>
@@ -5316,11 +5325,11 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   <button onClick={()=>setModalQty(modalQty+1)} style={{...S.qtyBtn,width:32,height:32,fontSize:16}}>+</button>
                 </div>
                 <button onClick={()=>addToCart(selectedProduct,modalQty)} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:"0.4rem",background:"transparent",color:"#aaa",border:`1px solid ${C.border}`,fontSize:10,fontWeight:800,letterSpacing:1,padding:"0.6rem",borderRadius:8,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></SVG>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
                   AGREGAR AL CARRITO
-                </BUTTON>
-              </DIV>
-              <BUTTON ONCLICK={()=>{FOR(LET I=0;I<MODALQTY;I++)HANDLEBUYNOW(SELECTEDPRODUCT);}} STYLE={{POSITION:"RELATIVE",OVERFLOW:"HIDDEN",WIDTH:"100%",DISPLAY:"FLEX",ALIGNITEMS:"CENTER",JUSTIFYCONTENT:"CENTER",GAP:"0.6REM",BACKGROUND:"LINEAR-gradient(180deg,#ffffff 0%,#f0f0f0 100%)",color:"#080808",border:"none",fontSize:14,fontWeight:900,letterSpacing:2.5,padding:"1.15rem",borderRadius:12,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",boxShadow:"0 10px 30px rgba(255,255,255,0.22), inset 0 1px 0 rgba(255,255,255,0.9)"}}>
+                </button>
+              </div>
+              <button onClick={()=>{for(let i=0;i<modalQty;i++)handleBuyNow(selectedProduct);}} style={{position:"relative",overflow:"hidden",width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:"0.6rem",background:"linear-gradient(180deg,#ffffff 0%,#f0f0f0 100%)",color:"#080808",border:"none",fontSize:14,fontWeight:900,letterSpacing:2.5,padding:"1.15rem",borderRadius:12,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",boxShadow:"0 10px 30px rgba(255,255,255,0.22), inset 0 1px 0 rgba(255,255,255,0.9)"}}>
                 <span style={{position:"absolute",inset:0,background:"linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.55) 50%,transparent 100%)",backgroundSize:"200% 100%",animation:"badgeShimmer 2.8s ease infinite",pointerEvents:"none",mixBlendMode:"overlay" as any}}/>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#080808" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{position:"relative",flexShrink:0}}><polyline points="20 6 9 17 4 12"/></svg>
                 <span style={{position:"relative"}}>COMPRAR AHORA</span>
