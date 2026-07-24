@@ -511,7 +511,6 @@ const GLOBAL_CSS = `
   @keyframes logoFocusBurst { 0%{transform:scale(0.55);opacity:0.85;} 100%{transform:scale(2);opacity:0;} }
   @keyframes logoPopIn { 0%{transform:scale(0.4);opacity:0;filter:blur(10px);} 60%{transform:scale(1.08);opacity:1;filter:blur(0px);} 100%{transform:scale(1);opacity:1;filter:blur(0px);} }
   .fokus-logo-btn, .fokus-logo-btn:focus, .fokus-logo-btn:focus-visible { outline:none !important; -webkit-tap-highlight-color:transparent; }
-  .fokus-logo-btn:active .fokus-hero-logo-frame { transform: scale(1.08); }
   @media(hover:hover) and (pointer:fine){
     .fokus-logo-btn:hover .fokus-logo-img { transform: scale(1.06); }
   }
@@ -556,11 +555,6 @@ const GLOBAL_CSS = `
   .pc:active { transform: scale(0.97); }
   .hc:active { opacity: 0.85; }
   .nb:active { opacity: 0.6; }
-
-  @keyframes pcbounceleft { 0%{opacity:0;transform:translatex(-46px) scale(0.9);} 55%{opacity:1;transform:translatex(8px) scale(1.02);} 78%{transform:translatex(-3px) scale(0.995);} 100%{opacity:1;transform:translatex(0) scale(1);} }
-  @keyframes pcbounceright { 0%{opacity:0;transform:translatex(46px) scale(0.9);} 55%{opacity:1;transform:translatex(-8px) scale(1.02);} 78%{transform:translatex(3px) scale(0.995);} 100%{opacity:1;transform:translatex(0) scale(1);} }
-  .pc-bounce-left { animation: pcbounceleft 0.46s cubic-bezier(0.22,1.3,0.36,1) both; }
-  .pc-bounce-right { animation: pcbounceright 0.46s cubic-bezier(0.22,1.3,0.36,1) both; }
 
   @media(hover:hover) and (pointer:fine){
     .iz { transition: transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94) !important; }
@@ -655,18 +649,21 @@ const StarRow=memo(function StarRow({value,onChange,size=15}:{value:number;onCha
 // ─── FOKUS LOGO HERO (INTERACTIVO, ENTRADA ULTRA PREMIUM) ────────────────────
 const FokusLogoHero=memo(function FokusLogoHero(){
   const[mounted,setMounted]=useState(false);
+  const[burst,setBurst]=useState(0);
   useEffect(()=>{const t=setTimeout(()=>setMounted(true),40);return()=>clearTimeout(t);},[]);
   return(
     <div style={{marginBottom:"1rem",display:"flex",justifyContent:"center"}}>
       <button
+        onClick={()=>setBurst(b=>b+1)}
         aria-label="Fokus"
         className="fokus-logo-btn"
         style={{position:"relative",background:"none",border:"none",padding:0,cursor:"pointer",width:76,height:76,WebkitTapHighlightColor:"transparent",display:"flex",alignItems:"center",justifyContent:"center",opacity:mounted?1:0,animation:mounted?"logoPopIn 0.85s cubic-bezier(0.16,1,0.3,1) both":"none"}}
       >
-        <span aria-hidden="true" style={{position:"absolute",width:80,height:80,borderRadius:"50%",border:"1px dashed rgba(255,255,255,0.28)",animation:mounted?"logoIrisSpin 14s linear infinite":"none",pointerEvents:"none",willChange:"transform"}}/>
-        <span aria-hidden="true" style={{position:"absolute",width:76,height:76,borderRadius:"50%",background:"conic-gradient(from 0deg, transparent 0%, rgba(255,255,255,0.9) 8%, transparent 18%, transparent 50%, rgba(255,255,255,0.5) 58%, transparent 68%, transparent 100%)",maskImage:"radial-gradient(circle, transparent 64%, black 65%, black 78%, transparent 79%)",WebkitMaskImage:"radial-gradient(circle, transparent 64%, black 65%, black 78%, transparent 79%)",animation:mounted?"logoIrisSpinReverse 5s linear infinite":"none",pointerEvents:"none",willChange:"transform"}}/>
-        <span aria-hidden="true" style={{position:"absolute",width:88,height:88,borderRadius:"50%",background:"radial-gradient(circle, rgba(255,255,255,0.18) 0%, transparent 68%)",animation:mounted?"logoApertureBreathe 3.2s ease-in-out infinite":"none",pointerEvents:"none",willChange:"transform"}}/>
-        <span className="fokus-hero-logo-frame" style={{position:"relative",width:64,height:64,borderRadius:"50%",overflow:"hidden",display:"block",transition:"transform 0.15s ease"}}>
+        <span aria-hidden="true" style={{position:"absolute",width:80,height:80,borderRadius:"50%",border:"1px dashed rgba(255,255,255,0.28)",animation:mounted?"logoIrisSpin 14s linear infinite":"none",pointerEvents:"none"}}/>
+        <span aria-hidden="true" style={{position:"absolute",width:76,height:76,borderRadius:"50%",background:"conic-gradient(from 0deg, transparent 0%, rgba(255,255,255,0.9) 8%, transparent 18%, transparent 50%, rgba(255,255,255,0.5) 58%, transparent 68%, transparent 100%)",maskImage:"radial-gradient(circle, transparent 64%, black 65%, black 78%, transparent 79%)",WebkitMaskImage:"radial-gradient(circle, transparent 64%, black 65%, black 78%, transparent 79%)",animation:mounted?"logoIrisSpinReverse 5s linear infinite":"none",pointerEvents:"none"}}/>
+        <span aria-hidden="true" style={{position:"absolute",width:88,height:88,borderRadius:"50%",background:"radial-gradient(circle, rgba(255,255,255,0.18) 0%, transparent 68%)",animation:mounted?"logoApertureBreathe 3.2s ease-in-out infinite":"none",pointerEvents:"none"}}/>
+        {burst>0&&<span key={burst} aria-hidden="true" style={{position:"absolute",width:64,height:64,borderRadius:"50%",border:"1px solid rgba(255,255,255,0.55)",animation:"logoFocusBurst 0.6s cubic-bezier(0.16,1,0.3,1) both",pointerEvents:"none"}}/>}
+        <span className="fokus-hero-logo-frame" style={{position:"relative",width:64,height:64,borderRadius:"50%",overflow:"hidden",display:"block",transform:burst>0?"scale(1.1)":"scale(1)",transition:"transform 0.45s cubic-bezier(0.34,1.56,0.64,1)"}}>
           <img className="fokus-logo-img" src="/favicon.png" alt="Fokus" width={64} height={64} style={{objectFit:"contain",filter:"brightness(1.1)",pointerEvents:"none",width:"100%",height:"100%",display:"block",transition:"transform 0.35s ease"}} draggable={false}/>
         </span>
       </button>
@@ -856,26 +853,23 @@ const NativeTabs=memo(function NativeTabs({items,active,onSelect,renderItem,heig
 
 // ─── PRODUCT CARD (GRID) ──────────────────────────────────────────────────────
 const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,index,fmtPrice,isFav,onToggleFavorite}:{product:Product;onClick:()=>void;onBuyNow:()=>void;index:number;fmtPrice:(n:number)=>string;isFav?:boolean;onToggleFavorite?:(id:string)=>void}){
-  const[cycle,setCycle]=useState(0);
-  const wasVis=useRef(false);
+  const[ratio,setRatio]=useState(0);
   const revealRef=useRef<HTMLDivElement>(null);
   useEffect(()=>{
     const el=revealRef.current;
     if(!el)return;
-    const obs=new IntersectionObserver(([entry])=>{
-      const now=entry.isIntersecting;
-      if(now&&!wasVis.current)setCycle(c=>c+1);
-      wasVis.current=now;
-    },{rootMargin:"-10% 0px -10% 0px",threshold:0.01});
+    const obs=new IntersectionObserver(([entry])=>{setRatio(entry.intersectionRatio);},{threshold:[0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1],rootMargin:"-4% 0px -4% 0px"});
     obs.observe(el);
     return()=>obs.disconnect();
   },[]);
-  const fromSide=index%2===0?"pc-bounce-left":"pc-bounce-right";
+  const premiumScale=0.9+ratio*0.1;
+  const premiumY=(1-ratio)*16;
   return(
-    <div ref={revealRef} key={cycle} className={`pc ${cycle>0?fromSide:""}`} style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:1,willChange:"transform"}}>
+    <div ref={revealRef} className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:1,filter:"none",transform:`translateY(${premiumY}px) scale(${premiumScale})`,transition:"transform 0.22s cubic-bezier(0.34,1.56,0.64,1)",willChange:"transform"}}>
       <div onClick={onClick} style={{background:"#111",aspectRatio:"1",overflow:"hidden",borderRadius:10,position:"relative",marginBottom:"0.55rem"}}>
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
+        {ratio>0.05&&<div style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden"}}><div style={{position:"absolute",top:0,left:0,width:"55%",height:"100%",background:"linear-gradient(120deg,transparent 0%,rgba(255,255,255,0.14) 45%,rgba(255,255,255,0.04) 55%,transparent 100%)",filter:"blur(1.5px)",animation:"cardSweep 1s cubic-bezier(0.19,1,0.22,1) both"}}/></div>}
         {!!product.discount&&product.discount>0&&<DiscountBadge percent={product.discount} issuper={isSuperOffer(product.discount)}/>}
         {product.bestseller&&<BestsellerBadge/>}
         {getAllImages(product).length>1&&<GalleryBadge/>}
@@ -3671,7 +3665,7 @@ const filteredComments=useMemo(()=>{
               const navCats=[
                 {key:"RELOJES",label:"Relojes"},
                 {key:"LENTES·SOL",label:"Sol"},
-                {key:"LENTES·ANTI-LUZ-AZUL",label:"Luz Azul"},
+                {key:"LENTES·ANTI-LUZ-AZUL",label:"Anti Luz"},
                 {key:"LENTES·FOTOCROMATICOS",label:"Fotocromáticos"},
                 {key:"LENTES·MOTORIZADOS",label:"Moto"},
                 {key:"PULSERAS",label:"Pulseras"},
@@ -3814,7 +3808,7 @@ const filteredComments=useMemo(()=>{
       {mainView==="comunidad"&&(
         <main className="pv" style={{paddingTop:navH,background:C.bg}}>
           <div style={{maxWidth:680,margin:"0 auto",padding:"3rem 1.5rem 0",textAlign:"center",animation:"slideUp 0.4s ease"}}>
-            <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:20,padding:"0.35rem 1rem",marginBottom:"1.25rem"}}><div style={{width:6,height:6,borderRadius:"50%",background:"#4caf50",flexShrink:0,boxShadow:"0 0 0 3px rgba(76,175,80,0.2)",animation:"pulseRing 2s infinite"}}/><span style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#ffffff"}}>CLIENTES REALES</span></div>
+            <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:20,padding:"0.35rem 1rem",marginBottom:"1.25rem"}}><div style={{width:6,height:6,borderRadius:"50%",background:"#4caf50",flexShrink:0,boxShadow:"0 0 0 3px rgba(76,175,80,0.2)",animation:"pulseRing 2s infinite"}}/><span style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#4caf50"}}>CLIENTES REALES</span></div>
             <h2 style={{fontSize:28,fontWeight:900,letterSpacing:4,marginBottom:"0.75rem",color:C.accent,lineHeight:1.1}}>COMUNIDAD<br/>FOKUS</h2>
             <p style={{color:"#444",fontSize:13,lineHeight:1.8,maxWidth:360,margin:"0 auto 2rem"}}>Cada pedido es una historia real. Estos son nuestros clientes satisfechos enviando sus productos a toda Venezuela.</p>
             <div style={{display:"flex",justifyContent:"center",gap:"2rem",marginBottom:"2.5rem",flexWrap:"wrap"}}>{[{n:"15000+",l:"Pedidos"},{n:"23+",l:"Estados"},{n:"★ 4.9",l:"Valoración"}].map(({n,l})=>(<div key={l} style={{textAlign:"center"}}><p style={{margin:0,fontSize:20,fontWeight:900,color:C.accent}}>{n}</p><p style={{margin:"2px 0 0",fontSize:10,color:"#444",letterSpacing:1}}>{l}</p></div>))}</div>
