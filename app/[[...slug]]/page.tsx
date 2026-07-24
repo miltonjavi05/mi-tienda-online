@@ -1,4 +1,4 @@
- "use client";
+  "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
 import { usePathname } from "next/navigation";
@@ -563,18 +563,18 @@ const GLOBAL_CSS = `
       transform-style: preserve-3d;
       animation: pcscrollfocus linear both;
       animation-timeline: view(block);
-      animation-range: cover 14% cover 86%;
-      will-change: transform, opacity, filter, box-shadow;
+      animation-range: cover 8% cover 92%;
+      will-change: transform, opacity, filter;
       backface-visibility: hidden;
       -webkit-backface-visibility: hidden;
       contain: layout paint style;
     }
     @keyframes pcscrollfocus {
-      0%   { transform: scale3d(0.9,0.9,1) translatey(22px) translatez(0); opacity: 0.8; filter: brightness(0.82) saturate(0.85) blur(2px); box-shadow: 0 6px 16px rgba(0,0,0,0.25); }
-      35%  { transform: scale3d(1,1,1) translatey(4px) translatez(0); opacity: 0.96; filter: brightness(1) saturate(1.04) blur(0.2px); box-shadow: 0 14px 26px rgba(0,0,0,0.4); }
-      50%  { transform: scale3d(1.04,1.04,1) translatey(0) translatez(0); opacity: 1; filter: brightness(1.08) saturate(1.15) blur(0px); box-shadow: 0 18px 34px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06); }
-      65%  { transform: scale3d(1,1,1) translatey(-4px) translatez(0); opacity: 0.96; filter: brightness(1) saturate(1.04) blur(0.2px); box-shadow: 0 14px 26px rgba(0,0,0,0.4); }
-      100% { transform: scale3d(0.9,0.9,1) translatey(-22px) translatez(0); opacity: 0.8; filter: brightness(0.82) saturate(0.85) blur(2px); box-shadow: 0 6px 16px rgba(0,0,0,0.25); }
+      0%   { transform: scale3d(0.8,0.8,1) translatey(30px) translatez(0) rotatey(-9deg); opacity: 0.5; filter: brightness(0.78) saturate(0.82) blur(2.5px); }
+      18%  { transform: scale3d(0.93,0.93,1) translatey(10px) translatez(0) rotatey(-3deg); opacity: 0.85; filter: brightness(0.92) saturate(0.94) blur(0.6px); }
+      50%  { transform: scale3d(1.06,1.06,1) translatey(0) translatez(0) rotatey(0deg); opacity: 1; filter: brightness(1.07) saturate(1.14) blur(0px); }
+      82%  { transform: scale3d(0.93,0.93,1) translatey(-10px) translatez(0) rotatey(3deg); opacity: 0.85; filter: brightness(0.92) saturate(0.94) blur(0.6px); }
+      100% { transform: scale3d(0.8,0.8,1) translatey(-30px) translatez(0) rotatey(9deg); opacity: 0.5; filter: brightness(0.78) saturate(0.82) blur(2.5px); }
     }
     .hc-scroll-focus {
       transform-origin: center center;
@@ -881,20 +881,6 @@ function DraggableWA(){
   const onDown=useCallback((e:React.PointerEvent)=>{e.preventDefault();(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);dragging.current=true;moved.current=false;startPtr.current={x:e.clientX,y:e.clientY};startPos.current={...live.current};setPressed(true);setSnapping(false);},[]);
   const onMove=useCallback((e:React.PointerEvent)=>{if(!dragging.current)return;e.preventDefault();const dx=e.clientX-startPtr.current.x,dy=e.clientY-startPtr.current.y;if(Math.abs(dx)>4||Math.abs(dy)>4)moved.current=true;const n=clamp(startPos.current.x+dx,startPos.current.y+dy);live.current=n;cancelAnimationFrame(raf.current);raf.current=requestAnimationFrame(()=>applyTransform(n.x,n.y));},[clamp,applyTransform]);
   const finishDrag=useCallback(()=>{if(!dragging.current)return;dragging.current=false;setPressed(false);if(moved.current){const s=snapToEdge(live.current.x,live.current.y);live.current=s;setSnapping(true);setPos({...s});setTimeout(()=>setSnapping(false),420);}},[snapToEdge]);
-  useEffect(()=>{
-    const forceEnd=()=>{if(dragging.current)finishDrag();};
-    const onVisibility=()=>{if(document.visibilityState==="hidden")forceEnd();};
-    window.addEventListener("pointerup",forceEnd,{passive:true});
-    window.addEventListener("pointercancel",forceEnd,{passive:true});
-    window.addEventListener("blur",forceEnd);
-    document.addEventListener("visibilitychange",onVisibility);
-    return()=>{
-      window.removeEventListener("pointerup",forceEnd);
-      window.removeEventListener("pointercancel",forceEnd);
-      window.removeEventListener("blur",forceEnd);
-      document.removeEventListener("visibilitychange",onVisibility);
-    };
-  },[finishDrag]);
   const onClick=useCallback((e:React.MouseEvent)=>{if(moved.current){e.preventDefault();return;}trackLeadWhatsApp("boton_flotante");const msg=encodeURIComponent("Hola! Vi su tienda Fokus y quiero más información 🖤");window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`,"_blank","noreferrer");},[]);
   return(<div ref={btnRef} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={finishDrag} onPointerCancel={finishDrag} onClick={onClick} style={{position:"fixed",left:0,top:0,zIndex:500,width:BTN,height:BTN,borderRadius:"50%",background:pressed?"rgba(255,255,255,0.22)":"rgba(255,255,255,0.10)",backdropFilter:"blur(18px)",WebkitBackdropFilter:"blur(18px)",border:"1px solid rgba(255,255,255,0.20)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"grab",touchAction:"none",userSelect:"none",WebkitUserSelect:"none",visibility:ready?"visible":"hidden",transition:snapping?"transform 0.38s cubic-bezier(0.25,0.46,0.45,0.94), background 0.2s":"background 0.2s",willChange:"transform",boxShadow:pressed?"0 0 0 10px rgba(255,255,255,0.06)":"0 4px 24px rgba(0,0,0,0.6), 0 1px 4px rgba(0,0,0,0.4)"}}><IcWA s={BTN-14} c={pressed?"#080808":"#fff"}/></div>);
 } 
@@ -5353,4 +5339,4 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
       {!isAdmin&&!selectedProduct&&<DraggableWA/>} 
     </div>
   );
-}   
+} 
