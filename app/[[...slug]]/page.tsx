@@ -574,6 +574,22 @@ const GLOBAL_CSS = `
       86%  { transform: scale3d(0.96,0.96,1) translatey(-6px) translatez(0); opacity: 0.88; filter: brightness(0.95) saturate(0.97); }
       100% { transform: scale3d(0.91,0.91,1) translatey(-13px) translatez(0); opacity: 0.72; filter: brightness(0.88) saturate(0.92); }
     }
+    .hc-scroll-focus {
+      transform-origin: center center;
+      animation: hcscrollfocus linear both;
+      animation-timeline: view(inline);
+      animation-range: cover 8% cover 92%;
+      will-change: transform, filter;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      contain: layout paint style;
+      box-shadow: 0 14px 30px rgba(0,0,0,0.35);
+    }
+    @keyframes hcscrollfocus {
+      0%   { transform: scale3d(0.86,0.86,1) translatey(14px) translatez(0); filter: brightness(0.86); }
+      50%  { transform: scale3d(1,1,1) translatey(0) translatez(0); filter: brightness(1); }
+      100% { transform: scale3d(0.86,0.86,1) translatey(14px) translatez(0); filter: brightness(0.86); }
+    }
   }
 
   @media(hover:hover) and (pointer:fine){
@@ -913,18 +929,13 @@ const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,index,fmtP
 const HCard=memo(function HCard({product,onClick,onBuyNow,index,fmtPrice,isFav,onToggleFavorite,animate=true}:{product:Product;onClick:()=>void;onBuyNow:()=>void;index?:number;fmtPrice:(n:number)=>string;isFav?:boolean;onToggleFavorite?:(id:string)=>void;animate?:boolean|"premium"}){
   const[vis,setVis]=useState(false);
   const[cycle,setCycle]=useState(0);
-  const[ratio,setRatio]=useState(1);
   const wasVis=useRef(false);
   const revealRef=useRef<HTMLDivElement>(null);
   const isPremium=animate==="premium";
   useEffect(()=>{
     const el=revealRef.current;
     if(!el)return;
-    if(isPremium){
-      const obs=new IntersectionObserver(([entry])=>{setRatio(entry.intersectionRatio);},{root:el.closest(".hr"),threshold:[0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1],rootMargin:"0px -2% 0px -2%"});
-      obs.observe(el);
-      return()=>obs.disconnect();
-    }
+    if(isPremium)return;
     const obs=new IntersectionObserver(([entry])=>{
       const now=entry.isIntersecting;
       setVis(now);
@@ -935,12 +946,8 @@ const HCard=memo(function HCard({product,onClick,onBuyNow,index,fmtPrice,isFav,o
     return()=>obs.disconnect();
   },[isPremium]);
   const revealDelay=Math.min((index??0)*30,160);
-  const premiumScale=0.86+ratio*0.14;
-  const premiumY=(1-ratio)*14;
-  const premiumShadow=`0 ${Math.round(4+ratio*16)}px ${Math.round(10+ratio*26)}px rgba(0,0,0,${(0.15+ratio*0.35).toFixed(3)})`;
-  const premiumBrightness=(0.86+ratio*0.14).toFixed(3);
   return(
-    <div ref={revealRef} className="hc" style={isPremium?{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:1,transform:`translateY(${premiumY}px) scale(${premiumScale})`,filter:`brightness(${premiumBrightness})`,boxShadow:premiumShadow,borderRadius:14,transition:"transform 0.22s cubic-bezier(0.34,1.56,0.64,1), filter 0.22s ease, box-shadow 0.22s ease",willChange:"transform,filter"}:animate?{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:vis?1:0,transform:vis?"translateY(0) scale(1)":"translateY(18px) scale(0.88)",filter:vis?"blur(0px)":"blur(5px)",transition:`opacity 0.5s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, transform 0.55s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, filter 0.5s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms`,willChange:"transform,opacity,filter"}:{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:1,transform:"none",filter:"none"}}>
+    <div ref={revealRef} className={isPremium?"hc hc-scroll-focus":"hc"} style={isPremium?{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",borderRadius:14}:animate?{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:vis?1:0,transform:vis?"translateY(0) scale(1)":"translateY(18px) scale(0.88)",filter:vis?"blur(0px)":"blur(5px)",transition:`opacity 0.5s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, transform 0.55s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms, filter 0.5s cubic-bezier(0.19,1,0.22,1) ${revealDelay}ms`,willChange:"transform,opacity,filter"}:{flexShrink:0,width:152,WebkitTapHighlightColor:"transparent",touchAction:"manipulation",display:"flex",flexDirection:"column",opacity:1,transform:"none",filter:"none"}}>
       <div onClick={onClick} style={{background:"#111",width:152,height:152,overflow:"hidden",marginBottom:"0.55rem",borderRadius:10,position:"relative",cursor:"pointer"}}>
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
@@ -961,7 +968,7 @@ const HCard=memo(function HCard({product,onClick,onBuyNow,index,fmtPrice,isFav,o
         ):(
           <p style={{margin:0,fontSize:13,fontWeight:800,color:C.accent}}>{fmtPrice(product.price)}</p>
         )}
-        <p style={{margin:"2px 0 0",fontSize:8,color:"#fff",fontWeight:900,letterSpacing:0.8,textShadow:"0 0 8px rgba(255,255,255,0.35)",display:"inline-block",transform:isPremium?`scale(${(0.94+ratio*0.1).toFixed(3)})`:"none",transformOrigin:"left center",transition:isPremium?"transform 0.22s cubic-bezier(0.34,1.56,0.64,1)":"none"}}>⚡ {getUnitsSoldLabel(product)}</p>
+        <p style={{margin:"2px 0 0",fontSize:8,color:"#fff",fontWeight:900,letterSpacing:0.8,textShadow:"0 0 8px rgba(255,255,255,0.35)"}}>⚡ {getUnitsSoldLabel(product)}</p>
       </div>
       <div style={{display:"flex",flexDirection:"column",gap:"0.3rem"}}>
         <button
