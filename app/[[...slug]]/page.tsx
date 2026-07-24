@@ -851,24 +851,26 @@ const NativeTabs=memo(function NativeTabs({items,active,onSelect,renderItem,heig
 
 // ─── PRODUCT CARD (GRID) ──────────────────────────────────────────────────────
 const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,index,fmtPrice,isFav,onToggleFavorite}:{product:Product;onClick:()=>void;onBuyNow:()=>void;index:number;fmtPrice:(n:number)=>string;isFav?:boolean;onToggleFavorite?:(id:string)=>void}){
-  const[ratio,setRatio]=useState(0);
+  const[vis,setVis]=useState(false);
+  const wasVis=useRef(false);
   const revealRef=useRef<HTMLDivElement>(null);
   useEffect(()=>{
     const el=revealRef.current;
     if(!el)return;
-    const obs=new IntersectionObserver(([entry])=>{setRatio(entry.intersectionRatio);},{threshold:[0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1],rootMargin:"-4% 0px -4% 0px"});
+    const obs=new IntersectionObserver(([entry])=>{
+      const now=entry.isIntersecting;
+      setVis(now);
+      wasVis.current=now;
+    },{rootMargin:"-6% 0px -6% 0px",threshold:0.01});
     obs.observe(el);
     return()=>obs.disconnect();
   },[]);
-  const premiumScale=0.8+ratio*0.2;
-  const premiumY=(1-ratio)*34;
-  const premiumOpacity=0.35+ratio*0.65;
   return(
-    <div ref={revealRef} className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:premiumOpacity,filter:"none",transform:`translateY(${premiumY}px) scale(${premiumScale})`,transition:"transform 0.15s cubic-bezier(0.34,1.9,0.64,1), opacity 0.15s ease-out",willChange:"transform,opacity"}}>
+    <div ref={revealRef} className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:vis?1:0,filter:"none",transform:vis?"translateY(0) scale(1)":"translateY(28px) scale(0.92)",transition:"transform 0.32s cubic-bezier(0.22,1.15,0.36,1), opacity 0.28s ease-out",willChange:"transform,opacity"}}>
       <div onClick={onClick} style={{background:"#111",aspectRatio:"1",overflow:"hidden",borderRadius:10,position:"relative",marginBottom:"0.55rem"}}>
         <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
-        {ratio>0.05&&<div style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden"}}><div style={{position:"absolute",top:0,left:0,width:"55%",height:"100%",background:"linear-gradient(120deg,transparent 0%,rgba(255,255,255,0.14) 45%,rgba(255,255,255,0.04) 55%,transparent 100%)",filter:"blur(1.5px)",animation:"cardSweep 1s cubic-bezier(0.19,1,0.22,1) both"}}/></div>}
+        {vis&&<div style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden"}}><div style={{position:"absolute",top:0,left:0,width:"55%",height:"100%",background:"linear-gradient(120deg,transparent 0%,rgba(255,255,255,0.14) 45%,rgba(255,255,255,0.04) 55%,transparent 100%)",filter:"blur(1.5px)",animation:"cardSweep 1s cubic-bezier(0.19,1,0.22,1) both"}}/></div>}
         {!!product.discount&&product.discount>0&&<DiscountBadge percent={product.discount} issuper={isSuperOffer(product.discount)}/>}
         {product.bestseller&&<BestsellerBadge/>}
         {getAllImages(product).length>1&&<GalleryBadge/>}
@@ -3664,7 +3666,7 @@ const filteredComments=useMemo(()=>{
               const navCats=[
                 {key:"RELOJES",label:"Relojes"},
                 {key:"LENTES·SOL",label:"Sol"},
-                {key:"LENTES·ANTI-LUZ-AZUL",label:"Anti Luz"},
+                {key:"LENTES·ANTI-LUZ-AZUL",label:"Luz Azul"},
                 {key:"LENTES·FOTOCROMATICOS",label:"Fotocromáticos"},
                 {key:"LENTES·MOTORIZADOS",label:"Moto"},
                 {key:"PULSERAS",label:"Pulseras"},
@@ -3807,7 +3809,7 @@ const filteredComments=useMemo(()=>{
       {mainView==="comunidad"&&(
         <main className="pv" style={{paddingTop:navH,background:C.bg}}>
           <div style={{maxWidth:680,margin:"0 auto",padding:"3rem 1.5rem 0",textAlign:"center",animation:"slideUp 0.4s ease"}}>
-            <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:20,padding:"0.35rem 1rem",marginBottom:"1.25rem"}}><div style={{width:6,height:6,borderRadius:"50%",background:"#4caf50",flexShrink:0,boxShadow:"0 0 0 3px rgba(76,175,80,0.2)",animation:"pulseRing 2s infinite"}}/><span style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#4caf50"}}>CLIENTES REALES</span></div>
+            <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:20,padding:"0.35rem 1rem",marginBottom:"1.25rem"}}><div style={{width:6,height:6,borderRadius:"50%",background:"#4caf50",flexShrink:0,boxShadow:"0 0 0 3px rgba(76,175,80,0.2)",animation:"pulseRing 2s infinite"}}/><span style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#ffffff"}}>CLIENTES REALES</span></div>
             <h2 style={{fontSize:28,fontWeight:900,letterSpacing:4,marginBottom:"0.75rem",color:C.accent,lineHeight:1.1}}>COMUNIDAD<br/>FOKUS</h2>
             <p style={{color:"#444",fontSize:13,lineHeight:1.8,maxWidth:360,margin:"0 auto 2rem"}}>Cada pedido es una historia real. Estos son nuestros clientes satisfechos enviando sus productos a toda Venezuela.</p>
             <div style={{display:"flex",justifyContent:"center",gap:"2rem",marginBottom:"2.5rem",flexWrap:"wrap"}}>{[{n:"15000+",l:"Pedidos"},{n:"23+",l:"Estados"},{n:"★ 4.9",l:"Valoración"}].map(({n,l})=>(<div key={l} style={{textAlign:"center"}}><p style={{margin:0,fontSize:20,fontWeight:900,color:C.accent}}>{n}</p><p style={{margin:"2px 0 0",fontSize:10,color:"#444",letterSpacing:1}}>{l}</p></div>))}</div>
