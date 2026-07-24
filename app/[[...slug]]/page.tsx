@@ -3576,7 +3576,7 @@ const filteredComments=useMemo(()=>{
             <input autoFocus value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} placeholder="Buscar productos…" style={{...S.input,borderRadius:8}}/>
           </div>
         )}
-        <div style={{borderTop:"1px solid #161616",padding:"0 1rem",height:22,display:"flex",alignItems:"center",justifyContent:"space-between",gap:"0.5rem"}}>
+        <div style={{borderTop:"1px solid #161616",padding:"0 1rem",height:24,display:"flex",alignItems:"center",justifyContent:"space-between",gap:"0.5rem"}}>
           <div style={{display:"flex",alignItems:"center",gap:6}}>
             <span style={{width:6,height:6,borderRadius:"50%",background:rateLoading?"#555":bcvRate?"#4caf50":"#555",flexShrink:0}}/>
             <span style={{fontSize:10,color:"#444",fontWeight:700,letterSpacing:0.5}}>
