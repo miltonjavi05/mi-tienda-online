@@ -3577,19 +3577,21 @@ const filteredComments=useMemo(()=>{
           </div>
         )}
         <div style={{borderTop:"1px solid #161616",padding:"0 1rem",height:24,display:"flex",alignItems:"center",justifyContent:"space-between",gap:"0.5rem"}}>
+          {(isShop||isCart)&&(
+          <>
           <div style={{display:"flex",alignItems:"center",gap:6}}>
             <span style={{width:6,height:6,borderRadius:"50%",background:rateLoading?"#555":bcvRate?"#4caf50":"#555",flexShrink:0}}/>
             <span style={{fontSize:10,color:"#444",fontWeight:700,letterSpacing:0.5}}>
               {rateLoading?"Cargando tasa BCV…":bcvRate?`1 USD = ${bcvRate.toLocaleString("es-VE",{minimumFractionDigits:2,maximumFractionDigits:2})} Bs · BCV`:"Tasa BCV"}
             </span>
           </div>
-          {(isShop||isCart)&&(
           <button
             onClick={()=>{if(!showBs)fetchBcvRate();setShowBs(s=>!s);}}
             style={{display:"flex",alignItems:"center",gap:5,background:showBs?"#fff":"#1a1a1a",color:showBs?"#080808":"#888",border:`1px solid ${showBs?"#fff":"#2a2a2a"}`,borderRadius:20,padding:"2px 11px",fontSize:9,fontWeight:900,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",flexShrink:0,transition:"all 0.15s",WebkitTapHighlightColor:"transparent",touchAction:"manipulation"}}
           >
             {showBs?"VER EN USD ↕":"VER EN BS ↕"}
           </button>
+          </>
           )}
         </div>
       </nav>
