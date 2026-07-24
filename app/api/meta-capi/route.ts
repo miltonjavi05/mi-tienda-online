@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
           client_ip_address: req.headers.get("x-forwarded-for")?.split(",")[0] || "",
           client_user_agent:  body.user_data?.client_user_agent || "",
         },
-        custom_data: body.custom_data,
+        custom_data: body.custom_data,  
       }],
     };
 
