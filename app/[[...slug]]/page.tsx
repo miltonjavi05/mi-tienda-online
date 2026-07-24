@@ -1622,6 +1622,7 @@ export default function Home() {
   const[selectedProduct,setSel]    = useState<Product|null>(null);
   const[modalQty,setModalQty]      = useState(1);
   const[modalImgIdx,setModalImgIdx]= useState(0);
+  const[addedFlash,setAddedFlash]  = useState(false);
   const[productComments,setProductComments]=useState<ProductComment[]>([]);
   const[commentsLoading,setCommentsLoading]=useState(false);
   const[commentName,setCommentName]=useState("");
@@ -5307,19 +5308,27 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                 <Footer setMainView={setMainView} setShopFilter={setShopFilter}/>
               </div>
             </div>
-            <div className="pm-footer-bar" style={{flexShrink:0,padding:"1rem 1.5rem 1.5rem",background:"#111",borderTop:"1px solid #1e1e1e",display:"flex",flexDirection:"column",gap:"0.6rem",boxShadow:"0 -8px 24px rgba(0,0,0,0.4)"}}>
+            {addedFlash&&(
+              <div style={{position:"absolute",bottom:"100%",left:"1.5rem",right:"1.5rem",marginBottom:"0.6rem",display:"flex",alignItems:"center",gap:8,background:"#0d1e0d",border:"1px solid #2a4a2a",borderRadius:10,padding:"0.65rem 0.9rem",animation:"slideUp 0.25s cubic-bezier(0.34,1.3,0.64,1)",boxShadow:"0 8px 24px rgba(0,0,0,0.5)",zIndex:5}}>
+                <div style={{width:20,height:20,borderRadius:"50%",background:"#4caf50",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#080808" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <span style={{fontSize:12,fontWeight:800,color:"#4caf50"}}>Agregado al carrito ({modalQty} unidad{modalQty>1?"es":""})</span>
+              </div>
+            )}
+            <div className="pm-footer-bar" style={{flexShrink:0,padding:"1rem 1.5rem 1.5rem",background:"#111",borderTop:"1px solid #1e1e1e",display:"flex",flexDirection:"column",gap:"0.6rem",boxShadow:"0 -8px 24px rgba(0,0,0,0.4)",position:"relative"}}>
               <div style={{display:"flex",alignItems:"center",gap:"0.6rem"}}>
                 <div style={{display:"flex",alignItems:"center",border:`1px solid ${C.border}`,borderRadius:8,flexShrink:0}}>
                   <button onClick={()=>setModalQty(Math.max(1,modalQty-1))} style={{...S.qtyBtn,width:32,height:32,fontSize:16}}>−</button>
                   <span style={{padding:"0 0.6rem",fontSize:13,color:C.text,fontWeight:700}}>{modalQty}</span>
                   <button onClick={()=>setModalQty(modalQty+1)} style={{...S.qtyBtn,width:32,height:32,fontSize:16}}>+</button>
                 </div>
-                <button onClick={()=>addToCart(selectedProduct,modalQty)} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:"0.4rem",background:"transparent",color:"#aaa",border:`1px solid ${C.border}`,fontSize:10,fontWeight:800,letterSpacing:1,padding:"0.6rem",borderRadius:8,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>
+                <button onClick={()=>{addToCart(selectedProduct,modalQty);setAddedFlash(true);setTimeout(()=>setAddedFlash(false),1800);}} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:"0.4rem",background:"transparent",color:"#aaa",border:`1px solid ${C.border}`,fontSize:10,fontWeight:800,letterSpacing:1,padding:"0.6rem",borderRadius:8,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
                   AGREGAR AL CARRITO
                 </button>
               </div>
-              <button onClick={()=>{for(let i=0;i<modalQty;i++)handleBuyNow(selectedProduct);}} style={{position:"relative",overflow:"hidden",width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:"0.6rem",background:"linear-gradient(180deg,#ffffff 0%,#f0f0f0 100%)",color:"#080808",border:"none",fontSize:14,fontWeight:900,letterSpacing:2.5,padding:"1.15rem",borderRadius:12,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",boxShadow:"0 10px 30px rgba(255,255,255,0.22), inset 0 1px 0 rgba(255,255,255,0.9)"}}>
+              <button onClick={()=>{closeProdModal();for(let i=0;i<modalQty;i++)handleBuyNow(selectedProduct);}} style={{position:"relative",overflow:"hidden",width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:"0.6rem",background:"linear-gradient(180deg,#ffffff 0%,#f0f0f0 100%)",color:"#080808",border:"none",fontSize:14,fontWeight:900,letterSpacing:2.5,padding:"1.15rem",borderRadius:12,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",boxShadow:"0 10px 30px rgba(255,255,255,0.22), inset 0 1px 0 rgba(255,255,255,0.9)"}}>
                 <span style={{position:"absolute",inset:0,background:"linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.55) 50%,transparent 100%)",backgroundSize:"200% 100%",animation:"badgeShimmer 2.8s ease infinite",pointerEvents:"none",mixBlendMode:"overlay" as any}}/>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#080808" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{position:"relative",flexShrink:0}}><polyline points="20 6 9 17 4 12"/></svg>
                 <span style={{position:"relative"}}>COMPRAR AHORA</span>
