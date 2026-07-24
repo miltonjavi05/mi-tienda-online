@@ -557,15 +557,10 @@ const GLOBAL_CSS = `
   .hc:active { opacity: 0.85; }
   .nb:active { opacity: 0.6; }
 
-  @keyframes pcfocuspull { 0%{filter:blur(7px) brightness(1.4) contrast(1.05);transform:scale(1.1);} 55%{filter:blur(0px) brightness(1.06);transform:scale(0.99);} 100%{filter:blur(0px) brightness(1);transform:scale(1);} }
-  @keyframes pcfocuscornerin { 0%{opacity:0;transform:scale(1.6);} 40%{opacity:1;transform:scale(1);} 75%{opacity:1;} 100%{opacity:0;transform:scale(0.82);} }
-  .pc-focus-img { animation: pcfocuspull 0.5s cubic-bezier(0.19,1,0.22,1) both; will-change: transform, filter; }
-  .pc-focus-corners { position:absolute; inset:0; pointer-events:none; z-index:3; }
-  .pc-focus-corners span { position:absolute; width:16px; height:16px; border:1.5px solid rgba(255,255,255,0.9); opacity:0; animation: pcfocuscornerin 0.55s cubic-bezier(0.19,1,0.22,1) both; will-change: transform, opacity; }
-  .pc-focus-corners span:nth-child(1){ top:7px; left:7px; border-right:none; border-bottom:none; border-radius:3px 0 0 0; }
-  .pc-focus-corners span:nth-child(2){ top:7px; right:7px; border-left:none; border-bottom:none; border-radius:0 3px 0 0; animation-delay:0.03s; }
-  .pc-focus-corners span:nth-child(3){ bottom:7px; left:7px; border-right:none; border-top:none; border-radius:0 0 0 3px; animation-delay:0.03s; }
-  .pc-focus-corners span:nth-child(4){ bottom:7px; right:7px; border-left:none; border-top:none; border-radius:0 0 3px 0; animation-delay:0.06s; }
+  @keyframes pcbounceleft { 0%{opacity:0;transform:translatex(-46px) scale(0.9);} 55%{opacity:1;transform:translatex(8px) scale(1.02);} 78%{transform:translatex(-3px) scale(0.995);} 100%{opacity:1;transform:translatex(0) scale(1);} }
+  @keyframes pcbounceright { 0%{opacity:0;transform:translatex(46px) scale(0.9);} 55%{opacity:1;transform:translatex(-8px) scale(1.02);} 78%{transform:translatex(3px) scale(0.995);} 100%{opacity:1;transform:translatex(0) scale(1);} }
+  .pc-bounce-left { animation: pcbounceleft 0.46s cubic-bezier(0.22,1.3,0.36,1) both; }
+  .pc-bounce-right { animation: pcbounceright 0.46s cubic-bezier(0.22,1.3,0.36,1) both; }
 
   @media(hover:hover) and (pointer:fine){
     .iz { transition: transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94) !important; }
@@ -875,12 +870,12 @@ const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,index,fmtP
     obs.observe(el);
     return()=>obs.disconnect();
   },[]);
+  const fromSide=index%2===0?"pc-bounce-left":"pc-bounce-right";
   return(
-    <div ref={revealRef} className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:1}}>
+    <div ref={revealRef} key={cycle} className={`pc ${cycle>0?fromSide:""}`} style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:1,willChange:"transform"}}>
       <div onClick={onClick} style={{background:"#111",aspectRatio:"1",overflow:"hidden",borderRadius:10,position:"relative",marginBottom:"0.55rem"}}>
-        <div key={cycle} className="iz pc-focus-img" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
+        <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
-        {cycle>0&&<div key={"fc"+cycle} className="pc-focus-corners" aria-hidden="true"><span/><span/><span/><span/></div>}
         {!!product.discount&&product.discount>0&&<DiscountBadge percent={product.discount} issuper={isSuperOffer(product.discount)}/>}
         {product.bestseller&&<BestsellerBadge/>}
         {getAllImages(product).length>1&&<GalleryBadge/>}
