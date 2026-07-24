@@ -548,6 +548,7 @@ const GLOBAL_CSS = `
   }
 
   .pc, .hc, .cc { transition: transform 0.25s ease, border-color 0.2s ease, box-shadow 0.25s ease; }
+  .pg { perspective: 1400px; }
   @media(hover:hover) and (pointer:fine){
     .pc, .hc, .cc { contain: layout paint; }
   }
@@ -559,20 +560,21 @@ const GLOBAL_CSS = `
   @supports (animation-timeline: view()) {
     .pc-scroll-focus {
       transform-origin: center center;
+      transform-style: preserve-3d;
       animation: pcscrollfocus linear both;
       animation-timeline: view(block);
-      animation-range: cover 10% cover 90%;
+      animation-range: cover 8% cover 92%;
       will-change: transform, opacity, filter;
       backface-visibility: hidden;
       -webkit-backface-visibility: hidden;
       contain: layout paint style;
     }
     @keyframes pcscrollfocus {
-      0%   { transform: scale3d(0.91,0.91,1) translatey(13px) translatez(0); opacity: 0.72; filter: brightness(0.88) saturate(0.92); }
-      14%  { transform: scale3d(0.96,0.96,1) translatey(6px) translatez(0);  opacity: 0.88; filter: brightness(0.95) saturate(0.97); }
-      50%  { transform: scale3d(1.045,1.045,1) translatey(0) translatez(0); opacity: 1;    filter: brightness(1.05) saturate(1.1); }
-      86%  { transform: scale3d(0.96,0.96,1) translatey(-6px) translatez(0); opacity: 0.88; filter: brightness(0.95) saturate(0.97); }
-      100% { transform: scale3d(0.91,0.91,1) translatey(-13px) translatez(0); opacity: 0.72; filter: brightness(0.88) saturate(0.92); }
+      0%   { transform: scale3d(0.8,0.8,1) translatey(30px) translatez(0) rotatey(-9deg); opacity: 0.5; filter: brightness(0.78) saturate(0.82) blur(2.5px); }
+      18%  { transform: scale3d(0.93,0.93,1) translatey(10px) translatez(0) rotatey(-3deg); opacity: 0.85; filter: brightness(0.92) saturate(0.94) blur(0.6px); }
+      50%  { transform: scale3d(1.06,1.06,1) translatey(0) translatez(0) rotatey(0deg); opacity: 1; filter: brightness(1.07) saturate(1.14) blur(0px); }
+      82%  { transform: scale3d(0.93,0.93,1) translatey(-10px) translatez(0) rotatey(3deg); opacity: 0.85; filter: brightness(0.92) saturate(0.94) blur(0.6px); }
+      100% { transform: scale3d(0.8,0.8,1) translatey(-30px) translatez(0) rotatey(9deg); opacity: 0.5; filter: brightness(0.78) saturate(0.82) blur(2.5px); }
     }
     .hc-scroll-focus {
       transform-origin: center center;
