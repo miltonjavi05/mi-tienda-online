@@ -489,6 +489,10 @@ const GLOBAL_CSS = `
   @keyframes spin { to{transform:rotate(360deg)} }
   @keyframes tyCheck { from{stroke-dashoffset:40} to{stroke-dashoffset:0} }
   @keyframes badgeShimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+  @keyframes addBtnPress { 0%{transform:scale(1);} 35%{transform:scale(0.94);} 60%{transform:scale(1.03);} 100%{transform:scale(1);} }
+  @keyframes addBtnRing { 0%{opacity:0.55;transform:scale(0.9);} 100%{opacity:0;transform:scale(1.6);} }
+  @keyframes addedBadgeIn { 0%{opacity:0;transform:translateY(10px) scale(0.92);} 60%{opacity:1;transform:translateY(-2px) scale(1.02);} 100%{opacity:1;transform:translateY(0) scale(1);} }
+  @keyframes addedCheckPop { 0%{transform:scale(0);opacity:0;} 55%{transform:scale(1.25);opacity:1;} 100%{transform:scale(1);opacity:1;} }
   @keyframes railBounceRight { 0%{transform:translateX(0)} 35%{transform:translateX(-16px)} 65%{transform:translateX(5px)} 100%{transform:translateX(0)} }
   @keyframes railBounceLeft { 0%{transform:translateX(0)} 35%{transform:translateX(16px)} 65%{transform:translateX(-5px)} 100%{transform:translateX(0)} }
   @keyframes cardSweep { 0%{transform:translateX(-140%) skewX(-9deg);opacity:0} 30%{opacity:0.9} 65%{opacity:0.4} 100%{transform:translateX(200%) skewX(-9deg);opacity:0} }
@@ -1623,6 +1627,7 @@ export default function Home() {
   const[modalQty,setModalQty]      = useState(1);
   const[modalImgIdx,setModalImgIdx]= useState(0);
   const[addedFlash,setAddedFlash]  = useState(false);
+  const[addBtnPulse,setAddBtnPulse]= useState(false);
   const[productComments,setProductComments]=useState<ProductComment[]>([]);
   const[commentsLoading,setCommentsLoading]=useState(false);
   const[commentName,setCommentName]=useState("");
@@ -5310,11 +5315,15 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
             </div>
             <div className="pm-footer-bar" style={{flexShrink:0,padding:"1rem 1.5rem 1.5rem",background:"#111",borderTop:"1px solid #1e1e1e",display:"flex",flexDirection:"column",gap:"0.6rem",boxShadow:"0 -8px 24px rgba(0,0,0,0.4)",position:"relative"}}>
               {addedFlash&&(
-                <div style={{position:"absolute",bottom:"100%",left:"1.5rem",right:"1.5rem",marginBottom:"0.6rem",display:"flex",alignItems:"center",gap:8,background:"#0d1e0d",border:"1px solid #2a4a2a",borderRadius:10,padding:"0.65rem 0.9rem",animation:"slideUp 0.25s cubic-bezier(0.34,1.3,0.64,1)",boxShadow:"0 8px 24px rgba(0,0,0,0.5)",zIndex:5}}>
-                  <div style={{width:20,height:20,borderRadius:"50%",background:"#4caf50",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#080808" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                <div style={{position:"absolute",bottom:"100%",left:"1.5rem",right:"1.5rem",marginBottom:"0.6rem",display:"flex",alignItems:"center",gap:10,background:"linear-gradient(155deg,rgba(255,255,255,0.14) 0%,rgba(20,20,20,0.96) 45%,rgba(6,6,6,0.99) 100%)",border:"1px solid rgba(255,255,255,0.22)",borderRadius:12,padding:"0.75rem 1rem",animation:"addedBadgeIn 0.4s cubic-bezier(0.34,1.3,0.64,1)",boxShadow:"0 10px 30px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.15)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",zIndex:5,overflow:"hidden"}}>
+                  <span style={{position:"absolute",inset:0,background:"linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.10) 50%,transparent 100%)",backgroundSize:"200% 100%",animation:"badgeShimmer 2.4s ease infinite",pointerEvents:"none"}}/>
+                  <div style={{position:"relative",width:24,height:24,borderRadius:"50%",background:"linear-gradient(180deg,#ffffff 0%,#e5e5e5 100%)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 3px 10px rgba(255,255,255,0.25)",animation:"addedCheckPop 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.05s both"}}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#080808" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                   </div>
-                  <span style={{fontSize:12,fontWeight:800,color:"#4caf50"}}>Agregado al carrito ({modalQty} unidad{modalQty>1?"es":""})</span>
+                  <div style={{position:"relative",flex:1,minWidth:0}}>
+                    <p style={{margin:0,fontSize:12,fontWeight:900,color:"#fff",letterSpacing:0.5}}>Añadido al carrito 🖤</p>
+                    <p style={{margin:0,fontSize:10,color:"rgba(255,255,255,0.55)",fontWeight:700}}>{modalQty} unidad{modalQty>1?"es":""} de {selectedProduct.name}</p>
+                  </div>
                 </div>
               )}
               <div style={{display:"flex",alignItems:"center",gap:"0.6rem"}}>
@@ -5323,8 +5332,9 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   <span style={{padding:"0 0.6rem",fontSize:13,color:C.text,fontWeight:700}}>{modalQty}</span>
                   <button onClick={()=>setModalQty(modalQty+1)} style={{...S.qtyBtn,width:32,height:32,fontSize:16}}>+</button>
                 </div>
-                <button onClick={()=>{addToCart(selectedProduct,modalQty);setAddedFlash(true);setTimeout(()=>setAddedFlash(false),1800);}} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:"0.4rem",background:"transparent",color:"#aaa",border:`1px solid ${C.border}`,fontSize:10,fontWeight:800,letterSpacing:1,padding:"0.6rem",borderRadius:8,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+                <button onClick={()=>{addToCart(selectedProduct,modalQty);setAddedFlash(true);setAddBtnPulse(false);requestAnimationFrame(()=>setAddBtnPulse(true));setTimeout(()=>setAddedFlash(false),2200);setTimeout(()=>setAddBtnPulse(false),650);}} style={{position:"relative",overflow:"visible",flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:"0.4rem",background:addBtnPulse?"rgba(255,255,255,0.06)":"transparent",color:"#ccc",border:`1px solid ${addBtnPulse?"rgba(255,255,255,0.35)":C.border}`,fontSize:10,fontWeight:800,letterSpacing:1,padding:"0.6rem",borderRadius:8,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",animation:addBtnPulse?"addBtnPress 0.45s cubic-bezier(0.34,1.56,0.64,1)":"none",transition:"background 0.25s ease, border-color 0.25s ease"}}>
+                  {addBtnPulse&&<span aria-hidden="true" style={{position:"absolute",inset:-4,borderRadius:12,border:"1px solid rgba(255,255,255,0.55)",animation:"addBtnRing 0.6s ease-out",pointerEvents:"none"}}/>}
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
                   AGREGAR AL CARRITO
                 </button>
               </div>
