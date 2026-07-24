@@ -3538,7 +3538,7 @@ const filteredComments=useMemo(()=>{
         <ThankYouView order={orderSnap} onBack={()=>{setOrderSnap(null);setMainView("shop");setShopFilter("TODO");}} currentUser={currentUser} getRealUsdValue={getRealUsdValue}/>
       </>
     );
-  }
+  } 
 
   if(deepLinkPending){
     return(
