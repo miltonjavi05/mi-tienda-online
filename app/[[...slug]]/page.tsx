@@ -1766,6 +1766,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   useEffect(()=>{const upd=()=>{if(navRef.current)setNavH(navRef.current.offsetHeight);};upd();const ro=new ResizeObserver(upd);if(navRef.current)ro.observe(navRef.current);return()=>ro.disconnect();},[mainView,lentesOpen,searchOpen]);
 
   useEffect(()=>{initMetaPixel();},[]);
+  useEffect(()=>{if(typeof window!=="undefined"&&"scrollRestoration" in window.history)window.history.scrollRestoration="manual";},[]);
   const[navMounted,setNavMounted]=useState(false);
   useEffect(()=>{const t=setTimeout(()=>setNavMounted(true),650);return()=>clearTimeout(t);},[]);
   useEffect(()=>{
