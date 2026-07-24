@@ -557,6 +557,16 @@ const GLOBAL_CSS = `
   .hc:active { opacity: 0.85; }
   .nb:active { opacity: 0.6; }
 
+  @keyframes pcfocuspull { 0%{filter:blur(7px) brightness(1.4) contrast(1.05);transform:scale(1.1);} 55%{filter:blur(0px) brightness(1.06);transform:scale(0.99);} 100%{filter:blur(0px) brightness(1);transform:scale(1);} }
+  @keyframes pcfocuscornerin { 0%{opacity:0;transform:scale(1.6);} 40%{opacity:1;transform:scale(1);} 75%{opacity:1;} 100%{opacity:0;transform:scale(0.82);} }
+  .pc-focus-img { animation: pcfocuspull 0.5s cubic-bezier(0.19,1,0.22,1) both; will-change: transform, filter; }
+  .pc-focus-corners { position:absolute; inset:0; pointer-events:none; z-index:3; }
+  .pc-focus-corners span { position:absolute; width:16px; height:16px; border:1.5px solid rgba(255,255,255,0.9); opacity:0; animation: pcfocuscornerin 0.55s cubic-bezier(0.19,1,0.22,1) both; will-change: transform, opacity; }
+  .pc-focus-corners span:nth-child(1){ top:7px; left:7px; border-right:none; border-bottom:none; border-radius:3px 0 0 0; }
+  .pc-focus-corners span:nth-child(2){ top:7px; right:7px; border-left:none; border-bottom:none; border-radius:0 3px 0 0; animation-delay:0.03s; }
+  .pc-focus-corners span:nth-child(3){ bottom:7px; left:7px; border-right:none; border-top:none; border-radius:0 0 0 3px; animation-delay:0.03s; }
+  .pc-focus-corners span:nth-child(4){ bottom:7px; right:7px; border-left:none; border-top:none; border-radius:0 0 3px 0; animation-delay:0.06s; }
+
   @media(hover:hover) and (pointer:fine){
     .iz { transition: transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94) !important; }
     .io { transition: background 0.3s ease !important; }
@@ -851,7 +861,7 @@ const NativeTabs=memo(function NativeTabs({items,active,onSelect,renderItem,heig
 
 // ─── PRODUCT CARD (GRID) ──────────────────────────────────────────────────────
 const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,index,fmtPrice,isFav,onToggleFavorite}:{product:Product;onClick:()=>void;onBuyNow:()=>void;index:number;fmtPrice:(n:number)=>string;isFav?:boolean;onToggleFavorite?:(id:string)=>void}){
-  const[vis,setVis]=useState(false);
+  const[cycle,setCycle]=useState(0);
   const wasVis=useRef(false);
   const revealRef=useRef<HTMLDivElement>(null);
   useEffect(()=>{
@@ -859,18 +869,18 @@ const ProductCard=memo(function ProductCard({product,onClick,onBuyNow,index,fmtP
     if(!el)return;
     const obs=new IntersectionObserver(([entry])=>{
       const now=entry.isIntersecting;
-      setVis(now);
+      if(now&&!wasVis.current)setCycle(c=>c+1);
       wasVis.current=now;
-    },{rootMargin:"-6% 0px -6% 0px",threshold:0.01});
+    },{rootMargin:"-10% 0px -10% 0px",threshold:0.01});
     obs.observe(el);
     return()=>obs.disconnect();
   },[]);
   return(
-    <div ref={revealRef} className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:vis?1:0,filter:"none",transform:vis?"translateY(0) scale(1)":"translateY(28px) scale(0.92)",transition:"transform 0.32s cubic-bezier(0.22,1.15,0.36,1), opacity 0.28s ease-out",willChange:"transform,opacity"}}>
+    <div ref={revealRef} className="pc" style={{WebkitTapHighlightColor:"transparent",touchAction:"manipulation",position:"relative",display:"flex",flexDirection:"column",opacity:1}}>
       <div onClick={onClick} style={{background:"#111",aspectRatio:"1",overflow:"hidden",borderRadius:10,position:"relative",marginBottom:"0.55rem"}}>
-        <div className="iz" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
+        <div key={cycle} className="iz pc-focus-img" style={{width:"100%",height:"100%"}}><LazyImg src={product.img} alt={product.name}/></div>
         <div className="io" style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",pointerEvents:"none"}}/>
-        {vis&&<div style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden"}}><div style={{position:"absolute",top:0,left:0,width:"55%",height:"100%",background:"linear-gradient(120deg,transparent 0%,rgba(255,255,255,0.14) 45%,rgba(255,255,255,0.04) 55%,transparent 100%)",filter:"blur(1.5px)",animation:"cardSweep 1s cubic-bezier(0.19,1,0.22,1) both"}}/></div>}
+        {cycle>0&&<div key={"fc"+cycle} className="pc-focus-corners" aria-hidden="true"><span/><span/><span/><span/></div>}
         {!!product.discount&&product.discount>0&&<DiscountBadge percent={product.discount} issuper={isSuperOffer(product.discount)}/>}
         {product.bestseller&&<BestsellerBadge/>}
         {getAllImages(product).length>1&&<GalleryBadge/>}
