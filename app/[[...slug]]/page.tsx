@@ -1808,12 +1808,17 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
       body.style.top=prevTop;
       body.style.width=prevWidth;
       body.style.overflow=prevOverflow;
-      window.scrollTo(0,scrollY);
+      if(skipScrollRestoreRef.current){
+        skipScrollRestoreRef.current=false;
+      }else{
+        window.scrollTo(0,scrollY);
+      }
     };
   },[selectedProduct]);
 
   // ─── URL ↔ ESTADO: cada apartado con su propio link + back/forward sin trabarse ──
   const isPoppingRef = useRef(false);
+  const skipScrollRestoreRef = useRef(false);
   const selectedProductRef = useRef<Product|null>(null);
   const modalPushedRef = useRef(false);
   const pendingProductDeepLinkRef = useRef(isProductDeepLink);
@@ -5342,6 +5347,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   trackProductInterest(selectedProduct.id,selectedProduct.name,selectedProduct.category,"cart");
                   return [...prev,{product:selectedProduct,qty:modalQty}];
                 });
+                skipScrollRestoreRef.current=true;
                 closeProdModal();
                 setMainView("cart");
               }} style={{position:"relative",overflow:"hidden",width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:"0.6rem",background:"linear-gradient(180deg,#ffffff 0%,#f0f0f0 100%)",color:"#080808",border:"none",fontSize:14,fontWeight:900,letterSpacing:2.5,padding:"1.15rem",borderRadius:12,cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",boxShadow:"0 10px 30px rgba(255,255,255,0.22), inset 0 1px 0 rgba(255,255,255,0.9)"}}>
