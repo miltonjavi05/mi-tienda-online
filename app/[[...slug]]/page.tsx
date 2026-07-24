@@ -5355,4 +5355,4 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
       {!isAdmin&&!selectedProduct&&<DraggableWA/>} 
     </div>
   );
-} 
+}  
