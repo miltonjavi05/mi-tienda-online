@@ -505,6 +505,7 @@ const GLOBAL_CSS = `
   @keyframes focusCornerBreathe { 0%,100%{opacity:0.45;transform:scale(1);} 50%{opacity:1;transform:scale(1.1);} }
   @keyframes focusRingPulse { 0%{opacity:0.55;transform:scale(0.92);} 70%{opacity:0;transform:scale(1.35);} 100%{opacity:0;transform:scale(1.35);} }
   @keyframes verColArrowNudge { 0%,100%{transform:translateX(0);} 50%{transform:translateX(5px);} }
+  @keyframes scrollHintBounce { 0%,100%{transform:translateY(0);} 50%{transform:translateY(6px);} }
   @keyframes viewIn { 0%{opacity:0;} 100%{opacity:1;} }
   @keyframes plusPremiumGlow { 0%,100%{opacity:0.75;transform:scale(1);text-shadow:0 0 0px rgba(255,255,255,0);} 50%{opacity:1;transform:scale(1.22);text-shadow:0 0 12px rgba(255,255,255,0.85),0 0 22px rgba(255,255,255,0.35);} }
   .pv { animation: viewIn 0.15s ease-out both; will-change: opacity; }
@@ -1626,6 +1627,7 @@ export default function Home() {
   const[selectedProduct,setSel]    = useState<Product|null>(null);
   const[modalQty,setModalQty]      = useState(1);
   const[modalImgIdx,setModalImgIdx]= useState(0);
+  const pmScrollRef=useRef<HTMLDivElement>(null);
   const[addedFlash,setAddedFlash]  = useState(false);
   const[addBtnPulse,setAddBtnPulse]= useState(false);
   const[productComments,setProductComments]=useState<ProductComment[]>([]);
@@ -5183,7 +5185,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
             <div className="pm-drag-handle" style={{padding:"1.5rem 1.5rem 0",flexShrink:0}}>
               <div style={{width:36,height:3,background:"#222",borderRadius:2,margin:"0 auto 1rem"}}/>
             </div>
-            <div className="ts pm-scroll" style={{overflowY:"auto",WebkitOverflowScrolling:"touch",padding:"0 1.5rem",flex:1,minHeight:0}}>
+            <div ref={pmScrollRef} className="ts pm-scroll" style={{overflowY:"auto",WebkitOverflowScrolling:"touch",padding:"0 1.5rem",flex:1,minHeight:0}}>
               <div className="pm-grid">
                 <div className="pm-media-col">
                   <div className="pm-main-image" style={{background:"#0a0a0a",aspectRatio:"1/1",overflow:"hidden",marginBottom:"0.6rem",borderRadius:12,position:"relative"}}>
@@ -5217,6 +5219,10 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                 <p style={{fontSize:24,fontWeight:900,margin:"0 0 0.4rem",color:C.accent}}>{fmtPrice(selectedProduct.price)}</p>
               )}
               <p style={{fontSize:11,color:"#fff",fontWeight:900,margin:"0 0 1.25rem",letterSpacing:1,textShadow:"0 0 8px rgba(255,255,255,0.35)"}}>⚡ {getUnitsSoldLabel(selectedProduct)}</p>
+              <button onClick={()=>pmScrollRef.current?.scrollBy({top:320,behavior:"smooth"})} style={{display:"flex",alignItems:"center",gap:6,margin:"0 auto 1.1rem",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:20,padding:"0.4rem 0.9rem",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>
+                <span style={{fontSize:10,fontWeight:700,color:"#888",letterSpacing:0.5}}>Desliza para ver más</span>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{animation:"scrollHintBounce 1.4s ease-in-out infinite"}}><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
               {!!selectedProduct.urgencyTag&&(
                 <div style={{display:"flex",alignItems:"center",gap:8,background:selectedProduct.urgencyTag==="ultima"?"linear-gradient(135deg,rgba(255,59,59,0.14) 0%,rgba(122,0,0,0.08) 100%)":"linear-gradient(135deg,rgba(255,255,255,0.06) 0%,rgba(255,255,255,0.02) 100%)",border:`1px solid ${selectedProduct.urgencyTag==="ultima"?"rgba(255,59,59,0.4)":"rgba(255,255,255,0.15)"}`,borderRadius:10,padding:"0.65rem 0.9rem",marginBottom:"1.1rem"}}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill={selectedProduct.urgencyTag==="ultima"?"#ff5555":"#ffd43b"}><path d="M13 2L3 14h7l-1 8 11-14h-7l1-6z"/></svg>
@@ -5307,6 +5313,23 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                     <button onClick={submitProductComment} disabled={!commentName.trim()||!commentText.trim()||commentSending} style={{...S.darkBtn,justifyContent:"center",borderRadius:8,fontSize:11,opacity:(!commentName.trim()||!commentText.trim()||commentSending)?0.5:1,cursor:(!commentName.trim()||!commentText.trim()||commentSending)?"not-allowed":"pointer"}}>{commentSending?"Publicando...":"PUBLICAR RESEÑA"}</button>
                     {commentErr&&<p style={{margin:0,fontSize:11,color:"#ff8888",background:"#1e0808",borderRadius:8,padding:"0.5rem 0.75rem"}}>{commentErr}</p>}
                     {commentOk&&<p style={{margin:0,fontSize:11,color:"#4caf50",background:"#081e0e",borderRadius:8,padding:"0.5rem 0.75rem"}}>✓ Reseña publicada, ya es visible para todos</p>}
+                  </div>
+                </div>
+              </div>
+              <div style={{marginTop:"0.5rem",paddingTop:"1.25rem",borderTop:`1px solid ${C.border}`,paddingBottom:"1.25rem",display:"flex",flexDirection:"column",gap:"0.75rem"}}>
+                <div style={{display:"flex",alignItems:"center",gap:10,background:"linear-gradient(135deg,rgba(76,175,80,0.08) 0%,rgba(76,175,80,0.02) 100%)",border:"1px solid rgba(76,175,80,0.25)",borderRadius:12,padding:"0.75rem 1rem"}}>
+                  <div style={{width:34,height:34,borderRadius:"50%",background:"rgba(76,175,80,0.15)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg></div>
+                  <div><p style={{margin:"0 0 2px",fontSize:12,fontWeight:800,color:"#4caf50"}}>Compra 100% segura y protegida</p><p style={{margin:0,fontSize:10,color:"#555"}}>Miles de clientes ya confiaron en Fokus</p></div>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:10,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:12,padding:"0.75rem 1rem"}}>
+                  <div style={{width:34,height:34,borderRadius:"50%",background:"rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><IcTruck s={16} c="#fff"/></div>
+                  <div><p style={{margin:"0 0 2px",fontSize:12,fontWeight:800,color:"#fff"}}>Enviamos a todos los estados del país</p><p style={{margin:0,fontSize:10,color:"#555"}}>Trabajamos con MRW, Zoom y Tealca</p></div>
+                </div>
+                <div style={{background:"linear-gradient(160deg,#141414 0%,#0c0c0c 100%)",border:"1px solid #1e1e1e",borderRadius:14,padding:"1rem 1.1rem",position:"relative",overflow:"hidden"}}>
+                  <div style={{position:"absolute",top:0,left:0,right:0,height:1,background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.12),transparent)"}}/>
+                  <p style={{fontSize:9,fontWeight:800,letterSpacing:2,color:"#444",margin:"0 0 0.75rem"}}>MÉTODOS DE PAGO ACEPTADOS</p>
+                  <div style={{display:"flex",gap:"0.6rem",flexWrap:"wrap"}}>
+                    {PAYMENT_METHODS.map(pm=>(<div key={pm.id} style={{display:"flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:20,padding:"0.4rem 0.85rem 0.4rem 0.5rem"}}><span style={{fontSize:15}}>{pm.icon}</span><span style={{fontSize:10,fontWeight:700,color:"#ccc"}}>{pm.id==="pagomovil_bv"?"Pago Móvil BDV":pm.id==="pagomovil_ba"?"Pago Móvil Bancamiga":pm.id==="binance"?"Binance Pay":"Zinli"}</span></div>))}
                   </div>
                 </div>
               </div>
