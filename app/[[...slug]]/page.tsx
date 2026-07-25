@@ -584,16 +584,16 @@ const GLOBAL_CSS = `
       animation: hcscrollfocus linear both;
       animation-timeline: view(inline);
       animation-range: cover 8% cover 92%;
-      will-change: transform, filter, box-shadow;
+      will-change: transform, filter;
       backface-visibility: hidden;
       -webkit-backface-visibility: hidden;
       contain: layout paint style;
       box-shadow: 0 14px 30px rgba(0,0,0,0.35);
     }
     @keyframes hcscrollfocus {
-      0%   { transform: scale3d(0.85,0.85,1) translatey(8px) translatez(0); filter: brightness(0.85) saturate(0.88); box-shadow: 0 6px 14px rgba(0,0,0,0.22); }
-      50%  { transform: scale3d(1.06,1.06,1) translatey(0) translatez(0); filter: brightness(1.12) saturate(1.15); box-shadow: 0 22px 46px rgba(0,0,0,0.55); }
-      100% { transform: scale3d(0.85,0.85,1) translatey(8px) translatez(0); filter: brightness(0.85) saturate(0.88); box-shadow: 0 6px 14px rgba(0,0,0,0.22); }
+      0%   { transform: scale3d(0.92,0.92,1) translatey(8px) translatez(0); filter: brightness(0.98); }
+      50%  { transform: scale3d(1,1,1) translatey(0) translatez(0); filter: brightness(1); }
+      100% { transform: scale3d(0.92,0.92,1) translatey(8px) translatez(0); filter: brightness(0.98); }
     }
   }
 
