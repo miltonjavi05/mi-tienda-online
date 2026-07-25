@@ -3884,7 +3884,7 @@ const filteredComments=useMemo(()=>{
                 if(!prods.length)return null;
                 const isLC=(LENTES_SUBCATS as readonly string[]).includes(cat);
                 return(
-                  <ScrollFocusSection key={cat} style={{marginBottom:"2.5rem"}}>
+                  <ScrollFocusSection key={cat} style={{marginBottom:"1.1rem"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.5rem",borderBottom:`1px solid ${C.border}`,paddingBottom:"0.4rem"}}>
                       <h2 style={{fontSize:11,fontWeight:800,letterSpacing:3,margin:0,color:"#555"}}>{isLC?`LENTES · ${catLabel(cat).toUpperCase()}`:catLabel(cat).toUpperCase()}</h2>
                       <button onClick={()=>{setShopFilter(cat as ShopFilter);setLentesOpen(isLC);scrollTop();}} style={{background:"none",border:"none",fontSize:10,color:"#333",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",letterSpacing:1,fontWeight:700}}>VER TODOS</button>
