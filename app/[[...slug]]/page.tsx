@@ -3888,7 +3888,7 @@ const filteredComments=useMemo(()=>{
                       <button onClick={()=>{setShopFilter(cat as ShopFilter);setLentesOpen(isLC);scrollTop();}} style={{background:"none",border:"none",fontSize:10,color:"#333",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",letterSpacing:1,fontWeight:700}}>VER TODOS</button>
                     </div>
                     <HRow products={prods} onSelect={openProd} onBuyNow={openProd} fmtPrice={fmtPrice} animate="premium"/>
-                    <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,margin:"0.6rem auto 0",width:"fit-content",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:20,padding:"0.32rem 0.9rem",backdropFilter:"blur(6px)",WebkitBackdropFilter:"blur(6px)"}}>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,margin:"0.15rem auto 0",width:"fit-content",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:20,padding:"0.32rem 0.9rem",backdropFilter:"blur(6px)",WebkitBackdropFilter:"blur(6px)"}}>
                       <span style={{fontSize:9,fontWeight:700,color:"#777",letterSpacing:0.5}}>Desliza hacia abajo para ver más categorías</span>
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{animation:"scrollHintBounce 1.4s ease-in-out infinite",flexShrink:0}}><polyline points="6 9 12 15 18 9"/></svg>
                     </div>
