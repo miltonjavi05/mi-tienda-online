@@ -3545,6 +3545,7 @@ const filteredComments=useMemo(()=>{
   const openProd=useCallback((p:Product)=>{setSel(p);setModalQty(1);trackViewContent(p,currentUser?.email);trackProductInterest(p.id,p.name,p.category,"view");window.history.pushState({fokusModal:true},"",productPath(p));modalPushedRef.current=true;},[currentUser?.email]);
   const switchModalProduct=useCallback((p:Product)=>{
     setSel(p);setModalQty(1);setModalImgIdx(0);trackViewContent(p,currentUser?.email);trackProductInterest(p.id,p.name,p.category,"view");
+    pmScrollRef.current?.scrollTo({top:0,left:0,behavior:"instant" as ScrollBehavior});
     const path=productPath(p);
     if(modalPushedRef.current)window.history.replaceState({fokusModal:true},"",path);
     else{window.history.pushState({fokusModal:true},"",path);modalPushedRef.current=true;}
