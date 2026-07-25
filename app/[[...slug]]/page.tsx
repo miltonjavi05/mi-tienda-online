@@ -3935,6 +3935,12 @@ const filteredComments=useMemo(()=>{
   <main className="pv" style={{paddingTop:navH,background:C.bg}}>
     <div style={{maxWidth:680,margin:"0 auto",padding:"2rem 1rem 5rem",animation:"fadeIn 0.25s ease"}}>
       <h1 style={{fontSize:11,fontWeight:800,letterSpacing:3,marginBottom:"1rem",color:"#444"}}>CARRITO DE COMPRAS</h1>
+      {cart.length>0&&(
+        <button onClick={()=>window.scrollBy({top:420,behavior:"smooth"})} style={{display:"flex",alignItems:"center",gap:6,margin:"0 auto 1rem",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:20,padding:"0.4rem 0.9rem",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>
+          <span style={{fontSize:10,fontWeight:700,color:"#888",letterSpacing:0.5}}>Desliza para continuar tu compra</span>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{animation:"scrollHintBounce 1.4s ease-in-out infinite"}}><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+      )}
       <div style={{display:"flex",alignItems:"center",gap:0,marginBottom:"1.75rem"}}>
         {[{n:1,l:"Productos"},{n:2,l:"Envío"},{n:3,l:"Pago"},{n:4,l:"Comprobante"}].map((step,i,arr)=>{
           const done=(step.n===1&&cart.length>0)||(step.n===2&&!!deliveryInfo.zone)||(step.n===3&&!!payMethod)||(step.n===4&&!!comprobanteUrl);
@@ -5191,6 +5197,10 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   <div className="pm-main-image" style={{background:"#0a0a0a",aspectRatio:"1/1",overflow:"hidden",marginBottom:"0.6rem",borderRadius:12,position:"relative"}}>
                     <LazyImg src={getAllImages(selectedProduct)[modalImgIdx]||selectedProduct.img} alt={selectedProduct.name} fit="contain"/>
                     {!!selectedProduct.discount&&selectedProduct.discount>0&&<DiscountBadge percent={selectedProduct.discount} issuper={isSuperOffer(selectedProduct.discount)}/>}
+                    <button onClick={()=>pmScrollRef.current?.scrollBy({top:340,behavior:"smooth"})} style={{position:"absolute",bottom:10,left:"50%",transform:"translateX(-50%)",zIndex:6,display:"flex",flexDirection:"column",alignItems:"center",gap:2,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:20,padding:"0.4rem 0.9rem",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>
+                      <span style={{fontSize:9,fontWeight:700,color:"#fff",letterSpacing:0.5}}>Desliza para ver más</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{animation:"scrollHintBounce 1.4s ease-in-out infinite"}}><polyline points="6 9 12 15 18 9"/></svg>
+                    </button>
                   </div>
                   {getAllImages(selectedProduct).length>1&&(
                     <div className="ts" style={{display:"flex",gap:"0.5rem",overflowX:"auto",marginBottom:"1.1rem",WebkitOverflowScrolling:"touch"}}>
