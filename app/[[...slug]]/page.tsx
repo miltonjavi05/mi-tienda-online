@@ -506,6 +506,7 @@ const GLOBAL_CSS = `
   @keyframes focusRingPulse { 0%{opacity:0.55;transform:scale(0.92);} 70%{opacity:0;transform:scale(1.35);} 100%{opacity:0;transform:scale(1.35);} }
   @keyframes verColArrowNudge { 0%,100%{transform:translateX(0);} 50%{transform:translateX(5px);} }
   @keyframes scrollHintBounce { 0%,100%{transform:translateY(0);} 50%{transform:translateY(6px);} }
+  @keyframes scrollHintBounceX { 0%,100%{transform:translateX(0);} 50%{transform:translateX(6px);} }
   @keyframes viewIn { 0%{opacity:0;} 100%{opacity:1;} }
   @keyframes plusPremiumGlow { 0%,100%{opacity:0.75;transform:scale(1);text-shadow:0 0 0px rgba(255,255,255,0);} 50%{opacity:1;transform:scale(1.22);text-shadow:0 0 12px rgba(255,255,255,0.85),0 0 22px rgba(255,255,255,0.35);} }
   .pv { animation: viewIn 0.15s ease-out both; will-change: opacity; }
@@ -1090,33 +1091,42 @@ const ScrollFocusSection=memo(function ScrollFocusSection({children,style}:{chil
   const ref=useRef<HTMLDivElement>(null);
   const rafId=useRef<number|null>(null);
   const active=useRef(false);
+  const lastT=useRef(0);
+  const cur=useRef({ty:0,scale:1,opacity:1,blur:0});
   useEffect(()=>{
     const el=ref.current;
     if(!el)return;
-    const update=()=>{
-      if(!active.current){rafId.current=null;return;}
+    const update=(t:number)=>{
+      if(!active.current){rafId.current=null;lastT.current=0;return;}
+      const dt=lastT.current?Math.min(48,t-lastT.current):16.67;
+      lastT.current=t;
       const rect=el.getBoundingClientRect();
       const vh=window.innerHeight||1;
       const centerDelta=(rect.top+rect.height/2)-vh/2;
       const maxDelta=vh/2+rect.height/2;
       const progress=1-Math.min(1,Math.abs(centerDelta)/Math.max(1,maxDelta));
-      const scale=0.96+progress*0.04;
-      const opacity=0.4+progress*0.6;
-      const blur=(1-progress)*4;
-      const ty=Math.max(-24,Math.min(24,(centerDelta/Math.max(1,maxDelta))*24));
-      el.style.transform=`translateY(${ty.toFixed(2)}px) scale(${scale.toFixed(4)})`;
-      el.style.opacity=String(opacity.toFixed(3));
-      el.style.filter=`blur(${blur.toFixed(2)}px)`;
+      const targetScale=0.96+progress*0.04;
+      const targetOpacity=0.4+progress*0.6;
+      const targetBlur=(1-progress)*4;
+      const targetTy=Math.max(-24,Math.min(24,(centerDelta/Math.max(1,maxDelta))*24));
+      const smooth=1-Math.pow(0.001,dt/1000);
+      cur.current.ty+=(targetTy-cur.current.ty)*smooth;
+      cur.current.scale+=(targetScale-cur.current.scale)*smooth;
+      cur.current.opacity+=(targetOpacity-cur.current.opacity)*smooth;
+      cur.current.blur+=(targetBlur-cur.current.blur)*smooth;
+      el.style.transform=`translate3d(0,${cur.current.ty.toFixed(2)}px,0) scale(${cur.current.scale.toFixed(4)})`;
+      el.style.opacity=String(cur.current.opacity.toFixed(3));
+      el.style.filter=`blur(${cur.current.blur.toFixed(2)}px)`;
       rafId.current=requestAnimationFrame(update);
     };
-    const start=()=>{if(active.current)return;active.current=true;if(rafId.current==null)rafId.current=requestAnimationFrame(update);};
+    const start=()=>{if(active.current)return;active.current=true;lastT.current=0;if(rafId.current==null)rafId.current=requestAnimationFrame(update);};
     const stop=()=>{active.current=false;if(rafId.current!=null){cancelAnimationFrame(rafId.current);rafId.current=null;}};
     const obs=new IntersectionObserver(([entry])=>{if(entry.isIntersecting)start();else stop();},{rootMargin:"40% 0px 40% 0px",threshold:0});
     obs.observe(el);
     return()=>{stop();obs.disconnect();};
   },[]);
   return(
-    <div ref={ref} style={{willChange:"transform,opacity,filter",backfaceVisibility:"hidden",WebkitBackfaceVisibility:"hidden" as any,...style}}>
+    <div ref={ref} style={{willChange:"transform,opacity,filter",backfaceVisibility:"hidden",WebkitBackfaceVisibility:"hidden" as any,contain:"layout paint style",...style}}>
       {children}
     </div>
   );
@@ -3876,6 +3886,10 @@ const filteredComments=useMemo(()=>{
                       <button onClick={()=>{setShopFilter(cat as ShopFilter);setLentesOpen(isLC);scrollTop();}} style={{background:"none",border:"none",fontSize:10,color:"#333",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",letterSpacing:1,fontWeight:700}}>VER TODOS</button>
                     </div>
                     <HRow products={prods} onSelect={openProd} onBuyNow={openProd} fmtPrice={fmtPrice} animate="premium"/>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,margin:"0.55rem auto 0",width:"fit-content",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:20,padding:"0.3rem 0.85rem",backdropFilter:"blur(6px)",WebkitBackdropFilter:"blur(6px)"}}>
+                      <span style={{fontSize:9,fontWeight:700,color:"#777",letterSpacing:0.5}}>Desliza para ver más</span>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{animation:"scrollHintBounceX 1.4s ease-in-out infinite"}}><polyline points="9 18 15 12 9 6"/></svg>
+                    </div>
                   </ScrollFocusSection>
                 );
               })
