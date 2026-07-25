@@ -2936,12 +2936,18 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     if(!catFilteredProducts.length){alert("No hay productos en esa categoría.");return;}
     const catLabelText=cat==="ALL"?"todas las categorías":catLabel(cat);
     const progressSet=new Set(getBulkGenProgress());
-    let toProcess=catFilteredProducts.filter(p=>!progressSet.has(p.id));
+    let commentCountByProduct:Record<string,number>={};
+    try{
+      const rawComments=await fsGetCollectionAll("product_comments");
+      rawComments.forEach(c=>{const pid=c.productId as string;if(pid)commentCountByProduct[pid]=(commentCountByProduct[pid]||0)+1;});
+    }catch{ /* si falla, seguimos sin priorizar por conteo */ }
+    const byZeroFirst=(a:Product,b:Product)=>(commentCountByProduct[a.id]||0)-(commentCountByProduct[b.id]||0);
+    let toProcess=catFilteredProducts.filter(p=>!progressSet.has(p.id)).sort(byZeroFirst);
     const isTopUp=toProcess.length===0;
     if(isTopUp){
-      toProcess=[...catFilteredProducts];
+      toProcess=[...catFilteredProducts].sort(byZeroFirst);
       if(!confirm(`Ya hay reseñas generadas para los ${catFilteredProducts.length} producto(s) de "${catLabelText}". Se agregarán reseñas ADICIONALES (2 a 5 más por producto) sin borrar las anteriores. ¿Continuar?`))return;
-    }else if(!confirm(`Se generarán reseñas para ${toProcess.length} producto(s) pendientes de "${catLabelText}" (de ${catFilteredProducts.length} en esta selección). Si la API se satura por límites, esperará sola y continuará automáticamente sin perder el progreso. ¿Continuar?`))return;
+    }else if(!confirm(`Se generarán reseñas para ${toProcess.length} producto(s) pendientes de "${catLabelText}" (de ${catFilteredProducts.length} en esta selección), empezando por los que no tienen ningún comentario. Si la API se satura por límites, esperará sola y continuará automáticamente sin perder el progreso. ¿Continuar?`))return;
 
     setBulkGenLoading(true);setBulkGenErr("");setBulkGenMsg("");
     await loadAllComments(true);
