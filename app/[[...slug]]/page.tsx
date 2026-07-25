@@ -506,7 +506,6 @@ const GLOBAL_CSS = `
   @keyframes focusRingPulse { 0%{opacity:0.55;transform:scale(0.92);} 70%{opacity:0;transform:scale(1.35);} 100%{opacity:0;transform:scale(1.35);} }
   @keyframes verColArrowNudge { 0%,100%{transform:translateX(0);} 50%{transform:translateX(5px);} }
   @keyframes scrollHintBounce { 0%,100%{transform:translateY(0);} 50%{transform:translateY(6px);} }
-  @keyframes scrollHintBounceX { 0%,100%{transform:translateX(0);} 50%{transform:translateX(6px);} }
   @keyframes viewIn { 0%{opacity:0;} 100%{opacity:1;} }
   @keyframes plusPremiumGlow { 0%,100%{opacity:0.75;transform:scale(1);text-shadow:0 0 0px rgba(255,255,255,0);} 50%{opacity:1;transform:scale(1.22);text-shadow:0 0 12px rgba(255,255,255,0.85),0 0 22px rgba(255,255,255,0.35);} }
   .pv { animation: viewIn 0.15s ease-out both; will-change: opacity; }
@@ -1109,11 +1108,14 @@ const ScrollFocusSection=memo(function ScrollFocusSection({children,style}:{chil
       const targetOpacity=0.4+progress*0.6;
       const targetBlur=(1-progress)*4;
       const targetTy=Math.max(-24,Math.min(24,(centerDelta/Math.max(1,maxDelta))*24));
-      const smooth=1-Math.pow(0.001,dt/1000);
+      const TAU=90;
+      const smooth=1-Math.exp(-dt/TAU);
       cur.current.ty+=(targetTy-cur.current.ty)*smooth;
       cur.current.scale+=(targetScale-cur.current.scale)*smooth;
       cur.current.opacity+=(targetOpacity-cur.current.opacity)*smooth;
       cur.current.blur+=(targetBlur-cur.current.blur)*smooth;
+      if(Math.abs(targetTy-cur.current.ty)<0.05)cur.current.ty=targetTy;
+      if(Math.abs(targetScale-cur.current.scale)<0.0005)cur.current.scale=targetScale;
       el.style.transform=`translate3d(0,${cur.current.ty.toFixed(2)}px,0) scale(${cur.current.scale.toFixed(4)})`;
       el.style.opacity=String(cur.current.opacity.toFixed(3));
       el.style.filter=`blur(${cur.current.blur.toFixed(2)}px)`;
@@ -3886,9 +3888,9 @@ const filteredComments=useMemo(()=>{
                       <button onClick={()=>{setShopFilter(cat as ShopFilter);setLentesOpen(isLC);scrollTop();}} style={{background:"none",border:"none",fontSize:10,color:"#333",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",letterSpacing:1,fontWeight:700}}>VER TODOS</button>
                     </div>
                     <HRow products={prods} onSelect={openProd} onBuyNow={openProd} fmtPrice={fmtPrice} animate="premium"/>
-                    <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,margin:"0.55rem auto 0",width:"fit-content",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:20,padding:"0.3rem 0.85rem",backdropFilter:"blur(6px)",WebkitBackdropFilter:"blur(6px)"}}>
-                      <span style={{fontSize:9,fontWeight:700,color:"#777",letterSpacing:0.5}}>Desliza para ver más</span>
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{animation:"scrollHintBounceX 1.4s ease-in-out infinite"}}><polyline points="9 18 15 12 9 6"/></svg>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,margin:"0.6rem auto 0",width:"fit-content",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:20,padding:"0.32rem 0.9rem",backdropFilter:"blur(6px)",WebkitBackdropFilter:"blur(6px)"}}>
+                      <span style={{fontSize:9,fontWeight:700,color:"#777",letterSpacing:0.5}}>Desliza hacia abajo para ver más categorías</span>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{animation:"scrollHintBounce 1.4s ease-in-out infinite",flexShrink:0}}><polyline points="6 9 12 15 18 9"/></svg>
                     </div>
                   </ScrollFocusSection>
                 );
