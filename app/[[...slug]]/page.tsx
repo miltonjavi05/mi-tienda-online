@@ -1152,9 +1152,9 @@ function DeliveryForm({info,onChange}:{info:DeliveryInfo;onChange:(i:DeliveryInf
   return(
     <div style={{display:"flex",flexDirection:"column",gap:"0.6rem"}}>
       <div style={{display:"flex",alignItems:"center",gap:8,margin:"0 0 0.5rem"}}>
-        <span style={{width:18,height:18,borderRadius:"50%",background:"linear-gradient(135deg,#ffd43b 0%,#c99a1f 100%)",color:"#080808",fontSize:9,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</span>
+        <span style={{width:18,height:18,borderRadius:"50%",background:"linear-gradient(180deg,#ffffff 0%,#dcdcdc 100%)",color:"#080808",fontSize:9,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</span>
         <p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#888",margin:0}}>TIPO DE ENVÍO</p>
-        <div style={{flex:1,height:1,background:"linear-gradient(90deg,rgba(255,212,59,0.35),transparent)"}}/>
+        <div style={{flex:1,height:1,background:"linear-gradient(90deg,rgba(255,255,255,0.25),transparent)"}}/>
       </div>
       {DELIVERY_ZONES.map(z=>{
         const desc=z.id==="naguanagua"?"Entrega en la zona, sin costo adicional":z.id==="valencia"?"Entrega en Valencia con costo fijo de $3":"Envío por encomienda a cualquier estado del país";
@@ -4070,16 +4070,16 @@ const filteredComments=useMemo(()=>{
 
             {/* Indicador de siguiente paso */}
             {!deliveryInfo.zone&&(
-              <div style={{position:"relative",overflow:"hidden",display:"flex",alignItems:"center",gap:"0.85rem",background:"linear-gradient(135deg,#161616 0%,#0a0a0a 100%)",border:"1px solid rgba(255,212,59,0.25)",borderRadius:14,padding:"1rem 1.1rem",marginBottom:"1.25rem",animation:"fadeIn 0.3s ease",boxShadow:"0 10px 28px rgba(0,0,0,0.4)"}}>
-                <span style={{position:"absolute",inset:0,background:"linear-gradient(90deg,transparent 0%,rgba(255,212,59,0.08) 50%,transparent 100%)",backgroundSize:"200% 100%",animation:"badgeShimmer 2.6s ease infinite",pointerEvents:"none"}}/>
-                <div style={{position:"relative",width:32,height:32,borderRadius:"50%",background:"linear-gradient(135deg,#ffd43b 0%,#c99a1f 100%)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 4px 14px rgba(255,212,59,0.3)"}}>
+              <div style={{position:"relative",overflow:"hidden",display:"flex",alignItems:"center",gap:"0.85rem",background:"linear-gradient(135deg,#161616 0%,#0a0a0a 100%)",border:"1px solid rgba(255,255,255,0.14)",borderRadius:14,padding:"1rem 1.1rem",marginBottom:"1.25rem",animation:"fadeIn 0.3s ease",boxShadow:"0 10px 28px rgba(0,0,0,0.4)"}}>
+                <span style={{position:"absolute",inset:0,background:"linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.06) 50%,transparent 100%)",backgroundSize:"200% 100%",animation:"badgeShimmer 2.6s ease infinite",pointerEvents:"none"}}/>
+                <div style={{position:"relative",width:32,height:32,borderRadius:"50%",background:"linear-gradient(180deg,#ffffff 0%,#dcdcdc 100%)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 4px 14px rgba(255,255,255,0.18)"}}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#080808" strokeWidth="2.8"><polyline points="6 9 12 15 18 9"/></svg>
                 </div>
                 <div style={{position:"relative",flex:1}}>
-                  <span style={{display:"inline-block",fontSize:8,fontWeight:900,letterSpacing:1.5,color:"#080808",background:"#ffd43b",padding:"2px 7px",borderRadius:20,marginBottom:4}}>PASO 1 DE 3</span>
+                  <span style={{display:"inline-block",fontSize:8,fontWeight:900,letterSpacing:1.5,color:"#080808",background:"#fff",padding:"2px 7px",borderRadius:20,marginBottom:4}}>PASO 1 DE 3</span>
                   <p style={{margin:0,fontSize:12.5,fontWeight:800,color:"#fff",letterSpacing:0.3}}>Selecciona dónde enviamos tu pedido</p>
                 </div>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffd43b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{position:"relative",flexShrink:0,animation:"verColArrowNudge 1.3s ease-in-out infinite"}}><polyline points="6 9 12 15 18 9"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{position:"relative",flexShrink:0,animation:"verColArrowNudge 1.3s ease-in-out infinite"}}><polyline points="6 9 12 15 18 9"/></svg>
               </div>
             )}
 
@@ -4108,13 +4108,13 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
 
             {/* Indicador paso 2 */}
             {deliveryInfo.zone&&!payMethod&&(
-              <div style={{position:"relative",overflow:"hidden",display:"flex",alignItems:"center",gap:"0.85rem",background:"linear-gradient(135deg,#161616 0%,#0a0a0a 100%)",border:"1px solid rgba(255,212,59,0.25)",borderRadius:14,padding:"1rem 1.1rem",margin:"1.25rem 0 0",animation:"slideUp 0.25s ease",boxShadow:"0 10px 28px rgba(0,0,0,0.4)"}}>
-                <span style={{position:"absolute",inset:0,background:"linear-gradient(90deg,transparent 0%,rgba(255,212,59,0.08) 50%,transparent 100%)",backgroundSize:"200% 100%",animation:"badgeShimmer 2.6s ease infinite",pointerEvents:"none"}}/>
-                <div style={{position:"relative",width:32,height:32,borderRadius:"50%",background:"linear-gradient(135deg,#ffd43b 0%,#c99a1f 100%)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 4px 14px rgba(255,212,59,0.3)"}}>
+              <div style={{position:"relative",overflow:"hidden",display:"flex",alignItems:"center",gap:"0.85rem",background:"linear-gradient(135deg,#161616 0%,#0a0a0a 100%)",border:"1px solid rgba(255,255,255,0.14)",borderRadius:14,padding:"1rem 1.1rem",margin:"1.25rem 0 0",animation:"slideUp 0.25s ease",boxShadow:"0 10px 28px rgba(0,0,0,0.4)"}}>
+                <span style={{position:"absolute",inset:0,background:"linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.06) 50%,transparent 100%)",backgroundSize:"200% 100%",animation:"badgeShimmer 2.6s ease infinite",pointerEvents:"none"}}/>
+                <div style={{position:"relative",width:32,height:32,borderRadius:"50%",background:"linear-gradient(180deg,#ffffff 0%,#dcdcdc 100%)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 4px 14px rgba(255,255,255,0.18)"}}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#080808" strokeWidth="2.8"><polyline points="6 9 12 15 18 9"/></svg>
                 </div>
                 <div style={{position:"relative",flex:1}}>
-                  <span style={{display:"inline-block",fontSize:8,fontWeight:900,letterSpacing:1.5,color:"#080808",background:"#ffd43b",padding:"2px 7px",borderRadius:20,marginBottom:4}}>PASO 2 DE 3</span>
+                  <span style={{display:"inline-block",fontSize:8,fontWeight:900,letterSpacing:1.5,color:"#080808",background:"#fff",padding:"2px 7px",borderRadius:20,marginBottom:4}}>PASO 2 DE 3</span>
                   <p style={{margin:0,fontSize:12.5,fontWeight:800,color:"#fff",letterSpacing:0.3}}>Ahora elige cómo vas a pagar</p>
                 </div>
               </div>
@@ -4136,9 +4136,9 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                 </div>
               </div>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:"0.75rem"}}>
-                <span style={{width:18,height:18,borderRadius:"50%",background:"linear-gradient(135deg,#ffd43b 0%,#c99a1f 100%)",color:"#080808",fontSize:9,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</span>
+                <span style={{width:18,height:18,borderRadius:"50%",background:"linear-gradient(180deg,#ffffff 0%,#dcdcdc 100%)",color:"#080808",fontSize:9,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</span>
                 <p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#888",margin:0}}>MÉTODO DE PAGO</p>
-                <div style={{flex:1,height:1,background:"linear-gradient(90deg,rgba(255,212,59,0.35),transparent)"}}/>
+                <div style={{flex:1,height:1,background:"linear-gradient(90deg,rgba(255,255,255,0.25),transparent)"}}/>
               </div>
               <div style={{display:"flex",flexDirection:"column",gap:"0.45rem"}}>
                 {PAYMENT_METHODS.map(pm=>(<button key={pm.id} className="pc2" onClick={()=>{setPayMethod(pm.id);setTimeout(()=>payDetailsRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),300);}} style={{display:"flex",alignItems:"center",gap:"0.85rem",background:payMethod===pm.id?"#fff":"#111",color:payMethod===pm.id?"#080808":C.text,border:`1px solid ${payMethod===pm.id?"#fff":"#1e1e1e"}`,borderRadius:12,padding:"0.85rem 1rem",textAlign:"left",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",transition:"all 0.15s",boxShadow:payMethod===pm.id?"0 4px 16px rgba(255,255,255,0.08)":"none"}}>
@@ -5229,6 +5229,10 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   <div className="pm-main-image" style={{background:"#0a0a0a",aspectRatio:"1/1",overflow:"hidden",marginBottom:"0.6rem",borderRadius:12,position:"relative"}}>
                     <LazyImg src={getAllImages(selectedProduct)[modalImgIdx]||selectedProduct.img} alt={selectedProduct.name} fit="contain"/>
                     {!!selectedProduct.discount&&selectedProduct.discount>0&&<DiscountBadge percent={selectedProduct.discount} issuper={isSuperOffer(selectedProduct.discount)}/>}
+                    <button onClick={()=>pmScrollRef.current?.scrollBy({top:340,behavior:"smooth"})} style={{position:"absolute",bottom:10,left:"50%",transform:"translateX(-50%)",zIndex:6,display:"flex",flexDirection:"column",alignItems:"center",gap:2,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:20,padding:"0.4rem 0.9rem",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>
+                      <span style={{fontSize:9,fontWeight:700,color:"#fff",letterSpacing:0.5}}>Desliza para ver más</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{animation:"scrollHintBounce 1.4s ease-in-out infinite"}}><polyline points="6 9 12 15 18 9"/></svg>
+                    </button>
                   </div>
                   {getAllImages(selectedProduct).length>1&&(
                     <div className="ts" style={{display:"flex",gap:"0.5rem",overflowX:"auto",marginBottom:"1.1rem",WebkitOverflowScrolling:"touch"}}>
