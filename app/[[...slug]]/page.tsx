@@ -1,4 +1,4 @@
-    "use client";
+   "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
 import { usePathname } from "next/navigation";
@@ -590,12 +590,12 @@ const GLOBAL_CSS = `
       contain: layout paint style;
       box-shadow: 0 14px 30px rgba(0,0,0,0.35);
     }
-   @keyframes hcscrollfocus {
+    @keyframes hcscrollfocus {
       0%   { transform: scale3d(0.92,0.92,1) translatey(8px) translatez(0); filter: brightness(0.98); }
       50%  { transform: scale3d(1,1,1) translatey(0) translatez(0); filter: brightness(1); }
       100% { transform: scale3d(0.92,0.92,1) translatey(8px) translatez(0); filter: brightness(0.98); }
     }
-    }
+  }
 
   @media(hover:hover) and (pointer:fine){
     .iz { transition: transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94) !important; }
@@ -1078,45 +1078,8 @@ const RevealUp=memo(function RevealUp({children,delay=0}:{children:React.ReactNo
     obs.observe(el);
     return()=>obs.disconnect();
   },[]);
-   return(
-    <div ref={ref} style={{opacity:vis?1:0,transform:vis?"translateY(0) scale(1)":"translateY(46px) scale(0.96)",filter:vis?"blur(0px)":"blur(6px)",transition:`opacity 0.75s cubic-bezier(0.16,1,0.3,1) ${delay}ms, transform 0.85s cubic-bezier(0.16,1,0.3,1) ${delay}ms, filter 0.75s cubic-bezier(0.16,1,0.3,1) ${delay}ms`,willChange:"transform,opacity,filter"}}>
-      {children}
-    </div>
-  );
-});
-
-// ─── SCROLL FOCUS SECTION (SEGUIMIENTO CONTINUO AL SCROLL VERTICAL, FUNCIONA EN TODOS LOS NAVEGADORES) ─────
-const ScrollFocusSection=memo(function ScrollFocusSection({children,style}:{children:React.ReactNode;style?:React.CSSProperties}){
-  const ref=useRef<HTMLDivElement>(null);
-  const rafId=useRef<number|null>(null);
-  const active=useRef(false);
-  useEffect(()=>{
-    const el=ref.current;
-    if(!el)return;
-    const update=()=>{
-      if(!active.current){rafId.current=null;return;}
-      const rect=el.getBoundingClientRect();
-      const vh=window.innerHeight||1;
-      const centerDelta=(rect.top+rect.height/2)-vh/2;
-      const maxDelta=vh/2+rect.height/2;
-      const progress=1-Math.min(1,Math.abs(centerDelta)/Math.max(1,maxDelta));
-      const scale=0.96+progress*0.04;
-      const opacity=0.4+progress*0.6;
-      const blur=(1-progress)*4;
-      const ty=Math.max(-24,Math.min(24,(centerDelta/Math.max(1,maxDelta))*24));
-      el.style.transform=`translateY(${ty.toFixed(2)}px) scale(${scale.toFixed(4)})`;
-      el.style.opacity=String(opacity.toFixed(3));
-      el.style.filter=`blur(${blur.toFixed(2)}px)`;
-      rafId.current=requestAnimationFrame(update);
-    };
-    const start=()=>{if(active.current)return;active.current=true;if(rafId.current==null)rafId.current=requestAnimationFrame(update);};
-    const stop=()=>{active.current=false;if(rafId.current!=null){cancelAnimationFrame(rafId.current);rafId.current=null;}};
-    const obs=new IntersectionObserver(([entry])=>{if(entry.isIntersecting)start();else stop();},{rootMargin:"40% 0px 40% 0px",threshold:0});
-    obs.observe(el);
-    return()=>{stop();obs.disconnect();};
-  },[]);
   return(
-    <div ref={ref} style={{willChange:"transform,opacity,filter",backfaceVisibility:"hidden",WebkitBackfaceVisibility:"hidden" as any,...style}}>
+    <div ref={ref} style={{opacity:vis?1:0,transform:vis?"translateY(0) scale(1)":"translateY(46px) scale(0.96)",filter:vis?"blur(0px)":"blur(6px)",transition:`opacity 0.75s cubic-bezier(0.16,1,0.3,1) ${delay}ms, transform 0.85s cubic-bezier(0.16,1,0.3,1) ${delay}ms, filter 0.75s cubic-bezier(0.16,1,0.3,1) ${delay}ms`,willChange:"transform,opacity,filter"}}>
       {children}
     </div>
   );
@@ -3870,13 +3833,13 @@ const filteredComments=useMemo(()=>{
                 if(!prods.length)return null;
                 const isLC=(LENTES_SUBCATS as readonly string[]).includes(cat);
                 return(
-                  <ScrollFocusSection key={cat} style={{marginBottom:"2.5rem"}}>
+                  <div key={cat} style={{marginBottom:"2.5rem",animation:"fadeIn 0.3s ease"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.5rem",borderBottom:`1px solid ${C.border}`,paddingBottom:"0.4rem"}}>
                       <h2 style={{fontSize:11,fontWeight:800,letterSpacing:3,margin:0,color:"#555"}}>{isLC?`LENTES · ${catLabel(cat).toUpperCase()}`:catLabel(cat).toUpperCase()}</h2>
                       <button onClick={()=>{setShopFilter(cat as ShopFilter);setLentesOpen(isLC);scrollTop();}} style={{background:"none",border:"none",fontSize:10,color:"#333",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",letterSpacing:1,fontWeight:700}}>VER TODOS</button>
                     </div>
                     <HRow products={prods} onSelect={openProd} onBuyNow={openProd} fmtPrice={fmtPrice} animate="premium"/>
-                  </ScrollFocusSection>
+                  </div>
                 );
               })
             ):(
