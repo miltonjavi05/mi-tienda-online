@@ -516,9 +516,6 @@ const GLOBAL_CSS = `
   @keyframes logoFocusBurst { 0%{transform:scale(0.55);opacity:0.85;} 100%{transform:scale(2);opacity:0;} }
   @keyframes logoPopIn { 0%{transform:scale(0.4);opacity:0;filter:blur(10px);} 60%{transform:scale(1.08);opacity:1;filter:blur(0px);} 100%{transform:scale(1);opacity:1;filter:blur(0px);} }
   .fokus-logo-btn, .fokus-logo-btn:focus, .fokus-logo-btn:focus-visible { outline:none !important; -webkit-tap-highlight-color:transparent; }
-  .fokus-menu-btn { transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1); }
-  .fokus-menu-btn:active { transform: rotate(45deg); }
-  @media(hover:hover) and (pointer:fine){ .fokus-menu-btn:hover { transform: rotate(20deg); } }
   @media(hover:hover) and (pointer:fine){
     .fokus-logo-btn:hover .fokus-logo-img { transform: scale(1.06); }
   }
@@ -564,28 +561,24 @@ const GLOBAL_CSS = `
   .hc:active { opacity: 0.85; }
   .nb:active { opacity: 0.6; }
 
-  .pg { perspective: 1400px; }
-
   @supports (animation-timeline: view()) {
     .pc-scroll-focus {
       transform-origin: center center;
       animation: pcscrollfocus linear both;
       animation-timeline: view(block);
-      animation-range: cover 5% cover 95%;
+      animation-range: cover 10% cover 90%;
       will-change: transform, opacity, filter;
       backface-visibility: hidden;
       -webkit-backface-visibility: hidden;
       contain: layout paint style;
-      transform-style: preserve-3d;
     }
     @keyframes pcscrollfocus {
-      0%   { transform: perspective(1200px) rotateX(22deg) scale3d(0.82,0.82,1) translatey(22px) translatez(-60px); opacity: 0.5; filter: brightness(0.78) saturate(0.85); }
-      16%  { transform: perspective(1200px) rotateX(10deg) scale3d(0.93,0.93,1) translatey(10px) translatez(-20px); opacity: 0.82; filter: brightness(0.92) saturate(0.95); }
-      50%  { transform: perspective(1200px) rotateX(0deg) scale3d(1.07,1.07,1) translatey(0) translatez(0); opacity: 1; filter: brightness(1.08) saturate(1.15); }
-      84%  { transform: perspective(1200px) rotateX(-10deg) scale3d(0.93,0.93,1) translatey(-10px) translatez(-20px); opacity: 0.82; filter: brightness(0.92) saturate(0.95); }
-      100% { transform: perspective(1200px) rotateX(-22deg) scale3d(0.82,0.82,1) translatey(-22px) translatez(-60px); opacity: 0.5; filter: brightness(0.78) saturate(0.85); }
+      0%   { transform: scale3d(0.91,0.91,1) translatey(13px) translatez(0); opacity: 0.72; filter: brightness(0.88) saturate(0.92); }
+      14%  { transform: scale3d(0.96,0.96,1) translatey(6px) translatez(0);  opacity: 0.88; filter: brightness(0.95) saturate(0.97); }
+      50%  { transform: scale3d(1.045,1.045,1) translatey(0) translatez(0); opacity: 1;    filter: brightness(1.05) saturate(1.1); }
+      86%  { transform: scale3d(0.96,0.96,1) translatey(-6px) translatez(0); opacity: 0.88; filter: brightness(0.95) saturate(0.97); }
+      100% { transform: scale3d(0.91,0.91,1) translatey(-13px) translatez(0); opacity: 0.72; filter: brightness(0.88) saturate(0.92); }
     }
-  }
     .hc-scroll-focus {
       transform-origin: center center;
       animation: hcscrollfocus linear both;
@@ -3586,16 +3579,8 @@ const filteredComments=useMemo(()=>{
       {/* NAVBAR */}
       <nav ref={navRef} style={{position:"fixed",top:0,left:0,right:0,zIndex:200,background:"rgba(8,8,8,0.96)",borderBottom:"1px solid #161616",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 1rem",height:NAV_H,position:"relative"}}>
-          <button onClick={()=>setMenuOpen(true)} className="fokus-menu-btn" style={S.iconBtn} aria-label="Menú">
-            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="14.31" y1="8" x2="20.05" y2="17.94"/>
-              <line x1="9.69" y1="8" x2="21.17" y2="8"/>
-              <line x1="7.38" y1="12" x2="13.12" y2="2.06"/>
-              <line x1="9.69" y1="16" x2="3.95" y2="6.06"/>
-              <line x1="14.31" y1="16" x2="2.83" y2="16"/>
-              <line x1="16.62" y1="12" x2="10.88" y2="21.94"/>
-            </svg>
+          <button onClick={()=>setMenuOpen(true)} style={S.iconBtn} aria-label="Menú">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><line x1="3" y1="7" x2="21" y2="7"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="17" x2="21" y2="17"/></svg>
           </button>
           <button onClick={()=>setMainView("fokus")} style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:7,position:"absolute",left:"50%",transform:"translateX(-50%)",padding:"0 8px",WebkitTapHighlightColor:"transparent",maxWidth:"calc(100% - 120px)"}}>
             <img src="/favicon.png" alt="Fokus" width={26} height={26} style={{objectFit:"contain",flexShrink:0,pointerEvents:"none"}} draggable={false}/>
