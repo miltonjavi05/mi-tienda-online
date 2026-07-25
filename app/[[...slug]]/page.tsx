@@ -1151,7 +1151,11 @@ function DeliveryForm({info,onChange}:{info:DeliveryInfo;onChange:(i:DeliveryInf
   const upd=(field:keyof DeliveryInfo,val:string)=>onChange({...info,[field]:val});
   return(
     <div style={{display:"flex",flexDirection:"column",gap:"0.6rem"}}>
-      <p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#333",margin:"0 0 0.25rem"}}>TIPO DE ENVIO</p>
+      <div style={{display:"flex",alignItems:"center",gap:8,margin:"0 0 0.5rem"}}>
+        <span style={{width:18,height:18,borderRadius:"50%",background:"linear-gradient(135deg,#ffd43b 0%,#c99a1f 100%)",color:"#080808",fontSize:9,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>1</span>
+        <p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#888",margin:0}}>TIPO DE ENVÍO</p>
+        <div style={{flex:1,height:1,background:"linear-gradient(90deg,rgba(255,212,59,0.35),transparent)"}}/>
+      </div>
       {DELIVERY_ZONES.map(z=>{
         const desc=z.id==="naguanagua"?"Entrega en la zona, sin costo adicional":z.id==="valencia"?"Entrega en Valencia con costo fijo de $3":"Envío por encomienda a cualquier estado del país";
         return(
@@ -1229,8 +1233,17 @@ const Footer=memo(function Footer({setMainView,setShopFilter}:{setMainView:(v:Ma
   const sA:React.CSSProperties={display:"flex",alignItems:"center",justifyContent:"center",width:36,height:36,borderRadius:"50%",background:"rgba(255,255,255,0.04)",textDecoration:"none",border:"1px solid rgba(255,255,255,0.07)",flexShrink:0};
   const cats=[{l:"Lentes",c:"LENTES"},{l:"Relojes",c:"RELOJES"},{l:"Collares",c:"COLLARES"},{l:"Pulseras",c:"PULSERAS"},{l:"Anillos",c:"ANILLOS"},{l:"Aretes",c:"ARETES"},{l:"Billeteras",c:"BILLETERAS"}];
   return(
-    <footer style={{background:"#060606",borderTop:"1px solid #111",marginTop:"2rem",padding:"2.5rem 1.5rem 2rem"}}>
+    <footer style={{background:"#060606",position:"relative",marginTop:"2rem",padding:"2.5rem 1.5rem 2rem"}}>
+      <div style={{position:"absolute",top:0,left:0,right:0,height:1,background:"linear-gradient(90deg,transparent,rgba(255,212,59,0.35),transparent)"}}/>
       <div style={{maxWidth:1100,margin:"0 auto"}}>
+        <div style={{display:"flex",flexWrap:"wrap",gap:"0.5rem",justifyContent:"center",marginBottom:"2rem"}}>
+          {[{icon:"🔒",l:"Pago 100% seguro"},{icon:"🚚",l:"Envíos a toda Venezuela"},{icon:"⭐",l:"4.9 · +15.000 pedidos"},{icon:"💬",l:"Atención por WhatsApp"}].map(b=>(
+            <div key={b.l} style={{display:"flex",alignItems:"center",gap:6,background:"linear-gradient(135deg,rgba(255,255,255,0.05) 0%,rgba(255,255,255,0.015) 100%)",border:"1px solid rgba(255,255,255,0.09)",borderRadius:20,padding:"0.45rem 0.9rem"}}>
+              <span style={{fontSize:12}}>{b.icon}</span>
+              <span style={{fontSize:9,fontWeight:800,letterSpacing:0.8,color:"#999"}}>{b.l}</span>
+            </div>
+          ))}
+        </div>
         <div className="fg" style={{display:"grid",gap:"2rem",marginBottom:"2rem"}}>
           <div>
             <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:"0.65rem"}}><img src="/favicon.png" alt="Fokus" width={20} height={20} style={{objectFit:"contain",pointerEvents:"none"}} draggable={false}/><span style={{fontWeight:900,fontSize:12,letterSpacing:5,color:"#fff"}}>FOKUS</span></div>
@@ -1247,7 +1260,10 @@ const Footer=memo(function Footer({setMainView,setShopFilter}:{setMainView:(v:Ma
             <div style={{display:"flex",flexDirection:"column",gap:"0.2rem"}}><p style={{fontSize:10,color:"#2a2a2a",margin:0}}>miltonjavi05@gmail.com</p><p style={{fontSize:10,color:"#2a2a2a",margin:0}}>+58 424-300-5733</p></div>
           </div>
         </div>
-        <p style={{fontSize:10,color:"#333",margin:"0 0 0.85rem",lineHeight:1.7,maxWidth:640,textAlign:"center",marginLeft:"auto",marginRight:"auto"}}></p>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.5rem",marginBottom:"1.5rem",flexWrap:"wrap"}}>
+          <span style={{fontSize:8,fontWeight:800,letterSpacing:1.5,color:"#2a2a2a",marginRight:4}}>ACEPTAMOS</span>
+          {PAYMENT_METHODS.map(pm=>(<span key={pm.id} style={{display:"flex",alignItems:"center",justifyContent:"center",width:26,height:26,borderRadius:7,background:"#111",border:"1px solid #1e1e1e",fontSize:12}}>{pm.icon}</span>))}
+        </div>
         <div style={{borderTop:"1px solid #111",paddingTop:"1rem",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"0.4rem"}}><p style={{fontSize:9,color:"#222",margin:0,letterSpacing:1}}>© {new Date().getFullYear()} FOKUS. TODOS LOS DERECHOS RESERVADOS. </p><p style={{fontSize:9,color:"#1a1a1a",margin:0,letterSpacing:1}}>FOKUS ®</p></div>
       </div>
     </footer>
@@ -4054,14 +4070,16 @@ const filteredComments=useMemo(()=>{
 
             {/* Indicador de siguiente paso */}
             {!deliveryInfo.zone&&(
-              <div style={{display:"flex",alignItems:"center",gap:"0.65rem",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:10,padding:"0.75rem 1rem",marginBottom:"1.25rem",animation:"fadeIn 0.3s ease"}}>
-                <div style={{width:28,height:28,borderRadius:"50%",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#080808" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+              <div style={{position:"relative",overflow:"hidden",display:"flex",alignItems:"center",gap:"0.85rem",background:"linear-gradient(135deg,#161616 0%,#0a0a0a 100%)",border:"1px solid rgba(255,212,59,0.25)",borderRadius:14,padding:"1rem 1.1rem",marginBottom:"1.25rem",animation:"fadeIn 0.3s ease",boxShadow:"0 10px 28px rgba(0,0,0,0.4)"}}>
+                <span style={{position:"absolute",inset:0,background:"linear-gradient(90deg,transparent 0%,rgba(255,212,59,0.08) 50%,transparent 100%)",backgroundSize:"200% 100%",animation:"badgeShimmer 2.6s ease infinite",pointerEvents:"none"}}/>
+                <div style={{position:"relative",width:32,height:32,borderRadius:"50%",background:"linear-gradient(135deg,#ffd43b 0%,#c99a1f 100%)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 4px 14px rgba(255,212,59,0.3)"}}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#080808" strokeWidth="2.8"><polyline points="6 9 12 15 18 9"/></svg>
                 </div>
-                <div>
-                  <p style={{margin:0,fontSize:12,fontWeight:800,color:"#fff",letterSpacing:0.5}}>Selecciona dónde enviamos tu pedido</p>
-                  <p style={{margin:"2px 0 0",fontSize:10,color:"#555"}}>Solo 3 pasos para completar tu compra</p>
+                <div style={{position:"relative",flex:1}}>
+                  <span style={{display:"inline-block",fontSize:8,fontWeight:900,letterSpacing:1.5,color:"#080808",background:"#ffd43b",padding:"2px 7px",borderRadius:20,marginBottom:4}}>PASO 1 DE 3</span>
+                  <p style={{margin:0,fontSize:12.5,fontWeight:800,color:"#fff",letterSpacing:0.3}}>Selecciona dónde enviamos tu pedido</p>
                 </div>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffd43b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{position:"relative",flexShrink:0,animation:"verColArrowNudge 1.3s ease-in-out infinite"}}><polyline points="6 9 12 15 18 9"/></svg>
               </div>
             )}
 
@@ -4090,11 +4108,15 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
 
             {/* Indicador paso 2 */}
             {deliveryInfo.zone&&!payMethod&&(
-              <div style={{display:"flex",alignItems:"center",gap:"0.65rem",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:10,padding:"0.75rem 1rem",margin:"1.25rem 0 0",animation:"slideUp 0.25s ease"}}>
-                <div style={{width:28,height:28,borderRadius:"50%",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#080808" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+              <div style={{position:"relative",overflow:"hidden",display:"flex",alignItems:"center",gap:"0.85rem",background:"linear-gradient(135deg,#161616 0%,#0a0a0a 100%)",border:"1px solid rgba(255,212,59,0.25)",borderRadius:14,padding:"1rem 1.1rem",margin:"1.25rem 0 0",animation:"slideUp 0.25s ease",boxShadow:"0 10px 28px rgba(0,0,0,0.4)"}}>
+                <span style={{position:"absolute",inset:0,background:"linear-gradient(90deg,transparent 0%,rgba(255,212,59,0.08) 50%,transparent 100%)",backgroundSize:"200% 100%",animation:"badgeShimmer 2.6s ease infinite",pointerEvents:"none"}}/>
+                <div style={{position:"relative",width:32,height:32,borderRadius:"50%",background:"linear-gradient(135deg,#ffd43b 0%,#c99a1f 100%)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 4px 14px rgba(255,212,59,0.3)"}}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#080808" strokeWidth="2.8"><polyline points="6 9 12 15 18 9"/></svg>
                 </div>
-                <p style={{margin:0,fontSize:12,fontWeight:800,color:"#fff",letterSpacing:0.5}}>Ahora elige cómo vas a pagar</p>
+                <div style={{position:"relative",flex:1}}>
+                  <span style={{display:"inline-block",fontSize:8,fontWeight:900,letterSpacing:1.5,color:"#080808",background:"#ffd43b",padding:"2px 7px",borderRadius:20,marginBottom:4}}>PASO 2 DE 3</span>
+                  <p style={{margin:0,fontSize:12.5,fontWeight:800,color:"#fff",letterSpacing:0.3}}>Ahora elige cómo vas a pagar</p>
+                </div>
               </div>
             )}
 
@@ -4113,7 +4135,11 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   <span style={{fontSize:9,color:"#444",fontWeight:700,letterSpacing:0.5}}>PAGO SEGURO</span>
                 </div>
               </div>
-              <p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#333",marginBottom:"0.75rem"}}>MÉTODO DE PAGO</p>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:"0.75rem"}}>
+                <span style={{width:18,height:18,borderRadius:"50%",background:"linear-gradient(135deg,#ffd43b 0%,#c99a1f 100%)",color:"#080808",fontSize:9,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>2</span>
+                <p style={{fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#888",margin:0}}>MÉTODO DE PAGO</p>
+                <div style={{flex:1,height:1,background:"linear-gradient(90deg,rgba(255,212,59,0.35),transparent)"}}/>
+              </div>
               <div style={{display:"flex",flexDirection:"column",gap:"0.45rem"}}>
                 {PAYMENT_METHODS.map(pm=>(<button key={pm.id} className="pc2" onClick={()=>{setPayMethod(pm.id);setTimeout(()=>payDetailsRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),300);}} style={{display:"flex",alignItems:"center",gap:"0.85rem",background:payMethod===pm.id?"#fff":"#111",color:payMethod===pm.id?"#080808":C.text,border:`1px solid ${payMethod===pm.id?"#fff":"#1e1e1e"}`,borderRadius:12,padding:"0.85rem 1rem",textAlign:"left",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",transition:"all 0.15s",boxShadow:payMethod===pm.id?"0 4px 16px rgba(255,255,255,0.08)":"none"}}>
                   <div style={{width:36,height:36,borderRadius:9,background:payMethod===pm.id?"rgba(8,8,8,0.06)":"rgba(255,255,255,0.04)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:17}}>{pm.icon}</span></div>
@@ -5204,10 +5230,6 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                     <LazyImg src={getAllImages(selectedProduct)[modalImgIdx]||selectedProduct.img} alt={selectedProduct.name} fit="contain"/>
                     {!!selectedProduct.discount&&selectedProduct.discount>0&&<DiscountBadge percent={selectedProduct.discount} issuper={isSuperOffer(selectedProduct.discount)}/>}
                   </div>
-                  <button onClick={()=>pmScrollRef.current?.scrollBy({top:340,behavior:"smooth"})} style={{display:"flex",alignItems:"center",gap:6,margin:"0 auto 0.85rem",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:20,padding:"0.35rem 0.85rem",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>
-                    <span style={{fontSize:9,fontWeight:700,color:"#888",letterSpacing:0.5}}>Desliza para ver más</span>
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{animation:"scrollHintBounce 1.4s ease-in-out infinite"}}><polyline points="6 9 12 15 18 9"/></svg>
-                  </button>
                   {getAllImages(selectedProduct).length>1&&(
                     <div className="ts" style={{display:"flex",gap:"0.5rem",overflowX:"auto",marginBottom:"1.1rem",WebkitOverflowScrolling:"touch"}}>
                       {getAllImages(selectedProduct).map((src,i)=>(
