@@ -1261,8 +1261,8 @@ const Footer=memo(function Footer({setMainView,setShopFilter}:{setMainView:(v:Ma
           </div>
         </div>
         <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"0.5rem",marginBottom:"1.5rem",flexWrap:"wrap"}}>
-          <span style={{fontSize:8,fontWeight:800,letterSpacing:1.5,color:"#2a2a2a",marginRight:4}}>ACEPTAMOS</span>
-          {PAYMENT_METHODS.map(pm=>(<span key={pm.id} style={{display:"flex",alignItems:"center",justifyContent:"center",width:26,height:26,borderRadius:7,background:"#111",border:"1px solid #1e1e1e",fontSize:12}}>{pm.icon}</span>))}
+          <span style={{fontSize:8,fontWeight:800,letterSpacing:1.5,color:"#2a2a2a"}}>ACEPTAMOS</span>
+          <span style={{fontSize:9,fontWeight:700,color:"#3a3a3a"}}>Pago Móvil · Binance Pay · Zinli</span>
         </div>
         <div style={{borderTop:"1px solid #111",paddingTop:"1rem",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"0.4rem"}}><p style={{fontSize:9,color:"#222",margin:0,letterSpacing:1}}>© {new Date().getFullYear()} FOKUS. TODOS LOS DERECHOS RESERVADOS. </p><p style={{fontSize:9,color:"#1a1a1a",margin:0,letterSpacing:1}}>FOKUS ®</p></div>
       </div>
@@ -5229,11 +5229,11 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   <div className="pm-main-image" style={{background:"#0a0a0a",aspectRatio:"1/1",overflow:"hidden",marginBottom:"0.6rem",borderRadius:12,position:"relative"}}>
                     <LazyImg src={getAllImages(selectedProduct)[modalImgIdx]||selectedProduct.img} alt={selectedProduct.name} fit="contain"/>
                     {!!selectedProduct.discount&&selectedProduct.discount>0&&<DiscountBadge percent={selectedProduct.discount} issuper={isSuperOffer(selectedProduct.discount)}/>}
-                    <button onClick={()=>pmScrollRef.current?.scrollBy({top:340,behavior:"smooth"})} style={{position:"absolute",bottom:10,left:"50%",transform:"translateX(-50%)",zIndex:6,display:"flex",flexDirection:"column",alignItems:"center",gap:2,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:20,padding:"0.4rem 0.9rem",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>
-                      <span style={{fontSize:9,fontWeight:700,color:"#fff",letterSpacing:0.5}}>Desliza para ver más</span>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{animation:"scrollHintBounce 1.4s ease-in-out infinite"}}><polyline points="6 9 12 15 18 9"/></svg>
-                    </button>
                   </div>
+                  <button onClick={()=>pmScrollRef.current?.scrollBy({top:340,behavior:"smooth"})} style={{display:"flex",alignItems:"center",gap:6,margin:"0 auto 0.85rem",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:20,padding:"0.35rem 0.85rem",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>
+                    <span style={{fontSize:9,fontWeight:700,color:"#888",letterSpacing:0.5}}>Desliza para ver más</span>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{animation:"scrollHintBounce 1.4s ease-in-out infinite"}}><polyline points="6 9 12 15 18 9"/></svg>
+                  </button>
                   {getAllImages(selectedProduct).length>1&&(
                     <div className="ts" style={{display:"flex",gap:"0.5rem",overflowX:"auto",marginBottom:"1.1rem",WebkitOverflowScrolling:"touch"}}>
                       {getAllImages(selectedProduct).map((src,i)=>(
@@ -5253,12 +5253,15 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
               </div>
               {selectedProduct.description&&<p style={{fontSize:13,color:"#555",margin:"0 0 0.65rem",lineHeight:1.6}}>{selectedProduct.description}</p>}
               {selectedProduct.discount&&selectedProduct.discount>0?(
-                <div style={{display:"flex",alignItems:"baseline",gap:10,marginBottom:"0.4rem",flexWrap:"wrap"}}>
+                <div style={{display:"flex",alignItems:"baseline",gap:10,marginBottom:"0.3rem",flexWrap:"wrap"}}>
                   <p style={{fontSize:24,fontWeight:900,margin:0,color:isSuperOffer(selectedProduct.discount)?"#ff5555":"#ffd43b"}}>{fmtPrice(getFinalPrice(selectedProduct))}</p>
                   <p style={{fontSize:15,margin:0,color:"#555",textDecoration:"line-through"}}>{fmtPrice(selectedProduct.price)}</p>
                 </div>
               ):(
-                <p style={{fontSize:24,fontWeight:900,margin:"0 0 0.4rem",color:C.accent}}>{fmtPrice(selectedProduct.price)}</p>
+                <p style={{fontSize:24,fontWeight:900,margin:"0 0 0.3rem",color:C.accent}}>{fmtPrice(selectedProduct.price)}</p>
+              )}
+              {showBs&&bcvRate&&(
+                <p style={{fontSize:9,color:"#555",margin:"0 0 0.5rem",display:"flex",alignItems:"center",gap:5}}><span style={{width:5,height:5,borderRadius:"50%",background:"#4caf50",flexShrink:0}}/>Precio en Bolívares a tasa BCV (1 USD = {bcvRate.toLocaleString("es-VE",{maximumFractionDigits:2})} Bs)</p>
               )}
               <p style={{fontSize:11,color:"#fff",fontWeight:900,margin:"0 0 1.25rem",letterSpacing:1,textShadow:"0 0 8px rgba(255,255,255,0.35)"}}>⚡ {getUnitsSoldLabel(selectedProduct)}</p>
               <button onClick={()=>pmScrollRef.current?.scrollBy({top:320,behavior:"smooth"})} style={{display:"flex",alignItems:"center",gap:6,margin:"0 auto 1.1rem",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:20,padding:"0.4rem 0.9rem",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>
