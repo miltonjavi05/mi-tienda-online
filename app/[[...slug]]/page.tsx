@@ -1108,7 +1108,7 @@ const ScrollFocusSection=memo(function ScrollFocusSection({children,style}:{chil
       const targetOpacity=0.4+progress*0.6;
       const targetBlur=(1-progress)*4;
       const targetTy=Math.max(-24,Math.min(24,(centerDelta/Math.max(1,maxDelta))*24));
-      const TAU=90;
+      const TAU=55;
       const smooth=1-Math.exp(-dt/TAU);
       cur.current.ty+=(targetTy-cur.current.ty)*smooth;
       cur.current.scale+=(targetScale-cur.current.scale)*smooth;
@@ -1116,6 +1116,8 @@ const ScrollFocusSection=memo(function ScrollFocusSection({children,style}:{chil
       cur.current.blur+=(targetBlur-cur.current.blur)*smooth;
       if(Math.abs(targetTy-cur.current.ty)<0.05)cur.current.ty=targetTy;
       if(Math.abs(targetScale-cur.current.scale)<0.0005)cur.current.scale=targetScale;
+      if(Math.abs(targetOpacity-cur.current.opacity)<0.003)cur.current.opacity=targetOpacity;
+      if(Math.abs(targetBlur-cur.current.blur)<0.02)cur.current.blur=targetBlur;
       el.style.transform=`translate3d(0,${cur.current.ty.toFixed(2)}px,0) scale(${cur.current.scale.toFixed(4)})`;
       el.style.opacity=String(cur.current.opacity.toFixed(3));
       el.style.filter=`blur(${cur.current.blur.toFixed(2)}px)`;
@@ -3888,7 +3890,7 @@ const filteredComments=useMemo(()=>{
                       <button onClick={()=>{setShopFilter(cat as ShopFilter);setLentesOpen(isLC);scrollTop();}} style={{background:"none",border:"none",fontSize:10,color:"#333",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",letterSpacing:1,fontWeight:700}}>VER TODOS</button>
                     </div>
                     <HRow products={prods} onSelect={openProd} onBuyNow={openProd} fmtPrice={fmtPrice} animate="premium"/>
-                    <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,margin:"0.15rem auto 0",width:"fit-content",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:20,padding:"0.32rem 0.9rem",backdropFilter:"blur(6px)",WebkitBackdropFilter:"blur(6px)"}}>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,margin:"-0.35rem auto 0",width:"fit-content",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:20,padding:"0.32rem 0.9rem",backdropFilter:"blur(6px)",WebkitBackdropFilter:"blur(6px)",position:"relative",zIndex:2}}>
                       <span style={{fontSize:9,fontWeight:700,color:"#777",letterSpacing:0.5}}>Desliza hacia abajo para ver más categorías</span>
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{animation:"scrollHintBounce 1.4s ease-in-out infinite",flexShrink:0}}><polyline points="6 9 12 15 18 9"/></svg>
                     </div>
