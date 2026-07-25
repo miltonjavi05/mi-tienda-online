@@ -5197,11 +5197,11 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                   <div className="pm-main-image" style={{background:"#0a0a0a",aspectRatio:"1/1",overflow:"hidden",marginBottom:"0.6rem",borderRadius:12,position:"relative"}}>
                     <LazyImg src={getAllImages(selectedProduct)[modalImgIdx]||selectedProduct.img} alt={selectedProduct.name} fit="contain"/>
                     {!!selectedProduct.discount&&selectedProduct.discount>0&&<DiscountBadge percent={selectedProduct.discount} issuper={isSuperOffer(selectedProduct.discount)}/>}
-                    <button onClick={()=>pmScrollRef.current?.scrollBy({top:340,behavior:"smooth"})} style={{position:"absolute",bottom:10,left:"50%",transform:"translateX(-50%)",zIndex:6,display:"flex",flexDirection:"column",alignItems:"center",gap:2,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:20,padding:"0.4rem 0.9rem",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>
-                      <span style={{fontSize:9,fontWeight:700,color:"#fff",letterSpacing:0.5}}>Desliza para ver más</span>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{animation:"scrollHintBounce 1.4s ease-in-out infinite"}}><polyline points="6 9 12 15 18 9"/></svg>
-                    </button>
                   </div>
+                  <button onClick={()=>pmScrollRef.current?.scrollBy({top:340,behavior:"smooth"})} style={{display:"flex",alignItems:"center",gap:6,margin:"0 auto 0.85rem",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:20,padding:"0.35rem 0.85rem",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>
+                    <span style={{fontSize:9,fontWeight:700,color:"#888",letterSpacing:0.5}}>Desliza para ver más</span>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{animation:"scrollHintBounce 1.4s ease-in-out infinite"}}><polyline points="6 9 12 15 18 9"/></svg>
+                  </button>
                   {getAllImages(selectedProduct).length>1&&(
                     <div className="ts" style={{display:"flex",gap:"0.5rem",overflowX:"auto",marginBottom:"1.1rem",WebkitOverflowScrolling:"touch"}}>
                       {getAllImages(selectedProduct).map((src,i)=>(
