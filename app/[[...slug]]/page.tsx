@@ -590,10 +590,27 @@ const GLOBAL_CSS = `
       contain: layout paint style;
       box-shadow: 0 14px 30px rgba(0,0,0,0.35);
     }
-    @keyframes hcscrollfocus {
+   @keyframes hcscrollfocus {
       0%   { transform: scale3d(0.92,0.92,1) translatey(8px) translatez(0); filter: brightness(0.98); }
       50%  { transform: scale3d(1,1,1) translatey(0) translatez(0); filter: brightness(1); }
       100% { transform: scale3d(0.92,0.92,1) translatey(8px) translatez(0); filter: brightness(0.98); }
+    }
+    .cat-section-scroll-focus {
+      transform-origin: center center;
+      animation: catsectionfocus linear both;
+      animation-timeline: view(block);
+      animation-range: cover 0% cover 100%;
+      will-change: transform, opacity, filter;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      contain: layout paint style;
+    }
+    @keyframes catsectionfocus {
+      0%   { opacity: 0.4; transform: scale3d(0.96,0.96,1) translatey(24px) translatez(0); filter: blur(4px); }
+      16%  { opacity: 0.85; transform: scale3d(0.99,0.99,1) translatey(6px) translatez(0); filter: blur(1px); }
+      50%  { opacity: 1; transform: scale3d(1,1,1) translatey(0) translatez(0); filter: blur(0px); }
+      84%  { opacity: 0.9; transform: scale3d(0.99,0.99,1) translatey(-6px) translatez(0); filter: blur(0.5px); }
+      100% { opacity: 0.45; transform: scale3d(0.96,0.96,1) translatey(-22px) translatez(0); filter: blur(3.5px); }
     }
   }
 
@@ -3833,7 +3850,7 @@ const filteredComments=useMemo(()=>{
                 if(!prods.length)return null;
                 const isLC=(LENTES_SUBCATS as readonly string[]).includes(cat);
                 return(
-                  <div key={cat} style={{marginBottom:"2.5rem",animation:"fadeIn 0.3s ease"}}>
+                  <div key={cat} className="cat-section-scroll-focus" style={{marginBottom:"2.5rem",animation:"fadeIn 0.3s ease"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.5rem",borderBottom:`1px solid ${C.border}`,paddingBottom:"0.4rem"}}>
                       <h2 style={{fontSize:11,fontWeight:800,letterSpacing:3,margin:0,color:"#555"}}>{isLC?`LENTES · ${catLabel(cat).toUpperCase()}`:catLabel(cat).toUpperCase()}</h2>
                       <button onClick={()=>{setShopFilter(cat as ShopFilter);setLentesOpen(isLC);scrollTop();}} style={{background:"none",border:"none",fontSize:10,color:"#333",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",letterSpacing:1,fontWeight:700}}>VER TODOS</button>
