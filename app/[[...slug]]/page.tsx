@@ -4204,7 +4204,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
               {canSendOrder?"CONFIRMAR Y ENVIAR PEDIDO →":!deliveryInfo.zone?"SELECCIONA TIPO DE ENVÍO ↑":!payMethod?"SELECCIONA MÉTODO DE PAGO ↑":"SUBE EL COMPROBANTE PARA CONTINUAR ↑"}
             </button>
 
-            <div style={{display:"flex",justifyContent:"center",gap:"1.5rem",marginTop:"1rem",marginBottom:"0.25rem",flexWrap:"wrap"}}>{[{i:"🔒",t:"Pago seguro"},{i:"📦",t:"Envío a todo el país"},{i:"⭐",t:"3.000+ clientes"}].map(({i,t})=>(<div key={t} style={{display:"flex",alignItems:"center",gap:4}}><span style={{fontSize:10}}>{i}</span><span style={{fontSize:9,color:"#333",fontWeight:700,letterSpacing:0.5}}>{t.toUpperCase()}</span></div>))}</div>
+            <div style={{display:"flex",justifyContent:"center",gap:"1.5rem",marginTop:"1rem",marginBottom:"0.25rem",flexWrap:"wrap"}}>{[{i:"🔒",t:"Pago seguro"},{i:"📦",t:"Envío a todo el país"},{i:"⭐",t:"15.000+ clientes"}].map(({i,t})=>(<div key={t} style={{display:"flex",alignItems:"center",gap:4}}><span style={{fontSize:10}}>{i}</span><span style={{fontSize:9,color:"#333",fontWeight:700,letterSpacing:0.5}}>{t.toUpperCase()}</span></div>))}</div>
               </div>
         </>
       )}
