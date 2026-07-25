@@ -591,9 +591,9 @@ const GLOBAL_CSS = `
       box-shadow: 0 14px 30px rgba(0,0,0,0.35);
     }
     @keyframes hcscrollfocus {
-      0%   { transform: scale3d(0.86,0.86,1) translatey(14px) translatez(0); filter: brightness(0.86); }
+      0%   { transform: scale3d(0.92,0.92,1) translatey(8px) translatez(0); filter: brightness(0.98); }
       50%  { transform: scale3d(1,1,1) translatey(0) translatez(0); filter: brightness(1); }
-      100% { transform: scale3d(0.86,0.86,1) translatey(14px) translatez(0); filter: brightness(0.86); }
+      100% { transform: scale3d(0.92,0.92,1) translatey(8px) translatez(0); filter: brightness(0.98); }
     }
   }
 
@@ -3785,7 +3785,7 @@ const filteredComments=useMemo(()=>{
                       <h2 style={{fontSize:11,fontWeight:800,letterSpacing:3,margin:0,color:"#555"}}>{bestsellers.length>0?"MÁS VENDIDOS":"DESTACADOS"}</h2>
                       <button onClick={()=>{setMainView("shop");setShopFilter("TODO");}} style={{background:"none",border:"none",fontSize:10,color:"#333",cursor:"pointer",fontFamily:"inherit",letterSpacing:1,fontWeight:700,WebkitTapHighlightColor:"transparent"}}>VER TODOS</button>
                     </div>
-                    <HRow products={showcase} onSelect={openProd} onBuyNow={openProd} fmtPrice={fmtPrice} isFavorite={isFavorite} onToggleFavorite={toggleFavorite}/>
+                    <HRow products={showcase} onSelect={openProd} onBuyNow={openProd} fmtPrice={fmtPrice} isFavorite={isFavorite} onToggleFavorite={toggleFavorite} animate="premium"/>
                   </div>
                 )}
               </>
@@ -5381,7 +5381,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
               {modalSuggestions.length>0&&(
                 <div style={{marginTop:"0.5rem",paddingTop:"1.25rem",borderTop:`1px solid ${C.border}`,paddingBottom:"1.5rem"}}>
                   <p style={{fontSize:10,fontWeight:800,letterSpacing:2,color:"#555",margin:"0 0 0.85rem"}}>TAMBIÉN TE PUEDE INTERESAR</p>
-                  <HRow products={modalSuggestions} onSelect={switchModalProduct} onBuyNow={switchModalProduct} fmtPrice={fmtPrice}/>
+                  <HRow products={modalSuggestions} onSelect={switchModalProduct} onBuyNow={switchModalProduct} fmtPrice={fmtPrice} animate="premium"/>
                 </div>
               )}
               <div style={{marginTop:"1.5rem",marginLeft:"-1.5rem",marginRight:"-1.5rem"}}>
