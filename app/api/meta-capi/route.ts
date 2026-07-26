@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 const PIXEL_ID    = process.env.META_PIXEL_ID    || "840893159040582";
 const ACCESS_TOKEN = process.env.META_CAPI_ACCESS_TOKEN || "";
 const API_VERSION  = process.env.META_GRAPH_API_VERSION || "v25.0";
+const TEST_EVENT_CODE = process.env.META_TEST_EVENT_CODE || "";
 
 if (!ACCESS_TOKEN) {
   console.error("META CAPI: falta META_CAPI_ACCESS_TOKEN en las variables de entorno de Vercel");
@@ -28,8 +29,8 @@ export async function POST(req: NextRequest) {
       }],
     };
 
-    if (body.test_event_code) {
-      (payload as any).test_event_code = body.test_event_code;
+     if (body.test_event_code || TEST_EVENT_CODE) {
+      (payload as any).test_event_code = body.test_event_code || TEST_EVENT_CODE;
     }
 
       const r = await fetch(
