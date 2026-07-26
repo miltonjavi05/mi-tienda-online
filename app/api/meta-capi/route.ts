@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const PIXEL_ID    = process.env.META_PIXEL_ID    || "840893159040582";
 const ACCESS_TOKEN = process.env.META_CAPI_ACCESS_TOKEN || "";
+const API_VERSION  = process.env.META_GRAPH_API_VERSION || "v25.0";
 
 if (!ACCESS_TOKEN) {
   console.error("META CAPI: falta META_CAPI_ACCESS_TOKEN en las variables de entorno de Vercel");
@@ -31,8 +32,8 @@ export async function POST(req: NextRequest) {
       (payload as any).test_event_code = body.test_event_code;
     }
 
-    const r = await fetch(
-      `https://graph.facebook.com/v21.0/${PIXEL_ID}/events?access_token=${ACCESS_TOKEN}`,
+      const r = await fetch(
+      `https://graph.facebook.com/${API_VERSION}/${PIXEL_ID}/events?access_token=${ACCESS_TOKEN}`,
       { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }
     );
 
