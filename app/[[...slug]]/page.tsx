@@ -553,7 +553,7 @@ const GLOBAL_CSS = `
     .hr-arrow { display: none !important; }
   }
 
-  .pc, .hc, .cc { transition: transform 0.25s ease, border-color 0.2s ease, box-shadow 0.25s ease; }
+  .pc, .hc, .cc { transition: transform 0.18s cubic-bezier(0.22,1,0.36,1), border-color 0.15s ease, box-shadow 0.18s cubic-bezier(0.22,1,0.36,1); }
   @media(hover:hover) and (pointer:fine){
     .pc, .hc, .cc { contain: layout paint; }
   }
@@ -593,9 +593,9 @@ const GLOBAL_CSS = `
     }
    @keyframes hcscrollfocus {
       0%   { transform: scale3d(0.92,0.92,1) translatey(8px) translatez(0); }
-      50%  { transform: scale3d(1,1,1) translatey(0) translatez(0); }
+      18%  { transform: scale3d(1,1,1) translatey(0) translatez(0); }
+      82%  { transform: scale3d(1,1,1) translatey(0) translatez(0); }
       100% { transform: scale3d(0.92,0.92,1) translatey(8px) translatez(0); }
-    }
     }
 
   @media(hover:hover) and (pointer:fine){
@@ -625,6 +625,10 @@ const GLOBAL_CSS = `
   }
   @media(min-width:1400px){
     .shop-container { max-width: 96vw !important; }
+  }
+  @media(pointer:fine) and (min-width:900px){
+    .pg, .cg, .fg { contain: layout style; }
+    .pc-scroll-focus, .hc-scroll-focus { contain: layout paint style; }
   }
 
   /* ── home: adaptado a pantallas grandes ── */
