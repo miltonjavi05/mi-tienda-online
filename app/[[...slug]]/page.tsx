@@ -3748,7 +3748,7 @@ const filteredComments=useMemo(()=>{
           </div>
           <button
             onClick={()=>{if(!showBs)fetchBcvRate();setShowBs(s=>!s);}}
-            style={{display:"flex",alignItems:"center",gap:5,background:showBs?"rgba(255,255,255,0.16)":"rgba(0,0,0,0.55)",color:"#fff",border:`1px solid ${showBs?"rgba(255,255,255,0.4)":"rgba(255,255,255,0.1)"}`,borderRadius:20,padding:"4px 14px",fontSize:10,fontWeight:900,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",flexShrink:0,transition:"all 0.2s ease",WebkitTapHighlightColor:"transparent",touchAction:"manipulation",backdropFilter:"blur(12px) saturate(1.5)",WebkitBackdropFilter:"blur(12px) saturate(1.5)"}}
+            style={{display:"flex",alignItems:"center",gap:5,background:showBs?"rgba(0,0,0,0.55)":"rgba(255,255,255,0.16)",color:"#fff",border:"none",borderRadius:20,padding:"4px 14px",fontSize:10,fontWeight:900,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",flexShrink:0,touchAction:"manipulation",backdropFilter:"blur(12px) saturate(1.5)",WebkitBackdropFilter:"blur(12px) saturate(1.5)"}}
           >
             {showBs?"VER EN USD ↕":"VER EN BS ↕"}
           </button>
