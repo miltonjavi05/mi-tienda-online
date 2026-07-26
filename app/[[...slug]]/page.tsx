@@ -584,7 +584,7 @@ const GLOBAL_CSS = `
       transform-origin: center center;
       animation: hcscrollfocus linear both;
       animation-timeline: view(inline);
-      animation-range: cover 8% cover 92%;
+      animation-range: cover 0% cover 100%;
       will-change: transform;
       backface-visibility: hidden;
       -webkit-backface-visibility: hidden;
