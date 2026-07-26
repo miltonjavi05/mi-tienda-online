@@ -596,21 +596,6 @@ const GLOBAL_CSS = `
       50%  { transform: scale3d(1,1,1) translatey(0) translatez(0); filter: brightness(1); }
       100% { transform: scale3d(0.92,0.92,1) translatey(8px) translatez(0); filter: brightness(0.98); }
     }
-    .section-scroll-focus {
-      transform-origin: center center;
-      animation: sectionscrollfocus linear both;
-      animation-timeline: view(block);
-      animation-range: cover 12% cover 88%;
-      will-change: transform, opacity, filter;
-      backface-visibility: hidden;
-      -webkit-backface-visibility: hidden;
-      contain: layout paint style;
-    }
-    @keyframes sectionscrollfocus {
-      0%   { transform: translateY(22px) scale(0.965); opacity: 0.45; filter: blur(3px); }
-      50%  { transform: translateY(0) scale(1); opacity: 1; filter: blur(0px); }
-      100% { transform: translateY(-22px) scale(0.965); opacity: 0.45; filter: blur(3px); }
-    }
     }
 
   @media(hover:hover) and (pointer:fine){
@@ -1132,8 +1117,50 @@ const RevealUp=memo(function RevealUp({children,delay=0}:{children:React.ReactNo
 
 // ─── SCROLL FOCUS SECTION (SEGUIMIENTO CONTINUO AL SCROLL VERTICAL, FUNCIONA EN TODOS LOS NAVEGADORES) ─────
 const ScrollFocusSection=memo(function ScrollFocusSection({children,style}:{children:React.ReactNode;style?:React.CSSProperties}){
+  const ref=useRef<HTMLDivElement>(null);
+  const rafId=useRef<number|null>(null);
+  const active=useRef(false);
+  const lastT=useRef(0);
+  const cur=useRef({ty:0,scale:1,opacity:1,blur:0});
+  useEffect(()=>{
+    const el=ref.current;
+    if(!el)return;
+    const update=(t:number)=>{
+      if(!active.current){rafId.current=null;lastT.current=0;return;}
+      const dt=lastT.current?Math.min(48,t-lastT.current):16.67;
+      lastT.current=t;
+      const rect=el.getBoundingClientRect();
+      const vh=window.innerHeight||1;
+      const centerDelta=(rect.top+rect.height/2)-vh/2;
+      const maxDelta=vh/2+rect.height/2;
+      const progress=1-Math.min(1,Math.abs(centerDelta)/Math.max(1,maxDelta));
+      const targetScale=0.96+progress*0.04;
+      const targetOpacity=0.4+progress*0.6;
+      const targetBlur=(1-progress)*4;
+      const targetTy=Math.max(-24,Math.min(24,(centerDelta/Math.max(1,maxDelta))*24));
+      const TAU=55;
+      const smooth=1-Math.exp(-dt/TAU);
+      cur.current.ty+=(targetTy-cur.current.ty)*smooth;
+      cur.current.scale+=(targetScale-cur.current.scale)*smooth;
+      cur.current.opacity+=(targetOpacity-cur.current.opacity)*smooth;
+      cur.current.blur+=(targetBlur-cur.current.blur)*smooth;
+      if(Math.abs(targetTy-cur.current.ty)<0.05)cur.current.ty=targetTy;
+      if(Math.abs(targetScale-cur.current.scale)<0.0005)cur.current.scale=targetScale;
+      if(Math.abs(targetOpacity-cur.current.opacity)<0.003)cur.current.opacity=targetOpacity;
+      if(Math.abs(targetBlur-cur.current.blur)<0.02)cur.current.blur=targetBlur;
+      el.style.transform=`translate3d(0,${cur.current.ty.toFixed(2)}px,0) scale(${cur.current.scale.toFixed(4)})`;
+      el.style.opacity=String(cur.current.opacity.toFixed(3));
+      el.style.filter=`blur(${cur.current.blur.toFixed(2)}px)`;
+      rafId.current=requestAnimationFrame(update);
+    };
+    const start=()=>{if(active.current)return;active.current=true;lastT.current=0;if(rafId.current==null)rafId.current=requestAnimationFrame(update);};
+    const stop=()=>{active.current=false;if(rafId.current!=null){cancelAnimationFrame(rafId.current);rafId.current=null;}};
+    const obs=new IntersectionObserver(([entry])=>{if(entry.isIntersecting)start();else stop();},{rootMargin:"40% 0px 40% 0px",threshold:0});
+    obs.observe(el);
+    return()=>{stop();obs.disconnect();};
+  },[]);
   return(
-    <div className="section-scroll-focus" style={{backfaceVisibility:"hidden",WebkitBackfaceVisibility:"hidden" as any,contain:"layout paint style",...style}}>
+    <div ref={ref} style={{willChange:"transform,opacity,filter",backfaceVisibility:"hidden",WebkitBackfaceVisibility:"hidden" as any,contain:"layout paint style",...style}}>
       {children}
     </div>
   );
