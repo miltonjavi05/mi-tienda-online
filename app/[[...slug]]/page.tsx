@@ -3748,9 +3748,10 @@ const filteredComments=useMemo(()=>{
           </div>
           <button
             onClick={()=>{if(!showBs)fetchBcvRate();setShowBs(s=>!s);}}
-            style={{display:"flex",alignItems:"center",gap:5,background:showBs?"#fff":"#1a1a1a",color:showBs?"#080808":"#888",border:`1px solid ${showBs?"#fff":"#2a2a2a"}`,borderRadius:20,padding:"4px 14px",fontSize:10,fontWeight:900,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",flexShrink:0,transition:"all 0.15s",WebkitTapHighlightColor:"transparent",touchAction:"manipulation"}}
+            style={{position:"relative",overflow:"hidden",display:"flex",alignItems:"center",gap:5,background:"rgba(255,255,255,0.1)",color:"#fff",border:"1px solid rgba(255,255,255,0.35)",borderRadius:20,padding:"4px 14px",fontSize:10,fontWeight:900,letterSpacing:1.5,cursor:"pointer",fontFamily:"inherit",flexShrink:0,transition:"all 0.2s ease",WebkitTapHighlightColor:"transparent",touchAction:"manipulation",backdropFilter:"blur(14px) saturate(1.6)",WebkitBackdropFilter:"blur(14px) saturate(1.6)",boxShadow:"0 4px 18px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 0 0 1px rgba(255,255,255,0.06)",textShadow:"0 1px 3px rgba(0,0,0,0.5)"}}
           >
-            {showBs?"VER EN USD ↕":"VER EN BS ↕"}
+            <span style={{position:"absolute",inset:0,background:"linear-gradient(115deg,transparent 0%,rgba(255,255,255,0.22) 45%,transparent 65%)",backgroundSize:"200% 100%",animation:"badgeShimmer 3s ease infinite",pointerEvents:"none"}}/>
+            <span style={{position:"relative"}}>{showBs?"VER EN USD ↕":"VER EN BS ↕"}</span>
           </button>
         </div>
         )}
