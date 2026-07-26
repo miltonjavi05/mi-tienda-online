@@ -516,6 +516,7 @@ const GLOBAL_CSS = `
   @keyframes focusRingPulse { 0%{opacity:0.55;transform:scale(0.92);} 70%{opacity:0;transform:scale(1.35);} 100%{opacity:0;transform:scale(1.35);} }
   @keyframes verColArrowNudge { 0%,100%{transform:translateX(0);} 50%{transform:translateX(5px);} }
   @keyframes scrollHintBounce { 0%,100%{transform:translateY(0);} 50%{transform:translateY(6px);} }
+  @keyframes peekHint { 0%{transform:translateY(-16px);opacity:0.85;} 100%{transform:translateY(0);opacity:1;} }
   @keyframes premiumTabGlow { 0%{box-shadow:0 0 0 0 rgba(255,255,255,0);} 45%{box-shadow:0 0 16px 3px rgba(255,255,255,0.35);} 100%{box-shadow:0 0 0 0 rgba(255,255,255,0);} }
   @keyframes viewIn { 0%{opacity:0;} 100%{opacity:1;} }
   @keyframes plusPremiumGlow { 0%,100%{opacity:0.75;transform:scale(1);text-shadow:0 0 0px rgba(255,255,255,0);} 50%{opacity:1;transform:scale(1.22);text-shadow:0 0 12px rgba(255,255,255,0.85),0 0 22px rgba(255,255,255,0.35);} }
@@ -4016,7 +4017,7 @@ const filteredComments=useMemo(()=>{
                     </div>
                     <div className="pg" style={{display:"grid",gap:"1rem",alignItems:"start"}}>
                       {prods.map((p,i)=>(
-                        <div key={p.id} style={(i===2||i===3)?{animation:"scrollHintBounce 1.6s ease-in-out infinite"}:undefined}>
+                        <div key={p.id} style={(i===2||i===3)?{animation:"peekHint 0.65s cubic-bezier(0.16,1,0.3,1) 0.35s both"}:undefined}>
                           <ProductCard product={p} index={i} onClick={()=>openProd(p)} onBuyNow={()=>openProd(p)} fmtPrice={fmtPrice}/>
                         </div>
                       ))}
