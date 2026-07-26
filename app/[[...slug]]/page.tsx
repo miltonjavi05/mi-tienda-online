@@ -584,11 +584,11 @@ const GLOBAL_CSS = `
       contain: layout paint style;
     }
     @keyframes pcscrollfocus {
-      0%   { transform: scale3d(0.6,0.6,1) translatey(42px) translatez(0); opacity: 1; filter: saturate(0.85) blur(1.5px); }
-      14%  { transform: scale3d(0.82,0.82,1) translatey(16px) translatez(0);  opacity: 1; filter: saturate(0.95) blur(0.5px); }
-      50%  { transform: scale3d(1.06,1.06,1) translatey(0) translatez(0); opacity: 1;    filter: saturate(1.1) blur(0px); }
-      86%  { transform: scale3d(0.82,0.82,1) translatey(-16px) translatez(0); opacity: 1; filter: saturate(0.95) blur(0.5px); }
-      100% { transform: scale3d(0.6,0.6,1) translatey(-42px) translatez(0); opacity: 1; filter: saturate(0.95) blur(1.5px); }
+      0%   { transform: scale3d(0.58,0.58,1) translatey(42px) translatez(0); opacity: 0.12; filter: brightness(0.42) saturate(0.5) blur(2.5px); }
+      14%  { transform: scale3d(0.8,0.8,1) translatey(16px) translatez(0);  opacity: 0.55; filter: brightness(0.72) saturate(0.8) blur(1px); }
+      50%  { transform: scale3d(1.07,1.07,1) translatey(0) translatez(0); opacity: 1;    filter: brightness(1.08) saturate(1.15) blur(0px); }
+      86%  { transform: scale3d(0.8,0.8,1) translatey(-16px) translatez(0); opacity: 0.55; filter: brightness(0.72) saturate(0.8) blur(1px); }
+      100% { transform: scale3d(0.58,0.58,1) translatey(-42px) translatez(0); opacity: 0.12; filter: brightness(0.42) saturate(0.5) blur(2.5px); }
     }
     .hc-scroll-focus {
       transform-origin: center center;
