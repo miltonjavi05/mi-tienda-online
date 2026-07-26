@@ -4043,7 +4043,7 @@ const filteredComments=useMemo(()=>{
                     </div>
                   </div>
                 );
-              })
+              }) 
             )}
           </div>
           <Footer setMainView={setMainView} setShopFilter={setShopFilter}/>
