@@ -5321,7 +5321,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
               <div className="pm-grid">
                 <div className="pm-media-col">
                   <div className="pm-main-image" style={{background:"#0a0a0a",aspectRatio:"1/1",overflow:"hidden",marginBottom:"0.6rem",borderRadius:12,position:"relative"}}>
-                    <LazyImg src={getAllImages(selectedProduct)[modalImgIdx]||selectedProduct.img} alt={selectedProduct.name} fit="contain"/>
+                    <LazyImg src={getAllImages(selectedProduct)[modalImgIdx]||selectedProduct.img} alt={selectedProduct.name} fit="contain" priority/>
                     {!!selectedProduct.discount&&selectedProduct.discount>0&&<DiscountBadge percent={selectedProduct.discount} issuper={isSuperOffer(selectedProduct.discount)}/>}
                   </div>
                   <button onClick={()=>pmScrollRef.current?.scrollBy({top:340,behavior:"smooth"})} style={{display:"flex",alignItems:"center",gap:6,margin:"0 auto 0.85rem",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:20,padding:"0.35rem 0.85rem",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>
