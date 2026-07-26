@@ -342,7 +342,8 @@ function loadFacebookScript():Promise<any>{
   });
 }
 async function fsGetUser(uid:string):Promise<{photoURL:string;favorites:string[]}>{try{const r=await fetch(`${fsBase()}/users/${uid}`);if(!r.ok)return{photoURL:"",favorites:[]};const d=await r.json() as FsDoc;const rawFav=fromFs(d.fields?.favorites??{nullValue:null}) as string[]|null;return{photoURL:(fromFs(d.fields?.photoURL??{nullValue:null}) as string)||"",favorites:Array.isArray(rawFav)?rawFav:[]};}catch{return{photoURL:"",favorites:[]};}}
-async function uploadImg(file:File,preset=CLOUDINARY_PRESET):Promise<string>{const fd=new FormData();fd.append("file",file);fd.append("upload_preset",preset);const r=await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`,{method:"POST",body:fd});if(!r.ok){const errText=await r.text().catch(()=>"");throw new Error(`Error subiendo imagen: ${errText}`);}return((await r.json()) as{secure_url:string}).secure_url;}function cropImageToSquare(file:File):Promise<File>{
+async function uploadImg(file:File,preset=CLOUDINARY_PRESET):Promise<string>{const fd=new FormData();fd.append("file",file);fd.append("upload_preset",preset);const r=await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`,{method:"POST",body:fd});if(!r.ok){const errText=await r.text().catch(()=>"");throw new Error(`Error subiendo imagen: ${errText}`);}return((await r.json()) as{secure_url:string}).secure_url;}
+function cropImageToSquare(file:File):Promise<File>{
   return new Promise(resolve=>{
     const url=URL.createObjectURL(file);
     const img=new Image();
