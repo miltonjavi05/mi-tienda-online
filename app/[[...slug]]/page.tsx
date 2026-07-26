@@ -5555,8 +5555,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
               <div style={{marginTop:"1.5rem",marginLeft:"-1.5rem",marginRight:"-1.5rem"}}>
                 <Footer setMainView={setMainView} setShopFilter={setShopFilter}/>
               </div>
-            </div>
-            <div className="pm-footer-bar" onTouchStart={handleModalDragTouchStart} onTouchMove={handleModalDragTouchMove} onTouchEnd={handleModalDragTouchEnd} style={{flexShrink:0,padding:"1rem 1.5rem 1.5rem",background:"#111",borderTop:"1px solid #1e1e1e",display:"flex",flexDirection:"column",gap:"0.6rem",boxShadow:"0 -8px 24px rgba(0,0,0,0.4)",position:"relative"}}>
+            <div className="pm-footer-bar" style={{position:"sticky",bottom:0,marginLeft:"-1.5rem",marginRight:"-1.5rem",marginTop:"1rem",padding:"1rem 1.5rem 1.5rem",background:"#111",borderTop:"1px solid #1e1e1e",display:"flex",flexDirection:"column",gap:"0.6rem",boxShadow:"0 -8px 24px rgba(0,0,0,0.4)",zIndex:5}}>
               {addedFlash&&(
                 <div style={{position:"absolute",bottom:"100%",left:"1.5rem",right:"1.5rem",marginBottom:"0.6rem",display:"flex",alignItems:"center",gap:10,background:"linear-gradient(155deg,rgba(255,255,255,0.14) 0%,rgba(20,20,20,0.96) 45%,rgba(6,6,6,0.99) 100%)",border:"1px solid rgba(255,255,255,0.22)",borderRadius:12,padding:"0.75rem 1rem",animation:"addedBadgeIn 0.22s cubic-bezier(0.22,1,0.36,1)",boxShadow:"0 10px 30px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.15)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",zIndex:5,overflow:"hidden",willChange:"transform,opacity"}}>
                   <div style={{position:"relative",width:24,height:24,borderRadius:"50%",background:"linear-gradient(180deg,#ffffff 0%,#e5e5e5 100%)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 3px 10px rgba(255,255,255,0.25)",animation:"addedCheckPop 0.3s cubic-bezier(0.34,1.56,0.64,1) 0.03s both",willChange:"transform,opacity"}}>
@@ -5593,6 +5592,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#080808" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{position:"relative",flexShrink:0}}><polyline points="20 6 9 17 4 12"/></svg>
                 <span style={{position:"relative"}}>COMPRAR AHORA</span>
               </button>
+            </div>
             </div>
           </div>
         </div>
