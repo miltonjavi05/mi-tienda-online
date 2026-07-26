@@ -592,10 +592,10 @@ const GLOBAL_CSS = `
       box-shadow: 0 14px 30px rgba(0,0,0,0.35);
     }
    @keyframes hcscrollfocus {
-      0%   { transform: scale3d(0.985,0.985,1) translatey(3px) translatez(0); }
+      0%   { transform: scale3d(0.92,0.92,1) translatey(8px) translatez(0); }
       18%  { transform: scale3d(1,1,1) translatey(0) translatez(0); }
       82%  { transform: scale3d(1,1,1) translatey(0) translatez(0); }
-      100% { transform: scale3d(0.985,0.985,1) translatey(3px) translatez(0); }
+      100% { transform: scale3d(0.92,0.92,1) translatey(8px) translatez(0); }
     }
     }
 
