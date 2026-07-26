@@ -134,16 +134,27 @@ function normalizeVEPhone(phone: string): string {
   if (!digits.startsWith("58")) digits = "58" + digits;
   return digits;
 }
-function initMetaPixel(): void {
+function initMetaPixel(userEmail?: string, userPhone?: string): void {
   if (typeof window === "undefined") return;
-  if ((window as any).fbq) return;
+  if ((window as any).fbq) {
+    if (userEmail || userPhone) {
+      const adv:Record<string,string> = {};
+      if (userEmail) adv.em = userEmail.trim().toLowerCase();
+      if (userPhone) adv.ph = normalizeVEPhone(userPhone);
+      (window as any).fbq('init', META_PIXEL_ID, adv);
+    }
+    return;
+  }
   (function(f:any,b:any,e:any,v:any,n?:any,t?:any,s?:any){
     if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};
     if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];
     t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];
     s.parentNode.insertBefore(t,s)
   })(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
-  (window as any).fbq('init', META_PIXEL_ID);
+  const adv:Record<string,string> = {};
+  if (userEmail) adv.em = userEmail.trim().toLowerCase();
+  if (userPhone) adv.ph = normalizeVEPhone(userPhone);
+  (window as any).fbq('init', META_PIXEL_ID, adv);
   (window as any).fbq('track', 'PageView');
 }
 function fbqTrack(event: string, params?: Record<string, unknown>, options?: { eventID?: string }): void {
@@ -238,14 +249,13 @@ async function trackLeadWhatsApp(
   extra?: { value?: number; content_ids?: string[]; content_name?: string }
 ): Promise<void> {
   const eventId = genEventId();
-  const payload = {
+   const payload = {
     content_name: extra?.content_name || source,
     content_category: "whatsapp_click",
-    value: extra?.value ?? 1,
+    value: parseFloat((extra?.value ?? 1).toFixed(2)),
     currency: "USD",
     ...(extra?.content_ids ? { content_ids: extra.content_ids, content_type: "product" } : {}),
-  };
-  fbqTrack("Lead", payload, { eventID: eventId });
+  };  fbqTrack("Lead", payload, { eventID: eventId });
   await sendCAPI("Lead", eventId, payload);
   fsAddToCollection("leads", { source, value: payload.value, createdAt: Date.now() }).catch(() => {});
 }
