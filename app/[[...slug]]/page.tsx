@@ -892,18 +892,45 @@ function DraggableWA(){
 const NativeTabs=memo(function NativeTabs({items,active,onSelect,renderItem,height=44}:{items:string[];active:string;onSelect:(v:string)=>void;renderItem:(item:string,isActive:boolean)=>React.ReactNode;height?:number;}){
   const ref=useRef<HTMLDivElement>(null);
   const btnRefs=useRef<Record<string,HTMLButtonElement|null>>({});
-  const[ind,setInd]=useState<{left:number;width:number;ready:boolean}>({left:0,width:0,ready:false});
+  const pillRef=useRef<HTMLDivElement>(null);
+  const glowRef=useRef<HTMLDivElement>(null);
+  const target=useRef({left:0,width:0});
+  const cur=useRef({left:0,width:0,inited:false});
+  const rafId=useRef<number|null>(null);
+  const lastT=useRef(0);
   const[pulse,setPulse]=useState(0);
   useEffect(()=>{const el=ref.current?.querySelector(`[data-active="true"]`) as HTMLElement|null;if(el)el.scrollIntoView({block:"nearest",inline:"center",behavior:"smooth"});},[active]);
   useEffect(()=>{
     const btn=btnRefs.current[active];
-    if(btn)setInd({left:btn.offsetLeft,width:btn.offsetWidth,ready:true});
+    if(!btn)return;
+    target.current={left:btn.offsetLeft,width:btn.offsetWidth};
+    if(glowRef.current){glowRef.current.style.left=`${target.current.left}px`;glowRef.current.style.width=`${target.current.width}px`;}
+    if(!cur.current.inited){
+      cur.current={left:target.current.left,width:target.current.width,inited:true};
+      if(pillRef.current){pillRef.current.style.left=`${cur.current.left}px`;pillRef.current.style.width=`${cur.current.width}px`;}
+    }
     setPulse(p=>p+1);
+    const animate=(t:number)=>{
+      const dt=lastT.current?Math.min(48,t-lastT.current):16.67;
+      lastT.current=t;
+      const TAU=60;
+      const smooth=1-Math.exp(-dt/TAU);
+      cur.current.left+=(target.current.left-cur.current.left)*smooth;
+      cur.current.width+=(target.current.width-cur.current.width)*smooth;
+      if(Math.abs(target.current.left-cur.current.left)<0.3)cur.current.left=target.current.left;
+      if(Math.abs(target.current.width-cur.current.width)<0.3)cur.current.width=target.current.width;
+      if(pillRef.current){pillRef.current.style.left=`${cur.current.left.toFixed(2)}px`;pillRef.current.style.width=`${cur.current.width.toFixed(2)}px`;}
+      const done=cur.current.left===target.current.left&&cur.current.width===target.current.width;
+      if(!done)rafId.current=requestAnimationFrame(animate);
+      else{rafId.current=null;lastT.current=0;}
+    };
+    if(rafId.current==null){lastT.current=0;rafId.current=requestAnimationFrame(animate);}
   },[active,items.join("|")]);
+  useEffect(()=>()=>{if(rafId.current!=null)cancelAnimationFrame(rafId.current);},[]);
   return(<div ref={ref} className="ts" style={{display:"flex",overflowX:"auto",overflowY:"hidden",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",height,touchAction:"pan-x"}}>
     <div style={{position:"relative",display:"flex"}}>
-      {ind.ready&&<div style={{position:"absolute",top:0,left:ind.left,width:ind.width,height:"100%",borderRadius:8,background:"linear-gradient(135deg,rgba(255,255,255,0.14) 0%,rgba(255,255,255,0.04) 100%)",border:"1px solid rgba(255,255,255,0.22)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.25), 0 4px 14px rgba(0,0,0,0.35)",transition:"left 0.4s cubic-bezier(0.22,1,0.36,1), width 0.4s cubic-bezier(0.22,1,0.36,1)",pointerEvents:"none",zIndex:0}}/>}
-      {ind.ready&&<div key={pulse} style={{position:"absolute",top:0,left:ind.left,width:ind.width,height:"100%",borderRadius:8,pointerEvents:"none",zIndex:0,animation:"premiumTabGlow 0.55s ease-out 0.3s both"}}/>}
+      <div ref={pillRef} style={{position:"absolute",top:0,left:0,width:0,height:"100%",borderRadius:8,background:"linear-gradient(135deg,rgba(255,255,255,0.14) 0%,rgba(255,255,255,0.04) 100%)",border:"1px solid rgba(255,255,255,0.22)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.25), 0 4px 14px rgba(0,0,0,0.35)",pointerEvents:"none",zIndex:0,willChange:"left,width"}}/>
+      <div ref={glowRef} key={pulse} style={{position:"absolute",top:0,left:0,width:0,height:"100%",borderRadius:8,pointerEvents:"none",zIndex:0,animation:"premiumTabGlow 0.55s ease-out 0.3s both"}}/>
       {items.map(item=>(<button key={item} ref={el=>{btnRefs.current[item]=el;}} data-active={item===active} onClick={()=>onSelect(item)} style={{position:"relative",zIndex:1,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",flexShrink:0,padding:0,display:"flex",alignItems:"center",WebkitTapHighlightColor:"transparent"}}>{renderItem(item,item===active)}</button>))}
     </div>
   </div>);
@@ -3674,7 +3701,7 @@ const filteredComments=useMemo(()=>{
         </div>
         {!isAdmin&&(
           <NativeTabs items={TABS.map(t=>t.id)} active={mainView} onSelect={id=>{setMainView(id as MainView);if(id==="shop")setShopFilter("TODO");}} height={TABS_H}
-            renderItem={(id,a)=>{const l=TABS.find(t=>t.id===id)?.l??id;const isGrabados=id==="grabados";return<span className="nb" style={{display:"flex",alignItems:"center",padding:"0 1.4rem",height:"100%",borderBottom:a?"2px solid #fff":"2px solid transparent",fontSize:10,fontWeight:800,letterSpacing:2.5,color:a?"#fff":"#444",whiteSpace:"nowrap",transition:isGrabados?"color 0.15s,border-color 0.15s,opacity 0.8s cubic-bezier(0.16,1,0.3,1) 0.15s,transform 0.8s cubic-bezier(0.16,1,0.3,1) 0.15s":"color 0.15s,border-color 0.15s",opacity:isGrabados?(navMounted?1:0):1,transform:isGrabados?(navMounted?"translateY(0)":"translateY(18px)"):"none"}}>{l}</span>;}}/>
+            renderItem={(id,a)=>{const l=TABS.find(t=>t.id===id)?.l??id;const isGrabados=id==="grabados";return<span className="nb" style={{display:"flex",alignItems:"center",padding:"0 1.4rem",height:"100%",borderBottom:"2px solid transparent",fontSize:10,fontWeight:800,letterSpacing:2.5,color:a?"#fff":"#444",whiteSpace:"nowrap",transition:isGrabados?"color 0.15s,opacity 0.8s cubic-bezier(0.16,1,0.3,1) 0.15s,transform 0.8s cubic-bezier(0.16,1,0.3,1) 0.15s":"color 0.15s",opacity:isGrabados?(navMounted?1:0):1,transform:isGrabados?(navMounted?"translateY(0)":"translateY(18px)"):"none"}}>{l}</span>;}}/>
         )}
         {searchOpen&&(
           <div style={{background:"#111",borderTop:`1px solid ${C.border}`,padding:"0.55rem 1rem"}}>
@@ -3884,7 +3911,7 @@ const filteredComments=useMemo(()=>{
               active={shopFilter==="TODO"?"TODO":isLentesActive?"LENTES":(SHOP_CATS.filter(c=>c!=="LENTES") as string[]).includes(shopFilter)?shopFilter:"TODO"}
               onSelect={item=>{if(item==="LENTES"){const n=!lentesOpen;setLentesOpen(n);if(n)setShopFilter("LENTES");}else{setShopFilter(item as ShopFilter);setLentesOpen(false);}scrollTop();}}
               height={44}
-              renderItem={(item,_)=>{const a=item==="TODO"?shopFilter==="TODO":item==="LENTES"?isLentesActive:shopFilter===item;return(<span className="nb" style={{display:"flex",alignItems:"center",gap:4,padding:"0 1rem",height:44,borderBottom:a?"2px solid #fff":"2px solid transparent",fontSize:10,fontWeight:800,letterSpacing:2,color:a?"#fff":"#3e3e3e",whiteSpace:"nowrap",transition:"color 0.15s,border-color 0.15s"}}>{item}{item==="LENTES"&&<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{transition:"transform 0.2s",transform:lentesOpen?"rotate(180deg)":"rotate(0deg)"}}><polyline points="6 9 12 15 18 9"/></svg>}</span>);}}
+              renderItem={(item,_)=>{const a=item==="TODO"?shopFilter==="TODO":item==="LENTES"?isLentesActive:shopFilter===item;return(<span className="nb" style={{display:"flex",alignItems:"center",gap:4,padding:"0 1rem",height:44,borderBottom:"2px solid transparent",fontSize:10,fontWeight:800,letterSpacing:2,color:a?"#fff":"#3e3e3e",whiteSpace:"nowrap",transition:"color 0.15s"}}>{item}{item==="LENTES"&&<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{transition:"transform 0.2s",transform:lentesOpen?"rotate(180deg)":"rotate(0deg)"}}><polyline points="6 9 12 15 18 9"/></svg>}</span>);}}
             />
             {lentesOpen&&(
               <div className="ts" style={{background:"#0a0a0a",borderTop:"1px solid #1a1a1a",padding:"0.55rem 1rem",display:"flex",gap:"0.45rem",overflowX:"auto",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",touchAction:"pan-x"}}>
