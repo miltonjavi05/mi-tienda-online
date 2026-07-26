@@ -3062,14 +3062,17 @@ const removeCoupon=useCallback(()=>{setAppliedCoupon(null);setCouponInput("");se
     const catFilteredProducts=cat==="ALL"?products:products.filter(p=>p.category===cat);
     if(!catFilteredProducts.length){alert("No hay productos en esa categoría.");return;}
     const catLabelText=cat==="ALL"?"todas las categorías":catLabel(cat);
-    const progressSet=new Set(getBulkGenProgress());
     let commentCountByProduct:Record<string,number>={};
     try{
       const rawComments=await fsGetCollectionAll("product_comments");
       rawComments.forEach(c=>{const pid=c.productId as string;if(pid)commentCountByProduct[pid]=(commentCountByProduct[pid]||0)+1;});
     }catch{ /* si falla, seguimos sin priorizar por conteo */ }
+    // El progreso real se calcula con los comentarios que existen de verdad en Firestore,
+    // no con lo guardado en localStorage (que podía quedar desactualizado si se borraban reseñas).
+    const progressSet=new Set(catFilteredProducts.filter(p=>(commentCountByProduct[p.id]||0)>0).map(p=>p.id));
+    saveBulkGenProgress(Array.from(new Set([...getBulkGenProgress(),...Array.from(progressSet)])));
     const byZeroFirst=(a:Product,b:Product)=>(commentCountByProduct[a.id]||0)-(commentCountByProduct[b.id]||0);
-    let toProcess=catFilteredProducts.filter(p=>!progressSet.has(p.id)).sort(byZeroFirst);
+    let toProcess=catFilteredProducts.filter(p=>(commentCountByProduct[p.id]||0)===0).sort(byZeroFirst);
     const isTopUp=toProcess.length===0;
     if(isTopUp){
       toProcess=[...catFilteredProducts].sort(byZeroFirst);
