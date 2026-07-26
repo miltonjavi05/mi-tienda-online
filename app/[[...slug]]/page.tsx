@@ -506,6 +506,7 @@ const GLOBAL_CSS = `
   @keyframes focusRingPulse { 0%{opacity:0.55;transform:scale(0.92);} 70%{opacity:0;transform:scale(1.35);} 100%{opacity:0;transform:scale(1.35);} }
   @keyframes verColArrowNudge { 0%,100%{transform:translateX(0);} 50%{transform:translateX(5px);} }
   @keyframes scrollHintBounce { 0%,100%{transform:translateY(0);} 50%{transform:translateY(6px);} }
+  @keyframes premiumTabGlow { 0%{box-shadow:0 0 0 0 rgba(255,255,255,0);} 45%{box-shadow:0 0 16px 3px rgba(255,255,255,0.35);} 100%{box-shadow:0 0 0 0 rgba(255,255,255,0);} }
   @keyframes viewIn { 0%{opacity:0;} 100%{opacity:1;} }
   @keyframes plusPremiumGlow { 0%,100%{opacity:0.75;transform:scale(1);text-shadow:0 0 0px rgba(255,255,255,0);} 50%{opacity:1;transform:scale(1.22);text-shadow:0 0 12px rgba(255,255,255,0.85),0 0 22px rgba(255,255,255,0.35);} }
   .pv { animation: viewIn 0.15s ease-out both; will-change: opacity; }
@@ -890,8 +891,22 @@ function DraggableWA(){
 // ─── NATIVE TABS ──────────────────────────────────────────────────────────────
 const NativeTabs=memo(function NativeTabs({items,active,onSelect,renderItem,height=44}:{items:string[];active:string;onSelect:(v:string)=>void;renderItem:(item:string,isActive:boolean)=>React.ReactNode;height?:number;}){
   const ref=useRef<HTMLDivElement>(null);
+  const btnRefs=useRef<Record<string,HTMLButtonElement|null>>({});
+  const[ind,setInd]=useState<{left:number;width:number;ready:boolean}>({left:0,width:0,ready:false});
+  const[pulse,setPulse]=useState(0);
   useEffect(()=>{const el=ref.current?.querySelector(`[data-active="true"]`) as HTMLElement|null;if(el)el.scrollIntoView({block:"nearest",inline:"center",behavior:"smooth"});},[active]);
-  return(<div ref={ref} className="ts" style={{display:"flex",overflowX:"auto",overflowY:"hidden",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",height,touchAction:"pan-x"}}>{items.map(item=>(<button key={item} data-active={item===active} onClick={()=>onSelect(item)} style={{background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",flexShrink:0,padding:0,display:"flex",alignItems:"center",WebkitTapHighlightColor:"transparent"}}>{renderItem(item,item===active)}</button>))}</div>);
+  useEffect(()=>{
+    const btn=btnRefs.current[active];
+    if(btn)setInd({left:btn.offsetLeft,width:btn.offsetWidth,ready:true});
+    setPulse(p=>p+1);
+  },[active,items.join("|")]);
+  return(<div ref={ref} className="ts" style={{display:"flex",overflowX:"auto",overflowY:"hidden",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",height,touchAction:"pan-x"}}>
+    <div style={{position:"relative",display:"flex"}}>
+      {ind.ready&&<div style={{position:"absolute",top:"50%",left:ind.left,width:ind.width,height:"72%",transform:"translateY(-50%)",borderRadius:8,background:"linear-gradient(135deg,rgba(255,255,255,0.14) 0%,rgba(255,255,255,0.04) 100%)",border:"1px solid rgba(255,255,255,0.22)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.25), 0 4px 14px rgba(0,0,0,0.35)",transition:"left 0.4s cubic-bezier(0.22,1,0.36,1), width 0.4s cubic-bezier(0.22,1,0.36,1)",pointerEvents:"none",zIndex:0}}/>}
+      {ind.ready&&<div key={pulse} style={{position:"absolute",top:"50%",left:ind.left,width:ind.width,height:"72%",transform:"translateY(-50%)",borderRadius:8,pointerEvents:"none",zIndex:0,animation:"premiumTabGlow 0.55s ease-out 0.3s both"}}/>}
+      {items.map(item=>(<button key={item} ref={el=>{btnRefs.current[item]=el;}} data-active={item===active} onClick={()=>onSelect(item)} style={{position:"relative",zIndex:1,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",flexShrink:0,padding:0,display:"flex",alignItems:"center",WebkitTapHighlightColor:"transparent"}}>{renderItem(item,item===active)}</button>))}
+    </div>
+  </div>);
 });
 
 // ─── PRODUCT CARD (GRID) ──────────────────────────────────────────────────────
