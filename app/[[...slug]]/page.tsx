@@ -1155,7 +1155,7 @@ const ScrollFocusSection=memo(function ScrollFocusSection({children,style}:{chil
     };
     const start=()=>{if(active.current)return;active.current=true;lastT.current=0;if(rafId.current==null)rafId.current=requestAnimationFrame(update);};
     const stop=()=>{active.current=false;if(rafId.current!=null){cancelAnimationFrame(rafId.current);rafId.current=null;}};
-    const obs=new IntersectionObserver(([entry])=>{if(entry.isIntersecting)start();else stop();},{rootMargin:"40% 0px 40% 0px",threshold:0});
+    const obs=new IntersectionObserver(([entry])=>{if(entry.isIntersecting)start();else stop();},{rootMargin:"-10% 0px -10% 0px",threshold:0});
     obs.observe(el);
     return()=>{stop();obs.disconnect();};
   },[]);
