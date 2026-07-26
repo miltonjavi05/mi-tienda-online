@@ -584,7 +584,7 @@ const GLOBAL_CSS = `
       transform-origin: center center;
       animation: hcscrollfocus linear both;
       animation-timeline: view(inline);
-      animation-range: cover 0% cover 100%;
+      animation-range: cover 8% cover 92%;
       will-change: transform;
       backface-visibility: hidden;
       -webkit-backface-visibility: hidden;
@@ -593,8 +593,7 @@ const GLOBAL_CSS = `
     }
    @keyframes hcscrollfocus {
       0%   { transform: scale3d(0.92,0.92,1) translatey(8px) translatez(0); }
-      18%  { transform: scale3d(1,1,1) translatey(0) translatez(0); }
-      82%  { transform: scale3d(1,1,1) translatey(0) translatez(0); }
+      50%  { transform: scale3d(1,1,1) translatey(0) translatez(0); }
       100% { transform: scale3d(0.92,0.92,1) translatey(8px) translatez(0); }
     }
     }
