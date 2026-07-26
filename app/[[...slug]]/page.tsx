@@ -1943,7 +1943,8 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   useEffect(()=>{
     if(typeof navigator==="undefined")return;
     const ua=navigator.userAgent;
-    setIsIOSGoogleApp(/iPhone/.test(ua)&&/GSA\//.test(ua));
+    console.log("UA DEBUG:",ua);
+    setIsIOSGoogleApp(/iPhone/i.test(ua));
   },[]);
   useEffect(()=>{
     if(!currentUser?.uid){setFavorites([]);return;}
