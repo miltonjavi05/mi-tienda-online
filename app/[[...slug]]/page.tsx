@@ -840,16 +840,40 @@ function PwdInput({value,onChange,placeholder,onKeyDown,autoComplete}:{value:str
 // ─── LAZY IMAGE ───────────────────────────────────────────────────────────────
 const LazyImg=memo(function LazyImg({src,alt,fit="cover",priority=false}:{src:string;alt:string;fit?:"cover"|"contain";priority?:boolean}){
   const[loaded,setLoaded]=useState(false);
+  const[hqSrc,setHqSrc]=useState<string|null>(null);
+  const[hqVisible,setHqVisible]=useState(false);
+  const hqRequested=useRef(false);
+  useEffect(()=>{setLoaded(false);setHqSrc(null);setHqVisible(false);hqRequested.current=false;},[src]);
+  useEffect(()=>{
+    if(!hqSrc)return;
+    const raf=requestAnimationFrame(()=>setHqVisible(true));
+    return()=>cancelAnimationFrame(raf);
+  },[hqSrc]);
+  const requestHq=useCallback(()=>{
+    if(hqRequested.current)return;
+    hqRequested.current=true;
+    const target=optImg(src,860);
+    const load=()=>{
+      const img=new window.Image();
+      img.onload=()=>setHqSrc(target);
+      img.src=target;
+    };
+    if(typeof (window as any).requestIdleCallback==="function"){
+      (window as any).requestIdleCallback(load,{timeout:1200});
+    }else{
+      setTimeout(load,150);
+    }
+  },[src]);
   return(
     <div style={{position:"relative",width:"100%",height:"100%",pointerEvents:"none"}}>
       {!loaded&&<div style={{position:"absolute",inset:0,background:"#161616"}}/>}
       <img
-        src={optImg(src,850)}
+        src={optImg(src,450)}
         alt={alt}
         loading={priority?"eager":"lazy"}
         fetchPriority={priority?"high":"auto"}
         decoding="async"
-        onLoad={()=>setLoaded(true)}
+        onLoad={()=>{setLoaded(true);requestHq();}}
         style={{
           width:"100%",height:"100%",objectFit:fit,display:"block",
           opacity:loaded?1:0,
@@ -862,10 +886,28 @@ const LazyImg=memo(function LazyImg({src,alt,fit="cover",priority=false}:{src:st
         } as React.CSSProperties}
         draggable={false}
       />
+      {hqSrc&&(
+        <img
+          src={hqSrc}
+          alt=""
+          aria-hidden="true"
+          decoding="async"
+          style={{
+            position:"absolute",inset:0,
+            width:"100%",height:"100%",objectFit:fit,display:"block",
+            opacity:hqVisible?1:0,
+            transition:"opacity 0.35s ease",
+            pointerEvents:"none",
+            userSelect:"none",
+            WebkitUserSelect:"none",
+            WebkitTouchCallout:"none",
+          } as React.CSSProperties}
+          draggable={false}
+        />
+      )}
     </div>
   );
 });
-
 function SkeletonCard(){return(<div><div style={{aspectRatio:"1",background:"#141414",marginBottom:"0.6rem",borderRadius:10,overflow:"hidden",position:"relative"}}><div style={{position:"absolute",inset:0,background:"linear-gradient(90deg,#141414 0%,#1e1e1e 50%,#141414 100%)",backgroundSize:"200% 100%",animation:"shimmer 1.4s infinite"}}/></div><div style={{height:11,background:"#141414",borderRadius:4,marginBottom:6,width:"70%"}}/><div style={{height:11,background:"#141414",borderRadius:4,width:"35%"}}/></div>);}
 
 // ─── DRAGGABLE WA BUTTON ──────────────────────────────────────────────────────
