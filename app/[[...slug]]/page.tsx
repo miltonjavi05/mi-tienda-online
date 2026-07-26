@@ -553,7 +553,7 @@ const GLOBAL_CSS = `
     .hr-arrow { display: none !important; }
   }
 
-  .pc, .hc, .cc { transition: transform 0.25s ease, border-color 0.2s ease, box-shadow 0.25s ease; }
+  .pc, .hc, .cc { transition: transform 0.18s cubic-bezier(0.22,1,0.36,1), border-color 0.15s ease, box-shadow 0.18s cubic-bezier(0.22,1,0.36,1); }
   @media(hover:hover) and (pointer:fine){
     .pc, .hc, .cc { contain: layout paint; }
   }
@@ -574,11 +574,11 @@ const GLOBAL_CSS = `
       contain: layout paint style;
     }
     @keyframes pcscrollfocus {
-      0%   { transform: scale3d(0.76,0.76,1) translatey(25px) translatez(0); opacity: 0.34; filter: brightness(0.66) saturate(0.75); }
-      14%  { transform: scale3d(0.89,0.89,1) translatey(10px) translatez(0);  opacity: 0.7; filter: brightness(0.85) saturate(0.9); }
-      50%  { transform: scale3d(1.045,1.045,1) translatey(0) translatez(0); opacity: 1;    filter: brightness(1.05) saturate(1.1); }
-      86%  { transform: scale3d(0.89,0.89,1) translatey(-10px) translatez(0); opacity: 0.7; filter: brightness(0.85) saturate(0.9); }
-      100% { transform: scale3d(0.76,0.76,1) translatey(-25px) translatez(0); opacity: 0.34; filter: brightness(0.66) saturate(0.75); }
+      0%   { transform: scale3d(0.87,0.87,1) translatey(16px) translatez(0); opacity: 0.92; filter: brightness(0.95) saturate(0.95); }
+      14%  { transform: scale3d(0.94,0.94,1) translatey(7px) translatez(0);  opacity: 0.97; filter: brightness(1) saturate(1); }
+      50%  { transform: scale3d(1.05,1.05,1) translatey(0) translatez(0); opacity: 1;    filter: brightness(1.05) saturate(1.1); }
+      86%  { transform: scale3d(0.94,0.94,1) translatey(-7px) translatez(0); opacity: 0.97; filter: brightness(1) saturate(1); }
+      100% { transform: scale3d(0.87,0.87,1) translatey(-16px) translatez(0); opacity: 0.92; filter: brightness(0.95) saturate(0.95); }
     }
     .hc-scroll-focus {
       transform-origin: center center;
@@ -592,10 +592,10 @@ const GLOBAL_CSS = `
       box-shadow: 0 14px 30px rgba(0,0,0,0.35);
     }
    @keyframes hcscrollfocus {
-      0%   { transform: scale3d(0.92,0.92,1) translatey(8px) translatez(0); }
-      50%  { transform: scale3d(1,1,1) translatey(0) translatez(0); }
-      100% { transform: scale3d(0.92,0.92,1) translatey(8px) translatez(0); }
-    }
+      0%   { transform: scale3d(0.9,0.9,1) translatey(10px) translatez(0); }
+      18%  { transform: scale3d(1,1,1) translatey(0) translatez(0); }
+      82%  { transform: scale3d(1,1,1) translatey(0) translatez(0); }
+      100% { transform: scale3d(0.9,0.9,1) translatey(10px) translatez(0); }
     }
 
   @media(hover:hover) and (pointer:fine){
@@ -625,6 +625,10 @@ const GLOBAL_CSS = `
   }
   @media(min-width:1400px){
     .shop-container { max-width: 96vw !important; }
+  }
+  @media(pointer:fine) and (min-width:900px){
+    .pg, .cg, .fg { contain: layout style; }
+    .pc-scroll-focus, .hc-scroll-focus { contain: layout paint style; }
   }
 
   /* ── home: adaptado a pantallas grandes ── */
