@@ -574,11 +574,11 @@ const GLOBAL_CSS = `
       contain: layout paint style;
     }
     @keyframes pcscrollfocus {
-      0%   { transform: scale3d(0.80,0.80,1) translatey(22px) translatez(0); opacity: 0.42; filter: brightness(0.72) saturate(0.8); }
-      14%  { transform: scale3d(0.91,0.91,1) translatey(9px) translatez(0);  opacity: 0.75; filter: brightness(0.88) saturate(0.92); }
+      0%   { transform: scale3d(0.76,0.76,1) translatey(25px) translatez(0); opacity: 0.34; filter: brightness(0.66) saturate(0.75); }
+      14%  { transform: scale3d(0.89,0.89,1) translatey(10px) translatez(0);  opacity: 0.7; filter: brightness(0.85) saturate(0.9); }
       50%  { transform: scale3d(1.045,1.045,1) translatey(0) translatez(0); opacity: 1;    filter: brightness(1.05) saturate(1.1); }
-      86%  { transform: scale3d(0.91,0.91,1) translatey(-9px) translatez(0); opacity: 0.75; filter: brightness(0.88) saturate(0.92); }
-      100% { transform: scale3d(0.80,0.80,1) translatey(-22px) translatez(0); opacity: 0.42; filter: brightness(0.72) saturate(0.8); }
+      86%  { transform: scale3d(0.89,0.89,1) translatey(-10px) translatez(0); opacity: 0.7; filter: brightness(0.85) saturate(0.9); }
+      100% { transform: scale3d(0.76,0.76,1) translatey(-25px) translatez(0); opacity: 0.34; filter: brightness(0.66) saturate(0.75); }
     }
     .hc-scroll-focus {
       transform-origin: center center;
