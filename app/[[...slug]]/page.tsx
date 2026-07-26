@@ -4032,10 +4032,10 @@ const filteredComments=useMemo(()=>{
                         if(i===1&&isLC&&isIOSGoogleApp&&prods.length>2){
                           return[card,(
                             <div key={p.id+"-hint"} style={{gridColumn:"1 / -1",display:"flex",justifyContent:"center",marginTop:"-0.3rem",marginBottom:"0.2rem"}}>
-                              <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+                              <button onClick={()=>window.scrollBy({top:260,behavior:"smooth"})} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",padding:"0.4rem 0.8rem",WebkitTapHighlightColor:"transparent"}}>
                                 <span style={{fontSize:9,fontWeight:800,letterSpacing:1,color:"#666"}}>VER MÁS MODELOS</span>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{animation:"scrollHintBounce 1.4s ease-in-out infinite"}}><polyline points="6 9 12 15 18 9"/></svg>
-                              </div>
+                              </button>
                             </div>
                           )];
                         }
