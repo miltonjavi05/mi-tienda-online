@@ -3,6 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 const PIXEL_ID    = process.env.META_PIXEL_ID    || "840893159040582";
 const ACCESS_TOKEN = process.env.META_CAPI_ACCESS_TOKEN || "";
 
+if (!ACCESS_TOKEN) {
+  console.error("META CAPI: falta META_CAPI_ACCESS_TOKEN en las variables de entorno de Vercel");
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -23,16 +27,22 @@ export async function POST(req: NextRequest) {
       }],
     };
 
+    if (body.test_event_code) {
+      (payload as any).test_event_code = body.test_event_code;
+    }
+
     const r = await fetch(
-      `https://graph.facebook.com/v25.0/${PIXEL_ID}/events?access_token=${ACCESS_TOKEN}`,
+      `https://graph.facebook.com/v21.0/${PIXEL_ID}/events?access_token=${ACCESS_TOKEN}`,
       { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }
     );
 
     const data = await r.json();
-if (!r.ok) {
-  console.error("META CAPI ERROR:", JSON.stringify(data));
-}
-return NextResponse.json(data, { status: r.ok ? 200 : 400 });
+    if (!r.ok) {
+      console.error("META CAPI ERROR:", { pixel: PIXEL_ID, hasToken: !!ACCESS_TOKEN, event: body.event_name, data });
+    } else {
+      console.log("META CAPI OK:", { pixel: PIXEL_ID, event: body.event_name, event_id: body.event_id });
+    }
+    return NextResponse.json(data, { status: r.ok ? 200 : 400 });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
