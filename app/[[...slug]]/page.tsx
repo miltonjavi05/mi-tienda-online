@@ -3666,6 +3666,7 @@ const filteredComments=useMemo(()=>{
             <input autoFocus value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} placeholder="Buscar productos…" style={{...S.input,borderRadius:8}}/>
           </div>
         )}
+        {mainView!=="fokus"&&mainView!=="comunidad"&&mainView!=="grabados"&&(
         <div style={{borderTop:"1px solid #161616",padding:"0 1rem",height:36,display:"flex",alignItems:"center",justifyContent:"space-between",gap:"0.5rem"}}>
           <div style={{display:"flex",alignItems:"center",gap:6}}>
             <span style={{width:6,height:6,borderRadius:"50%",background:rateLoading?"#555":bcvRate?"#4caf50":"#555",flexShrink:0}}/>
@@ -3680,6 +3681,7 @@ const filteredComments=useMemo(()=>{
             {showBs?"VER EN USD ↕":"VER EN BS ↕"}
           </button>
         </div>
+        )}
       </nav>
 
       {/* MENÚ LATERAL */}
