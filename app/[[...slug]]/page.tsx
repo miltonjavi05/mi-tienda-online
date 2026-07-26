@@ -199,9 +199,16 @@ function getCookie(name: string): string {
 function getFbcFromUrl(): string {
   if (typeof window === "undefined") return "";
   const match = window.location.search.match(/[?&]fbclid=([^&]+)/);
-  if (!match) return "";
-  const fbclid = match[1];
-  return `fb.1.${Date.now()}.${fbclid}`;
+  if (match) {
+    const fbc = `fb.1.${Date.now()}.${match[1]}`;
+    try { localStorage.setItem("fokus_fbc", fbc); } catch { /* silent */ }
+    return fbc;
+  }
+  try {
+    const stored = localStorage.getItem("fokus_fbc");
+    if (stored) return stored;
+  } catch { /* silent */ }
+  return "";
 }
 async function trackViewContent(product: Product, userEmail?: string): Promise<void> {
   const eventId = genEventId();
