@@ -4017,7 +4017,7 @@ const filteredComments=useMemo(()=>{
                     </div>
                     <div className="pg" style={{display:"grid",gap:"1rem",alignItems:"start"}}>
                       {prods.map((p,i)=>(
-                        <div key={p.id} style={(i===2||i===3)?{marginTop:-28}:undefined}>
+                        <div key={p.id} style={(i===2||i===3)?{marginTop:-38}:undefined}>
                           <ProductCard product={p} index={i} onClick={()=>openProd(p)} onBuyNow={()=>openProd(p)} fmtPrice={fmtPrice}/>
                         </div>
                       ))}
