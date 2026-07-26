@@ -434,7 +434,7 @@ const DEMO:Product[]=[
   {id:"d11",name:"Billetera Cuero",category:"BILLETERAS",price:30,img:"https://images.unsplash.com/photo-1627123424574-724758594e93?w=400&q=80",order:10},
 ];
 
-const NAV_H=56,TABS_H=34;
+const NAV_H=56,TABS_H=30;
 const C={bg:"#080808",border:"#1e1e1e",text:"#ececec",accent:"#fff"};
 const S={
   iconBtn:{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:8,WebkitTapHighlightColor:"transparent"} as React.CSSProperties,
@@ -894,20 +894,31 @@ const NativeTabs=memo(function NativeTabs({items,active,onSelect,renderItem,heig
   const btnRefs=useRef<Record<string,HTMLButtonElement|null>>({});
   const pillRef=useRef<HTMLDivElement>(null);
   const glowRef=useRef<HTMLDivElement>(null);
+  const mountedOnce=useRef(false);
   const[pulse,setPulse]=useState(0);
   useEffect(()=>{const el=ref.current?.querySelector(`[data-active="true"]`) as HTMLElement|null;if(el)el.scrollIntoView({block:"nearest",inline:"center",behavior:"smooth"});},[active]);
   useEffect(()=>{
     const btn=btnRefs.current[active];
     if(!btn)return;
     const left=btn.offsetLeft,width=btn.offsetWidth;
-    if(pillRef.current){pillRef.current.style.left=`${left}px`;pillRef.current.style.width=`${width}px`;}
+    const isFirst=!mountedOnce.current;
+    if(pillRef.current){
+      if(isFirst)pillRef.current.style.transition="none";
+      pillRef.current.style.left=`${left}px`;
+      pillRef.current.style.width=`${width}px`;
+      if(isFirst){
+        void pillRef.current.offsetWidth;
+        pillRef.current.style.transition="left 0.22s cubic-bezier(0.22,1,0.36,1), width 0.22s cubic-bezier(0.22,1,0.36,1)";
+      }
+    }
     if(glowRef.current){glowRef.current.style.left=`${left}px`;glowRef.current.style.width=`${width}px`;}
-    setPulse(p=>p+1);
+    if(!isFirst)setPulse(p=>p+1);
+    mountedOnce.current=true;
   },[active,items.join("|")]);
   return(<div ref={ref} className="ts" style={{display:"flex",overflowX:"auto",overflowY:"hidden",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",height,touchAction:"pan-x"}}>
     <div style={{position:"relative",display:"flex"}}>
-      <div ref={pillRef} style={{position:"absolute",top:0,left:0,width:0,height:"100%",borderRadius:8,background:"linear-gradient(135deg,rgba(255,255,255,0.14) 0%,rgba(255,255,255,0.04) 100%)",border:"1px solid rgba(255,255,255,0.22)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.25), 0 4px 14px rgba(0,0,0,0.35)",pointerEvents:"none",zIndex:0,willChange:"left,width",transition:"left 0.26s cubic-bezier(0.22,1,0.36,1), width 0.26s cubic-bezier(0.22,1,0.36,1)"}}/>
-      <div ref={glowRef} key={pulse} style={{position:"absolute",top:0,left:0,width:0,height:"100%",borderRadius:8,pointerEvents:"none",zIndex:0,animation:"premiumTabGlow 0.55s ease-out 0.3s both",transition:"left 0.26s cubic-bezier(0.22,1,0.36,1), width 0.26s cubic-bezier(0.22,1,0.36,1)"}}/>
+      <div ref={pillRef} style={{position:"absolute",top:0,left:0,width:0,height:"100%",borderRadius:8,background:"linear-gradient(135deg,rgba(255,255,255,0.14) 0%,rgba(255,255,255,0.04) 100%)",border:"1px solid rgba(255,255,255,0.22)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.25), 0 4px 14px rgba(0,0,0,0.35)",pointerEvents:"none",zIndex:0,willChange:"left,width"}}/>
+      <div ref={glowRef} key={pulse} style={{position:"absolute",top:0,left:0,width:0,height:"100%",borderRadius:8,pointerEvents:"none",zIndex:0,animation:pulse>0?"premiumTabGlow 0.55s ease-out 0.2s both":"none",transition:"left 0.22s cubic-bezier(0.22,1,0.36,1), width 0.22s cubic-bezier(0.22,1,0.36,1)"}}/>
       {items.map(item=>(<button key={item} ref={el=>{btnRefs.current[item]=el;}} data-active={item===active} onClick={()=>onSelect(item)} style={{position:"relative",zIndex:1,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",flexShrink:0,padding:0,display:"flex",alignItems:"center",WebkitTapHighlightColor:"transparent"}}>{renderItem(item,item===active)}</button>))}
     </div>
   </div>);
@@ -3887,8 +3898,8 @@ const filteredComments=useMemo(()=>{
               items={["TODO","LENTES",...(SHOP_CATS.filter(c=>c!=="LENTES") as string[])]}
               active={shopFilter==="TODO"?"TODO":isLentesActive?"LENTES":(SHOP_CATS.filter(c=>c!=="LENTES") as string[]).includes(shopFilter)?shopFilter:"TODO"}
               onSelect={item=>{if(item==="LENTES"){const n=!lentesOpen;setLentesOpen(n);if(n)setShopFilter("LENTES");}else{setShopFilter(item as ShopFilter);setLentesOpen(false);}scrollTop();}}
-              height={36}
-              renderItem={(item,_)=>{const a=item==="TODO"?shopFilter==="TODO":item==="LENTES"?isLentesActive:shopFilter===item;return(<span className="nb" style={{display:"flex",alignItems:"center",gap:4,padding:"0 1rem",height:36,borderBottom:"2px solid transparent",fontSize:10,fontWeight:800,letterSpacing:2,color:a?"#fff":"#3e3e3e",whiteSpace:"nowrap",transition:"color 0.15s"}}>{item}{item==="LENTES"&&<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{transition:"transform 0.2s",transform:lentesOpen?"rotate(180deg)":"rotate(0deg)"}}><polyline points="6 9 12 15 18 9"/></svg>}</span>);}}
+              height={32}
+              renderItem={(item,_)=>{const a=item==="TODO"?shopFilter==="TODO":item==="LENTES"?isLentesActive:shopFilter===item;return(<span className="nb" style={{display:"flex",alignItems:"center",gap:4,padding:"0 0.9rem",height:32,borderBottom:"2px solid transparent",fontSize:10,fontWeight:800,letterSpacing:2,color:a?"#fff":"#3e3e3e",whiteSpace:"nowrap",transition:"color 0.15s"}}>{item}{item==="LENTES"&&<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{transition:"transform 0.2s",transform:lentesOpen?"rotate(180deg)":"rotate(0deg)"}}><polyline points="6 9 12 15 18 9"/></svg>}</span>);}}
             />
             {lentesOpen&&(
               <div className="ts" style={{background:"#0a0a0a",borderTop:"1px solid #1a1a1a",padding:"0.55rem 1rem",display:"flex",gap:"0.45rem",overflowX:"auto",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",touchAction:"pan-x"}}>
