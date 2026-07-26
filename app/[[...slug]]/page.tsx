@@ -592,10 +592,10 @@ const GLOBAL_CSS = `
       box-shadow: 0 14px 30px rgba(0,0,0,0.35);
     }
    @keyframes hcscrollfocus {
-      0%   { transform: scale3d(0.92,0.92,1) translatey(8px) translatez(0); }
+      0%   { transform: scale3d(0.86,0.86,1) translatey(12px) translatez(0); }
       18%  { transform: scale3d(1,1,1) translatey(0) translatez(0); }
       82%  { transform: scale3d(1,1,1) translatey(0) translatez(0); }
-      100% { transform: scale3d(0.92,0.92,1) translatey(8px) translatez(0); }
+      100% { transform: scale3d(0.86,0.86,1) translatey(12px) translatez(0); }
     }
 
   @media(hover:hover) and (pointer:fine){
@@ -870,7 +870,6 @@ const LazyImg=memo(function LazyImg({src,alt,fit="cover",priority=false}:{src:st
   },[src]);
   return(
     <div style={{position:"relative",width:"100%",height:"100%",pointerEvents:"none"}}>
-      {!loaded&&<div style={{position:"absolute",inset:0,background:"#161616"}}/>}
       <img
         src={optImg(src,450)}
         alt={alt}
@@ -1180,23 +1179,15 @@ const ScrollFocusSection=memo(function ScrollFocusSection({children,style}:{chil
       const centerDelta=(rect.top+rect.height/2)-vh/2;
       const maxDelta=vh/2+rect.height/2;
       const progress=1-Math.min(1,Math.abs(centerDelta)/Math.max(1,maxDelta));
-      const targetScale=0.96+progress*0.04;
-      const targetOpacity=0.4+progress*0.6;
-      const targetBlur=(1-progress)*4;
-      const targetTy=Math.max(-24,Math.min(24,(centerDelta/Math.max(1,maxDelta))*24));
+      const targetScale=0.92+progress*0.08;
+      const targetTy=Math.max(-34,Math.min(34,(centerDelta/Math.max(1,maxDelta))*34));
       const TAU=55;
       const smooth=1-Math.exp(-dt/TAU);
       cur.current.ty+=(targetTy-cur.current.ty)*smooth;
       cur.current.scale+=(targetScale-cur.current.scale)*smooth;
-      cur.current.opacity+=(targetOpacity-cur.current.opacity)*smooth;
-      cur.current.blur+=(targetBlur-cur.current.blur)*smooth;
       if(Math.abs(targetTy-cur.current.ty)<0.05)cur.current.ty=targetTy;
       if(Math.abs(targetScale-cur.current.scale)<0.0005)cur.current.scale=targetScale;
-      if(Math.abs(targetOpacity-cur.current.opacity)<0.003)cur.current.opacity=targetOpacity;
-      if(Math.abs(targetBlur-cur.current.blur)<0.02)cur.current.blur=targetBlur;
       el.style.transform=`translate3d(0,${cur.current.ty.toFixed(2)}px,0) scale(${cur.current.scale.toFixed(4)})`;
-      el.style.opacity=String(cur.current.opacity.toFixed(3));
-      el.style.filter=`blur(${cur.current.blur.toFixed(2)}px)`;
       rafId.current=requestAnimationFrame(update);
     };
     const start=()=>{if(active.current)return;active.current=true;lastT.current=0;if(rafId.current==null)rafId.current=requestAnimationFrame(update);};
