@@ -593,8 +593,8 @@ const GLOBAL_CSS = `
     }
    @keyframes hcscrollfocus {
       0%   { transform: scale3d(0.92,0.92,1) translatey(8px) translatez(0); }
-      30%  { transform: scale3d(1,1,1) translatey(0) translatez(0); }
-      70%  { transform: scale3d(1,1,1) translatey(0) translatez(0); }
+      18%  { transform: scale3d(1,1,1) translatey(0) translatez(0); }
+      82%  { transform: scale3d(1,1,1) translatey(0) translatez(0); }
       100% { transform: scale3d(0.92,0.92,1) translatey(8px) translatez(0); }
     }
     }
