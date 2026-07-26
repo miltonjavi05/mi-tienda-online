@@ -369,7 +369,7 @@ function loadXLSXLib():Promise<any>{
     document.head.appendChild(script);
   });
 }
-function optImg(url:string,w=400):string{if(!url||!url.includes("cloudinary.com"))return url;return url.replace("/upload/",`/upload/w_${w},q_auto,f_webp,dpr_auto/`);}
+function optImg(url:string,w=400):string{if(!url||!url.includes("cloudinary.com"))return url;return url.replace("/upload/",`/upload/w_${w},q_auto:good,f_webp,dpr_auto/`);}
 function getAllImages(p:Product):string[]{const extra=(p.images||[]).filter(u=>u&&u!==p.img);return[p.img,...extra].filter(Boolean);}
 function getFinalPrice(p:Product):number{if(p.discount&&p.discount>0)return p.price*(1-p.discount/100);return p.price;}
 const units_sold_tiers=[6,9,12,15,18,22,27,31,36,42,48,55,63,71,80,89,99,110,122,135,149,164,180,197,215,234,254,275,297,320,344,369,395,422,450,479,509,540,572,605,639,674,710,747,785,824,864,905];
