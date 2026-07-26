@@ -1939,6 +1939,12 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   useEffect(()=>{if(typeof window!=="undefined"&&"scrollRestoration" in window.history)window.history.scrollRestoration="manual";},[]);
   const[navMounted,setNavMounted]=useState(false);
   useEffect(()=>{const t=setTimeout(()=>setNavMounted(true),650);return()=>clearTimeout(t);},[]);
+  const[isIOSGoogleApp,setIsIOSGoogleApp]=useState(false);
+  useEffect(()=>{
+    if(typeof navigator==="undefined")return;
+    const ua=navigator.userAgent;
+    setIsIOSGoogleApp(/iPhone/.test(ua)&&/GSA\//.test(ua));
+  },[]);
   useEffect(()=>{
     if(!currentUser?.uid){setFavorites([]);return;}
     fsGetUser(currentUser.uid).then(d=>setFavorites(d.favorites||[])).catch(()=>{});
@@ -4016,11 +4022,24 @@ const filteredComments=useMemo(()=>{
                       <button onClick={()=>{setShopFilter(cat as ShopFilter);setLentesOpen(isLC);scrollTop();}} style={{background:"none",border:"none",fontSize:10,color:"#333",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent",letterSpacing:1,fontWeight:700}}>VER TODOS</button>
                     </div>
                     <div className="pg" style={{display:"grid",gap:"1rem",alignItems:"start"}}>
-                      {prods.map((p,i)=>(
-                        <div key={p.id} style={(i===2||i===3)?{marginTop:-38}:undefined}>
-                          <ProductCard product={p} index={i} onClick={()=>openProd(p)} onBuyNow={()=>openProd(p)} fmtPrice={fmtPrice}/>
-                        </div>
-                      ))}
+                      {prods.flatMap((p,i)=>{
+                        const card=(
+                          <div key={p.id} style={(i===2||i===3)?{marginTop:-38}:undefined}>
+                            <ProductCard product={p} index={i} onClick={()=>openProd(p)} onBuyNow={()=>openProd(p)} fmtPrice={fmtPrice}/>
+                          </div>
+                        );
+                        if(i===1&&isLC&&isIOSGoogleApp&&prods.length>2){
+                          return[card,(
+                            <div key={p.id+"-hint"} style={{gridColumn:"1 / -1",display:"flex",justifyContent:"center",marginTop:"-0.3rem",marginBottom:"0.2rem"}}>
+                              <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+                                <span style={{fontSize:9,fontWeight:800,letterSpacing:1,color:"#666"}}>VER MÁS MODELOS</span>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{animation:"scrollHintBounce 1.4s ease-in-out infinite"}}><polyline points="6 9 12 15 18 9"/></svg>
+                              </div>
+                            </div>
+                          )];
+                        }
+                        return[card];
+                      })}
                     </div>
                   </div>
                 );
