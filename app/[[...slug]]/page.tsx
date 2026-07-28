@@ -206,7 +206,11 @@ function getFbcFromUrl(): string {
   }
   try {
     const stored = localStorage.getItem("fokus_fbc");
-    if (stored) return stored;
+    if (stored) {
+      const ts = Number(stored.split(".")[2]) || 0;
+      if (Date.now() - ts < 7 * 24 * 60 * 60 * 1000) return stored;
+      localStorage.removeItem("fokus_fbc");
+    }
   } catch { /* silent */ }
   return "";
 }
