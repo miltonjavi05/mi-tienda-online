@@ -265,10 +265,12 @@ async function trackLeadWhatsApp(
   const eventId = genEventId();
   const rawValue = extra?.value;
   const hasRealValue = typeof rawValue === "number" && isFinite(rawValue) && rawValue > 0;
-   const payload = {
+  const estimatedValue = hasRealValue ? (rawValue as number) : 15; // [Suposición] ajusta al ticket promedio real de Fokus
+  const payload = {
     content_name: extra?.content_name || source,
     content_category: "whatsapp_click",
-    ...(hasRealValue ? { value: parseFloat((rawValue as number).toFixed(2)), currency: "USD" } : {}),
+    value: parseFloat(estimatedValue.toFixed(2)),
+    currency: "USD",
     ...(extra?.content_ids ? { content_ids: extra.content_ids, content_type: "product" } : {}),
   };  fbqTrack("Lead", payload, { eventID: eventId });
   await sendCAPI("Lead", eventId, payload);

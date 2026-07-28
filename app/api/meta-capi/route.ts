@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
         event_name:       body.event_name,
         event_id:         body.event_id,
         event_time:       body.event_time || Math.floor(Date.now() / 1000),
-        event_source_url: body.event_source_url || "",
+        ...(body.event_source_url ? { event_source_url: body.event_source_url } : {}),
         action_source:    body.action_source || "website",
         user_data: {
           ...body.user_data,
