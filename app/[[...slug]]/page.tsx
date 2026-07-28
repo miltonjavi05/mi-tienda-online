@@ -1974,6 +1974,20 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
     console.log("UA DEBUG:",ua);
     setIsIOSGoogleApp(/iPhone/i.test(ua));
   },[]);
+  const[isInAppBrowser,setIsInAppBrowser]=useState(false);
+  const[iabDismissed,setIabDismissed]=useState(false);
+  useEffect(()=>{
+    if(typeof navigator==="undefined")return;
+    const ua=navigator.userAgent;
+    if(/FBAN|FBAV|Instagram/i.test(ua)){
+      setIsInAppBrowser(true);
+      try{if(sessionStorage.getItem("fokus_iab_dismissed")==="1")setIabDismissed(true);}catch{}
+    }
+  },[]);
+  const dismissIabBanner=useCallback(()=>{
+    setIabDismissed(true);
+    try{sessionStorage.setItem("fokus_iab_dismissed","1");}catch{}
+  },[]);
   useEffect(()=>{
     if(!currentUser?.uid){setFavorites([]);return;}
     fsGetUser(currentUser.uid).then(d=>setFavorites(d.favorites||[])).catch(()=>{});
@@ -3775,6 +3789,13 @@ const filteredComments=useMemo(()=>{
 
       {/* NAVBAR */}
       <nav ref={navRef} style={{position:"fixed",top:0,left:0,right:0,zIndex:200,background:"rgba(8,8,8,0.96)",borderBottom:"1px solid #161616",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)"}}>
+        {isInAppBrowser&&!iabDismissed&&(
+          <div style={{background:"linear-gradient(135deg,#1a1608 0%,#141410 100%)",borderBottom:"1px solid #3a2f10",padding:"0.5rem 1rem",display:"flex",alignItems:"center",gap:"0.6rem"}}>
+            <span style={{fontSize:14,flexShrink:0}}>⚠️</span>
+            <p style={{margin:0,flex:1,fontSize:11,color:"#ffd43b",lineHeight:1.4,fontWeight:600}}>Para una mejor experiencia toca <strong>⋯</strong> arriba y elige <strong>"Abrir en el navegador"</strong></p>
+            <button onClick={dismissIabBanner} aria-label="Cerrar aviso" style={{background:"none",border:"none",color:"#ffd43b",cursor:"pointer",fontSize:13,padding:4,flexShrink:0,WebkitTapHighlightColor:"transparent"}}>✕</button>
+          </div>
+        )}
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 1rem",height:NAV_H,position:"relative"}}>
           <button onClick={()=>setMenuOpen(true)} style={S.iconBtn} aria-label="Menú">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><line x1="3" y1="7" x2="21" y2="7"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="17" x2="21" y2="17"/></svg>
