@@ -174,6 +174,8 @@ async function sendCAPI(eventName: string, eventId: string, data: { value?: numb
       userData?.phone ? sha256(userData.phone) : Promise.resolve(""),
       userData?.state ? sha256(normalizeState(userData.state)) : Promise.resolve(""),
     ]);
+    const fbpVal = getCookie("_fbp");
+    const fbcVal = getCookie("_fbc") || getFbcFromUrl();
     const payload = {
       event_name: eventName, event_id: eventId,
       event_time: Math.floor(Date.now() / 1000),
@@ -184,9 +186,10 @@ async function sendCAPI(eventName: string, eventId: string, data: { value?: numb
         ...(hashedPhone && { ph: hashedPhone }),
         ...(hashedState && { st: hashedState }),
         client_user_agent: typeof navigator !== "undefined" ? navigator.userAgent : "",
-        fbp: getCookie("_fbp"), fbc: getCookie("_fbc") || getFbcFromUrl(),
+        ...(fbpVal && { fbp: fbpVal }),
+        ...(fbcVal && { fbc: fbcVal }),
       },
-      custom_data: { ...data, currency: data.currency || "USD" },
+      custom_data: data.value !== undefined ? { ...data, currency: data.currency || "USD" } : { ...data },
     };
     await fetch("/api/meta-capi", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), keepalive: true });
   } catch { /* silent */ }
@@ -198,12 +201,6 @@ function getCookie(name: string): string {
 }
 function getFbcFromUrl(): string {
   if (typeof window === "undefined") return "";
-  const match = window.location.search.match(/[?&]fbclid=([^&]+)/);
-  if (match) {
-    const fbc = `fb.1.${Date.now()}.${match[1]}`;
-    try { localStorage.setItem("fokus_fbc", fbc); } catch { /* silent */ }
-    return fbc;
-  }
   try {
     const stored = localStorage.getItem("fokus_fbc");
     if (stored) {
@@ -212,6 +209,12 @@ function getFbcFromUrl(): string {
       localStorage.removeItem("fokus_fbc");
     }
   } catch { /* silent */ }
+  const match = window.location.search.match(/[?&]fbclid=([^&]+)/);
+  if (match) {
+    const fbc = `fb.1.${Date.now()}.${match[1]}`;
+    try { localStorage.setItem("fokus_fbc", fbc); } catch { /* silent */ }
+    return fbc;
+  }
   return "";
 }
 async function trackViewContent(product: Product, userEmail?: string): Promise<void> {
@@ -260,15 +263,16 @@ async function trackLeadWhatsApp(
   extra?: { value?: number; content_ids?: string[]; content_name?: string }
 ): Promise<void> {
   const eventId = genEventId();
+  const rawValue = extra?.value;
+  const hasRealValue = typeof rawValue === "number" && isFinite(rawValue) && rawValue > 0;
    const payload = {
     content_name: extra?.content_name || source,
     content_category: "whatsapp_click",
-    value: parseFloat((extra?.value ?? 1).toFixed(2)),
-    currency: "USD",
+    ...(hasRealValue ? { value: parseFloat((rawValue as number).toFixed(2)), currency: "USD" } : {}),
     ...(extra?.content_ids ? { content_ids: extra.content_ids, content_type: "product" } : {}),
   };  fbqTrack("Lead", payload, { eventID: eventId });
   await sendCAPI("Lead", eventId, payload);
-  fsAddToCollection("leads", { source, value: payload.value, createdAt: Date.now() }).catch(() => {});
+  fsAddToCollection("leads", { source, value: hasRealValue ? rawValue : 0, createdAt: Date.now() }).catch(() => {});
 }
 function trackProductInterest(productId:string,productName:string,category:string,type:"view"|"cart"):void{
   fsAddToCollection("product_interest",{productId,productName,category,type,createdAt:Date.now()}).catch(()=>{});
@@ -1956,7 +1960,7 @@ const[deliveryInfo,setDeliveryInfo]=useState<DeliveryInfo>({zone:"",nombre:"",ce
   const[navH,setNavH]=useState(NAV_H+TABS_H+36);
   useEffect(()=>{const upd=()=>{if(navRef.current)setNavH(navRef.current.offsetHeight);};upd();const ro=new ResizeObserver(upd);if(navRef.current)ro.observe(navRef.current);return()=>ro.disconnect();},[mainView,lentesOpen,searchOpen]);
 
- useEffect(()=>{initMetaPixel();},[]);
+ useEffect(()=>{initMetaPixel();getFbcFromUrl();},[]);
   useEffect(()=>{if(currentUser)initMetaPixel(currentUser.email);},[currentUser?.email]);
   useEffect(()=>{if(typeof window!=="undefined"&&"scrollRestoration" in window.history)window.history.scrollRestoration="manual";},[]);
   const[navMounted,setNavMounted]=useState(false);
