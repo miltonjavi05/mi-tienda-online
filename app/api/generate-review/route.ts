@@ -9,7 +9,7 @@ const GROQ_API_KEYS = [
   process.env.GROQ_API_KEY_6 || "",
   process.env.GROQ_API_KEY_7 || "",
 ].filter(Boolean);
-const GROQ_MODEL = "llama-3.3-70b-versatile";
+const GROQ_MODEL = "openai/gpt-oss-120b";
 
 const SAMPLE_REVIEW_NAMES = [
   "Jose Arturo", "Anderson Jose", "Maria Carrillo", "Luis Gamarra", "Arturo Jose",
