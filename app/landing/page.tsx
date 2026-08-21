@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, createContext, useContext } from "react";
 
 const WHATSAPP_NUMBER = "584243005733";
 const PRODUCT = { name: "Lentes Anti Luz Azul Premium", price: 28, offerPrice: 19.9 };
+const LeadModalContext = createContext<(source: string) => void>(() => {});
 
 // ─── ESTILOS GLOBALES ───────────────────────────────────────────────────
 const GlobalStyles = () => (
@@ -193,12 +194,13 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 
 // ─── CTA BUTTON ──────────────────────────────────────────────────────────
 function CTAButton({ source, big = false, compact = false, label = "QUIERO LOS MÍOS AHORA", white = false }: { source: string; big?: boolean; compact?: boolean; label?: string; white?: boolean }) {
+  const openLead = useContext(LeadModalContext);
   const handleClick = useCallback(() => {
     if (typeof window !== "undefined" && (window as any).fbq) {
       (window as any).fbq("trackCustom", "AdquirirLentesAviador", { content_name: PRODUCT.name, value: PRODUCT.offerPrice, currency: "USD", source });
     }
-    window.dispatchEvent(new CustomEvent("fokus:open-lead", { detail: { source } }));
-  }, [source]);
+    openLead(source);
+  }, [source, openLead]);
 
   if (white) {
     return (
@@ -295,11 +297,7 @@ export default function LandingLentesAviador() {
   const [leadSource, setLeadSource] = useState("hero");
   useReveal();
 
-  useEffect(() => {
-    const handler = (e: any) => { setLeadSource(e.detail?.source || "hero"); setLeadOpen(true); };
-    window.addEventListener("fokus:open-lead", handler);
-    return () => window.removeEventListener("fokus:open-lead", handler);
-  }, []);
+  const openLead = useCallback((source: string) => { setLeadSource(source); setLeadOpen(true); }, []);
 
   // Parallax lentes
   useEffect(() => {
@@ -326,6 +324,7 @@ export default function LandingLentesAviador() {
   }, []);
 
   return (
+    <LeadModalContext.Provider value={openLead}>
     <div style={{ fontFamily:"'Helvetica Neue',Arial,sans-serif",background:"#050505",minHeight:"100vh",color:"#fff",overflowX:"hidden",position:"relative" }}>
       <GlobalStyles />
       <ParticlesBg />
@@ -573,5 +572,6 @@ export default function LandingLentesAviador() {
 
       <SocialToast />
     </div>
+    </LeadModalContext.Provider>
   );
 }
