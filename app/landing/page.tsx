@@ -65,7 +65,7 @@ const PRODUCT = {
 const PRODUCT_IMAGES = {
   hero: "/landing/lentes-aviador/frontal.jpg",
   gallery: [
-    { src: "/landing/lentes-aviador/beauty-2.jpg", caption: "Armazón en acero inoxidable premium — un accesorio que se ve tan bien como protege" },
+    { src: "/landing/lentes-aviador/beauty-2.jpg", caption: "Acero inoxidable combinado con acetato técnico — un accesorio que se ve tan bien como protege" },
     { src: "/landing/lentes-aviador/bisagra.jpg", caption: "Bisagras reforzadas de alta duración, listas para el uso diario frente al PC" },
     { src: "/landing/lentes-aviador/puente.jpg", caption: "Puente doble ajustable: se adapta a cualquier tipo de rostro sin apretar" },
     { src: "/landing/lentes-aviador/charm.jpg", caption: "Detalles grabados a mano — acabado de joyería, no de bisutería genérica" },
@@ -440,8 +440,8 @@ export default function LandingLentesAviador() {
     { q: "¿Cómo pago?", a: "Aceptamos Pago Móvil (Banco de Venezuela y Bancamiga), Binance Pay y Zinli. Tú eliges el método que prefieras al finalizar por WhatsApp." },
     { q: "¿Cuánto tarda el envío y a dónde llega?", a: "Enviamos a los 23 estados de Venezuela mediante MRW, Zoom y Tealca. Con MRW el tiempo de entrega es de 1 a 2 días hábiles. Si estás en Naguanagua el envío es gratis; en Valencia tiene un costo fijo de $3." },
     { q: "¿De verdad filtran la luz azul de las pantallas?", a: "Sí, el cristal cuenta con filtro real de luz azul, no es solo un lente con tinte decorativo — ayuda a reducir el cansancio y el ardor en los ojos tras horas de PC, laptop o celular." },
-    { q: "¿De qué material están hechos? ¿Se van a poner feos rápido?", a: "Armazón en acero inoxidable premium combinado con acetato técnico de alta resistencia, con acabado grabado a mano. Aguanta la oxidación, el sudor y los golpes del uso diario — nada de aleaciones baratas que se despintan con el tiempo." },
-    { q: "¿Sirven para colocarles mi fórmula (graduación)?", a: "Sí. El armazón está preparado tanto para mandar a montar tu fórmula en cualquier óptica, como para usarlos tal cual en tu día a día frente a la pantalla — dos usos en un solo accesorio." },
+    { q: "¿De qué material están hechos? ¿Se van a poner feos rápido?", a: "Acero inoxidable premium combinado con acetato técnico de alta resistencia, con acabado grabado a mano. Aguanta la oxidación, el sudor y los golpes del uso diario — nada de aleaciones baratas que se despintan con el tiempo." },
+    { q: "¿Sirven para colocarles mi fórmula (graduación)?", a: "Sí. El diseño está preparado tanto para mandar a montar tu fórmula en cualquier óptica, como para usarlos tal cual en tu día a día frente a la pantalla — dos usos en un solo accesorio." },
     { q: "¿Por qué están en oferta, tienen algo malo?", a: `No — es una promoción por tiempo limitado, ${PRODUCT.discountPercent}% de descuento sobre el precio normal de $${PRODUCT.price}. Es exactamente el mismo producto premium, solo que hoy cuesta menos.` },
   ]), []);
 
@@ -554,7 +554,7 @@ export default function LandingLentesAviador() {
           </RevealUp>
           <div className="benefits-grid" style={{ display: "grid", gap: "1rem" }}>
             {[
-              { icon: <IcGem s={20} />, t: "Acero inoxidable y acetato técnico", d: "Materiales de altísima resistencia: acero inoxidable premium y acetato técnico reforzado. No se oxida, no se despinta y aguanta el uso diario sin perder su brillo." },
+              { icon: <IcGem s={20} />, t: "Acero inoxidable con acetato técnico", d: "Combinación de altísima resistencia: acero inoxidable premium y acetato técnico reforzado. No se oxida, no se despinta y aguanta el uso diario sin perder su brillo." },
               { icon: <IcSun s={20} />, t: "Filtro real de luz azul", d: "Reduce la fatiga visual y el ardor en los ojos tras horas de PC, laptop o celular — no es solo un cristal con tinte." },
               { icon: <IcCheck s={20} c="#fff" />, t: "Ajuste cómodo todo el día", d: "Puente doble y puntas acolchadas — se te olvida que los llevas puestos." },
               { icon: <IcTruck s={20} />, t: "Envío a toda Venezuela", d: "Con MRW llegan en 1 a 2 días hábiles; también trabajamos con Zoom y Tealca a los 23 estados del país." },
