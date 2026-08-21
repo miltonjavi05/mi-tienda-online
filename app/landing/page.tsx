@@ -67,8 +67,8 @@ const PRODUCT_IMAGES = {
   gallery: [
     { src: "/landing/lentes-aviador/beauty-2.jpg", caption: "Armazón en acero inoxidable premium — un accesorio que se ve tan bien como protege" },
     { src: "/landing/lentes-aviador/bisagra.jpg", caption: "Bisagras reforzadas de alta duración, listas para el uso diario frente al PC" },
-    { src: "/landing/lentes-a/landing/lentes-aviador/nti-luz-azul/puente.jpg", caption: "Puente doble ajustable: se adapta a cualquier tipo de rostro sin apretar" },
-    { src: "/landing/lentes/landing/lentes-aviador/-anti-luz-azul/charm.jpg", caption: "Detalles grabados a mano — acabado de joyería, no de bisutería genérica" },
+    { src: "/landing/lentes-aviador/puente.jpg", caption: "Puente doble ajustable: se adapta a cualquier tipo de rostro sin apretar" },
+    { src: "/landing/lentes-aviador/charm.jpg", caption: "Detalles grabados a mano — acabado de joyería, no de bisutería genérica" },
     { src: "/landing/lentes-aviador/detalle-1.jpg", caption: "Puntas acolchadas para jornadas largas de estudio o trabajo, sin molestar" },
     { src: "/landing/lentes-aviador/lifestyle-2.jpg", caption: "Diseño premium pensado para quien vive conectado a la pantalla" },
   ],
@@ -795,7 +795,7 @@ function ReviewsSection() {
   const [done, setDone] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { fetchLandingReviews().then(list => { setReviews(list); }); }, []);
+  useEffect(() => { fetchLandingReviews().then(list => { setReviews(list.length ? list : SEED_REVIEWS); }); }, []);
 
   const avg = reviews.length ? reviews.reduce((s, r) => s + r.stars, 0) / reviews.length : 5;
 
