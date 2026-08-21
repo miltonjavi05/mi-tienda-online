@@ -279,9 +279,10 @@ const FAQS = [
   { q: "¿Cómo pago?", a: "Aceptamos Pago Móvil (Banco de Venezuela y Bancamiga), Binance Pay y Zinli. Tú eliges al finalizar por WhatsApp." },
   { q: "¿Cuánto tarda el envío?", a: "Enviamos a los 23 estados de Venezuela mediante MRW, Zoom y Tealca. Con MRW el tiempo de entrega es de 1 a 2 días hábiles." },
   { q: "¿De verdad filtran la luz azul?", a: "Sí, el cristal cuenta con filtro real de luz azul, no es solo un lente con tinte decorativo." },
-  { q: "¿Sirven para mi fórmula (graduación)?", a: "Sí. El diseño está preparado tanto para mandar a montar tu fórmula en cualquier óptica, como para usarlos tal cual en tu día a día frente a la pantalla." },
+ { q: "¿Sirven para mi fórmula (graduación)?", a: "Sí. El diseño está preparado tanto para mandar a montar tu fórmula en cualquier óptica, como para usarlos tal cual en tu día a día frente a la pantalla." },
+  { q: "¿Me van a quedar bien? No sé si es mi estilo", a: "El diseño aviador con puente doble se adapta a la mayoría de los rostros, y el acabado mate es discreto — no es un lente 'llamativo', es un lente que se nota por calidad, no por exceso." },
+  { q: "¿No se ven muy formales / muy casuales?", a: "Justo por eso funcionan: van igual de bien con una reunión que con una salida de fin de semana. Es la pieza que no tienes que pensar dos veces antes de usar." },
 ];
-
 function FaqItem({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false);
   const ansRef = useRef<HTMLDivElement>(null);
@@ -301,7 +302,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 }
 
 // ─── CTA BUTTON ──────────────────────────────────────────────────────────
-function CTAButton({ source, big = false, compact = false, label = "QUIERO LOS MÍOS AHORA", urgent = false }: { source: string; big?: boolean; compact?: boolean; label?: string; urgent?: boolean }) {
+function CTAButton({ source, big = false, compact = false, label = "SÍ, LOS QUIERO AHORA", urgent = false }: { source: string; big?: boolean; compact?: boolean; label?: string; urgent?: boolean }) {
   const openLead = useContext(LeadModalContext);
   const handleClick = useCallback(() => {
     if (typeof window !== "undefined" && (window as any).fbq) {
@@ -457,15 +458,15 @@ export default function LandingLentesAviador() {
         <div className="reveal" style={{ animationDelay:"0.1s" }}>
           <div style={{ display:"inline-flex",alignItems:"center",gap:8,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:30,padding:"6px 16px",marginBottom:24,backdropFilter:"blur(10px)" }}>
             <IcGem />
-            <span style={{ fontSize:9,fontWeight:800,letterSpacing:2.5,color:"rgba(255,255,255,0.6)",textTransform:"uppercase" }}>Edición Limitada · Anti Luz Azul</span>
+            <span style={{ fontSize:9,fontWeight:800,letterSpacing:2.5,color:"rgba(255,255,255,0.6)",textTransform:"uppercase" }}>Para Hombres Que No Pasan Desapercibidos</span>
           </div>
         </div>
 
         <h1 className="reveal" style={{ fontSize:36,fontWeight:900,lineHeight:1.05,margin:"0 0 16px",letterSpacing:-0.5,background:"linear-gradient(180deg,#fff 0%,#aaa 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animationDelay:"0.2s" }}>
-          Lentes que se ven<br/>tan bien como protegen
+          El detalle que hace<br/>que te noten primero
         </h1>
         <p className="reveal" style={{ fontSize:14,color:"#777",lineHeight:1.7,maxWidth:380,margin:"0 auto 30px",animationDelay:"0.3s" }}>
-          Acero inoxidable + acetato técnico. Filtro real de luz azul para tu jornada frente a la pantalla. Diseño grabado a mano.
+          Para el hombre que entra a una reunión, una llamada o una foto y se nota la diferencia. Acero inoxidable + acetato técnico, filtro real de luz azul, grabado a mano.
         </p>
 
         {/* LENTES FLONTANTES SIN FONDO */}
@@ -532,6 +533,27 @@ export default function LandingLentesAviador() {
             <div key={i} className="reveal" style={{ borderRadius:16,overflow:"hidden",background:"#0d0d0d",border:"1px solid #1e1e1e",animationDelay:`${0.1*i}s` }}>
               <img src={img.src} alt="" style={{ width:"100%",aspectRatio:"1/1",objectFit:"cover",display:"block" }} />
               <p style={{ margin:0,padding:12,fontSize:11,color:"#888" }}>{img.cap}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* PARA QUIÉN ES */}
+      <section style={{ position:"relative",zIndex:2,maxWidth:640,margin:"0 auto",padding:"0 20px 40px" }}>
+        <div className="reveal">
+          <p style={{ fontSize:9,fontWeight:800,letterSpacing:3,color:"#333",textAlign:"center",margin:"0 0 8px",textTransform:"uppercase" }}>No son para cualquiera</p>
+          <h2 style={{ fontSize:22,fontWeight:900,color:"#fff",textAlign:"center",margin:"0 0 24px" }}>Son para el hombre que...</h2>
+        </div>
+        <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
+          {[
+            "Lidera reuniones, cierra tratos y sabe que la primera impresión cuenta",
+            "Pasa horas frente a la pantalla y no está dispuesto a sacrificar ni su vista ni su imagen",
+            "Se cuida en los detalles: reloj, cadena, lentes — nada al azar",
+            "No busca 'unos lentes más', busca la pieza que completa el look",
+          ].map((t,i)=>(
+            <div key={i} className="reveal" style={{ display:"flex",alignItems:"center",gap:12,background:"#111",border:"1px solid #1e1e1e",borderRadius:12,padding:"14px 16px",animationDelay:`${0.08*i}s` }}>
+              <span style={{ flexShrink:0,width:22,height:22,borderRadius:"50%",background:"#1a0000",border:"1px solid #ff3b3b",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"#ff8888",fontWeight:900 }}>✓</span>
+              <p style={{ margin:0,fontSize:13,color:"#ddd",lineHeight:1.5 }}>{t}</p>
             </div>
           ))}
         </div>
@@ -690,7 +712,7 @@ export default function LandingLentesAviador() {
       {/* BARRA FIJA */}
       <div style={{ position:"fixed",left:0,right:0,bottom:0,zIndex:500,background:"rgba(8,8,8,0.97)",borderTop:"1px solid #1e1e1e",backdropFilter:"blur(16px)",padding:"12px 16px",display:"flex",alignItems:"center",gap:12 }}>
         <div style={{ flex:1,minWidth:0 }}>
-          <p style={{ margin:0,fontSize:9,color:"#555",letterSpacing:0.5,textTransform:"uppercase" }}>Oferta hoy · Sin registro</p>
+          <p style={{ margin:0,fontSize:9,color:"#555",letterSpacing:0.5,textTransform:"uppercase" }}>Últimas unidades · Entrega directa</p>
           <p style={{ margin:0,fontSize:15,fontWeight:900,color:"#fff" }}>${PRODUCT.offerPrice.toFixed(2)} <span style={{ fontSize:10,color:"#444",textDecoration:"line-through",fontWeight:600 }}>${PRODUCT.price.toFixed(2)}</span></p>
         </div>
         <CTAButton source="barra_fija" label="COMPRAR POR WS" compact urgent />
