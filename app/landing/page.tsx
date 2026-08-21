@@ -42,7 +42,7 @@ const IcArrow = () => (
 );
 
 const IcGem = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ffd43b" strokeWidth="2"><path d="M12 2l2.4 7.2h7.6l-6 4.8 2.4 7.2-6-4.8-6 4.8 2.4-7.2-6-4.8h7.6z"/></svg>
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2"><path d="M12 2l2.4 7.2h7.6l-6 4.8 2.4 7.2-6-4.8-6 4.8 2.4-7.2-6-4.8h7.6z"/></svg>
 );
 
 // ─── REVEAL ON SCROLL ───────────────────────────────────────────────────
@@ -204,8 +204,9 @@ function CTAButton({ source, big = false, compact = false, label = "QUIERO LOS M
 
   if (white) {
     return (
-      <button onClick={handleClick} className="cta-btn" style={{ width:"100%",background:"#fff",color:"#080808",border:"none",borderRadius:12,padding:big?"1.15rem":"1rem",fontSize:big?14:12,fontWeight:900,letterSpacing:2,cursor:"pointer",fontFamily:"inherit" }}>
-        <span style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:8 }}>
+      <button onClick={handleClick} className="cta-btn" style={{ position:"relative",overflow:"hidden",width:"100%",background:"linear-gradient(135deg,#ff4b4b 0%,#e01e1e 55%,#8a0000 100%)",color:"#fff",border:"1px solid rgba(255,255,255,0.25)",borderRadius:12,padding:big?"1.15rem":"1rem",fontSize:big?14:12,fontWeight:900,letterSpacing:2,cursor:"pointer",fontFamily:"inherit",boxShadow:"0 8px 28px rgba(255,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.3)" }}>
+        <span style={{ position:"absolute",inset:0,background:"linear-gradient(115deg,transparent 0%,rgba(255,255,255,0.35) 50%,transparent 100%)",backgroundSize:"200% 100%",animation:"shimmerBtn 2.6s ease infinite",pointerEvents:"none" }} />
+        <span style={{ position:"relative",display:"flex",alignItems:"center",justifyContent:"center",gap:8 }}>
           <IcWA s={big?20:17} /> {label}
         </span>
       </button>
@@ -213,8 +214,9 @@ function CTAButton({ source, big = false, compact = false, label = "QUIERO LOS M
   }
 
   return (
-    <button onClick={handleClick} className="cta-btn" style={{ width:compact?"auto":"100%",flexShrink:0,whiteSpace:"nowrap" as const,background:"#ff3b3b",color:"#fff",border:"none",borderRadius:compact?12:16,padding:compact?"0.8rem 1.3rem":big?"1.15rem":"1rem",fontSize:compact?12:big?15:13,fontWeight:900,letterSpacing:1.5,textTransform:"uppercase" as const,cursor:"pointer",fontFamily:"inherit" }}>
-      <span style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:10 }}>
+    <button onClick={handleClick} className="cta-btn" style={{ position:"relative",overflow:"hidden",width:compact?"auto":"100%",flexShrink:0,whiteSpace:"nowrap" as const,background:"linear-gradient(135deg,#ff4b4b 0%,#e01e1e 55%,#8a0000 100%)",color:"#fff",border:"1px solid rgba(255,255,255,0.25)",borderRadius:compact?12:16,padding:compact?"0.8rem 1.3rem":big?"1.15rem":"1rem",fontSize:compact?12:big?15:13,fontWeight:900,letterSpacing:1.5,textTransform:"uppercase" as const,cursor:"pointer",fontFamily:"inherit",boxShadow:"0 8px 28px rgba(255,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.3)" }}>
+      <span style={{ position:"absolute",inset:0,background:"linear-gradient(115deg,transparent 0%,rgba(255,255,255,0.35) 50%,transparent 100%)",backgroundSize:"200% 100%",animation:"shimmerBtn 2.6s ease infinite",pointerEvents:"none" }} />
+      <span style={{ position:"relative",display:"flex",alignItems:"center",justifyContent:"center",gap:10 }}>
         <IcWA s={big?20:18} /> {label}
       </span>
     </button>
@@ -225,12 +227,12 @@ function CTAButton({ source, big = false, compact = false, label = "QUIERO LOS M
 function LeadModal({ open, source, onClose }: { open: boolean; source: string; onClose: () => void }) {
   const [nombre, setNombre] = useState("");
   const [entrega, setEntrega] = useState<"valencia" | "nacional">("nacional");
-  const [aceptado, setAceptado] = useState(false);
+
   const [enviando, setEnviando] = useState(false);
 
   if (!open) return null;
 
-  const puedeConfirmar = nombre.trim().length > 1 && aceptado;
+  const puedeConfirmar = nombre.trim().length > 1;
 
   const handleConfirmar = () => {
     if (!puedeConfirmar) return;
@@ -246,7 +248,8 @@ function LeadModal({ open, source, onClose }: { open: boolean; source: string; o
 
   return (
     <div onClick={onClose} style={{ position:"fixed",inset:0,zIndex:1000,background:"rgba(0,0,0,0.85)",backdropFilter:"blur(6px)",display:"flex",alignItems:"flex-end",justifyContent:"center",animation:"fadeIn 0.2s ease" }}>
-      <div onClick={e=>e.stopPropagation()} style={{ width:"100%",maxWidth:460,maxHeight:"90vh",overflowY:"auto" as const,background:"#0a0a0a",border:"1px solid #222",borderTop:"1px solid #2a2a2a",borderRadius:"20px 20px 0 0",padding:"24px 20px 28px" }}>
+      <div onClick={e=>e.stopPropagation()} style={{ width:"100%",maxWidth:460,maxHeight:"90vh",overflowY:"auto" as const,background:"linear-gradient(160deg,#141414 0%,#080808 100%)",border:"1px solid #2a2a2a",borderTop:"1px solid #333",borderRadius:"20px 20px 0 0",padding:"24px 20px 28px",position:"relative",boxShadow:"0 -20px 60px rgba(0,0,0,0.6)" }}>
+        <div style={{ position:"absolute",top:0,left:0,right:0,height:1,background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.25),transparent)" }} />
         <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16 }}>
           <div>
             <p style={{ margin:0,fontSize:9,fontWeight:800,letterSpacing:2,color:"#666",textTransform:"uppercase" }}>Fokus Accesorios</p>
@@ -259,7 +262,7 @@ function LeadModal({ open, source, onClose }: { open: boolean; source: string; o
           <span style={{ fontSize:15,color:"#444",textDecoration:"line-through" }}>${PRODUCT.price.toFixed(2)}</span>
           <span style={{ fontSize:28,fontWeight:900,color:"#fff" }}>${PRODUCT.offerPrice.toFixed(2)}</span>
         </div>
-        <p style={{ margin:"0 0 22px",fontSize:11,color:"#555" }}>Equivale a <strong style={{ color:"#ffd43b" }}>Bs. 892</strong> · Tasa BCV</p>
+        <p style={{ margin:"0 0 22px",fontSize:11,color:"#555" }}>Equivale a <strong style={{ color:"#fff" }}>Bs. 892</strong> · Tasa BCV</p>
 
         <label style={{ display:"block",fontSize:10,fontWeight:800,letterSpacing:1.5,color:"#888",textTransform:"uppercase",marginBottom:8 }}>Nombre completo *</label>
         <input value={nombre} onChange={e=>setNombre(e.target.value)} placeholder="¿Cómo te llamas?" style={{ width:"100%",background:"#141414",border:"1px solid #2a2a2a",borderRadius:10,padding:"14px 16px",color:"#fff",fontSize:14,marginBottom:20,fontFamily:"inherit",boxSizing:"border-box" as const }} />
@@ -276,13 +279,14 @@ function LeadModal({ open, source, onClose }: { open: boolean; source: string; o
           </button>
         </div>
 
-        <label style={{ display:"flex",alignItems:"flex-start",gap:8,marginBottom:20,cursor:"pointer" }}>
-          <input type="checkbox" checked={aceptado} onChange={e=>setAceptado(e.target.checked)} style={{ marginTop:2,accentColor:"#ff3b3b",width:16,height:16,flexShrink:0 }} />
-          <span style={{ fontSize:10,color:"#888",lineHeight:1.5 }}>Entiendo que el precio es de ${PRODUCT.offerPrice.toFixed(2)} USD y deseo coordinar mi pago y envío por WhatsApp.</span>
-        </label>
+        <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:20,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:10,padding:"10px 12px" }}>
+          <span style={{ fontSize:14 }}>🔒</span>
+          <span style={{ fontSize:10,color:"#888",lineHeight:1.5 }}>Coordinamos tu pago y envío directo por WhatsApp, sin compromiso.</span>
+        </div>
 
-        <button onClick={handleConfirmar} disabled={!puedeConfirmar || enviando} style={{ width:"100%",background: puedeConfirmar ? "#ff3b3b" : "#2a2a2a",color:"#fff",border:"none",borderRadius:12,padding:"1rem",fontSize:13,fontWeight:900,letterSpacing:1.5,textTransform:"uppercase" as const,cursor: puedeConfirmar ? "pointer" : "not-allowed",display:"flex",alignItems:"center",justifyContent:"center",gap:8,fontFamily:"inherit" }}>
-          {enviando ? "Redirigiendo..." : <>CONFIRMAR PEDIDO <IcArrow /></>}
+        <button onClick={handleConfirmar} disabled={!puedeConfirmar || enviando} style={{ position:"relative",overflow:"hidden",width:"100%",background: puedeConfirmar ? "linear-gradient(135deg,#ff4b4b 0%,#e01e1e 55%,#8a0000 100%)" : "#2a2a2a",color:"#fff",border:puedeConfirmar?"1px solid rgba(255,255,255,0.25)":"none",borderRadius:12,padding:"1rem",fontSize:13,fontWeight:900,letterSpacing:1.5,textTransform:"uppercase" as const,cursor: puedeConfirmar ? "pointer" : "not-allowed",display:"flex",alignItems:"center",justifyContent:"center",gap:8,fontFamily:"inherit",boxShadow:puedeConfirmar?"0 8px 28px rgba(255,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.3)":"none" }}>
+          {puedeConfirmar&&<span style={{ position:"absolute",inset:0,background:"linear-gradient(115deg,transparent 0%,rgba(255,255,255,0.35) 50%,transparent 100%)",backgroundSize:"200% 100%",animation:"shimmerBtn 2.6s ease infinite",pointerEvents:"none" }} />}
+          <span style={{ position:"relative",display:"flex",alignItems:"center",gap:8 }}>{enviando ? "Redirigiendo..." : <>CONFIRMAR PEDIDO <IcArrow /></>}</span>
         </button>
         <p style={{ fontSize:9,color:"#333",margin:"12px 0 0",textAlign:"center" }}>🔒 Te contactamos por WhatsApp en breve</p>
       </div>
@@ -376,7 +380,7 @@ export default function LandingLentesAviador() {
               -29% HOY
             </span>
           </div>
-          <p style={{ margin:"8px 0 0",fontSize:12,color:"#555" }}>Equivale a <strong style={{ color:"#ffd43b" }}>Bs. 892</strong> · Tasa BCV</p>
+          <p style={{ margin:"8px 0 0",fontSize:12,color:"#555" }}>Equivale a <strong style={{ color:"#fff" }}>Bs. 892</strong> · Tasa BCV</p>
         </div>
 
         <p className="reveal" style={{ fontSize:11,color:"#ff8888",margin:"0 0 16px",fontWeight:700,animationDelay:"0.6s" }}>
@@ -466,7 +470,7 @@ export default function LandingLentesAviador() {
       {/* CTA INTERMEDIO */}
       <section className="reveal" style={{ position:"relative",zIndex:2,maxWidth:460,margin:"0 auto",padding:"40px 20px 0",textAlign:"center" }}>
         <div style={{ background:"linear-gradient(135deg,#141410,#0a0a08)",border:"1px solid #3a3520",borderRadius:16,padding:"28px 20px" }}>
-          <p style={{ fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#ffd43b",margin:"0 0 12px",textTransform:"uppercase" }}>🔥 Quedan pocas unidades a este precio</p>
+          <p style={{ fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#fff",margin:"0 0 12px",textTransform:"uppercase" }}>🔥 Quedan pocas unidades a este precio</p>
           <div style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:16 }}>
             <span style={{ fontSize:17,color:"#444",textDecoration:"line-through" }}>${PRODUCT.price.toFixed(2)}</span>
             <span style={{ fontSize:36,fontWeight:900,color:"#fff" }}>${PRODUCT.offerPrice.toFixed(2)}</span>
