@@ -191,24 +191,18 @@ function FaqItem({ q, a }: { q: string; a: string }) {
   );
 }
 
-// ─── CTA BUTTON (ADICTIVO) ──────────────────────────────────────────────
+// ─── CTA BUTTON ──────────────────────────────────────────────────────────
 function CTAButton({ source, big = false, compact = false, label = "QUIERO LOS MÍOS AHORA", white = false }: { source: string; big?: boolean; compact?: boolean; label?: string; white?: boolean }) {
-  const handleClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = rect.left + rect.width / 2;
-    const y = rect.top + rect.height / 2;
-    if ((window as any).__burst) (window as any).__burst(x, y, Math.random() < 0.5 ? "#ffd43b" : "#ff3b3b", 35);
-    if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
-    // Tracking Meta Pixel
+  const handleClick = useCallback(() => {
     if (typeof window !== "undefined" && (window as any).fbq) {
       (window as any).fbq("trackCustom", "AdquirirLentesAviador", { content_name: PRODUCT.name, value: PRODUCT.offerPrice, currency: "USD", source });
     }
-    setTimeout(() => { window.dispatchEvent(new CustomEvent("fokus:open-lead", { detail: { source } })); }, 350);
+    window.dispatchEvent(new CustomEvent("fokus:open-lead", { detail: { source } }));
   }, [source]);
 
   if (white) {
     return (
-      <button onClick={handleClick} className="cta-btn" style={{ position:"relative",width:"100%",background:"linear-gradient(180deg,#ffffff,#f0f0f0)",color:"#080808",border:"none",borderRadius:12,padding:big?"1.15rem":"1rem",fontSize:big?14:12,fontWeight:900,letterSpacing:2,cursor:"pointer",overflow:"hidden",boxShadow:"0 8px 24px rgba(255,255,255,0.15)",transition:"transform 0.15s",fontFamily:"inherit" }}>
+      <button onClick={handleClick} className="cta-btn" style={{ width:"100%",background:"#fff",color:"#080808",border:"none",borderRadius:12,padding:big?"1.15rem":"1rem",fontSize:big?14:12,fontWeight:900,letterSpacing:2,cursor:"pointer",fontFamily:"inherit" }}>
         <span style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:8 }}>
           <IcWA s={big?20:17} /> {label}
         </span>
@@ -217,9 +211,8 @@ function CTAButton({ source, big = false, compact = false, label = "QUIERO LOS M
   }
 
   return (
-    <button onClick={handleClick} className="cta-btn" style={{ position:"relative",width:compact?"auto":"100%",flexShrink:0,whiteSpace:"nowrap" as const,background:"linear-gradient(180deg,#ff3b3b,#c41e1e)",color:"#fff",border:"none",borderRadius:compact?12:16,padding:compact?"0.8rem 1.3rem":big?"1.15rem":"1rem",fontSize:compact?12:big?15:13,fontWeight:900,letterSpacing:1.5,textTransform:"uppercase" as const,cursor:"pointer",overflow:"hidden",boxShadow:"0 8px 32px rgba(255,59,59,0.4), inset 0 1px 0 rgba(255,255,255,0.3)",transition:"all 0.15s cubic-bezier(0.16,1,0.3,1)",fontFamily:"inherit" }}>
-      <span style={{ position:"absolute",inset:0,background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.3),transparent)",backgroundSize:"200% 100%",animation:"shimmerBtn 2s ease infinite",pointerEvents:"none" }} />
-      <span style={{ position:"relative",zIndex:2,display:"flex",alignItems:"center",justifyContent:"center",gap:10 }}>
+    <button onClick={handleClick} className="cta-btn" style={{ width:compact?"auto":"100%",flexShrink:0,whiteSpace:"nowrap" as const,background:"#ff3b3b",color:"#fff",border:"none",borderRadius:compact?12:16,padding:compact?"0.8rem 1.3rem":big?"1.15rem":"1rem",fontSize:compact?12:big?15:13,fontWeight:900,letterSpacing:1.5,textTransform:"uppercase" as const,cursor:"pointer",fontFamily:"inherit" }}>
+      <span style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:10 }}>
         <IcWA s={big?20:18} /> {label}
       </span>
     </button>
@@ -229,50 +222,63 @@ function CTAButton({ source, big = false, compact = false, label = "QUIERO LOS M
 // ─── MODAL DE DATOS (FILTRO DE CLIENTES) ────────────────────────────────
 function LeadModal({ open, source, onClose }: { open: boolean; source: string; onClose: () => void }) {
   const [nombre, setNombre] = useState("");
+  const [entrega, setEntrega] = useState<"valencia" | "nacional">("nacional");
+  const [aceptado, setAceptado] = useState(false);
   const [enviando, setEnviando] = useState(false);
 
   if (!open) return null;
 
+  const puedeConfirmar = nombre.trim().length > 1 && aceptado;
+
   const handleConfirmar = () => {
-    if (!nombre.trim()) return;
+    if (!puedeConfirmar) return;
     if (typeof window !== "undefined" && (window as any).fbq) {
       (window as any).fbq("track", "Lead", { content_name: PRODUCT.name, value: PRODUCT.offerPrice, currency: "USD", source });
     }
-    const msg = encodeURIComponent(`Hola! Quiero mis *Lentes Aviador Premium* a $${PRODUCT.offerPrice} (antes $${PRODUCT.price})\n\n• Nombre: ${nombre}\n• Entrega: Envío Nacional (MRW / Zoom / Tealca)`);
+    const entregaTxt = entrega === "valencia" ? "Retiro / Delivery en Valencia" : "Envío Nacional (MRW / Zoom / Tealca)";
+    const msg = encodeURIComponent(`Hola! Quiero mis *Lentes Aviador Premium* a $${PRODUCT.offerPrice} (antes $${PRODUCT.price})\n\n• Nombre: ${nombre}\n• Entrega: ${entregaTxt}`);
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, "_blank");
     setEnviando(true);
     setTimeout(() => { setEnviando(false); onClose(); }, 400);
   };
 
   return (
-    <div onClick={onClose} style={{ position:"fixed",inset:0,zIndex:1000,background:"rgba(0,0,0,0.75)",backdropFilter:"blur(6px)",display:"flex",alignItems:"flex-end",justifyContent:"center",animation:"fadeIn 0.25s ease" }}>
-      <div onClick={e=>e.stopPropagation()} style={{ width:"100%",maxWidth:460,background:"#0b0b0b",border:"1px solid #2a2a2a",borderTop:"1px solid #333",borderRadius:"20px 20px 0 0",padding:"24px 20px 28px",animation:"slideUp 0.3s cubic-bezier(0.16,1,0.3,1)" }}>
+    <div onClick={onClose} style={{ position:"fixed",inset:0,zIndex:1000,background:"rgba(0,0,0,0.85)",backdropFilter:"blur(6px)",display:"flex",alignItems:"flex-end",justifyContent:"center",animation:"fadeIn 0.2s ease" }}>
+      <div onClick={e=>e.stopPropagation()} style={{ width:"100%",maxWidth:460,maxHeight:"90vh",overflowY:"auto" as const,background:"#0a0a0a",border:"1px solid #222",borderTop:"1px solid #2a2a2a",borderRadius:"20px 20px 0 0",padding:"24px 20px 28px" }}>
         <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16 }}>
           <div>
-            <p style={{ margin:0,fontSize:9,fontWeight:800,letterSpacing:2,color:"#ff8888",textTransform:"uppercase" }}>Asegura tus lentes</p>
-            <h3 style={{ margin:"4px 0 0",fontSize:20,fontWeight:900,color:"#fff" }}>Completa tus datos</h3>
+            <p style={{ margin:0,fontSize:9,fontWeight:800,letterSpacing:2,color:"#666",textTransform:"uppercase" }}>Fokus Accesorios</p>
+            <h3 style={{ margin:"4px 0 0",fontSize:20,fontWeight:900,color:"#fff" }}>Asegura tus lentes</h3>
           </div>
-          <button onClick={onClose} style={{ background:"#1a1a1a",border:"1px solid #2a2a2a",borderRadius:"50%",width:30,height:30,color:"#888",cursor:"pointer",fontSize:14,flexShrink:0 }}>✕</button>
+          <button onClick={onClose} style={{ background:"#141414",border:"1px solid #2a2a2a",borderRadius:"50%",width:30,height:30,color:"#888",cursor:"pointer",fontSize:14,flexShrink:0 }}>✕</button>
         </div>
 
-        <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:20 }}>
+        <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:22 }}>
           <span style={{ fontSize:15,color:"#444",textDecoration:"line-through" }}>${PRODUCT.price.toFixed(2)}</span>
-          <span style={{ fontSize:26,fontWeight:900,color:"#fff" }}>${PRODUCT.offerPrice.toFixed(2)}</span>
+          <span style={{ fontSize:28,fontWeight:900,color:"#fff" }}>${PRODUCT.offerPrice.toFixed(2)}</span>
         </div>
 
         <label style={{ display:"block",fontSize:10,fontWeight:800,letterSpacing:1.5,color:"#888",textTransform:"uppercase",marginBottom:8 }}>Nombre completo *</label>
-        <input value={nombre} onChange={e=>setNombre(e.target.value)} placeholder="¿Cómo te llamas?" style={{ width:"100%",background:"#141414",border:"1px solid #2a2a2a",borderRadius:10,padding:"14px 16px",color:"#fff",fontSize:14,marginBottom:18,fontFamily:"inherit",boxSizing:"border-box" as const }} />
+        <input value={nombre} onChange={e=>setNombre(e.target.value)} placeholder="¿Cómo te llamas?" style={{ width:"100%",background:"#141414",border:"1px solid #2a2a2a",borderRadius:10,padding:"14px 16px",color:"#fff",fontSize:14,marginBottom:20,fontFamily:"inherit",boxSizing:"border-box" as const }} />
 
-        <label style={{ display:"block",fontSize:10,fontWeight:800,letterSpacing:1.5,color:"#888",textTransform:"uppercase",marginBottom:8 }}>Método de entrega</label>
-        <div style={{ display:"flex",alignItems:"center",gap:10,background:"#141410",border:"1px solid #3a1515",borderRadius:10,padding:"14px 16px",marginBottom:22 }}>
-          <span style={{ fontSize:18 }}>📦</span>
-          <div>
-            <p style={{ margin:0,fontSize:12,fontWeight:800,color:"#eee" }}>Envío Nacional</p>
-            <p style={{ margin:0,fontSize:10,color:"#666" }}>MRW · Zoom · Tealca — 1 a 2 días hábiles</p>
-          </div>
+        <label style={{ display:"block",fontSize:10,fontWeight:800,letterSpacing:1.5,color:"#888",textTransform:"uppercase",marginBottom:8 }}>Método de entrega *</label>
+        <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:20 }}>
+          <button onClick={()=>setEntrega("valencia")} style={{ background:entrega==="valencia"?"#1a0000":"#141414",border:`1px solid ${entrega==="valencia"?"#ff3b3b":"#2a2a2a"}`,borderRadius:10,padding:"14px 10px",cursor:"pointer",textAlign:"center" }}>
+            <p style={{ margin:0,fontSize:11,fontWeight:800,color:"#eee" }}>Valencia</p>
+            <p style={{ margin:"2px 0 0",fontSize:9,color:"#666" }}>Retiro / Delivery</p>
+          </button>
+          <button onClick={()=>setEntrega("nacional")} style={{ background:entrega==="nacional"?"#1a0000":"#141414",border:`1px solid ${entrega==="nacional"?"#ff3b3b":"#2a2a2a"}`,borderRadius:10,padding:"14px 10px",cursor:"pointer",textAlign:"center" }}>
+            <p style={{ margin:0,fontSize:11,fontWeight:800,color:"#eee" }}>Envío Nacional</p>
+            <p style={{ margin:"2px 0 0",fontSize:9,color:"#666" }}>MRW / Zoom / Tealca</p>
+          </button>
         </div>
 
-        <button onClick={handleConfirmar} disabled={!nombre.trim() || enviando} className="cta-btn" style={{ width:"100%",background: nombre.trim() ? "linear-gradient(180deg,#ff3b3b,#c41e1e)" : "#2a2a2a",color:"#fff",border:"none",borderRadius:12,padding:"1rem",fontSize:13,fontWeight:900,letterSpacing:1.5,textTransform:"uppercase" as const,cursor: nombre.trim() ? "pointer" : "not-allowed",display:"flex",alignItems:"center",justifyContent:"center",gap:8,fontFamily:"inherit" }}>
+        <label style={{ display:"flex",alignItems:"flex-start",gap:8,marginBottom:20,cursor:"pointer" }}>
+          <input type="checkbox" checked={aceptado} onChange={e=>setAceptado(e.target.checked)} style={{ marginTop:2,accentColor:"#ff3b3b",width:16,height:16,flexShrink:0 }} />
+          <span style={{ fontSize:10,color:"#888",lineHeight:1.5 }}>Entiendo que el precio es de ${PRODUCT.offerPrice.toFixed(2)} USD y deseo coordinar mi pago y envío por WhatsApp.</span>
+        </label>
+
+        <button onClick={handleConfirmar} disabled={!puedeConfirmar || enviando} style={{ width:"100%",background: puedeConfirmar ? "#ff3b3b" : "#2a2a2a",color:"#fff",border:"none",borderRadius:12,padding:"1rem",fontSize:13,fontWeight:900,letterSpacing:1.5,textTransform:"uppercase" as const,cursor: puedeConfirmar ? "pointer" : "not-allowed",display:"flex",alignItems:"center",justifyContent:"center",gap:8,fontFamily:"inherit" }}>
           {enviando ? "Redirigiendo..." : <>CONFIRMAR PEDIDO <IcArrow /></>}
         </button>
         <p style={{ fontSize:9,color:"#333",margin:"12px 0 0",textAlign:"center" }}>🔒 Te contactamos por WhatsApp en breve</p>
