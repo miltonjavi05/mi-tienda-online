@@ -45,6 +45,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import Image from "next/image";
 
 // ─── CONFIG (mismos valores que tu tienda) ────────────────────────────────
 const META_PIXEL_ID = "840893159040582";
@@ -52,8 +53,8 @@ const WHATSAPP_NUMBER = "584243005733";
 const CUSTOM_EVENT_NAME = "AdquirirLentesAviador";
 
 const PRODUCT = {
-  name: "Lentes Aviador Premium",
-  code: "FK-AVIADOR-PREMIUM",
+  name: "Lentes Anti Luz Azul Premium",
+  code: "FK-ANTILUZAZUL-PREMIUM",
   price: 28,
   offerPrice: 19.9,
   get discountPercent() {
@@ -62,17 +63,17 @@ const PRODUCT = {
 };
 
 const PRODUCT_IMAGES = {
-  hero: "/landing/lentes-aviador/frontal.jpg",
+  hero: "/landing/lentes-anti-luz-azul/frontal.jpg",
   gallery: [
-    { src: "/landing/lentes-aviador/beauty-2.jpg", caption: "Armazón en acero inoxidable premium, resistente a la oxidación y al sudor" },
-    { src: "/landing/lentes-aviador/bisagra.jpg", caption: "Bisagras reforzadas de alta duración — sin aflojarse con el uso diario" },
-    { src: "/landing/lentes-aviador/puente.jpg", caption: "Puente doble ajustable: se adapta a cualquier tipo de rostro sin apretar" },
-    { src: "/landing/lentes-aviador/charm.jpg", caption: "Detalles grabados a mano en la patilla — acabado de joyería, no de plástico" },
-    { src: "/landing/lentes-aviador/detalle-1.jpg", caption: "Puntas acolchadas para uso prolongado, todo el día, sin molestar" },
-    { src: "/landing/lentes-aviador/lifestyle-2.jpg", caption: "Diseño aviador clásico reinventado con líneas modernas y actitud" },
+    { src: "/landing/lentes-anti-luz-azul/beauty-2.jpg", caption: "Armazón en acero inoxidable premium — un accesorio que se ve tan bien como protege" },
+    { src: "/landing/lentes-anti-luz-azul/bisagra.jpg", caption: "Bisagras reforzadas de alta duración, listas para el uso diario frente al PC" },
+    { src: "/landing/lentes-anti-luz-azul/puente.jpg", caption: "Puente doble ajustable: se adapta a cualquier tipo de rostro sin apretar" },
+    { src: "/landing/lentes-anti-luz-azul/charm.jpg", caption: "Detalles grabados a mano — acabado de joyería, no de bisutería genérica" },
+    { src: "/landing/lentes-anti-luz-azul/detalle-1.jpg", caption: "Puntas acolchadas para jornadas largas de estudio o trabajo, sin molestar" },
+    { src: "/landing/lentes-anti-luz-azul/lifestyle-2.jpg", caption: "Diseño premium pensado para quien vive conectado a la pantalla" },
   ],
-  lifestyle: "/landing/lentes-aviador/lifestyle-1.jpg",
-  beauty: "/landing/lentes-aviador/beauty-1.jpg",
+  lifestyle: "/landing/lentes-anti-luz-azul/lifestyle-1.jpg",
+  beauty: "/landing/lentes-anti-luz-azul/beauty-1.jpg",
 };
 
 // ─── UTILIDADES META PIXEL + CAPI (mismo patrón que tu tienda) ───────────
@@ -371,7 +372,7 @@ export default function LandingLentesAviador() {
     { q: "¿Y si los lentes no me quedan o no me gustan?", a: "Tienes garantía de satisfacción: si al recibirlos algo no está bien, lo resolvemos contigo directamente. Nuestro objetivo es que te quedes feliz con tu compra, no solo que compres." },
     { q: "¿Cómo pago?", a: "Aceptamos Pago Móvil (Banco de Venezuela y Bancamiga), Binance Pay y Zinli. Tú eliges el método que prefieras al finalizar por WhatsApp." },
     { q: "¿Cuánto tarda el envío y a dónde llega?", a: "Enviamos a los 23 estados de Venezuela mediante MRW, Zoom y Tealca. Si estás en Naguanagua el envío es gratis; en Valencia tiene un costo fijo de $3." },
-    { q: "¿Los lentes protegen realmente del sol?", a: "Sí, cuentan con protección UV400 real, no es solo un lente oscuro decorativo — filtran los rayos dañinos igual que unos lentes ópticos de protección." },
+    { q: "¿De verdad filtran la luz azul de las pantallas?", a: "Sí, el cristal cuenta con filtro real de luz azul, no es solo un lente con tinte decorativo — ayuda a reducir el cansancio y el ardor en los ojos tras horas de PC, laptop o celular." },
     { q: "¿De qué material están hechos? ¿Se van a poner feos rápido?", a: "Armazón en acero inoxidable premium con acabado grabado a mano, resistente a la oxidación, al sudor y al uso diario. No es plástico ni aleación barata que se despinta." },
     { q: "¿Por qué están en oferta, tienen algo malo?", a: `No — es una promoción por tiempo limitado, ${PRODUCT.discountPercent}% de descuento sobre el precio normal de $${PRODUCT.price}. Es exactamente el mismo producto premium, solo que hoy cuesta menos.` },
   ]), []);
@@ -401,13 +402,13 @@ export default function LandingLentesAviador() {
         <div style={{ animation: "fadeIn 0.6s ease" }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 20, padding: "0.35rem 0.9rem", marginBottom: "1rem" }}>
             <IcGem s={11} c="rgba(255,255,255,0.6)" />
-            <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: 2, color: "rgba(255,255,255,0.55)" }}>EDICIÓN LIMITADA · ACERO INOXIDABLE PREMIUM</span>
+            <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: 2, color: "rgba(255,255,255,0.55)" }}>EDICIÓN LIMITADA · FILTRO DE LUZ AZUL · ACERO INOXIDABLE</span>
           </div>
           <h1 className="hero-title" style={{ fontSize: 40, fontWeight: 900, lineHeight: 1.08, margin: "0 0 0.75rem", color: "#fff", letterSpacing: 0.5 }}>
-            Lentes Aviador<br />que no pasan desapercibidos
+            Lentes Anti Luz Azul<br />que se ven tan bien como protegen
           </h1>
           <p className="hero-sub" style={{ fontSize: 14, color: "#777", lineHeight: 1.7, maxWidth: 420, margin: "0 auto 1.5rem" }}>
-            Armazón grabado a mano, protección UV400 real y un ajuste que se olvida que lo llevas puesto. Hoy con {PRODUCT.discountPercent}% de descuento.
+            Diseño premium en acero inoxidable grabado a mano, con filtro real de luz azul para tus jornadas frente al PC, la laptop o el celular. Hoy con {PRODUCT.discountPercent}% de descuento.
           </p>
         </div>
 
@@ -419,15 +420,20 @@ export default function LandingLentesAviador() {
           <span aria-hidden="true" style={{ position: "absolute", bottom: -10, right: -10, width: 22, height: 22, borderBottom: "2px solid rgba(255,255,255,0.8)", borderRight: "2px solid rgba(255,255,255,0.8)", animation: "focusCornerIn 0.8s cubic-bezier(0.16,1,0.3,1) 0.18s both", zIndex: 3 }} />
           <span aria-hidden="true" style={{ position: "absolute", inset: -10, borderRadius: 18, border: "1px solid rgba(255,255,255,0.5)", animation: "focusRingPulse 2.8s ease-out infinite", pointerEvents: "none", zIndex: 3 }} />
           <div style={{ position: "relative", aspectRatio: "1/1", borderRadius: 16, overflow: "hidden", background: "#0a0a0a", boxShadow: "0 30px 70px rgba(0,0,0,0.6)" }}>
-            {!heroLoaded && <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg,#141414 0%,#1e1e1e 50%,#141414 100%)", backgroundSize: "200% 100%", animation: "badgeShimmer 1.4s infinite" }} />}
-            <img
+            {!heroLoaded && <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg,#141414 0%,#1e1e1e 50%,#141414 100%)", backgroundSize: "200% 100%", animation: "badgeShimmer 1.4s infinite", zIndex: 1 }} />}
+            <Image
               src={PRODUCT_IMAGES.hero}
               alt={PRODUCT.name}
+              fill
+              priority
+              fetchPriority="high"
+              sizes="(max-width: 480px) 92vw, 380px"
+              quality={90}
               onLoad={() => setHeroLoaded(true)}
-              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", opacity: heroLoaded ? 1 : 0, transition: "opacity 0.4s ease", animation: heroLoaded ? "heroKenBurns 9s ease-in-out infinite alternate" : "none" }}
+              style={{ objectFit: "cover", opacity: heroLoaded ? 1 : 0, transition: "opacity 0.4s ease", animation: heroLoaded ? "heroKenBurns 9s ease-in-out infinite alternate" : "none" }}
               draggable={false}
             />
-            <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.35) 100%)", pointerEvents: "none", animation: "spotlightPulse 4s ease-in-out infinite" }} />
+            <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.35) 100%)", pointerEvents: "none", animation: "spotlightPulse 4s ease-in-out infinite", zIndex: 2 }} />
           </div>
         </div>
 
@@ -459,8 +465,8 @@ export default function LandingLentesAviador() {
           {PRODUCT_IMAGES.gallery.map((item, i) => (
             <RevealUp key={item.src} delay={i * 70} from={i % 2 === 0 ? "left" : "right"}>
               <div style={{ borderRadius: 14, overflow: "hidden", background: "#0d0d0d", border: `1px solid ${C.border}` }}>
-                <div style={{ aspectRatio: "1/1", background: "#0a0a0a" }}>
-                  <img src={item.src} alt={item.caption} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} draggable={false} />
+                <div style={{ position: "relative", aspectRatio: "1/1", background: "#0a0a0a" }}>
+                  <Image src={item.src} alt={item.caption} fill loading="lazy" sizes="(max-width: 480px) 92vw, 420px" quality={85} style={{ objectFit: "cover" }} draggable={false} />
                 </div>
                 <p style={{ margin: 0, padding: "0.9rem 1rem", fontSize: 12, color: "#999", lineHeight: 1.6 }}>{item.caption}</p>
               </div>
@@ -478,11 +484,11 @@ export default function LandingLentesAviador() {
           <div className="benefits-grid" style={{ display: "grid", gap: "1rem" }}>
             {[
               { icon: <IcGem s={20} />, t: "Acero inoxidable premium", d: "Resistente a la oxidación, el sudor y el uso diario. No se despinta ni se pone feo." },
-              { icon: <IcSun s={20} />, t: "Protección UV400 real", d: "Filtran los rayos dañinos del sol, no es solo un cristal oscuro decorativo." },
+              { icon: <IcSun s={20} />, t: "Filtro real de luz azul", d: "Reduce la fatiga visual y el ardor en los ojos tras horas de PC, laptop o celular — no es solo un cristal con tinte." },
               { icon: <IcCheck s={20} c="#fff" />, t: "Ajuste cómodo todo el día", d: "Puente doble y puntas acolchadas — se te olvida que los llevas puestos." },
               { icon: <IcTruck s={20} />, t: "Envío a toda Venezuela", d: "Llegan a los 23 estados del país con MRW, Zoom o Tealca." },
               { icon: <IcShield s={20} />, t: "Garantía de satisfacción", d: "Si algo no está bien al recibirlos, lo resolvemos contigo directamente." },
-              { icon: <IcRefresh s={20} />, t: "Diseño exclusivo Fokus", d: "Detalles grabados a mano — acabado de joyería, no de bisutería genérica." },
+              { icon: <IcRefresh s={20} />, t: "Diseño exclusivo Fokus", d: "Detalles grabados a mano — acabado de joyería, un accesorio con el que se nota tu estilo." },
             ].map((b, i) => (
               <RevealUp key={b.t} delay={i * 60}>
                 <div style={{ background: "#111", border: `1px solid ${C.border}`, borderRadius: 14, padding: "1.25rem 1.1rem", height: "100%" }}>
@@ -511,16 +517,16 @@ export default function LandingLentesAviador() {
       <section style={{ maxWidth: 880, margin: "0 auto", padding: "3rem 1.25rem" }}>
         <div className="gallery-row" style={{ display: "grid", gap: "1.25rem", alignItems: "center" }}>
           <RevealUp from="left">
-            <div style={{ borderRadius: 16, overflow: "hidden", aspectRatio: "1/1", background: "#0a0a0a" }}>
-              <img src={PRODUCT_IMAGES.lifestyle} alt="Lentes puestos" style={{ width: "100%", height: "100%", objectFit: "cover" }} draggable={false} />
+            <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", aspectRatio: "1/1", background: "#0a0a0a" }}>
+              <Image src={PRODUCT_IMAGES.lifestyle} alt="Lentes puestos, uso diario frente a la pantalla" fill loading="lazy" sizes="(max-width: 480px) 92vw, 420px" quality={85} style={{ objectFit: "cover" }} draggable={false} />
             </div>
           </RevealUp>
           <RevealUp from="right" delay={100}>
             <div>
-              <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: 3, color: "#333", margin: "0 0 0.6rem" }}>ACTITUD, NO SOLO ACCESORIO</p>
-              <h3 style={{ fontSize: 20, fontWeight: 900, color: "#fff", margin: "0 0 0.85rem", lineHeight: 1.3 }}>Diseñados para quien no pasa desapercibido</h3>
+              <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: 3, color: "#333", margin: "0 0 0.6rem" }}>ESTILO Y PROTECCIÓN, EN UNO SOLO</p>
+              <h3 style={{ fontSize: 20, fontWeight: 900, color: "#fff", margin: "0 0 0.85rem", lineHeight: 1.3 }}>Pensados para quien vive conectado</h3>
               <p style={{ fontSize: 13, color: "#777", lineHeight: 1.8, margin: 0 }}>
-                La silueta aviador clásica, reinventada con líneas modernas y terminaciones grabadas a mano. Cada pieza sale de nuestro taller lista para acompañarte todos los días — de la oficina a la calle, sin cambiar de lentes.
+                Un diseño premium con terminaciones grabadas a mano, ideal para gamers, estudiantes y quienes trabajan todo el día frente a una pantalla. No solo se ven de lujo: cuidan tus ojos mientras lo hacen. De la oficina al gaming, sin cambiar de lentes.
               </p>
             </div>
           </RevealUp>
@@ -537,7 +543,7 @@ export default function LandingLentesAviador() {
             {[
               { n: "Javier R.", t: "Pensé que iban a ser como los lentes normales de la calle, pero la calidad se nota apenas los tienes en la mano. El acero no se siente barato para nada." },
               { n: "Andrea M.", t: "Pedí por WhatsApp, me atendieron rápido y llegaron a mi estado sin problema. Superó lo que esperaba por el precio." },
-              { n: "Carlos G.", t: "Los uso todos los días para el sol y no me han molestado ni una vez. El diseño de las patillas es un detalle que nadie más tiene." },
+              { n: "Carlos G.", t: "Los uso todos los días frente a la pantalla del trabajo y no me han molestado ni una vez. El diseño de las patillas es un detalle que nadie más tiene." },
             ].map((r, i) => (
               <RevealUp key={r.n} delay={i * 80}>
                 <div style={{ background: "#111", border: `1px solid ${C.border}`, borderRadius: 12, padding: "1rem 1.1rem" }}>
@@ -555,6 +561,8 @@ export default function LandingLentesAviador() {
           </div>
         </div>
       </section>
+
+      <ReviewsSection />
 
       {/* ── ELIMINACIÓN DE OBJECIONES / FAQ ── */}
       <section style={{ maxWidth: 720, margin: "0 auto", padding: "3rem 1.25rem" }}>
@@ -633,6 +641,192 @@ export default function LandingLentesAviador() {
         </div>
       </div>
     </div>
+  );
+}
+
+// ─── RESEÑAS (mismo sistema de comentarios que la tienda) ────────────────
+const REVIEWS_FIREBASE_PROJECT_ID = "fokus-16a0c";
+const REVIEWS_CLOUDINARY_CLOUD = "drgafle8o";
+const REVIEWS_CLOUDINARY_PRESET = "fokus_products";
+// Cambia esto por el ID de otro producto de tu tienda si quieres mostrar SUS reseñas aquí:
+const REVIEWS_PRODUCT_ID = PRODUCT.code;
+const REVIEWS_PRODUCT_NAME = PRODUCT.name;
+
+interface LandingReview { id: string; name: string; comment: string; stars: number; createdAt: number; photoUrl?: string; avatarUrl?: string; }
+
+function reviewsFsBase() { return `https://firestore.googleapis.com/v1/projects/${REVIEWS_FIREBASE_PROJECT_ID}/databases/(default)/documents`; }
+function reviewsFromFs(f: any): unknown {
+  if (!f) return null;
+  if ("stringValue" in f) return f.stringValue;
+  if ("doubleValue" in f) return f.doubleValue;
+  if ("integerValue" in f) return Number(f.integerValue);
+  if ("booleanValue" in f) return f.booleanValue;
+  return null;
+}
+function reviewsToFs(v: unknown): any {
+  if (v === null || v === undefined) return { nullValue: null };
+  if (typeof v === "string") return { stringValue: v };
+  if (typeof v === "number") return { doubleValue: v };
+  if (typeof v === "boolean") return { booleanValue: v };
+  return { stringValue: String(v) };
+}
+async function fetchLandingReviews(): Promise<LandingReview[]> {
+  try {
+    const r = await fetch(`${reviewsFsBase()}:runQuery`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ structuredQuery: { from: [{ collectionId: "product_comments" }], where: { fieldFilter: { field: { fieldPath: "productId" }, op: "EQUAL", value: { stringValue: REVIEWS_PRODUCT_ID } } } } }),
+    });
+    const d = await r.json();
+    const list: LandingReview[] = (Array.isArray(d) ? d : []).filter((x: any) => x.document).map((x: any) => {
+      const doc = x.document; const f = doc.fields || {};
+      return {
+        id: doc.name.split("/").pop(),
+        name: (reviewsFromFs(f.name) as string) || "Cliente Fokus",
+        comment: (reviewsFromFs(f.comment) as string) || "",
+        stars: Number(reviewsFromFs(f.stars)) || 5,
+        createdAt: Number(reviewsFromFs(f.createdAt)) || Date.now(),
+        photoUrl: (reviewsFromFs(f.photoUrl) as string) || "",
+        avatarUrl: (reviewsFromFs(f.avatarUrl) as string) || "",
+      };
+    });
+    list.sort((a, b) => b.createdAt - a.createdAt);
+    return list;
+  } catch { return []; }
+}
+async function submitLandingReview(name: string, comment: string, stars: number, photoUrl: string): Promise<void> {
+  const fields = {
+    productId: reviewsToFs(REVIEWS_PRODUCT_ID),
+    productName: reviewsToFs(REVIEWS_PRODUCT_NAME),
+    name: reviewsToFs(name),
+    email: reviewsToFs(""),
+    comment: reviewsToFs(comment),
+    stars: reviewsToFs(stars),
+    createdAt: reviewsToFs(Date.now()),
+    photoUrl: reviewsToFs(photoUrl),
+    avatarUrl: reviewsToFs(""),
+    isAdmin: reviewsToFs(false),
+  };
+  await fetch(`${reviewsFsBase()}/product_comments`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fields }) });
+}
+async function uploadReviewPhoto(file: File): Promise<string> {
+  const fd = new FormData();
+  fd.append("file", file);
+  fd.append("upload_preset", REVIEWS_CLOUDINARY_PRESET);
+  const r = await fetch(`https://api.cloudinary.com/v1_1/${REVIEWS_CLOUDINARY_CLOUD}/image/upload`, { method: "POST", body: fd });
+  const d = await r.json();
+  return d.secure_url as string;
+}
+
+const SEED_REVIEWS: LandingReview[] = [
+  { id: "seed1", name: "Javier Jose", stars: 5, comment: "Los uso todo el día en la computadora del trabajo y se nota la diferencia, ya no llego a la casa con los ojos cansados. Se ven finísimos además.", createdAt: Date.now() - 86400000 * 6 },
+  { id: "seed2", name: "Anderson", stars: 5, comment: "Excelente calidad, el armazón no se siente para nada barato. Los pedí para el estudio y quedé encantado con el acabado.", createdAt: Date.now() - 86400000 * 14 },
+  { id: "seed3", name: "Carrillo", stars: 5, comment: "Se ven elegantes y de verdad ayudan con el cansancio visual de estar tantas horas frente a la pantalla. Llegaron rápido a mi estado.", createdAt: Date.now() - 86400000 * 21 },
+  { id: "seed4", name: "Gamarra", stars: 4, comment: "Muy buen diseño, cómodos para usar todo el día. Los recomiendo para quienes trabajamos frente al PC.", createdAt: Date.now() - 86400000 * 30 },
+  { id: "seed5", name: "Arturo Jose", stars: 5, comment: "Pinta de lujo y encima cumplen su función. Ya no me duele tanto la cabeza después de las jornadas largas de PC.", createdAt: Date.now() - 86400000 * 40 },
+];
+
+function ReviewsStarRow({ value, onChange, size = 16 }: { value: number; onChange?: (n: number) => void; size?: number }) {
+  return (
+    <div style={{ display: "flex", gap: 3 }}>
+      {[1, 2, 3, 4, 5].map(n => (
+        <button key={n} type="button" onClick={onChange ? () => onChange(n) : undefined} disabled={!onChange} style={{ background: "none", border: "none", padding: 1, cursor: onChange ? "pointer" : "default", display: "flex" }}>
+          <svg width={size} height={size} viewBox="0 0 24 24" fill={n <= value ? "#fff" : "none"} stroke={n <= value ? "#fff" : "#3a3a3a"} strokeWidth="1.5" strokeLinejoin="round"><path d="M12 2l2.9 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l7.1-1.01z" /></svg>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ReviewsSection() {
+  const [reviews, setReviews] = useState<LandingReview[]>(SEED_REVIEWS);
+  const [visible, setVisible] = useState(4);
+  const [name, setName] = useState("");
+  const [comment, setComment] = useState("");
+  const [stars, setStars] = useState(5);
+  const [photoUrl, setPhotoUrl] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [done, setDone] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { fetchLandingReviews().then(list => { if (list.length) setReviews([...list, ...SEED_REVIEWS]); }); }, []);
+
+  const avg = reviews.length ? reviews.reduce((s, r) => s + r.stars, 0) / reviews.length : 5;
+
+  const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try { setPhotoUrl(await uploadReviewPhoto(file)); } catch { /* silent */ }
+    finally { setUploading(false); if (fileRef.current) fileRef.current.value = ""; }
+  };
+
+  const handleSubmit = async () => {
+    if (!name.trim() || !comment.trim()) return;
+    setSending(true);
+    try {
+      await submitLandingReview(name.trim(), comment.trim(), stars, photoUrl);
+      setReviews(prev => [{ id: "tmp_" + Date.now(), name: name.trim(), comment: comment.trim(), stars, createdAt: Date.now(), photoUrl }, ...prev]);
+      setName(""); setComment(""); setStars(5); setPhotoUrl(""); setDone(true);
+      setTimeout(() => setDone(false), 3000);
+    } finally { setSending(false); }
+  };
+
+  return (
+    <section style={{ maxWidth: 720, margin: "0 auto", padding: "3rem 1.25rem" }}>
+      <RevealUp>
+        <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
+          <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: 3, color: "#333", margin: "0 0 0.5rem" }}>OPINIONES REALES</p>
+          <h2 style={{ fontSize: 22, fontWeight: 900, color: "#fff", margin: "0 0 0.5rem" }}>Lo que dicen nuestros clientes</h2>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            <ReviewsStarRow value={Math.round(avg)} size={14} />
+            <span style={{ fontSize: 12, fontWeight: 800, color: "#fff" }}>{avg.toFixed(1)}</span>
+            <span style={{ fontSize: 11, color: "#444" }}>({reviews.length} reseñas)</span>
+          </div>
+        </div>
+      </RevealUp>
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", marginBottom: "1.5rem" }}>
+        {reviews.slice(0, visible).map(r => (
+          <div key={r.id} style={{ background: "#111", border: `1px solid ${C.border}`, borderRadius: 12, padding: "1rem 1.1rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {r.avatarUrl ? <img src={r.avatarUrl} alt={r.name} style={{ width: 26, height: 26, borderRadius: "50%", objectFit: "cover" }} draggable={false} /> : <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><span style={{ fontSize: 11, fontWeight: 900, color: "#080808" }}>{r.name[0]?.toUpperCase()}</span></div>}
+                <span style={{ fontSize: 12, fontWeight: 800, color: "#ddd" }}>{r.name}</span>
+              </div>
+              <span style={{ fontSize: 9, color: "#333" }}>{new Date(r.createdAt).toLocaleDateString("es-VE", { day: "2-digit", month: "short" })}</span>
+            </div>
+            <div style={{ marginBottom: 5 }}><ReviewsStarRow value={r.stars} size={11} /></div>
+            <p style={{ margin: 0, fontSize: 12.5, color: "#888", lineHeight: 1.7 }}>{r.comment}</p>
+            {!!r.photoUrl && <img src={r.photoUrl} alt="" style={{ width: 90, height: 90, objectFit: "cover", borderRadius: 8, marginTop: 8 }} draggable={false} />}
+          </div>
+        ))}
+        {reviews.length > visible && (
+          <button onClick={() => setVisible(v => v + 6)} style={{ background: "#161616", border: `1px solid ${C.border}`, color: "#ccc", borderRadius: 10, padding: "0.75rem", fontSize: 11, fontWeight: 800, letterSpacing: 1, cursor: "pointer", fontFamily: "inherit" }}>VER MÁS RESEÑAS</button>
+        )}
+      </div>
+      <div style={{ background: "linear-gradient(160deg,#141414 0%,#0c0c0c 100%)", border: `1px solid ${C.border}`, borderRadius: 14, padding: "1.1rem" }}>
+        <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: 2, color: "#444", margin: "0 0 0.6rem" }}>DEJA TU RESEÑA</p>
+        <div style={{ marginBottom: "0.85rem" }}><ReviewsStarRow value={stars} onChange={setStars} size={22} /></div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+          <input placeholder="Tu nombre *" value={name} onChange={e => setName(e.target.value)} style={{ width: "100%", border: `1px solid ${C.border}`, padding: "0.75rem 1rem", fontSize: 13, outline: "none", fontFamily: "inherit", background: "#161616", color: "#eee", borderRadius: 8, boxSizing: "border-box" }} />
+          <textarea placeholder="Cuéntanos tu experiencia..." value={comment} onChange={e => setComment(e.target.value)} rows={2} style={{ width: "100%", border: `1px solid ${C.border}`, padding: "0.75rem 1rem", fontSize: 13, outline: "none", fontFamily: "inherit", background: "#161616", color: "#eee", borderRadius: 8, boxSizing: "border-box", resize: "vertical" as const, lineHeight: 1.6 }} />
+          <div>
+            <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} disabled={uploading} style={{ display: "none" }} id="landing-review-photo" />
+            {photoUrl ? (
+              <div style={{ position: "relative", display: "inline-block" }}>
+                <img src={photoUrl} alt="" style={{ width: 60, height: 60, objectFit: "cover", borderRadius: 8 }} draggable={false} />
+                <button type="button" onClick={() => setPhotoUrl("")} style={{ position: "absolute", top: -6, right: -6, background: "#cc3333", border: "none", borderRadius: "50%", width: 18, height: 18, color: "#fff", fontSize: 10, cursor: "pointer" }}>✕</button>
+              </div>
+            ) : (
+              <label htmlFor="landing-review-photo" style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#161616", border: "1px dashed #2a2a2a", borderRadius: 8, padding: "0.55rem 0.9rem", cursor: uploading ? "not-allowed" : "pointer", fontSize: 11, color: "#888", fontWeight: 700 }}>{uploading ? "Subiendo…" : "📷 Agregar foto (opcional)"}</label>
+            )}
+          </div>
+          <button onClick={handleSubmit} disabled={!name.trim() || !comment.trim() || sending} style={{ background: "#fff", color: "#080808", border: "none", borderRadius: 8, padding: "0.85rem", fontSize: 11, fontWeight: 900, letterSpacing: 1, cursor: (!name.trim() || !comment.trim() || sending) ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: (!name.trim() || !comment.trim() || sending) ? 0.5 : 1 }}>{sending ? "Publicando..." : "PUBLICAR RESEÑA"}</button>
+          {done && <p style={{ margin: 0, fontSize: 11, color: "#4caf50" }}>✓ ¡Gracias por tu reseña!</p>}
+        </div>
+      </div>
+    </section>
   );
 }
 
