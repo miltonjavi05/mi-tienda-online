@@ -45,7 +45,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import Image from "next/image";
+
 
 // ─── CONFIG (mismos valores que tu tienda) ────────────────────────────────
 const META_PIXEL_ID = "840893159040582";
@@ -371,9 +371,10 @@ export default function LandingLentesAviador() {
     { q: "¿Es seguro comprar por WhatsApp?", a: "Sí. Hablas directo con nosotros, sin intermediarios ni bots. Confirmamos tu pedido, te enviamos los datos de pago y coordinamos el envío contigo en tiempo real. Más de 15.000 pedidos entregados nos respaldan." },
     { q: "¿Y si los lentes no me quedan o no me gustan?", a: "Tienes garantía de satisfacción: si al recibirlos algo no está bien, lo resolvemos contigo directamente. Nuestro objetivo es que te quedes feliz con tu compra, no solo que compres." },
     { q: "¿Cómo pago?", a: "Aceptamos Pago Móvil (Banco de Venezuela y Bancamiga), Binance Pay y Zinli. Tú eliges el método que prefieras al finalizar por WhatsApp." },
-    { q: "¿Cuánto tarda el envío y a dónde llega?", a: "Enviamos a los 23 estados de Venezuela mediante MRW, Zoom y Tealca. Si estás en Naguanagua el envío es gratis; en Valencia tiene un costo fijo de $3." },
+    { q: "¿Cuánto tarda el envío y a dónde llega?", a: "Enviamos a los 23 estados de Venezuela mediante MRW, Zoom y Tealca. Con MRW el tiempo de entrega es de 1 a 2 días hábiles. Si estás en Naguanagua el envío es gratis; en Valencia tiene un costo fijo de $3." },
     { q: "¿De verdad filtran la luz azul de las pantallas?", a: "Sí, el cristal cuenta con filtro real de luz azul, no es solo un lente con tinte decorativo — ayuda a reducir el cansancio y el ardor en los ojos tras horas de PC, laptop o celular." },
-    { q: "¿De qué material están hechos? ¿Se van a poner feos rápido?", a: "Armazón en acero inoxidable premium con acabado grabado a mano, resistente a la oxidación, al sudor y al uso diario. No es plástico ni aleación barata que se despinta." },
+    { q: "¿De qué material están hechos? ¿Se van a poner feos rápido?", a: "Armazón en acero inoxidable premium combinado con acetato técnico de alta resistencia, con acabado grabado a mano. Aguanta la oxidación, el sudor y los golpes del uso diario — nada de aleaciones baratas que se despintan con el tiempo." },
+    { q: "¿Sirven para colocarles mi fórmula (graduación)?", a: "Sí. El armazón está preparado tanto para mandar a montar tu fórmula en cualquier óptica, como para usarlos tal cual en tu día a día frente a la pantalla — dos usos en un solo accesorio." },
     { q: "¿Por qué están en oferta, tienen algo malo?", a: `No — es una promoción por tiempo limitado, ${PRODUCT.discountPercent}% de descuento sobre el precio normal de $${PRODUCT.price}. Es exactamente el mismo producto premium, solo que hoy cuesta menos.` },
   ]), []);
 
@@ -408,7 +409,7 @@ export default function LandingLentesAviador() {
             Lentes Anti Luz Azul<br />que se ven tan bien como protegen
           </h1>
           <p className="hero-sub" style={{ fontSize: 14, color: "#777", lineHeight: 1.7, maxWidth: 420, margin: "0 auto 1.5rem" }}>
-            Diseño premium en acero inoxidable grabado a mano, con filtro real de luz azul para tus jornadas frente al PC, la laptop o el celular. Hoy con {PRODUCT.discountPercent}% de descuento.
+            Diseño premium en acero inoxidable y acetato técnico de alta resistencia, grabado a mano, con filtro real de luz azul para tus jornadas frente al PC, la laptop o el celular. Sirven tanto para mandar a formular con tu graduación como para uso diario. Hoy con {PRODUCT.discountPercent}% de descuento — te llegan en 1 a 2 días hábiles por MRW.
           </p>
         </div>
 
@@ -421,16 +422,13 @@ export default function LandingLentesAviador() {
           <span aria-hidden="true" style={{ position: "absolute", inset: -10, borderRadius: 18, border: "1px solid rgba(255,255,255,0.5)", animation: "focusRingPulse 2.8s ease-out infinite", pointerEvents: "none", zIndex: 3 }} />
           <div style={{ position: "relative", aspectRatio: "1/1", borderRadius: 16, overflow: "hidden", background: "#0a0a0a", boxShadow: "0 30px 70px rgba(0,0,0,0.6)" }}>
             {!heroLoaded && <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg,#141414 0%,#1e1e1e 50%,#141414 100%)", backgroundSize: "200% 100%", animation: "badgeShimmer 1.4s infinite", zIndex: 1 }} />}
-            <Image
+            <img
               src={PRODUCT_IMAGES.hero}
               alt={PRODUCT.name}
-              fill
-              priority
+              loading="eager"
               fetchPriority="high"
-              sizes="(max-width: 480px) 92vw, 380px"
-              quality={90}
               onLoad={() => setHeroLoaded(true)}
-              style={{ objectFit: "cover", opacity: heroLoaded ? 1 : 0, transition: "opacity 0.4s ease", animation: heroLoaded ? "heroKenBurns 9s ease-in-out infinite alternate" : "none" }}
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: heroLoaded ? 1 : 0, transition: "opacity 0.4s ease", animation: heroLoaded ? "heroKenBurns 9s ease-in-out infinite alternate" : "none" }}
               draggable={false}
             />
             <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.35) 100%)", pointerEvents: "none", animation: "spotlightPulse 4s ease-in-out infinite", zIndex: 2 }} />
@@ -466,7 +464,7 @@ export default function LandingLentesAviador() {
             <RevealUp key={item.src} delay={i * 70} from={i % 2 === 0 ? "left" : "right"}>
               <div style={{ borderRadius: 14, overflow: "hidden", background: "#0d0d0d", border: `1px solid ${C.border}` }}>
                 <div style={{ position: "relative", aspectRatio: "1/1", background: "#0a0a0a" }}>
-                  <Image src={item.src} alt={item.caption} fill loading="lazy" sizes="(max-width: 480px) 92vw, 420px" quality={85} style={{ objectFit: "cover" }} draggable={false} />
+                  <img src={item.src} alt={item.caption} loading="lazy" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} draggable={false} />
                 </div>
                 <p style={{ margin: 0, padding: "0.9rem 1rem", fontSize: 12, color: "#999", lineHeight: 1.6 }}>{item.caption}</p>
               </div>
@@ -483,12 +481,13 @@ export default function LandingLentesAviador() {
           </RevealUp>
           <div className="benefits-grid" style={{ display: "grid", gap: "1rem" }}>
             {[
-              { icon: <IcGem s={20} />, t: "Acero inoxidable premium", d: "Resistente a la oxidación, el sudor y el uso diario. No se despinta ni se pone feo." },
+              { icon: <IcGem s={20} />, t: "Acero inoxidable y acetato técnico", d: "Materiales de altísima resistencia: acero inoxidable premium y acetato técnico reforzado. No se oxida, no se despinta y aguanta el uso diario sin perder su brillo." },
               { icon: <IcSun s={20} />, t: "Filtro real de luz azul", d: "Reduce la fatiga visual y el ardor en los ojos tras horas de PC, laptop o celular — no es solo un cristal con tinte." },
               { icon: <IcCheck s={20} c="#fff" />, t: "Ajuste cómodo todo el día", d: "Puente doble y puntas acolchadas — se te olvida que los llevas puestos." },
-              { icon: <IcTruck s={20} />, t: "Envío a toda Venezuela", d: "Llegan a los 23 estados del país con MRW, Zoom o Tealca." },
+              { icon: <IcTruck s={20} />, t: "Envío a toda Venezuela", d: "Con MRW llegan en 1 a 2 días hábiles; también trabajamos con Zoom y Tealca a los 23 estados del país." },
               { icon: <IcShield s={20} />, t: "Garantía de satisfacción", d: "Si algo no está bien al recibirlos, lo resolvemos contigo directamente." },
               { icon: <IcRefresh s={20} />, t: "Diseño exclusivo Fokus", d: "Detalles grabados a mano — acabado de joyería, un accesorio con el que se nota tu estilo." },
+              { icon: <IcCheck s={20} c="#fff" />, t: "Listos para tu fórmula o uso diario", d: "El armazón admite montar tus lentes formulados en cualquier óptica, o úsalos tal cual para tu jornada diaria frente a la pantalla." },
             ].map((b, i) => (
               <RevealUp key={b.t} delay={i * 60}>
                 <div style={{ background: "#111", border: `1px solid ${C.border}`, borderRadius: 14, padding: "1.25rem 1.1rem", height: "100%" }}>
@@ -518,7 +517,7 @@ export default function LandingLentesAviador() {
         <div className="gallery-row" style={{ display: "grid", gap: "1.25rem", alignItems: "center" }}>
           <RevealUp from="left">
             <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", aspectRatio: "1/1", background: "#0a0a0a" }}>
-              <Image src={PRODUCT_IMAGES.lifestyle} alt="Lentes puestos, uso diario frente a la pantalla" fill loading="lazy" sizes="(max-width: 480px) 92vw, 420px" quality={85} style={{ objectFit: "cover" }} draggable={false} />
+              <img src={PRODUCT_IMAGES.lifestyle} alt="Lentes puestos, uso diario frente a la pantalla" loading="lazy" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} draggable={false} />
             </div>
           </RevealUp>
           <RevealUp from="right" delay={100}>
@@ -649,7 +648,7 @@ const REVIEWS_FIREBASE_PROJECT_ID = "fokus-16a0c";
 const REVIEWS_CLOUDINARY_CLOUD = "drgafle8o";
 const REVIEWS_CLOUDINARY_PRESET = "fokus_products";
 // Cambia esto por el ID de otro producto de tu tienda si quieres mostrar SUS reseñas aquí:
-const REVIEWS_PRODUCT_ID = PRODUCT.code;
+const REVIEWS_PRODUCT_ID = "FK-13YTHA";
 const REVIEWS_PRODUCT_NAME = PRODUCT.name;
 
 interface LandingReview { id: string; name: string; comment: string; stars: number; createdAt: number; photoUrl?: string; avatarUrl?: string; }
