@@ -608,7 +608,7 @@ export default function LandingLentesAviador() {
             <p style={{ textAlign:"center",color:"#333",fontSize:12,margin:0 }}>Aún no hay reseñas para este producto.</p>
           ):(
             reviews.slice(0,reviewsVisible).map((r,i)=> (
-              <div key={r.id} className="reveal" style={{ background:"#111",border:"1px solid #1e1e1e",borderRadius:12,padding:16,animationDelay:`${0.05*i}s` }}>
+              <div key={r.id} style={{ background:"#111",border:"1px solid #1e1e1e",borderRadius:12,padding:16,animation:"fadeIn 0.4s ease" }}>
                 <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6 }}>
                   <div style={{ display:"flex",alignItems:"center",gap:8 }}>
                     <div style={{ width:28,height:28,borderRadius:"50%",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center" }}>
