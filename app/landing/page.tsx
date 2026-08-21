@@ -235,16 +235,13 @@ function LeadModal({ open, source, onClose }: { open: boolean; source: string; o
 
   const handleConfirmar = () => {
     if (!nombre.trim()) return;
-    setEnviando(true);
     if (typeof window !== "undefined" && (window as any).fbq) {
       (window as any).fbq("track", "Lead", { content_name: PRODUCT.name, value: PRODUCT.offerPrice, currency: "USD", source });
     }
     const msg = encodeURIComponent(`Hola! Quiero mis *Lentes Aviador Premium* a $${PRODUCT.offerPrice} (antes $${PRODUCT.price})\n\n• Nombre: ${nombre}\n• Entrega: Envío Nacional (MRW / Zoom / Tealca)`);
-    setTimeout(() => {
-      window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, "_blank");
-      setEnviando(false);
-      onClose();
-    }, 500);
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, "_blank");
+    setEnviando(true);
+    setTimeout(() => { setEnviando(false); onClose(); }, 400);
   };
 
   return (
@@ -354,7 +351,7 @@ export default function LandingLentesAviador() {
         <div className="reveal lentes-box" id="lentes-box" style={{ position:"relative",width:"100%",maxWidth:400,height:320,margin:"0 auto 30px",perspective:1000,cursor:"pointer",animationDelay:"0.4s" }}
           onClick={(e) => { const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect(); const x = e.clientX || rect.left+rect.width/2; const y = e.clientY || rect.top+rect.height/2; if((window as any).__burst)(window as any).__burst(x,y); }}>
           <div style={{ position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:280,height:280,background:"radial-gradient(circle,rgba(255,59,59,0.15) 0%,transparent 70%)",borderRadius:"50%",filter:"blur(40px)",animation:"gp 3s ease-in-out infinite" }} />
-          <img id="lentes-img" className="lentes-img" src="/landing/lentes-aviador/frontal.png" alt="Lentes Aviador Premium"
+          <img id="lentes-img" className="lentes-img" src="/landing/lentes-aviador/frontal.jpg" alt="Lentes Aviador Premium"
             style={{ position:"absolute",top:"50%",left:"50%",width:"90%",maxWidth:360,filter:"drop-shadow(0 20px 60px rgba(0,0,0,0.8)) drop-shadow(0 0 30px rgba(255,59,59,0.2))",animation:"fy 4s ease-in-out infinite, fr 6s ease-in-out infinite",transition:"transform 0.4s cubic-bezier(0.16,1,0.3,1)" }} />
           <div style={{ position:"absolute",bottom:20,left:"50%",transform:"translateX(-50%) scaleY(-1)",width:"60%",height:40,background:"linear-gradient(180deg,rgba(255,255,255,0.08),transparent)",filter:"blur(8px)",borderRadius:"50%",animation:"rf 4s ease-in-out infinite" }} />
           <div style={{ position:"absolute",top:"20%",left:"15%",width:4,height:4,background:"#ffd43b",borderRadius:"50%",boxShadow:"0 0 10px #ffd43b",animation:"pf 5s ease-in-out infinite" }} />
@@ -404,9 +401,11 @@ export default function LandingLentesAviador() {
         </div>
         <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12 }}>
           {[
+            {src:"/landing/lentes-aviador/beauty-1.jpg",cap:"Perfil aerodinámico, acabado mate premium"},
             {src:"/landing/lentes-aviador/beauty-2.jpg",cap:"Acero inoxidable combinado con acetato técnico"},
             {src:"/landing/lentes-aviador/bisagra.jpg",cap:"Bisagras reforzadas de alta duración"},
-            {src:"/landing/lentes-aviador/puente.jpg",cap:"Puente doble ajustable para cualquier rostro"},
+            {src:"/landing/lentes-aviador/detalle-1.jpg",cap:"Puntas ergonómicas para uso todo el día"},
+            {src:"/landing/lentes-aviador/detalle-2.jpg",cap:"Puente doble ajustable para cualquier rostro"},
             {src:"/landing/lentes-aviador/charm.jpg",cap:"Detalles grabados a mano, acabado de precisión"},
           ].map((img,i)=> (
             <div key={i} className="reveal" style={{ borderRadius:16,overflow:"hidden",background:"#0d0d0d",border:"1px solid #1e1e1e",animationDelay:`${0.1*i}s` }}>
@@ -414,6 +413,22 @@ export default function LandingLentesAviador() {
               <p style={{ margin:0,padding:12,fontSize:11,color:"#888" }}>{img.cap}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* LIFESTYLE */}
+      <section style={{ position:"relative",zIndex:2,maxWidth:640,margin:"0 auto",padding:"0 20px 40px" }}>
+        <div className="reveal">
+          <p style={{ fontSize:9,fontWeight:800,letterSpacing:3,color:"#333",textAlign:"center",margin:"0 0 8px",textTransform:"uppercase" }}>Así se ven puestos</p>
+          <h2 style={{ fontSize:22,fontWeight:900,color:"#fff",textAlign:"center",margin:"0 0 24px" }}>Hechos para lucir todos los días</h2>
+        </div>
+        <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12 }}>
+          <div className="reveal" style={{ borderRadius:16,overflow:"hidden",border:"1px solid #1e1e1e",animationDelay:"0.1s" }}>
+            <img src="/landing/lentes-aviador/lifestyle-1.jpg" alt="Modelo usando lentes aviador" style={{ width:"100%",aspectRatio:"3/4",objectFit:"cover",display:"block" }} />
+          </div>
+          <div className="reveal" style={{ borderRadius:16,overflow:"hidden",border:"1px solid #1e1e1e",animationDelay:"0.2s" }}>
+            <img src="/landing/lentes-aviador/lifestyle-2.jpg" alt="Modelo usando lentes aviador de frente" style={{ width:"100%",aspectRatio:"3/4",objectFit:"cover",display:"block" }} />
+          </div>
         </div>
       </section>
 
@@ -545,7 +560,7 @@ export default function LandingLentesAviador() {
           <p style={{ margin:0,fontSize:9,color:"#555",letterSpacing:0.5,textTransform:"uppercase" }}>Oferta hoy · Sin registro</p>
           <p style={{ margin:0,fontSize:15,fontWeight:900,color:"#fff" }}>${PRODUCT.offerPrice.toFixed(2)} <span style={{ fontSize:10,color:"#444",textDecoration:"line-through",fontWeight:600 }}>${PRODUCT.price.toFixed(2)}</span></p>
         </div>
-        <CTAButton source="barra_fija" label="COMPRAR →" compact />
+        <CTAButton source="barra_fija" label="COMPRAR POR WS" compact />
       </div>
 
       <SocialToast />
