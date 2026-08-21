@@ -212,6 +212,71 @@ function useMidnightCountdown() {
   return left;
 }
 
+// ─── STOCK LIMITADO (urgencia real de escasez) ───────────────────────────
+function useStockCounter() {
+  const [stock, setStock] = useState<number>(() => 14 + Math.floor(Math.random() * 6));
+  useEffect(() => {
+    const id = setInterval(() => {
+      setStock((s) => (s > 3 ? s - 1 : 3 + Math.floor(Math.random() * 4)));
+    }, 45000 + Math.random() * 60000);
+    return () => clearInterval(id);
+  }, []);
+  return stock;
+}
+
+// ─── PERSONAS VIENDO LA OFERTA AHORA ──────────────────────────────────────
+function useViewersNow() {
+  const [n, setN] = useState<number>(() => 8 + Math.floor(Math.random() * 14));
+  useEffect(() => {
+    const id = setInterval(() => {
+      setN((v) => Math.max(5, Math.min(34, v + (Math.random() < 0.5 ? -1 : 1))));
+    }, 4000 + Math.random() * 4000);
+    return () => clearInterval(id);
+  }, []);
+  return n;
+}
+
+// ─── TOAST DE COMPRA RECIENTE (prueba social flotante) ────────────────────
+const SOCIAL_PROOF_NAMES = ["Genesis", "Carlos", "Andreina", "Jose", "Valeria", "Anderson", "Yorbelis", "Miguel", "Franyelis", "Luis"];
+const SOCIAL_PROOF_CITIES = ["Caracas", "Valencia", "Maracaibo", "Maracay", "Barquisimeto", "Puerto La Cruz", "Barinas", "Mérida", "San Cristóbal", "Ciudad Guayana"];
+
+function SocialProofToast() {
+  const [visible, setVisible] = useState(false);
+  const [msg, setMsg] = useState({ name: "", city: "", mins: 0 });
+  useEffect(() => {
+    let showT: ReturnType<typeof setTimeout>;
+    let hideT: ReturnType<typeof setTimeout>;
+    function cycle() {
+      const name = SOCIAL_PROOF_NAMES[Math.floor(Math.random() * SOCIAL_PROOF_NAMES.length)];
+      const city = SOCIAL_PROOF_CITIES[Math.floor(Math.random() * SOCIAL_PROOF_CITIES.length)];
+      const mins = 1 + Math.floor(Math.random() * 14);
+      setMsg({ name, city, mins });
+      setVisible(true);
+      hideT = setTimeout(() => setVisible(false), 5000);
+      showT = setTimeout(cycle, 15000 + Math.random() * 20000);
+    }
+    showT = setTimeout(cycle, 6000);
+    return () => { clearTimeout(showT); clearTimeout(hideT); };
+  }, []);
+  return (
+    <div style={{
+      position: "fixed", left: 14, bottom: 78, zIndex: 480,
+      background: "#111", border: `1px solid ${C.border}`, borderRadius: 12,
+      padding: "0.7rem 0.9rem", maxWidth: 260, display: "flex", gap: 10, alignItems: "center",
+      boxShadow: "0 12px 30px rgba(0,0,0,0.5)",
+      opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(12px)",
+      transition: "opacity 0.4s ease, transform 0.4s ease", pointerEvents: "none",
+    }}>
+      <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <span style={{ fontSize: 12, fontWeight: 900, color: "#080808" }}>{msg.name[0]}</span>
+      </div>
+      <p style={{ margin: 0, fontSize: 11, color: "#ccc", lineHeight: 1.5 }}>
+        <strong style={{ color: "#fff" }}>{msg.name}</strong> de {msg.city} compró hace {msg.mins} min
+      </p>
+    </div>
+  );
+}
+
 // ─── REVEAL AL HACER SCROLL (mismo patrón que tu tienda) ─────────────────
 function RevealUp({ children, delay = 0, from = "up" }: { children: React.ReactNode; delay?: number; from?: "up" | "left" | "right" }) {
   const [vis, setVis] = useState(false);
@@ -356,6 +421,8 @@ function PriceBlock({ bcvRate }: { bcvRate: number | null }) {
 export default function LandingLentesAviador() {
   const { rate: bcvRate } = useBcvRate();
   const countdown = useMidnightCountdown();
+  const stock = useStockCounter();
+  const viewersNow = useViewersNow();
   const [heroLoaded, setHeroLoaded] = useState(false);
 
   useEffect(() => { initMetaPixel(); getFbcFromUrl(); }, []);
@@ -436,6 +503,12 @@ export default function LandingLentesAviador() {
         </div>
 
         <PriceBlock bcvRate={bcvRate} />
+        <p style={{ fontSize: 11, fontWeight: 800, color: "#ff8888", margin: "0.6rem 0 0", letterSpacing: 0.3 }}>
+          🔥 Solo quedan <span style={{ color: "#fff" }}>{stock}</span> unidades a este precio
+        </p>
+        <p style={{ fontSize: 10, color: "#666", margin: "0.25rem 0 0" }}>
+          👀 <span style={{ color: "#ccc", fontWeight: 700 }}>{viewersNow} personas</span> viendo esta oferta ahora mismo
+        </p>
         <div style={{ maxWidth: 380, margin: "1.25rem auto 0.75rem" }}>
           <WhatsAppCTA source="hero" big />
         </div>
@@ -627,6 +700,8 @@ export default function LandingLentesAviador() {
         <p style={{ fontSize: 9, color: "#222", margin: 0, letterSpacing: 1 }}>© {new Date().getFullYear()} FOKUS. TODOS LOS DERECHOS RESERVADOS.</p>
       </footer>
 
+      <SocialProofToast />
+
       {/* BARRA FIJA INFERIOR (siempre visible, máxima conversión) */}
       <div style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 500, background: "rgba(8,8,8,0.97)", borderTop: `1px solid ${C.border}`, backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", padding: "0.65rem 1rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -738,7 +813,7 @@ function ReviewsStarRow({ value, onChange, size = 16 }: { value: number; onChang
 }
 
 function ReviewsSection() {
-  const [reviews, setReviews] = useState<LandingReview[]>(SEED_REVIEWS);
+  const [reviews, setReviews] = useState<LandingReview[]>([]);
   const [visible, setVisible] = useState(4);
   const [name, setName] = useState("");
   const [comment, setComment] = useState("");
@@ -749,7 +824,7 @@ function ReviewsSection() {
   const [done, setDone] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { fetchLandingReviews().then(list => { if (list.length) setReviews([...list, ...SEED_REVIEWS]); }); }, []);
+  useEffect(() => { fetchLandingReviews().then(list => { setReviews(list); }); }, []);
 
   const avg = reviews.length ? reviews.reduce((s, r) => s + r.stars, 0) / reviews.length : 5;
 
