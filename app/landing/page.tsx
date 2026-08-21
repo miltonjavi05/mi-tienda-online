@@ -193,7 +193,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 }
 
 // ─── CTA BUTTON ──────────────────────────────────────────────────────────
-function CTAButton({ source, big = false, compact = false, label = "QUIERO LOS MÍOS AHORA", white = false }: { source: string; big?: boolean; compact?: boolean; label?: string; white?: boolean }) {
+function CTAButton({ source, big = false, compact = false, label = "QUIERO LOS MÍOS AHORA", urgent = false }: { source: string; big?: boolean; compact?: boolean; label?: string; urgent?: boolean }) {
   const openLead = useContext(LeadModalContext);
   const handleClick = useCallback(() => {
     if (typeof window !== "undefined" && (window as any).fbq) {
@@ -202,22 +202,21 @@ function CTAButton({ source, big = false, compact = false, label = "QUIERO LOS M
     openLead(source);
   }, [source, openLead]);
 
-  if (white) {
-    return (
-      <button onClick={handleClick} className="cta-btn" style={{ position:"relative",overflow:"hidden",width:"100%",background:"linear-gradient(135deg,#ff4b4b 0%,#e01e1e 55%,#8a0000 100%)",color:"#fff",border:"1px solid rgba(255,255,255,0.25)",borderRadius:12,padding:big?"1.15rem":"1rem",fontSize:big?14:12,fontWeight:900,letterSpacing:2,cursor:"pointer",fontFamily:"inherit",boxShadow:"0 8px 28px rgba(255,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.3)" }}>
-        <span style={{ position:"absolute",inset:0,background:"linear-gradient(115deg,transparent 0%,rgba(255,255,255,0.35) 50%,transparent 100%)",backgroundSize:"200% 100%",animation:"shimmerBtn 2.6s ease infinite",pointerEvents:"none" }} />
-        <span style={{ position:"relative",display:"flex",alignItems:"center",justifyContent:"center",gap:8 }}>
-          <IcWA s={big?20:17} /> {label}
-        </span>
-      </button>
-    );
-  }
+  const bg = urgent
+    ? "linear-gradient(135deg,#ff4b4b 0%,#e01e1e 55%,#8a0000 100%)"
+    : "linear-gradient(135deg,#ffffff 0%,#f2f2f2 55%,#d9d9d9 100%)";
+  const color = urgent ? "#fff" : "#0a0a0a";
+  const border = urgent ? "1px solid rgba(255,255,255,0.25)" : "1px solid rgba(0,0,0,0.08)";
+  const shadow = urgent
+    ? "0 8px 28px rgba(255,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.3)"
+    : "0 8px 28px rgba(255,255,255,0.18), inset 0 1px 0 rgba(255,255,255,0.6)";
+  const shimmer = urgent ? "rgba(255,255,255,0.35)" : "rgba(0,0,0,0.12)";
 
   return (
-    <button onClick={handleClick} className="cta-btn" style={{ position:"relative",overflow:"hidden",width:compact?"auto":"100%",flexShrink:0,whiteSpace:"nowrap" as const,background:"linear-gradient(135deg,#ff4b4b 0%,#e01e1e 55%,#8a0000 100%)",color:"#fff",border:"1px solid rgba(255,255,255,0.25)",borderRadius:compact?12:16,padding:compact?"0.8rem 1.3rem":big?"1.15rem":"1rem",fontSize:compact?12:big?15:13,fontWeight:900,letterSpacing:1.5,textTransform:"uppercase" as const,cursor:"pointer",fontFamily:"inherit",boxShadow:"0 8px 28px rgba(255,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.3)" }}>
-      <span style={{ position:"absolute",inset:0,background:"linear-gradient(115deg,transparent 0%,rgba(255,255,255,0.35) 50%,transparent 100%)",backgroundSize:"200% 100%",animation:"shimmerBtn 2.6s ease infinite",pointerEvents:"none" }} />
-      <span style={{ position:"relative",display:"flex",alignItems:"center",justifyContent:"center",gap:10 }}>
-        <IcWA s={big?20:18} /> {label}
+    <button onClick={handleClick} className="cta-btn" style={{ position:"relative",overflow:"hidden",width:compact?"auto":"100%",flexShrink:0,whiteSpace:"nowrap" as const,background:bg,color,border,borderRadius:compact?12:16,padding:compact?"0.8rem 1.3rem":big?"1.15rem":"1rem",fontSize:compact?12:big?15:13,fontWeight:900,letterSpacing:1.5,textTransform:"uppercase" as const,cursor:"pointer",fontFamily:"inherit",boxShadow:shadow }}>
+      <span style={{ position:"absolute",inset:0,background:`linear-gradient(115deg,transparent 0%,${shimmer} 50%,transparent 100%)`,backgroundSize:"200% 100%",animation:"shimmerBtn 2.6s ease infinite",pointerEvents:"none" }} />
+      <span style={{ position:"relative",display:"flex",alignItems:"center",justifyContent:"center",gap:compact?8:10 }}>
+        <IcWA s={big?20:compact?17:18} /> {label}
       </span>
     </button>
   );
@@ -240,7 +239,7 @@ function LeadModal({ open, source, onClose }: { open: boolean; source: string; o
       (window as any).fbq("track", "Lead", { content_name: PRODUCT.name, value: PRODUCT.offerPrice, currency: "USD", source });
     }
     const entregaTxt = entrega === "valencia" ? "Retiro / Delivery en Valencia" : "Envío Nacional (MRW / Zoom / Tealca)";
-    const msg = encodeURIComponent(`Hola! Quiero mis *${PRODUCT.name}* a $${PRODUCT.offerPrice} (antes $${PRODUCT.price})\n\n• Nombre: ${nombre}\n• Entrega: ${entregaTxt}`);
+    const msg = encodeURIComponent(`Hola! Quiero mis *${PRODUCT.name}* a $${PRODUCT.offerPrice} (antes $${PRODUCT.price})\n\n• Nombre: ${nombre}\n• Entrega: ${entregaTxt}\n\n_Este mensaje es de alta prioridad, te contactaremos enseguida._`);
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, "_blank");
     setEnviando(true);
     setTimeout(() => { setEnviando(false); onClose(); }, 400);
@@ -362,7 +361,7 @@ export default function LandingLentesAviador() {
         {/* LENTES FLONTANTES SIN FONDO */}
         <div className="reveal lentes-box" id="lentes-box" style={{ position:"relative",width:"100%",maxWidth:400,height:320,margin:"0 auto 30px",perspective:1000,cursor:"pointer",animationDelay:"0.4s" }}
           onClick={(e) => { const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect(); const x = e.clientX || rect.left+rect.width/2; const y = e.clientY || rect.top+rect.height/2; if((window as any).__burst)(window as any).__burst(x,y); }}>
-          <div style={{ position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:280,height:280,background:"radial-gradient(circle,rgba(255,59,59,0.15) 0%,transparent 70%)",borderRadius:"50%",filter:"blur(40px)",animation:"gp 3s ease-in-out infinite" }} />
+          <div style={{ position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:280,height:280,background:"radial-gradient(circle,rgba(255,255,255,0.12) 0%,transparent 70%)",borderRadius:"50%",filter:"blur(40px)",animation:"gp 3s ease-in-out infinite" }} />
           <img id="lentes-img" className="lentes-img" src="/landing/lentes-aviador/frontal.jpg" alt="Lentes Aviador Premium"
             style={{ position:"absolute",top:"50%",left:"50%",width:"90%",maxWidth:360,filter:"drop-shadow(0 20px 60px rgba(0,0,0,0.8)) drop-shadow(0 0 30px rgba(255,59,59,0.2))",animation:"fy 4s ease-in-out infinite, fr 6s ease-in-out infinite",transition:"transform 0.4s cubic-bezier(0.16,1,0.3,1)" }} />
           <div style={{ position:"absolute",bottom:20,left:"50%",transform:"translateX(-50%) scaleY(-1)",width:"60%",height:40,background:"linear-gradient(180deg,rgba(255,255,255,0.08),transparent)",filter:"blur(8px)",borderRadius:"50%",animation:"rf 4s ease-in-out infinite" }} />
@@ -375,7 +374,7 @@ export default function LandingLentesAviador() {
         <div className="reveal" style={{ marginBottom:20,animationDelay:"0.5s" }}>
           <div style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:16,flexWrap:"wrap" }}>
             <span style={{ fontSize:18,color:"#444",textDecoration:"line-through",fontWeight:600 }}>${PRODUCT.price.toFixed(2)}</span>
-            <span style={{ fontSize:48,fontWeight:900,color:"#fff",lineHeight:1,animation:"pp 2.4s ease-in-out infinite",textShadow:"0 0 40px rgba(255,59,59,0.3)" }}>${PRODUCT.offerPrice.toFixed(2)}</span>
+            <span style={{ fontSize:48,fontWeight:900,color:"#fff",lineHeight:1,animation:"pp 2.4s ease-in-out infinite",textShadow:"0 0 40px rgba(255,255,255,0.25)" }}>${PRODUCT.offerPrice.toFixed(2)}</span>
             <span style={{ background:"linear-gradient(135deg,#ff3b3b,#7a0000)",color:"#fff",fontSize:11,fontWeight:900,letterSpacing:1,padding:"6px 14px",borderRadius:20,boxShadow:"0 4px 20px rgba(255,0,0,0.4)",animation:"bs 2.8s ease infinite" }}>
               -29% HOY
             </span>
@@ -475,7 +474,7 @@ export default function LandingLentesAviador() {
             <span style={{ fontSize:17,color:"#444",textDecoration:"line-through" }}>${PRODUCT.price.toFixed(2)}</span>
             <span style={{ fontSize:36,fontWeight:900,color:"#fff" }}>${PRODUCT.offerPrice.toFixed(2)}</span>
           </div>
-          <CTAButton source="cta_intermedio" white label="PEDIR POR WHATSAPP AHORA" />
+          <CTAButton source="cta_intermedio" label="PEDIR POR WHATSAPP AHORA" />
         </div>
       </section>
 
@@ -556,7 +555,7 @@ export default function LandingLentesAviador() {
             <span style={{ fontSize:17,color:"#444",textDecoration:"line-through" }}>${PRODUCT.price.toFixed(2)}</span>
             <span style={{ fontSize:36,fontWeight:900,color:"#fff" }}>${PRODUCT.offerPrice.toFixed(2)}</span>
           </div>
-          <CTAButton source="cta_final" big label="COMPRAR AHORA" />
+          <CTAButton source="cta_final" big urgent label="COMPRAR AHORA" />
           <p style={{ fontSize:9,color:"#333",margin:"12px 0 0" }}>⏳ Oferta termina en {cd.h}h {cd.m}m</p>
         </div>
       </section>
@@ -572,7 +571,7 @@ export default function LandingLentesAviador() {
           <p style={{ margin:0,fontSize:9,color:"#555",letterSpacing:0.5,textTransform:"uppercase" }}>Oferta hoy · Sin registro</p>
           <p style={{ margin:0,fontSize:15,fontWeight:900,color:"#fff" }}>${PRODUCT.offerPrice.toFixed(2)} <span style={{ fontSize:10,color:"#444",textDecoration:"line-through",fontWeight:600 }}>${PRODUCT.price.toFixed(2)}</span></p>
         </div>
-        <CTAButton source="barra_fija" label="COMPRAR POR WS" compact />
+        <CTAButton source="barra_fija" label="COMPRAR POR WS" compact urgent />
       </div>
 
       <SocialToast />
