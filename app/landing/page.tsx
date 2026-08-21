@@ -666,6 +666,24 @@ export default function LandingLentesAviador() {
         </RevealUp>
       </section>
 
+      {/* ── MÁS MODELOS ── */}
+      <section style={{ maxWidth: 640, margin: "0 auto", padding: "0 1.25rem 3rem" }}>
+        <RevealUp>
+          <a href="https://www.fokusaccesorios.shop/tienda/lentes/anti-luz-azul" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", display: "block" }}>
+            <div style={{ background: "linear-gradient(160deg,#141414 0%,#0c0c0c 100%)", border: `1px solid ${C.border}`, borderRadius: 18, padding: "2rem 1.5rem", textAlign: "center", position: "relative", overflow: "hidden" }}>
+              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1, background: "linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent)" }} />
+              <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: 3, color: "#333", margin: "0 0 0.75rem" }}>COLECCIÓN COMPLETA</p>
+              <h2 style={{ fontSize: 20, fontWeight: 900, color: "#fff", margin: "0 0 0.5rem", lineHeight: 1.3 }}>¿Buscas otro estilo?</h2>
+              <p style={{ fontSize: 13, color: "#666", lineHeight: 1.6, margin: "0 0 1.25rem" }}>Explora todos nuestros modelos de lentes anti luz azul y encuentra el que mejor va contigo.</p>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 20, padding: "0.6rem 1.2rem" }}>
+                <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.5, color: "#fff" }}>VER MÁS MODELOS</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              </div>
+            </div>
+          </a>
+        </RevealUp>
+      </section>
+
       {/* FOOTER MÍNIMO */}
       <footer style={{ borderTop: `1px solid ${C.border}`, padding: "1.5rem", textAlign: "center" }}>
         <p style={{ fontSize: 9, color: "#222", margin: 0, letterSpacing: 1 }}>© {new Date().getFullYear()} FOKUS. TODOS LOS DERECHOS RESERVADOS.</p>
