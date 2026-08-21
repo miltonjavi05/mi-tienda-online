@@ -192,7 +192,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 }
 
 // ─── CTA BUTTON (ADICTIVO) ──────────────────────────────────────────────
-function CTAButton({ source, big = false, label = "QUIERO LOS MÍOS AHORA", white = false }: { source: string; big?: boolean; label?: string; white?: boolean }) {
+function CTAButton({ source, big = false, compact = false, label = "QUIERO LOS MÍOS AHORA", white = false }: { source: string; big?: boolean; compact?: boolean; label?: string; white?: boolean }) {
   const handleClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = rect.left + rect.width / 2;
@@ -218,7 +218,7 @@ function CTAButton({ source, big = false, label = "QUIERO LOS MÍOS AHORA", whit
   }
 
   return (
-    <button onClick={handleClick} className="cta-btn" style={{ position:"relative",width:"100%",background:"linear-gradient(180deg,#ff3b3b,#c41e1e)",color:"#fff",border:"none",borderRadius:16,padding:big?"1.15rem":"1rem",fontSize:big?15:13,fontWeight:900,letterSpacing:1.5,textTransform:"uppercase" as const,cursor:"pointer",overflow:"hidden",boxShadow:"0 8px 32px rgba(255,59,59,0.4), inset 0 1px 0 rgba(255,255,255,0.3)",transition:"all 0.15s cubic-bezier(0.16,1,0.3,1)",fontFamily:"inherit" }}>
+    <button onClick={handleClick} className="cta-btn" style={{ position:"relative",width:compact?"auto":"100%",flexShrink:0,whiteSpace:"nowrap" as const,background:"linear-gradient(180deg,#ff3b3b,#c41e1e)",color:"#fff",border:"none",borderRadius:compact?12:16,padding:compact?"0.8rem 1.3rem":big?"1.15rem":"1rem",fontSize:compact?12:big?15:13,fontWeight:900,letterSpacing:1.5,textTransform:"uppercase" as const,cursor:"pointer",overflow:"hidden",boxShadow:"0 8px 32px rgba(255,59,59,0.4), inset 0 1px 0 rgba(255,255,255,0.3)",transition:"all 0.15s cubic-bezier(0.16,1,0.3,1)",fontFamily:"inherit" }}>
       <span style={{ position:"absolute",inset:0,background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.3),transparent)",backgroundSize:"200% 100%",animation:"shimmerBtn 2s ease infinite",pointerEvents:"none" }} />
       <span style={{ position:"relative",zIndex:2,display:"flex",alignItems:"center",justifyContent:"center",gap:10 }}>
         <IcWA s={big?20:18} /> {label}
@@ -472,7 +472,7 @@ export default function LandingLentesAviador() {
       </section>
 
       {/* FOOTER */}
-      <footer style={{ position:"relative",zIndex:2,borderTop:"1px solid #1e1e1e",padding:24,textAlign:"center" }}>
+      <footer style={{ position:"relative",zIndex:2,borderTop:"1px solid #1e1e1e",padding:"24px 24px 90px",textAlign:"center" }}>
         <p style={{ fontSize:9,color:"#222",margin:0,letterSpacing:1,textTransform:"uppercase" }}>© 2026 FOKUS. Todos los derechos reservados.</p>
       </footer>
 
@@ -482,7 +482,7 @@ export default function LandingLentesAviador() {
           <p style={{ margin:0,fontSize:9,color:"#555",letterSpacing:0.5,textTransform:"uppercase" }}>Oferta hoy · Sin registro</p>
           <p style={{ margin:0,fontSize:15,fontWeight:900,color:"#fff" }}>${PRODUCT.offerPrice.toFixed(2)} <span style={{ fontSize:10,color:"#444",textDecoration:"line-through",fontWeight:600 }}>${PRODUCT.price.toFixed(2)}</span></p>
         </div>
-        <CTAButton source="barra_fija" label="COMPRAR →" />
+        <CTAButton source="barra_fija" label="COMPRAR →" compact />
       </div>
 
       <SocialToast />
