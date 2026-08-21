@@ -203,7 +203,7 @@ function CTAButton({ source, big = false, compact = false, label = "QUIERO LOS M
     if (typeof window !== "undefined" && (window as any).fbq) {
       (window as any).fbq("trackCustom", "AdquirirLentesAviador", { content_name: PRODUCT.name, value: PRODUCT.offerPrice, currency: "USD", source });
     }
-    setTimeout(() => { if ((window as any).__openLead) (window as any).__openLead(source); }, 350);
+    setTimeout(() => { window.dispatchEvent(new CustomEvent("fokus:open-lead", { detail: { source } })); }, 350);
   }, [source]);
 
   if (white) {
@@ -245,7 +245,7 @@ function LeadModal({ open, source, onClose }: { open: boolean; source: string; o
   };
 
   return (
-    <div onClick={onClose} style={{ position:"fixed",inset:0,zIndex:900,background:"rgba(0,0,0,0.75)",backdropFilter:"blur(6px)",display:"flex",alignItems:"flex-end",justifyContent:"center",animation:"fadeIn 0.25s ease" }}>
+    <div onClick={onClose} style={{ position:"fixed",inset:0,zIndex:1000,background:"rgba(0,0,0,0.75)",backdropFilter:"blur(6px)",display:"flex",alignItems:"flex-end",justifyContent:"center",animation:"fadeIn 0.25s ease" }}>
       <div onClick={e=>e.stopPropagation()} style={{ width:"100%",maxWidth:460,background:"#0b0b0b",border:"1px solid #2a2a2a",borderTop:"1px solid #333",borderRadius:"20px 20px 0 0",padding:"24px 20px 28px",animation:"slideUp 0.3s cubic-bezier(0.16,1,0.3,1)" }}>
         <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16 }}>
           <div>
@@ -290,7 +290,9 @@ export default function LandingLentesAviador() {
   useReveal();
 
   useEffect(() => {
-    (window as any).__openLead = (source: string) => { setLeadSource(source); setLeadOpen(true); };
+    const handler = (e: any) => { setLeadSource(e.detail?.source || "hero"); setLeadOpen(true); };
+    window.addEventListener("fokus:open-lead", handler);
+    return () => window.removeEventListener("fokus:open-lead", handler);
   }, []);
 
   // Parallax lentes
