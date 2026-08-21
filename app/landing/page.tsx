@@ -203,8 +203,7 @@ function CTAButton({ source, big = false, compact = false, label = "QUIERO LOS M
     if (typeof window !== "undefined" && (window as any).fbq) {
       (window as any).fbq("trackCustom", "AdquirirLentesAviador", { content_name: PRODUCT.name, value: PRODUCT.offerPrice, currency: "USD", source });
     }
-    const msg = encodeURIComponent(`Hola! Vi la oferta de los *Lentes Aviador Premium* a $${PRODUCT.offerPrice} (antes $${PRODUCT.price}) y quiero aprovecharla ahora 🖤🕶️`);
-    setTimeout(() => window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, "_blank"), 400);
+    setTimeout(() => { if ((window as any).__openLead) (window as any).__openLead(source); }, 350);
   }, [source]);
 
   if (white) {
@@ -227,11 +226,75 @@ function CTAButton({ source, big = false, compact = false, label = "QUIERO LOS M
   );
 }
 
+// ─── MODAL DE DATOS (FILTRO DE CLIENTES) ────────────────────────────────
+function LeadModal({ open, source, onClose }: { open: boolean; source: string; onClose: () => void }) {
+  const [nombre, setNombre] = useState("");
+  const [enviando, setEnviando] = useState(false);
+
+  if (!open) return null;
+
+  const handleConfirmar = () => {
+    if (!nombre.trim()) return;
+    setEnviando(true);
+    if (typeof window !== "undefined" && (window as any).fbq) {
+      (window as any).fbq("track", "Lead", { content_name: PRODUCT.name, value: PRODUCT.offerPrice, currency: "USD", source });
+    }
+    const msg = encodeURIComponent(`Hola! Quiero mis *Lentes Aviador Premium* a $${PRODUCT.offerPrice} (antes $${PRODUCT.price})\n\n• Nombre: ${nombre}\n• Entrega: Envío Nacional (MRW / Zoom / Tealca)`);
+    setTimeout(() => {
+      window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, "_blank");
+      setEnviando(false);
+      onClose();
+    }, 500);
+  };
+
+  return (
+    <div onClick={onClose} style={{ position:"fixed",inset:0,zIndex:900,background:"rgba(0,0,0,0.75)",backdropFilter:"blur(6px)",display:"flex",alignItems:"flex-end",justifyContent:"center",animation:"fadeIn 0.25s ease" }}>
+      <div onClick={e=>e.stopPropagation()} style={{ width:"100%",maxWidth:460,background:"#0b0b0b",border:"1px solid #2a2a2a",borderTop:"1px solid #333",borderRadius:"20px 20px 0 0",padding:"24px 20px 28px",animation:"slideUp 0.3s cubic-bezier(0.16,1,0.3,1)" }}>
+        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16 }}>
+          <div>
+            <p style={{ margin:0,fontSize:9,fontWeight:800,letterSpacing:2,color:"#ff8888",textTransform:"uppercase" }}>Asegura tus lentes</p>
+            <h3 style={{ margin:"4px 0 0",fontSize:20,fontWeight:900,color:"#fff" }}>Completa tus datos</h3>
+          </div>
+          <button onClick={onClose} style={{ background:"#1a1a1a",border:"1px solid #2a2a2a",borderRadius:"50%",width:30,height:30,color:"#888",cursor:"pointer",fontSize:14,flexShrink:0 }}>✕</button>
+        </div>
+
+        <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:20 }}>
+          <span style={{ fontSize:15,color:"#444",textDecoration:"line-through" }}>${PRODUCT.price.toFixed(2)}</span>
+          <span style={{ fontSize:26,fontWeight:900,color:"#fff" }}>${PRODUCT.offerPrice.toFixed(2)}</span>
+        </div>
+
+        <label style={{ display:"block",fontSize:10,fontWeight:800,letterSpacing:1.5,color:"#888",textTransform:"uppercase",marginBottom:8 }}>Nombre completo *</label>
+        <input value={nombre} onChange={e=>setNombre(e.target.value)} placeholder="¿Cómo te llamas?" style={{ width:"100%",background:"#141414",border:"1px solid #2a2a2a",borderRadius:10,padding:"14px 16px",color:"#fff",fontSize:14,marginBottom:18,fontFamily:"inherit",boxSizing:"border-box" as const }} />
+
+        <label style={{ display:"block",fontSize:10,fontWeight:800,letterSpacing:1.5,color:"#888",textTransform:"uppercase",marginBottom:8 }}>Método de entrega</label>
+        <div style={{ display:"flex",alignItems:"center",gap:10,background:"#141410",border:"1px solid #3a1515",borderRadius:10,padding:"14px 16px",marginBottom:22 }}>
+          <span style={{ fontSize:18 }}>📦</span>
+          <div>
+            <p style={{ margin:0,fontSize:12,fontWeight:800,color:"#eee" }}>Envío Nacional</p>
+            <p style={{ margin:0,fontSize:10,color:"#666" }}>MRW · Zoom · Tealca — 1 a 2 días hábiles</p>
+          </div>
+        </div>
+
+        <button onClick={handleConfirmar} disabled={!nombre.trim() || enviando} className="cta-btn" style={{ width:"100%",background: nombre.trim() ? "linear-gradient(180deg,#ff3b3b,#c41e1e)" : "#2a2a2a",color:"#fff",border:"none",borderRadius:12,padding:"1rem",fontSize:13,fontWeight:900,letterSpacing:1.5,textTransform:"uppercase" as const,cursor: nombre.trim() ? "pointer" : "not-allowed",display:"flex",alignItems:"center",justifyContent:"center",gap:8,fontFamily:"inherit" }}>
+          {enviando ? "Redirigiendo..." : <>CONFIRMAR PEDIDO <IcArrow /></>}
+        </button>
+        <p style={{ fontSize:9,color:"#333",margin:"12px 0 0",textAlign:"center" }}>🔒 Te contactamos por WhatsApp en breve</p>
+      </div>
+    </div>
+  );
+}
+
 // ─── MAIN COMPONENT ─────────────────────────────────────────────────────
 export default function LandingLentesAviador() {
   const cd = useCountdown();
   const stock = useStock();
+  const [leadOpen, setLeadOpen] = useState(false);
+  const [leadSource, setLeadSource] = useState("hero");
   useReveal();
+
+  useEffect(() => {
+    (window as any).__openLead = (source: string) => { setLeadSource(source); setLeadOpen(true); };
+  }, []);
 
   // Parallax lentes
   useEffect(() => {
@@ -344,7 +407,7 @@ export default function LandingLentesAviador() {
             {src:"/landing/lentes-aviador/beauty-2.jpg",cap:"Acero inoxidable combinado con acetato técnico"},
             {src:"/landing/lentes-aviador/bisagra.jpg",cap:"Bisagras reforzadas de alta duración"},
             {src:"/landing/lentes-aviador/puente.jpg",cap:"Puente doble ajustable para cualquier rostro"},
-            {src:"/landing/lentes-aviador/charm.jpg",cap:"Detalles grabados a mano, acabado de joyería"},
+            {src:"/landing/lentes-aviador/charm.jpg",cap:"Detalles grabados a mano, acabado de precisión"},
           ].map((img,i)=> (
             <div key={i} className="reveal" style={{ borderRadius:16,overflow:"hidden",background:"#0d0d0d",border:"1px solid #1e1e1e",animationDelay:`${0.1*i}s` }}>
               <img src={img.src} alt="" style={{ width:"100%",aspectRatio:"1/1",objectFit:"cover",display:"block" }} />
