@@ -238,7 +238,7 @@ function LeadModal({ open, source, onClose }: { open: boolean; source: string; o
       (window as any).fbq("track", "Lead", { content_name: PRODUCT.name, value: PRODUCT.offerPrice, currency: "USD", source });
     }
     const entregaTxt = entrega === "valencia" ? "Retiro / Delivery en Valencia" : "Envío Nacional (MRW / Zoom / Tealca)";
-    const msg = encodeURIComponent(`Hola! Quiero mis *Lentes Aviador Premium* a $${PRODUCT.offerPrice} (antes $${PRODUCT.price})\n\n• Nombre: ${nombre}\n• Entrega: ${entregaTxt}`);
+    const msg = encodeURIComponent(`Hola! Quiero mis *${PRODUCT.name}* a $${PRODUCT.offerPrice} (antes $${PRODUCT.price})\n\n• Nombre: ${nombre}\n• Entrega: ${entregaTxt}`);
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, "_blank");
     setEnviando(true);
     setTimeout(() => { setEnviando(false); onClose(); }, 400);
@@ -255,10 +255,11 @@ function LeadModal({ open, source, onClose }: { open: boolean; source: string; o
           <button onClick={onClose} style={{ background:"#141414",border:"1px solid #2a2a2a",borderRadius:"50%",width:30,height:30,color:"#888",cursor:"pointer",fontSize:14,flexShrink:0 }}>✕</button>
         </div>
 
-        <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:22 }}>
+        <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:6 }}>
           <span style={{ fontSize:15,color:"#444",textDecoration:"line-through" }}>${PRODUCT.price.toFixed(2)}</span>
           <span style={{ fontSize:28,fontWeight:900,color:"#fff" }}>${PRODUCT.offerPrice.toFixed(2)}</span>
         </div>
+        <p style={{ margin:"0 0 22px",fontSize:11,color:"#555" }}>Equivale a <strong style={{ color:"#ffd43b" }}>Bs. 892</strong> · Tasa BCV</p>
 
         <label style={{ display:"block",fontSize:10,fontWeight:800,letterSpacing:1.5,color:"#888",textTransform:"uppercase",marginBottom:8 }}>Nombre completo *</label>
         <input value={nombre} onChange={e=>setNombre(e.target.value)} placeholder="¿Cómo te llamas?" style={{ width:"100%",background:"#141414",border:"1px solid #2a2a2a",borderRadius:10,padding:"14px 16px",color:"#fff",fontSize:14,marginBottom:20,fontFamily:"inherit",boxSizing:"border-box" as const }} />
@@ -571,6 +572,7 @@ export default function LandingLentesAviador() {
       </div>
 
       <SocialToast />
+      <LeadModal open={leadOpen} source={leadSource} onClose={() => setLeadOpen(false)} />
     </div>
     </LeadModalContext.Provider>
   );
