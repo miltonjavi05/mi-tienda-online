@@ -63,17 +63,17 @@ const PRODUCT = {
 };
 
 const PRODUCT_IMAGES = {
-  hero: "/landing/lentes-anti-luz-azul/frontal.jpg",
+  hero: "/landing/lentes-aviador/frontal.jpg",
   gallery: [
-    { src: "/landing/lentes-anti-luz-azul/beauty-2.jpg", caption: "Armazón en acero inoxidable premium — un accesorio que se ve tan bien como protege" },
-    { src: "/landing/lentes-anti-luz-azul/bisagra.jpg", caption: "Bisagras reforzadas de alta duración, listas para el uso diario frente al PC" },
-    { src: "/landing/lentes-anti-luz-azul/puente.jpg", caption: "Puente doble ajustable: se adapta a cualquier tipo de rostro sin apretar" },
-    { src: "/landing/lentes-anti-luz-azul/charm.jpg", caption: "Detalles grabados a mano — acabado de joyería, no de bisutería genérica" },
-    { src: "/landing/lentes-anti-luz-azul/detalle-1.jpg", caption: "Puntas acolchadas para jornadas largas de estudio o trabajo, sin molestar" },
-    { src: "/landing/lentes-anti-luz-azul/lifestyle-2.jpg", caption: "Diseño premium pensado para quien vive conectado a la pantalla" },
+    { src: "/landing/lentes-aviador/beauty-2.jpg", caption: "Armazón en acero inoxidable premium — un accesorio que se ve tan bien como protege" },
+    { src: "/landing/lentes-aviador/bisagra.jpg", caption: "Bisagras reforzadas de alta duración, listas para el uso diario frente al PC" },
+    { src: "/landing/lentes-a/landing/lentes-aviador/nti-luz-azul/puente.jpg", caption: "Puente doble ajustable: se adapta a cualquier tipo de rostro sin apretar" },
+    { src: "/landing/lentes/landing/lentes-aviador/-anti-luz-azul/charm.jpg", caption: "Detalles grabados a mano — acabado de joyería, no de bisutería genérica" },
+    { src: "/landing/lentes-aviador/detalle-1.jpg", caption: "Puntas acolchadas para jornadas largas de estudio o trabajo, sin molestar" },
+    { src: "/landing/lentes-aviador/lifestyle-2.jpg", caption: "Diseño premium pensado para quien vive conectado a la pantalla" },
   ],
-  lifestyle: "/landing/lentes-anti-luz-azul/lifestyle-1.jpg",
-  beauty: "/landing/lentes-anti-luz-azul/beauty-1.jpg",
+  lifestyle: "/landing/lentes-aviador/lifestyle-1.jpg",
+  beauty: "/landing/lentes-aviador/beauty-1.jpg",
 };
 
 // ─── UTILIDADES META PIXEL + CAPI (mismo patrón que tu tienda) ───────────
@@ -605,35 +605,6 @@ export default function LandingLentesAviador() {
         </div>
       </section>
 
-      {/* ── TESTIMONIOS ── */}
-      <section style={{ background: "#0a0a0a", borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, padding: "3rem 1.25rem" }}>
-        <div style={{ maxWidth: 720, margin: "0 auto" }}>
-          <RevealUp>
-            <h2 style={{ fontSize: 20, fontWeight: 900, color: "#fff", textAlign: "center", margin: "0 0 2rem" }}>Lo que dicen quienes ya los tienen</h2>
-          </RevealUp>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
-            {[
-              { n: "Javier R.", t: "Pensé que iban a ser como los lentes normales de la calle, pero la calidad se nota apenas los tienes en la mano. El acero no se siente barato para nada." },
-              { n: "Andrea M.", t: "Pedí por WhatsApp, me atendieron rápido y llegaron a mi estado sin problema. Superó lo que esperaba por el precio." },
-              { n: "Carlos G.", t: "Los uso todos los días frente a la pantalla del trabajo y no me han molestado ni una vez. El diseño de las patillas es un detalle que nadie más tiene." },
-            ].map((r, i) => (
-              <RevealUp key={r.n} delay={i * 80}>
-                <div style={{ background: "#111", border: `1px solid ${C.border}`, borderRadius: 12, padding: "1rem 1.1rem" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                    <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <span style={{ fontSize: 11, fontWeight: 900, color: "#080808" }}>{r.n[0]}</span>
-                    </div>
-                    <span style={{ fontSize: 12, fontWeight: 800, color: "#ddd" }}>{r.n}</span>
-                    <span style={{ color: C.gold, fontSize: 11 }}>★★★★★</span>
-                  </div>
-                  <p style={{ margin: 0, fontSize: 12.5, color: "#888", lineHeight: 1.7 }}>{r.t}</p>
-                </div>
-              </RevealUp>
-            ))}
-          </div>
-        </div>
-      </section>
-
       <ReviewsSection />
 
       {/* ── ELIMINACIÓN DE OBJECIONES / FAQ ── */}
@@ -705,7 +676,7 @@ export default function LandingLentesAviador() {
       {/* BARRA FIJA INFERIOR (siempre visible, máxima conversión) */}
       <div style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 500, background: "rgba(8,8,8,0.97)", borderTop: `1px solid ${C.border}`, backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", padding: "0.65rem 1rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: 9, color: "#555", letterSpacing: 0.5 }}>OFERTA HOY</p>
+          <p style={{ margin: 0, fontSize: 9, color: "#555", letterSpacing: 0.5 }}>OFERTA HOY · SIN REGISTRO</p>
           <p style={{ margin: 0, fontSize: 15, fontWeight: 900, color: "#fff" }}>
             ${PRODUCT.offerPrice.toFixed(2)} <span style={{ fontSize: 10, color: "#444", textDecoration: "line-through", fontWeight: 600 }}>${PRODUCT.price.toFixed(2)}</span>
           </p>
