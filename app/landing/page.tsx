@@ -6,6 +6,114 @@ const WHATSAPP_NUMBER = "584243005733";
 const PRODUCT = { name: "Lentes Anti Luz Azul Premium", price: 28, offerPrice: 19.9 };
 const LeadModalContext = createContext<(source: string) => void>(() => {});
 
+// ─── RESEÑAS EN VIVO (FIRESTORE) ─────────────────────────────────────────
+const FIREBASE_PROJECT_ID = "fokus-16a0c";
+const REVIEWS_PRODUCT_CODE = "FK-13YTHA";
+const REVIEWS_POLL_MS = 20000;
+
+type LiveReview = { id: string; name: string; comment: string; stars: number; createdAt: number; email: string };
+
+function fsBaseLanding() {
+  return `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents`;
+}
+
+function fsValueToJs(v: any): any {
+  if (!v) return null;
+  if ("stringValue" in v) return v.stringValue;
+  if ("doubleValue" in v) return v.doubleValue;
+  if ("integerValue" in v) return Number(v.integerValue);
+  if ("booleanValue" in v) return v.booleanValue;
+  if ("nullValue" in v) return null;
+  if ("arrayValue" in v) return (v.arrayValue.values || []).map(fsValueToJs);
+  if ("mapValue" in v) {
+    const fields = v.mapValue.fields || {};
+    return Object.fromEntries(Object.entries(fields).map(([k, val]) => [k, fsValueToJs(val)]));
+  }
+  return null;
+}
+
+async function fetchProductIdByCode(code: string): Promise<string | null> {
+  try {
+    const res = await fetch(`${fsBaseLanding()}:runQuery`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        structuredQuery: {
+          from: [{ collectionId: "products" }],
+          where: { fieldFilter: { field: { fieldPath: "code" }, op: "EQUAL", value: { stringValue: code } } },
+          limit: 1,
+        },
+      }),
+    });
+    const data = await res.json();
+    const found = (Array.isArray(data) ? data : []).find((x: any) => x.document);
+    if (!found) return null;
+    return found.document.name.split("/").pop();
+  } catch { return null; }
+}
+
+async function fetchProductReviews(productId: string): Promise<LiveReview[]> {
+  try {
+    const res = await fetch(`${fsBaseLanding()}:runQuery`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        structuredQuery: {
+          from: [{ collectionId: "product_comments" }],
+          where: { fieldFilter: { field: { fieldPath: "productId" }, op: "EQUAL", value: { stringValue: productId } } },
+        },
+      }),
+    });
+    const data = await res.json();
+    const docs = (Array.isArray(data) ? data : []).filter((x: any) => x.document).map((x: any) => x.document);
+    const reviews: LiveReview[] = docs.map((doc: any) => {
+      const f = doc.fields || {};
+      return {
+        id: doc.name.split("/").pop(),
+        name: fsValueToJs(f.name) || "Cliente Fokus",
+        comment: fsValueToJs(f.comment) || "",
+        stars: Number(fsValueToJs(f.stars)) || 5,
+        createdAt: Number(fsValueToJs(f.createdAt)) || 0,
+        email: fsValueToJs(f.email) || "",
+      };
+    });
+    reviews.sort((a, b) => b.createdAt - a.createdAt);
+    return reviews;
+  } catch { return []; }
+}
+
+function formatRelativeDate(ts: number): string {
+  if (!ts) return "";
+  const days = Math.floor((Date.now() - ts) / 86400000);
+  if (days <= 0) return "Hoy";
+  if (days === 1) return "Hace 1 día";
+  if (days < 30) return `Hace ${days} días`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `Hace ${months} mes${months > 1 ? "es" : ""}`;
+  const years = Math.floor(months / 12);
+  return `Hace ${years} año${years > 1 ? "s" : ""}`;
+}
+
+function useLiveReviews() {
+  const [reviews, setReviews] = useState<LiveReview[]>([]);
+  const [loading, setLoading] = useState(true);
+  const productIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      if (!productIdRef.current) productIdRef.current = await fetchProductIdByCode(REVIEWS_PRODUCT_CODE);
+      if (!productIdRef.current) { if (!cancelled) setLoading(false); return; }
+      const list = await fetchProductReviews(productIdRef.current);
+      if (!cancelled) { setReviews(list); setLoading(false); }
+    };
+    load();
+    const id = setInterval(load, REVIEWS_POLL_MS);
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
+  const avg = reviews.length ? reviews.reduce((s, r) => s + (r.stars || 5), 0) / reviews.length : 0;
+  return { reviews, avg, loading };
+}
+
 // ─── ESTILOS GLOBALES ───────────────────────────────────────────────────
 const GlobalStyles = () => (
   <style>{`
@@ -299,6 +407,8 @@ export default function LandingLentesAviador() {
   const stock = useStock();
   const [leadOpen, setLeadOpen] = useState(false);
   const [leadSource, setLeadSource] = useState("hero");
+  const { reviews, avg, loading: reviewsLoading } = useLiveReviews();
+  const [reviewsVisible, setReviewsVisible] = useState(10);
   useReveal();
 
   const openLead = useCallback((source: string) => { setLeadSource(source); setLeadOpen(true); }, []);
@@ -482,30 +592,42 @@ export default function LandingLentesAviador() {
       <section style={{ position:"relative",zIndex:2,maxWidth:640,margin:"0 auto",padding:"48px 20px" }}>
         <div className="reveal">
           <p style={{ fontSize:9,fontWeight:800,letterSpacing:3,color:"#333",textAlign:"center",margin:"0 0 8px",textTransform:"uppercase" }}>Opiniones reales</p>
-          <h2 style={{ fontSize:22,fontWeight:900,color:"#fff",textAlign:"center",margin:"0 0 24px" }}>Lo que dicen nuestros clientes</h2>
+          <h2 style={{ fontSize:22,fontWeight:900,color:"#fff",textAlign:"center",margin:"0 0 8px" }}>Lo que dicen nuestros clientes</h2>
+          {reviews.length>0&&(
+            <div style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:8,margin:"0 0 24px" }}>
+              <div style={{ display:"flex",gap:2 }}>{[1,2,3,4,5].map(s=><IcStar key={s} />)}</div>
+              <span style={{ fontSize:12,fontWeight:800,color:"#fff" }}>{avg.toFixed(1)}</span>
+              <span style={{ fontSize:11,color:"#555" }}>· {reviews.length} reseñas</span>
+            </div>
+          )}
         </div>
         <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
-          {[
-            {n:"Javier Jose",d:"Hace 6 días",c:"Los uso todo el día en la computadora del trabajo y se nota la diferencia, ya no llego a la casa con los ojos cansados. Se ven finísimos además."},
-            {n:"Anderson",d:"Hace 14 días",c:"Excelente calidad, el material no se siente para nada barato. Los pedí para el estudio y quedé encantado con el acabado."},
-            {n:"Carrillo",d:"Hace 21 días",c:"Se ven elegantes y de verdad ayudan con el cansancio visual de estar tantas horas frente a la pantalla. Llegaron rápido a mi estado."},
-          ].map((r,i)=> (
-            <div key={i} className="reveal" style={{ background:"#111",border:"1px solid #1e1e1e",borderRadius:12,padding:16,animationDelay:`${0.1*i}s` }}>
-              <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6 }}>
-                <div style={{ display:"flex",alignItems:"center",gap:8 }}>
-                  <div style={{ width:28,height:28,borderRadius:"50%",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center" }}>
-                    <span style={{ fontSize:11,fontWeight:900,color:"#080808" }}>{r.n[0]}</span>
+          {reviewsLoading?(
+            <p style={{ textAlign:"center",color:"#333",fontSize:12,margin:0 }}>Cargando reseñas…</p>
+          ):reviews.length===0?(
+            <p style={{ textAlign:"center",color:"#333",fontSize:12,margin:0 }}>Aún no hay reseñas para este producto.</p>
+          ):(
+            reviews.slice(0,reviewsVisible).map((r,i)=> (
+              <div key={r.id} className="reveal" style={{ background:"#111",border:"1px solid #1e1e1e",borderRadius:12,padding:16,animationDelay:`${0.05*i}s` }}>
+                <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6 }}>
+                  <div style={{ display:"flex",alignItems:"center",gap:8 }}>
+                    <div style={{ width:28,height:28,borderRadius:"50%",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center" }}>
+                      <span style={{ fontSize:11,fontWeight:900,color:"#080808" }}>{(r.name||"?")[0]}</span>
+                    </div>
+                    <span style={{ fontSize:12,fontWeight:800,color:"#ddd" }}>{r.name}</span>
                   </div>
-                  <span style={{ fontSize:12,fontWeight:800,color:"#ddd" }}>{r.n}</span>
+                  <span style={{ fontSize:9,color:"#333" }}>{formatRelativeDate(r.createdAt)}</span>
                 </div>
-                <span style={{ fontSize:9,color:"#333" }}>{r.d}</span>
+                <div style={{ display:"flex",gap:2,marginBottom:6 }}>
+                  {[1,2,3,4,5].map(s=><IcStar key={s} />)}
+                </div>
+                <p style={{ margin:0,fontSize:12,color:"#888",lineHeight:1.7 }}>{r.comment}</p>
               </div>
-              <div style={{ display:"flex",gap:2,marginBottom:6 }}>
-                {[1,2,3,4,5].map(s=><IcStar key={s} />)}
-              </div>
-              <p style={{ margin:0,fontSize:12,color:"#888",lineHeight:1.7 }}>{r.c}</p>
-            </div>
-          ))}
+            ))
+          )}
+          {reviews.length>reviewsVisible&&(
+            <button onClick={()=>setReviewsVisible(v=>v+10)} style={{ background:"#161616",border:"1px solid #1e1e1e",color:"#ccc",borderRadius:10,padding:"0.75rem",fontSize:12,fontWeight:800,letterSpacing:1,cursor:"pointer",fontFamily:"inherit" }}>VER MÁS RESEÑAS ({reviews.length-reviewsVisible})</button>
+          )}
         </div>
       </section>
 
