@@ -346,6 +346,7 @@ function LeadModal({ open, source, onClose }: { open: boolean; source: string; o
     if (!puedeConfirmar) return;
     if (typeof window !== "undefined" && (window as any).fbq) {
       (window as any).fbq("track", "Lead", { content_name: PRODUCT.name, value: PRODUCT.offerPrice, currency: "USD", source });
+      (window as any).fbq("trackCustom", "PedidoConfirmado", { content_name: PRODUCT.name, value: PRODUCT.offerPrice, currency: "USD", source });
     }
     const entregaTxt = entrega === "valencia" ? "Retiro / Delivery en Valencia" : "Envío Nacional (MRW / Zoom / Tealca)";
     const msg = encodeURIComponent(`Hola! Quiero mis *${PRODUCT.name}* a $${PRODUCT.offerPrice} (antes $${PRODUCT.price})\n\n• Nombre: ${nombre}\n• Entrega: ${entregaTxt}\n\n_Este mensaje es de alta prioridad, te contactaremos enseguida._`);
