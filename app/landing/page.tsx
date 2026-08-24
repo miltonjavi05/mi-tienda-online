@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useCallback, createContext, useContext } f
 
 const WHATSAPP_NUMBER = "584243005733";
 const PRODUCT = { name: "Lentes Anti Luz Azul Premium", price: 28, offerPrice: 19.9 };
+const BCV_RATE = 44.8; // actualiza este número cuando cambie la tasa BCV
+const bsPrice = (usd: number) => Math.round(usd * BCV_RATE).toLocaleString("es-VE");
 const LeadModalContext = createContext<(source: string) => void>(() => {});
 
 // ─── RESEÑAS EN VIVO (FIRESTORE) ─────────────────────────────────────────
@@ -260,7 +262,7 @@ function BurstCanvas() {
       constructor(px:number,py:number,co?:string){
         this.x=px;this.y=py;const a=Math.random()*Math.PI*2;const sp=2+Math.random()*6;
         this.vx=Math.cos(a)*sp;this.vy=Math.sin(a)*sp;this.decay=0.015+Math.random()*0.02;
-        this.size=2+Math.random()*5;this.color=co||["#ff3b3b","#ffd43b","#fff","#ff8888"][Math.floor(Math.random()*4)];
+        this.size=2+Math.random()*5;this.color=co||["#fff","#ccc","#999","#eee"][Math.floor(Math.random()*4)];
       }
       update(){this.x+=this.vx;this.y+=this.vy;this.vy+=this.g;this.life-=this.decay;this.size*=0.97;}
       draw(){x!.globalAlpha=this.life;x!.fillStyle=this.color;x!.beginPath();x!.arc(this.x,this.y,this.size,0,Math.PI*2);x!.fill();x!.globalAlpha=1;}
@@ -371,18 +373,18 @@ function LeadModal({ open, source, onClose }: { open: boolean; source: string; o
           <span style={{ fontSize:15,color:"#444",textDecoration:"line-through" }}>${PRODUCT.price.toFixed(2)}</span>
           <span style={{ fontSize:28,fontWeight:900,color:"#fff" }}>${PRODUCT.offerPrice.toFixed(2)}</span>
         </div>
-        <p style={{ margin:"0 0 22px",fontSize:11,color:"#555" }}>Equivale a <strong style={{ color:"#fff" }}>Bs. 892</strong> · Tasa BCV</p>
+        <p style={{ margin:"0 0 22px",fontSize:11,color:"#555" }}>Equivale a <strong style={{ color:"#fff" }}>Bs. {bsPrice(PRODUCT.offerPrice)}</strong> · Tasa BCV</p>
 
         <label style={{ display:"block",fontSize:10,fontWeight:800,letterSpacing:1.5,color:"#888",textTransform:"uppercase",marginBottom:8 }}>Nombre completo *</label>
         <input value={nombre} onChange={e=>setNombre(e.target.value)} placeholder="¿Cómo te llamas?" style={{ width:"100%",background:"#141414",border:"1px solid #2a2a2a",borderRadius:10,padding:"14px 16px",color:"#fff",fontSize:14,marginBottom:20,fontFamily:"inherit",boxSizing:"border-box" as const }} />
 
         <label style={{ display:"block",fontSize:10,fontWeight:800,letterSpacing:1.5,color:"#888",textTransform:"uppercase",marginBottom:8 }}>Método de entrega *</label>
         <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:20 }}>
-          <button onClick={()=>setEntrega("valencia")} style={{ background:entrega==="valencia"?"#1a0000":"#141414",border:`1px solid ${entrega==="valencia"?"#ff3b3b":"#2a2a2a"}`,borderRadius:10,padding:"14px 10px",cursor:"pointer",textAlign:"center" }}>
+          <button onClick={()=>setEntrega("valencia")} style={{ background:entrega==="valencia"?"#2a2a2a":"#141414",border:`1px solid ${entrega==="valencia"?"#fff":"#2a2a2a"}`,borderRadius:10,padding:"14px 10px",cursor:"pointer",textAlign:"center" }}>
             <p style={{ margin:0,fontSize:11,fontWeight:800,color:"#eee" }}>Valencia</p>
             <p style={{ margin:"2px 0 0",fontSize:9,color:"#666" }}>Retiro / Delivery</p>
           </button>
-          <button onClick={()=>setEntrega("nacional")} style={{ background:entrega==="nacional"?"#1a0000":"#141414",border:`1px solid ${entrega==="nacional"?"#ff3b3b":"#2a2a2a"}`,borderRadius:10,padding:"14px 10px",cursor:"pointer",textAlign:"center" }}>
+          <button onClick={()=>setEntrega("nacional")} style={{ background:entrega==="nacional"?"#2a2a2a":"#141414",border:`1px solid ${entrega==="nacional"?"#fff":"#2a2a2a"}`,borderRadius:10,padding:"14px 10px",cursor:"pointer",textAlign:"center" }}>
             <p style={{ margin:0,fontSize:11,fontWeight:800,color:"#eee" }}>Envío Nacional</p>
             <p style={{ margin:"2px 0 0",fontSize:9,color:"#666" }}>MRW / Zoom / Tealca</p>
           </button>
@@ -475,24 +477,15 @@ export default function LandingLentesAviador() {
           onClick={(e) => { const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect(); const x = e.clientX || rect.left+rect.width/2; const y = e.clientY || rect.top+rect.height/2; if((window as any).__burst)(window as any).__burst(x,y); }}>
           <div style={{ position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:280,height:280,background:"radial-gradient(circle,rgba(255,255,255,0.12) 0%,transparent 70%)",borderRadius:"50%",filter:"blur(40px)",animation:"gp 3s ease-in-out infinite" }} />
           <img id="lentes-img" className="lentes-img" src="/landing/lentes-aviador/frontal.jpg" alt="Lentes Aviador Premium"
-            style={{ position:"absolute",top:"50%",left:"50%",width:"90%",maxWidth:360,filter:"drop-shadow(0 20px 60px rgba(0,0,0,0.8)) drop-shadow(0 0 30px rgba(255,59,59,0.2))",animation:"fy 4s ease-in-out infinite, fr 6s ease-in-out infinite",transition:"transform 0.4s cubic-bezier(0.16,1,0.3,1)" }} />
+            style={{ position:"absolute",top:"50%",left:"50%",width:"90%",maxWidth:360,filter:"drop-shadow(0 20px 60px rgba(0,0,0,0.8)) drop-shadow(0 0 30px rgba(255,255,255,0.25))",animation:"fy 4s ease-in-out infinite, fr 6s ease-in-out infinite",transition:"transform 0.4s cubic-bezier(0.16,1,0.3,1)" }} />
           <div style={{ position:"absolute",bottom:20,left:"50%",transform:"translateX(-50%) scaleY(-1)",width:"60%",height:40,background:"linear-gradient(180deg,rgba(255,255,255,0.08),transparent)",filter:"blur(8px)",borderRadius:"50%",animation:"rf 4s ease-in-out infinite" }} />
-          <div style={{ position:"absolute",top:"20%",left:"15%",width:4,height:4,background:"#ffd43b",borderRadius:"50%",boxShadow:"0 0 10px #ffd43b",animation:"pf 5s ease-in-out infinite" }} />
-          <div style={{ position:"absolute",top:"60%",right:"10%",width:3,height:3,background:"#ff3b3b",borderRadius:"50%",boxShadow:"0 0 8px #ff3b3b",animation:"pf 4s ease-in-out infinite 1s" }} />
+          <div style={{ position:"absolute",top:"20%",left:"15%",width:4,height:4,background:"#fff",borderRadius:"50%",boxShadow:"0 0 10px rgba(255,255,255,0.6)",animation:"pf 5s ease-in-out infinite" }} />
+          <div style={{ position:"absolute",top:"60%",right:"10%",width:3,height:3,background:"#ccc",borderRadius:"50%",boxShadow:"0 0 8px rgba(255,255,255,0.4)",animation:"pf 4s ease-in-out infinite 1s" }} />
           <div style={{ position:"absolute",bottom:"25%",left:"20%",width:5,height:5,background:"#fff",borderRadius:"50%",boxShadow:"0 0 12px rgba(255,255,255,0.5)",animation:"pf 6s ease-in-out infinite 0.5s" }} />
         </div>
 
         {/* PRECIO */}
-        <div className="reveal" style={{ marginBottom:20,animationDelay:"0.5s" }}>
-          <div style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:16,flexWrap:"wrap" }}>
-            <span style={{ fontSize:18,color:"#444",textDecoration:"line-through",fontWeight:600 }}>${PRODUCT.price.toFixed(2)}</span>
-            <span style={{ fontSize:48,fontWeight:900,color:"#fff",lineHeight:1,animation:"pp 2.4s ease-in-out infinite",textShadow:"0 0 40px rgba(255,255,255,0.25)" }}>${PRODUCT.offerPrice.toFixed(2)}</span>
-            <span style={{ background:"linear-gradient(135deg,#ff3b3b,#7a0000)",color:"#fff",fontSize:11,fontWeight:900,letterSpacing:1,padding:"6px 14px",borderRadius:20,boxShadow:"0 4px 20px rgba(255,0,0,0.4)",animation:"bs 2.8s ease infinite" }}>
-              -29% HOY
-            </span>
-          </div>
-          <p style={{ margin:"8px 0 0",fontSize:12,color:"#555" }}>Equivale a <strong style={{ color:"#fff" }}>Bs. 892</strong> · Tasa BCV</p>
-        </div>
+          <p style={{ margin:"8px 0 0",fontSize:12,color:"#555" }}>Equivale a <strong style={{ color:"#fff" }}>Bs. {bsPrice(PRODUCT.offerPrice)}</strong> · Tasa BCV</p>
 
         <p className="reveal" style={{ fontSize:11,color:"#ff8888",margin:"0 0 16px",fontWeight:700,animationDelay:"0.6s" }}>
           🔥 Solo quedan <span style={{ color:"#fff",fontSize:14 }}>{stock}</span> unidades a este precio
@@ -553,7 +546,7 @@ export default function LandingLentesAviador() {
             "No busca 'unos lentes más', busca la pieza que completa el look",
           ].map((t,i)=>(
             <div key={i} className="reveal" style={{ display:"flex",alignItems:"center",gap:12,background:"#111",border:"1px solid #1e1e1e",borderRadius:12,padding:"14px 16px",animationDelay:`${0.08*i}s` }}>
-              <span style={{ flexShrink:0,width:22,height:22,borderRadius:"50%",background:"#1a0000",border:"1px solid #ff3b3b",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"#ff8888",fontWeight:900 }}>✓</span>
+              <span style={{ flexShrink:0,width:22,height:22,borderRadius:"50%",background:"#1a1a1a",border:"1px solid #444",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"#fff",fontWeight:900 }}>✓</span>
               <p style={{ margin:0,fontSize:13,color:"#ddd",lineHeight:1.5 }}>{t}</p>
             </div>
           ))}
@@ -601,7 +594,7 @@ export default function LandingLentesAviador() {
 
       {/* CTA INTERMEDIO */}
       <section className="reveal" style={{ position:"relative",zIndex:2,maxWidth:460,margin:"0 auto",padding:"40px 20px 0",textAlign:"center" }}>
-        <div style={{ background:"linear-gradient(135deg,#141410,#0a0a08)",border:"1px solid #3a3520",borderRadius:16,padding:"28px 20px" }}>
+        <div style={{ background:"linear-gradient(135deg,#151515,#0a0a0a)",border:"1px solid #2a2a2a",borderRadius:16,padding:"28px 20px" }}>
           <p style={{ fontSize:9,fontWeight:800,letterSpacing:2.5,color:"#fff",margin:"0 0 12px",textTransform:"uppercase" }}>🔥 Quedan pocas unidades a este precio</p>
           <div style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:16 }}>
             <span style={{ fontSize:17,color:"#444",textDecoration:"line-through" }}>${PRODUCT.price.toFixed(2)}</span>
