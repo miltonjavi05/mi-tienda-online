@@ -4,8 +4,22 @@ import { useState, useEffect, useRef, useCallback, createContext, useContext } f
 
 const WHATSAPP_NUMBER = "584243005733";
 const PRODUCT = { name: "Lentes Anti Luz Azul Premium", price: 28, offerPrice: 19.9 };
-const BCV_RATE = 44.8; // actualiza este número cuando cambie la tasa BCV
-const bsPrice = (usd: number) => Math.round(usd * BCV_RATE).toLocaleString("es-VE");
+function bsPrice(usd: number, rate: number) {
+  return rate ? Math.round(usd * rate).toLocaleString("es-VE") : "...";
+}
+
+function useBcvRate() {
+  const [rate, setRate] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("https://ve.dolarapi.com/v1/dolares/oficial")
+      .then((r) => r.json())
+      .then((d) => { if (!cancelled && d?.promedio) setRate(d.promedio); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+  return rate;
+}
 const LeadModalContext = createContext<(source: string) => void>(() => {});
 
 // ─── RESEÑAS EN VIVO (FIRESTORE) ─────────────────────────────────────────
@@ -337,6 +351,7 @@ function CTAButton({ source, big = false, compact = false, label = "SÍ, LOS QUI
 function LeadModal({ open, source, onClose }: { open: boolean; source: string; onClose: () => void }) {
   const [nombre, setNombre] = useState("");
   const [entrega, setEntrega] = useState<"valencia" | "nacional">("nacional");
+  const bcvRate = useBcvRate();
 
   const [enviando, setEnviando] = useState(false);
 
@@ -373,7 +388,7 @@ function LeadModal({ open, source, onClose }: { open: boolean; source: string; o
           <span style={{ fontSize:15,color:"#444",textDecoration:"line-through" }}>${PRODUCT.price.toFixed(2)}</span>
           <span style={{ fontSize:28,fontWeight:900,color:"#fff" }}>${PRODUCT.offerPrice.toFixed(2)}</span>
         </div>
-        <p style={{ margin:"0 0 22px",fontSize:11,color:"#555" }}>Equivale a <strong style={{ color:"#fff" }}>Bs. {bsPrice(PRODUCT.offerPrice)}</strong> · Tasa BCV</p>
+        <p style={{ margin:"0 0 22px",fontSize:11,color:"#555" }}>Equivale a <strong style={{ color:"#fff" }}>Bs. {bsPrice(PRODUCT.offerPrice, bcvRate)}</strong> · Tasa BCV</p>
 
         <label style={{ display:"block",fontSize:10,fontWeight:800,letterSpacing:1.5,color:"#888",textTransform:"uppercase",marginBottom:8 }}>Nombre completo *</label>
         <input value={nombre} onChange={e=>setNombre(e.target.value)} placeholder="¿Cómo te llamas?" style={{ width:"100%",background:"#141414",border:"1px solid #2a2a2a",borderRadius:10,padding:"14px 16px",color:"#fff",fontSize:14,marginBottom:20,fontFamily:"inherit",boxSizing:"border-box" as const }} />
@@ -409,6 +424,7 @@ function LeadModal({ open, source, onClose }: { open: boolean; source: string; o
 export default function LandingLentesAviador() {
   const cd = useCountdown();
   const stock = useStock();
+  const bcvRate = useBcvRate();
   const [leadOpen, setLeadOpen] = useState(false);
   const [leadSource, setLeadSource] = useState("hero");
   const { reviews, avg, loading: reviewsLoading } = useLiveReviews();
@@ -485,7 +501,16 @@ export default function LandingLentesAviador() {
         </div>
 
         {/* PRECIO */}
-          <p style={{ margin:"8px 0 0",fontSize:12,color:"#555" }}>Equivale a <strong style={{ color:"#fff" }}>Bs. {bsPrice(PRODUCT.offerPrice)}</strong> · Tasa BCV</p>
+        <div className="reveal" style={{ marginBottom:20,animationDelay:"0.5s" }}>
+          <div style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:16,flexWrap:"wrap" }}>
+            <span style={{ fontSize:18,color:"#444",textDecoration:"line-through",fontWeight:600 }}>${PRODUCT.price.toFixed(2)}</span>
+            <span style={{ fontSize:48,fontWeight:900,color:"#fff",lineHeight:1,animation:"pp 2.4s ease-in-out infinite",textShadow:"0 0 40px rgba(255,255,255,0.25)" }}>${PRODUCT.offerPrice.toFixed(2)}</span>
+            <span style={{ background:"linear-gradient(135deg,#ff3b3b,#7a0000)",color:"#fff",fontSize:11,fontWeight:900,letterSpacing:1,padding:"6px 14px",borderRadius:20,boxShadow:"0 4px 20px rgba(255,0,0,0.4)",animation:"bs 2.8s ease infinite" }}>
+              -29% HOY
+            </span>
+          </div>
+          <p style={{ margin:"8px 0 0",fontSize:12,color:"#555" }}>Equivale a <strong style={{ color:"#fff" }}>Bs. {bsPrice(PRODUCT.offerPrice, bcvRate)}</strong> · Tasa BCV</p>
+        </div>
 
         <p className="reveal" style={{ fontSize:11,color:"#ff8888",margin:"0 0 16px",fontWeight:700,animationDelay:"0.6s" }}>
           🔥 Solo quedan <span style={{ color:"#fff",fontSize:14 }}>{stock}</span> unidades a este precio
