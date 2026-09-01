@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 
 // ─── FIREBASE (mismo proyecto que la tienda Fokus) ─────────────────────────
 const FIREBASE_PROJECT_ID = "fokus-16a0c";
@@ -84,7 +84,9 @@ async function fsSetSingleDoc(collection: string, id: string, data: Record<strin
 const COL = { ventas: "mami_sales", inv: "mami_investments", agenda: "mami_agenda" };
 const CONFIG_COL = "mami_config";
 const CONFIG_ID = "settings";
-
+const BCV_CACHE_KEY = "mami_bcv_rate";
+const BCV_CACHE_TIME = "mami_bcv_time";
+const BCV_TTL = 6 * 60 * 60 * 1000;
 // ─── LOGIN ────────────────────────────────────────────────────────────────
 const MAMI_USER = "morelia";
 const MAMI_PASS = "morelia";
@@ -203,21 +205,20 @@ function MamiPanel({ onLogout }: { onLogout: () => void }) {
   const [syncErr, setSyncErr] = useState("");
   const [tab, setTab] = useState("ventas");
   const [rate, setRate] = useState(40);
+  const [rateLoading, setRateLoading] = useState(false);
   const [sales, setSales] = useState<Sale[]>([]);
   const [invs, setInvs] = useState<Investment[]>([]);
   const [agenda, setAgenda] = useState<AgendaClient[]>([]);
   const [periodId, setPeriodId] = useState("hoy");
-  const rateDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Carga inicial desde Firestore — así se ve lo mismo sin importar desde qué dispositivo inicie sesión
+ // Carga inicial desde Firestore — así se ve lo mismo sin importar desde qué dispositivo inicie sesión
   useEffect(() => {
     (async () => {
       try {
-        const [rawSales, rawInvs, rawAgenda, cfg] = await Promise.all([
+        const [rawSales, rawInvs, rawAgenda] = await Promise.all([
           fsGetCollectionAll(COL.ventas),
           fsGetCollectionAll(COL.inv),
           fsGetCollectionAll(COL.agenda),
-          fsGetSingleDoc(CONFIG_COL, CONFIG_ID),
         ]);
         const s: Sale[] = rawSales.map(r => ({
           id: r.id, name: (r.name as string) || "", phone: (r.phone as string) || "",
@@ -235,7 +236,6 @@ function MamiPanel({ onLogout }: { onLogout: () => void }) {
           createdAt: Number(r.createdAt) || 0,
         })).sort((x, y) => Number(x.paid) - Number(y.paid) || y.createdAt - x.createdAt);
         setSales(s); setInvs(i); setAgenda(a);
-        if (cfg && typeof cfg.rate === "number") setRate(cfg.rate as number);
       } catch (e) {
         setSyncErr("No se pudo conectar con la base de datos. Verifica tu conexión e intenta de nuevo.");
       } finally {
@@ -244,14 +244,60 @@ function MamiPanel({ onLogout }: { onLogout: () => void }) {
     })();
   }, []);
 
-  // Tasa: se guarda en Firestore con un pequeño debounce mientras se escribe
-  const updateRate = useCallback((val: number) => {
-    setRate(val);
-    if (rateDebounce.current) clearTimeout(rateDebounce.current);
-    rateDebounce.current = setTimeout(() => {
-      fsSetSingleDoc(CONFIG_COL, CONFIG_ID, { rate: val }).catch(() => setSyncErr("No se pudo guardar la tasa."));
-    }, 500);
+  // Tasa BCV: se obtiene automáticamente (mismo endpoint /api/bcv que usa la tienda), con caché de 6 horas
+  const fetchBcvRate = useCallback(async (force = false) => {
+    if (!force) {
+      try {
+        const cached = localStorage.getItem(BCV_CACHE_KEY);
+        const cachedTime = localStorage.getItem(BCV_CACHE_TIME);
+        if (cached && cachedTime && Date.now() - Number(cachedTime) < BCV_TTL) {
+          const parsed = parseFloat(cached);
+          if (parsed > 0) { setRate(parsed); return; }
+        }
+      } catch { /* silencioso */ }
+    }
+    setRateLoading(true);
+    try {
+      const r = await fetch("/api/bcv");
+      const d = await r.json();
+      const parsed = parseFloat(d.rate ?? 0);
+      if (parsed > 0) {
+        setRate(parsed);
+        try {
+          localStorage.setItem(BCV_CACHE_KEY, String(parsed));
+          localStorage.setItem(BCV_CACHE_TIME, String(Date.now()));
+        } catch { /* silencioso */ }
+        return;
+      }
+      throw new Error("sin tasa");
+    } catch {
+      try {
+        const r2 = await fetch("https://api.exchangerate-api.com/v4/latest/USD");
+        const d2 = await r2.json();
+        const parsed2 = parseFloat(d2.rates?.VES ?? 0);
+        if (parsed2 > 0) {
+          setRate(parsed2);
+          try {
+            localStorage.setItem(BCV_CACHE_KEY, String(parsed2));
+            localStorage.setItem(BCV_CACHE_TIME, String(Date.now()));
+          } catch { /* silencioso */ }
+        }
+      } catch { /* silencioso */ }
+    } finally {
+      setRateLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchBcvRate();
+    const interval = setInterval(() => fetchBcvRate(true), BCV_TTL);
+    const onVisibility = () => { if (document.visibilityState === "visible") fetchBcvRate(); };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [fetchBcvRate]);
 
   // ── Ventas ──
   const addSale = useCallback(async (data: Omit<Sale, "id" | "createdAt">) => {
@@ -375,9 +421,11 @@ function MamiPanel({ onLogout }: { onLogout: () => void }) {
             <p style={{ margin: 0, fontSize: 11, color: "#b56e89" }}>Ventas de productos de limpieza</p>
           </div>
           <div style={{ textAlign: "right", flexShrink: 0 }}>
-            <p style={{ margin: 0, fontSize: 9, color: "#c288a0", fontWeight: 600 }}>TASA BS/$</p>
-            <input type="number" min={0} step={0.01} value={rate} onChange={e => updateRate(parseFloat(e.target.value) || 0)}
-              style={{ width: 64, border: "1px solid #f4b8cf", borderRadius: 8, padding: "3px 6px", fontSize: 12, fontWeight: 700, color: "#a3134f", background: "#fff" }} />
+            <p style={{ margin: 0, fontSize: 9, color: "#c288a0", fontWeight: 600 }}>TASA BCV BS/$</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <span style={{ fontSize: 14, fontWeight: 800, color: "#a3134f" }}>{rateLoading ? "…" : rate.toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <button onClick={() => fetchBcvRate(true)} disabled={rateLoading} title="Actualizar tasa" style={{ background: "none", border: "none", cursor: rateLoading ? "not-allowed" : "pointer", padding: 2, color: "#c2447a", fontSize: 12, opacity: rateLoading ? 0.5 : 1 }}>↻</button>
+            </div>
           </div>
         </div>
 
