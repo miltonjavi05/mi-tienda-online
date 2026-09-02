@@ -240,7 +240,7 @@ function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
   return (
     <div style={{
       fontFamily: "'Poppins', system-ui, sans-serif",
-      background: "linear-gradient(160deg,#fff5f8 0%,#ffeaf1 45%,#fde3ed 100%)",
+      background: "linear-gradient(160deg,#120a0f 0%,#1a0f16 45%,#150c12 100%)",
       minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "1.5rem",
     }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Playfair+Display:wght@700;800&display=swap');`}</style>
@@ -536,7 +536,7 @@ function MamiPanel({ onLogout }: { onLogout: () => void }) {
       <div style={{ maxWidth: 480, margin: "0 auto" }}>
         <div style={{
           display: "flex", alignItems: "center", gap: 12, marginBottom: "1.1rem",
-          background: "linear-gradient(135deg,#ffffffaa,#ffe0ec99)", borderRadius: 20,
+          background: "linear-gradient(135deg,#2a1b2499,#3a1f2c99)", borderRadius: 20,
           padding: "1rem 1.1rem", border: "1px solid #ffd3e2", boxShadow: "0 6px 20px rgba(214,51,108,0.08)",
         }}>
           <div style={{
@@ -909,7 +909,7 @@ function StatsTab({ periodId, setPeriodId, totalVentas, totalInv, ganancia, stat
         </Card>
       </div>
 
-      <Card style={{ background: ganancia >= 0 ? "linear-gradient(135deg,#fff0f6,#ffd9e8)" : "linear-gradient(135deg,#fff0f0,#ffd6d6)", border: "1px solid " + (ganancia >= 0 ? "#f4b8cf" : "#f4b8b8") }}>
+      <Card style={{ background: ganancia >= 0 ? "linear-gradient(135deg,#2a1620,#3a1f2c)" : "linear-gradient(135deg,#2c1616,#3a1c1c)", border: "1px solid " + (ganancia >= 0 ? "#f4b8cf" : "#f4b8b8") }}>
         <p style={{ margin: 0, fontSize: 10.5, fontWeight: 700, color: "#a3134f", letterSpacing: 0.3 }}>GANANCIA NETA</p>
         <p style={{ margin: "3px 0 0", fontSize: 26, fontWeight: 800, color: ganancia >= 0 ? "#a3134f" : "#c23838" }}>{fmtUSD(ganancia)}</p>
         <p style={{ margin: "2px 0 0", fontSize: 11, color: "#c2447a" }}>≈ {fmtBs(ganancia * rate)}</p>
