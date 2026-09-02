@@ -708,13 +708,16 @@ function VentasTab({ sales, addSale, removeSale, rate }: {
         </Field>
         {items.map(it => (
           <div key={it.category} style={{ marginBottom: "0.5rem" }}>
-            <p style={{ margin: "0 0 4px", fontSize: 11, fontWeight: 700, color: "#5a2540" }}>{it.category}</p>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+              <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: "#5a2540" }}>{it.category}</p>
+              <DeleteBtn onClick={() => toggleCategory(it.category)} />
+            </div>
             <div style={{ display: "flex", gap: 6 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <Field label="Litros"><input style={inputStyle} type="number" min={0} step={0.5} value={it.liters} onChange={e => updateItem(it.category, "liters", parseFloat(e.target.value) || 0)} /></Field>
+                <Field label="Litros"><input style={inputStyle} type="number" min={0} step={0.5} value={it.liters === 0 ? "" : it.liters} onChange={e => updateItem(it.category, "liters", e.target.value === "" ? 0 : parseFloat(e.target.value))} /></Field>
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <Field label="Valor (USD)"><input style={inputStyle} type="number" min={0} step={0.01} value={it.value} onChange={e => updateItem(it.category, "value", parseFloat(e.target.value) || 0)} /></Field>
+                <Field label="Valor (USD)"><input style={inputStyle} type="number" min={0} step={0.01} value={it.value === 0 ? "" : it.value} onChange={e => updateItem(it.category, "value", e.target.value === "" ? 0 : parseFloat(e.target.value))} /></Field>
               </div>
             </div>
           </div>
