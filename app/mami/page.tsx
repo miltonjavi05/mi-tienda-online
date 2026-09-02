@@ -295,7 +295,7 @@ function MamiPanel({ onLogout }: { onLogout: () => void }) {
   const [agenda, setAgenda] = useState<AgendaClient[]>([]);
   const [periodId, setPeriodId] = useState("hoy");
   const [invMonth, setInvMonth] = useState(todayISO().slice(0, 7));
-  const [invData, setInvData] = useState<{ materiaPrima: InvRow[]; comprados: InvRow[]; elaborados: InvRow[] }>({ materiaPrima: [], comprados: [], elaborados: [] });
+  const [invData, setInvData] = useState<{ materiaPrima: InvRow[]; comprados: InvRow[]; elaborados: InvRow[]; porComprar: string[] }>({ materiaPrima: [], comprados: [], elaborados: [], porComprar: [] });
   const [invLoading, setInvLoading] = useState(false);
   const loadInventario = useCallback(async (mes: string) => {
     setInvLoading(true);
@@ -305,7 +305,8 @@ function MamiPanel({ onLogout }: { onLogout: () => void }) {
         materiaPrima: JSON.parse((doc.materiaPrima as string) || "[]"),
         comprados: JSON.parse((doc.comprados as string) || "[]"),
         elaborados: JSON.parse((doc.elaborados as string) || "[]"),
-      } : { materiaPrima: [], comprados: [], elaborados: [] });
+        porComprar: JSON.parse((doc.porComprar as string) || "[]"),
+      } : { materiaPrima: [], comprados: [], elaborados: [], porComprar: [] });
     } catch { setSyncErr("No se pudo cargar el inventario."); }
     finally { setInvLoading(false); }
   }, []);
@@ -317,6 +318,7 @@ function MamiPanel({ onLogout }: { onLogout: () => void }) {
         materiaPrima: JSON.stringify(data.materiaPrima),
         comprados: JSON.stringify(data.comprados),
         elaborados: JSON.stringify(data.elaborados),
+        porComprar: JSON.stringify(data.porComprar),
       });
     } catch { setSyncErr("No se pudo guardar el inventario."); }
   }, [invMonth]);
@@ -1079,30 +1081,59 @@ function AgendaTab({ agenda, addAgenda, removeAgenda, togglePaid, abonar, rate }
     </>
   );
 }
-function InvRowsEditor({ title, rows, onChange, options }: { title: string; rows: InvRow[]; onChange: (r: InvRow[]) => void; options: string[]; }) {
+function InvRowsEditor({ title, rows, onChange, options, grouped }: { title: string; rows: InvRow[]; onChange: (r: InvRow[]) => void; options: string[]; grouped?: { label: string; items: string[] }[]; }) {
   const [name, setName] = useState("");
+  const [newName, setNewName] = useState("");
   const [qty, setQty] = useState("");
   const [unit, setUnit] = useState("kg");
+  const addRow = (n: string, q: number) => {
+    const idx = rows.findIndex(r => r.name.toLowerCase() === n.toLowerCase());
+    onChange(idx >= 0 ? rows.map((r, i) => i === idx ? { ...r, qty: q, unit } : r) : [...rows, { name: n, qty: q, unit }]);
+  };
   const add = () => {
     const n = name.trim(); const q = parseFloat(qty);
     if (!n || !q) return;
-    const idx = rows.findIndex(r => r.name.toLowerCase() === n.toLowerCase());
-    onChange(idx >= 0 ? rows.map((r, i) => i === idx ? { ...r, qty: q, unit } : r) : [...rows, { name: n, qty: q, unit }]);
+    addRow(n, q);
     setName(""); setQty("");
+  };
+  const addNewOption = () => {
+    const n = newName.trim();
+    if (!n) return;
+    saveCustomMaterial(n);
+    setName(n); setNewName("");
   };
   const remove = (n: string) => onChange(rows.filter(r => r.name !== n));
   return (
     <Card>
       <p style={{ margin: "0 0 0.6rem", fontSize: 12.5, fontWeight: 700, color: "#a3134f" }}>{title}</p>
       <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-        <input style={{ ...inputStyle, flex: 2 }} list={title + "-list"} placeholder="Nombre" value={name} onChange={e => setName(e.target.value)} />
-        <datalist id={title + "-list"}>{options.map(o => <option key={o} value={o} />)}</datalist>
+        {grouped ? (
+          <select style={{ ...inputStyle, flex: 2 }} value={name} onChange={e => setName(e.target.value)}>
+            <option value="">Selecciona…</option>
+            {grouped.map(g => (
+              <optgroup key={g.label} label={g.label}>
+                {g.items.map(o => <option key={o} value={o}>{o}</option>)}
+              </optgroup>
+            ))}
+          </select>
+        ) : (
+          <>
+            <input style={{ ...inputStyle, flex: 2 }} list={title + "-list"} placeholder="Nombre" value={name} onChange={e => setName(e.target.value)} />
+            <datalist id={title + "-list"}>{options.map(o => <option key={o} value={o} />)}</datalist>
+          </>
+        )}
         <input style={{ ...inputStyle, flex: 1 }} type="number" min={0} step={0.01} placeholder="Cant." value={qty} onChange={e => setQty(e.target.value)} />
         <select style={{ ...inputStyle, flex: 1 }} value={unit} onChange={e => setUnit(e.target.value)}>
           <option value="kg">kg</option><option value="L">L</option><option value="unid">unid</option>
         </select>
         <button type="button" onClick={add} style={{ border: "1px solid #f4c2d6", borderRadius: 9, background: "#fff0f5", color: "#c2447a", fontSize: 11, fontWeight: 700, padding: "0 0.75rem", cursor: "pointer" }}>+</button>
       </div>
+      {grouped && (
+        <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+          <input style={{ ...inputStyle, flex: 1 }} placeholder="Agregar nueva materia prima" value={newName} onChange={e => setNewName(e.target.value)} />
+          <button type="button" onClick={addNewOption} style={{ border: "1px solid #f4c2d6", borderRadius: 9, background: "#fff0f5", color: "#c2447a", fontSize: 11, fontWeight: 700, padding: "0 0.75rem", cursor: "pointer" }}>+ nueva</button>
+        </div>
+      )}
       {rows.length === 0 ? <p style={{ margin: 0, fontSize: 11.5, color: "#c9a3b6" }}>Sin existencias registradas</p> : rows.map(r => (
         <div key={r.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.3rem 0", borderBottom: "1px solid #ffeaf1" }}>
           <span style={{ fontSize: 11.5, color: "#5a2540" }}>{r.name}</span>
@@ -1116,10 +1147,46 @@ function InvRowsEditor({ title, rows, onChange, options }: { title: string; rows
   );
 }
 
+function ShoppingListEditor({ items, onChange }: { items: string[]; onChange: (l: string[]) => void }) {
+  const [text, setText] = useState("");
+  const [sel, setSel] = useState("");
+  const add = (n: string) => {
+    const v = n.trim();
+    if (!v || items.some(i => i.toLowerCase() === v.toLowerCase())) return;
+    onChange([...items, v]);
+  };
+  const remove = (n: string) => onChange(items.filter(i => i !== n));
+  return (
+    <Card>
+      <p style={{ margin: "0 0 0.6rem", fontSize: 12.5, fontWeight: 700, color: "#a3134f" }}>Próximo a comprar</p>
+      <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+        <select style={{ ...inputStyle, flex: 2 }} value={sel} onChange={e => { setSel(e.target.value); if (e.target.value) { add(e.target.value); setSel(""); } }}>
+          <option value="">De la lista…</option>
+          {MATERIAL_GROUPS.map(g => (
+            <optgroup key={g.label} label={g.label}>
+              {g.items.map(o => <option key={o} value={o}>{o}</option>)}
+            </optgroup>
+          ))}
+        </select>
+      </div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+        <input style={{ ...inputStyle, flex: 1 }} placeholder="Otro (escribe y agrega)" value={text} onChange={e => setText(e.target.value)} />
+        <button type="button" onClick={() => { add(text); setText(""); }} style={{ border: "1px solid #f4c2d6", borderRadius: 9, background: "#fff0f5", color: "#c2447a", fontSize: 11, fontWeight: 700, padding: "0 0.75rem", cursor: "pointer" }}>+</button>
+      </div>
+      {items.length === 0 ? <p style={{ margin: 0, fontSize: 11.5, color: "#c9a3b6" }}>Nada pendiente por comprar</p> : items.map(i => (
+        <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.3rem 0", borderBottom: "1px solid #ffeaf1" }}>
+          <span style={{ fontSize: 11.5, color: "#5a2540" }}>{i}</span>
+          <DeleteBtn onClick={() => remove(i)} />
+        </div>
+      ))}
+    </Card>
+  );
+}
+
 function InventarioTab({ month, setMonth, data, onSave, loading }: {
   month: string; setMonth: (m: string) => void;
-  data: { materiaPrima: InvRow[]; comprados: InvRow[]; elaborados: InvRow[] };
-  onSave: (d: { materiaPrima: InvRow[]; comprados: InvRow[]; elaborados: InvRow[] }) => void;
+  data: { materiaPrima: InvRow[]; comprados: InvRow[]; elaborados: InvRow[]; porComprar: string[] };
+  onSave: (d: { materiaPrima: InvRow[]; comprados: InvRow[]; elaborados: InvRow[]; porComprar: string[] }) => void;
   loading: boolean;
 }) {
   return (
@@ -1128,7 +1195,8 @@ function InventarioTab({ month, setMonth, data, onSave, loading }: {
         <Field label="Mes del inventario"><input style={inputStyle} type="month" value={month} onChange={e => setMonth(e.target.value)} /></Field>
         {loading && <p style={{ margin: 0, fontSize: 11, color: "#c9a3b6" }}>Cargando…</p>}
       </Card>
-      <InvRowsEditor title="Materia prima en existencia" rows={data.materiaPrima} options={getFullMaterials()} onChange={r => onSave({ ...data, materiaPrima: r })} />
+      <ShoppingListEditor items={data.porComprar} onChange={l => onSave({ ...data, porComprar: l })} />
+      <InvRowsEditor title="Materia prima en existencia" rows={data.materiaPrima} options={getFullMaterials()} grouped={MATERIAL_GROUPS} onChange={r => onSave({ ...data, materiaPrima: r })} />
       <InvRowsEditor title="Productos terminados comprados" rows={data.comprados} options={PRODUCTOS_TERMINADOS_COMPRA} onChange={r => onSave({ ...data, comprados: r })} />
       <InvRowsEditor title="Productos terminados elaborados aquí" rows={data.elaborados} options={getFullCatalog().map(p => p.name)} onChange={r => onSave({ ...data, elaborados: r })} />
     </>
