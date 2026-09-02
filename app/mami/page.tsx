@@ -1197,8 +1197,8 @@ function InventarioTab({ month, setMonth, data, onSave, loading }: {
       </Card>
       <ShoppingListEditor items={data.porComprar} onChange={l => onSave({ ...data, porComprar: l })} />
       <InvRowsEditor title="Materia prima en existencia" rows={data.materiaPrima} options={getFullMaterials()} grouped={MATERIAL_GROUPS} onChange={r => onSave({ ...data, materiaPrima: r })} />
-      <InvRowsEditor title="Productos terminados comprados" rows={data.comprados} options={PRODUCTOS_TERMINADOS_COMPRA} onChange={r => onSave({ ...data, comprados: r })} />
-      <InvRowsEditor title="Productos terminados elaborados aquí" rows={data.elaborados} options={getFullCatalog().map(p => p.name)} onChange={r => onSave({ ...data, elaborados: r })} />
+      <InvRowsEditor title="Productos terminados comprados" rows={data.comprados} options={PRODUCTOS_TERMINADOS_COMPRA} grouped={[{ label: "Productos terminados", items: PRODUCTOS_TERMINADOS_COMPRA }]} onChange={r => onSave({ ...data, comprados: r })} />
+      <InvRowsEditor title="Productos terminados elaborados aquí" rows={data.elaborados} options={getFullCatalog().map(p => p.name)} grouped={[{ label: "Catálogo", items: getFullCatalog().map(p => p.name) }]} onChange={r => onSave({ ...data, elaborados: r })} />
     </>
   );
 }
