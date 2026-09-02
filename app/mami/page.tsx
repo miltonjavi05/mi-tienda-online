@@ -245,23 +245,23 @@ function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
     }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Playfair+Display:wght@700;800&display=swap');`}</style>
       <div style={{
-        width: "100%", maxWidth: 340, background: "#fffdfe", borderRadius: 20, padding: "2rem 1.75rem",
-        border: "1px solid #ffd8e6", boxShadow: "0 10px 30px rgba(214,51,108,0.12)", textAlign: "center",
+        width: "100%", maxWidth: 340, background: "#1e1219", borderRadius: 20, padding: "2rem 1.75rem",
+        border: "1px solid #3a2430", boxShadow: "0 10px 30px rgba(0,0,0,0.45)", textAlign: "center",
       }}>
         <div style={{
           width: 56, height: 56, borderRadius: "50%", margin: "0 auto 0.9rem",
           background: "linear-gradient(140deg,#ff8fb3,#e05485)", display: "flex", alignItems: "center", justifyContent: "center",
           boxShadow: "0 4px 14px rgba(224,84,133,0.4)",
         }}><span style={{ fontSize: 24 }}>🧴</span></div>
-        <h1 style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, fontWeight: 800, margin: "0 0 0.2rem", color: "#a3134f" }}>Mami</h1>
-        <p style={{ fontSize: 11.5, color: "#b56e89", margin: "0 0 1.4rem" }}>Panel de ventas privado</p>
+        <h1 style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, fontWeight: 800, margin: "0 0 0.2rem", color: "#ff6fa8" }}>Mami</h1>
+        <p style={{ fontSize: 11.5, color: "#c99bb0", margin: "0 0 1.4rem" }}>Panel de ventas privado</p>
         <div style={{ textAlign: "left", marginBottom: "0.6rem" }}>
           <input placeholder="Usuario" value={user} onChange={e => setUser(e.target.value)} onKeyDown={e => e.key === "Enter" && submit()}
-            style={{ width: "100%", border: "1px solid #f4c2d6", borderRadius: 10, padding: "0.65rem 0.85rem", fontSize: 13.5, marginBottom: 8, color: "#5a2540" }} />
+            style={{ width: "100%", border: "1px solid #4a2f3a", borderRadius: 10, padding: "0.65rem 0.85rem", fontSize: 13.5, marginBottom: 8, color: "#f3e2ea" }} />
           <input placeholder="Clave" type="password" value={pass} onChange={e => setPass(e.target.value)} onKeyDown={e => e.key === "Enter" && submit()}
-            style={{ width: "100%", border: "1px solid #f4c2d6", borderRadius: 10, padding: "0.65rem 0.85rem", fontSize: 13.5, color: "#5a2540" }} />
+            style={{ width: "100%", border: "1px solid #4a2f3a", borderRadius: 10, padding: "0.65rem 0.85rem", fontSize: 13.5, color: "#f3e2ea" }} />
         </div>
-        {err && <p style={{ fontSize: 11.5, color: "#c2447a", background: "#fff0f5", borderRadius: 8, padding: "0.5rem 0.75rem", margin: "0 0 0.8rem" }}>{err}</p>}
+        {err && <p style={{ fontSize: 11.5, color: "#ff7fae", background: "#2f1c27", borderRadius: 8, padding: "0.5rem 0.75rem", margin: "0 0 0.8rem" }}>{err}</p>}
         <button onClick={submit} style={{
           width: "100%", border: "none", borderRadius: 12, padding: "0.75rem", background: "linear-gradient(135deg,#ff8fb3,#e05485)",
           color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", boxShadow: "0 6px 16px rgba(224,84,133,0.35)",
@@ -508,10 +508,10 @@ function MamiPanel({ onLogout }: { onLogout: () => void }) {
     return (
       <div style={{
         minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
-        fontFamily: "system-ui", background: "linear-gradient(160deg,#fff5f8 0%,#ffeaf1 45%,#fde3ed 100%)",
+        fontFamily: "system-ui", background: "linear-gradient(160deg,#fff5f8 0%,#241720 45%,#fde3ed 100%)",
       }}>
         <div style={{ textAlign: "center" }}>
-          <div style={{ width: 32, height: 32, border: "3px solid #ffd8e6", borderTopColor: "#e05485", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 0.75rem" }} />
+          <div style={{ width: 32, height: 32, border: "3px solid #3a2430", borderTopColor: "#e05485", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 0.75rem" }} />
           <p style={{ color: "#b23a5e", fontSize: 13 }}>Cargando panel…</p>
         </div>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -522,8 +522,8 @@ function MamiPanel({ onLogout }: { onLogout: () => void }) {
   return (
     <div style={{
       fontFamily: "'Poppins', system-ui, sans-serif",
-      background: "linear-gradient(160deg,#fff5f8 0%,#ffeaf1 45%,#fde3ed 100%)",
-      minHeight: "100vh", padding: "1.25rem 0.9rem 3rem", color: "#5a2540",
+      background: "linear-gradient(160deg,#fff5f8 0%,#241720 45%,#fde3ed 100%)",
+      minHeight: "100vh", padding: "1.25rem 0.9rem 3rem", color: "#f3e2ea",
     }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Playfair+Display:wght@700;800&display=swap');
@@ -537,7 +537,7 @@ function MamiPanel({ onLogout }: { onLogout: () => void }) {
         <div style={{
           display: "flex", alignItems: "center", gap: 12, marginBottom: "1.1rem",
           background: "linear-gradient(135deg,#2a1b2499,#3a1f2c99)", borderRadius: 20,
-          padding: "1rem 1.1rem", border: "1px solid #ffd3e2", boxShadow: "0 6px 20px rgba(214,51,108,0.08)",
+          padding: "1rem 1.1rem", border: "1px solid #3a2430", boxShadow: "0 6px 20px rgba(0,0,0,0.35)",
         }}>
           <div style={{
             width: 46, height: 46, borderRadius: "50%", background: "linear-gradient(140deg,#ff8fb3,#e05485)",
@@ -545,32 +545,32 @@ function MamiPanel({ onLogout }: { onLogout: () => void }) {
             boxShadow: "0 4px 14px rgba(224,84,133,0.4)",
           }}><span style={{ fontSize: 20 }}>🧴</span></div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <h1 style={{ fontFamily: "'Playfair Display',serif", fontSize: 19, fontWeight: 800, margin: 0, color: "#a3134f", letterSpacing: 0.3 }}>Mami</h1>
-            <p style={{ margin: 0, fontSize: 11, color: "#b56e89" }}>Ventas de productos de limpieza</p>
+            <h1 style={{ fontFamily: "'Playfair Display',serif", fontSize: 19, fontWeight: 800, margin: 0, color: "#ff6fa8", letterSpacing: 0.3 }}>Mami</h1>
+            <p style={{ margin: 0, fontSize: 11, color: "#c99bb0" }}>Ventas de productos de limpieza</p>
           </div>
           <div style={{ textAlign: "right", flexShrink: 0 }}>
-            <p style={{ margin: 0, fontSize: 9, color: "#c288a0", fontWeight: 600 }}>TASA BCV BS/$</p>
+            <p style={{ margin: 0, fontSize: 9, color: "#b98aa0", fontWeight: 600 }}>TASA BCV BS/$</p>
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <span style={{ fontSize: 14, fontWeight: 800, color: "#a3134f" }}>{rateLoading ? "…" : rate.toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              <button onClick={() => fetchBcvRate(true)} disabled={rateLoading} title="Actualizar tasa" style={{ background: "none", border: "none", cursor: rateLoading ? "not-allowed" : "pointer", padding: 2, color: "#c2447a", fontSize: 12, opacity: rateLoading ? 0.5 : 1 }}>↻</button>
+              <span style={{ fontSize: 14, fontWeight: 800, color: "#ff6fa8" }}>{rateLoading ? "…" : rate.toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <button onClick={() => fetchBcvRate(true)} disabled={rateLoading} title="Actualizar tasa" style={{ background: "none", border: "none", cursor: rateLoading ? "not-allowed" : "pointer", padding: 2, color: "#ff7fae", fontSize: 12, opacity: rateLoading ? 0.5 : 1 }}>↻</button>
             </div>
           </div>
         </div>
 
         {syncErr && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#fff0f0", border: "1px solid #f4b8b8", borderRadius: 12, padding: "0.6rem 0.85rem", marginBottom: "0.9rem" }}>
-            <p style={{ margin: 0, fontSize: 11.5, color: "#c23838", flex: 1 }}>{syncErr}</p>
-            <button onClick={() => setSyncErr("")} style={{ background: "none", border: "none", color: "#c23838", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>✕</button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#2c1616", border: "1px solid #5a2f2f", borderRadius: 12, padding: "0.6rem 0.85rem", marginBottom: "0.9rem" }}>
+            <p style={{ margin: 0, fontSize: 11.5, color: "#ff6b6b", flex: 1 }}>{syncErr}</p>
+            <button onClick={() => setSyncErr("")} style={{ background: "none", border: "none", color: "#ff6b6b", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>✕</button>
           </div>
         )}
 
-        <div style={{ display: "flex", gap: 6, marginBottom: "1.1rem", background: "#ffffff8a", borderRadius: 16, padding: 5, border: "1px solid #ffd8e6" }}>
+        <div style={{ display: "flex", gap: 6, marginBottom: "1.1rem", background: "#1c1119cc", borderRadius: 16, padding: 5, border: "1px solid #3a2430" }}>
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{
               flex: 1, padding: "0.55rem 0.3rem", borderRadius: 12, border: "none", cursor: "pointer",
               fontSize: 11.5, fontWeight: 700, letterSpacing: 0.2,
               background: tab === t.id ? "linear-gradient(135deg,#ff8fb3,#e05485)" : "transparent",
-              color: tab === t.id ? "#fff" : "#b56e89",
+              color: tab === t.id ? "#fff" : "#c99bb0",
               boxShadow: tab === t.id ? "0 4px 12px rgba(224,84,133,0.35)" : "none",
               transition: "all 0.15s",
             }}>{t.label}</button>
@@ -587,7 +587,7 @@ function MamiPanel({ onLogout }: { onLogout: () => void }) {
         {tab === "agenda" && <AgendaTab agenda={agenda} addAgenda={addAgenda} removeAgenda={removeAgenda} togglePaid={toggleAgendaPaid} abonar={abonarAgenda} rate={rate} />}
 
         <button onClick={onLogout} style={{
-          width: "100%", marginTop: "0.5rem", background: "transparent", border: "1px solid #f4c2d6", color: "#c2447a",
+          width: "100%", marginTop: "0.5rem", background: "transparent", border: "1px solid #4a2f3a", color: "#ff7fae",
           borderRadius: 10, padding: "0.65rem", fontSize: 11.5, fontWeight: 700, cursor: "pointer",
         }}>Cerrar sesión</button>
       </div>
@@ -598,8 +598,8 @@ function MamiPanel({ onLogout }: { onLogout: () => void }) {
 function Card({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
     <div style={{
-      background: "#fffdfe", border: "1px solid #ffd8e6", borderRadius: 16, padding: "1rem 1.1rem",
-      marginBottom: "0.85rem", boxShadow: "0 4px 14px rgba(214,51,108,0.06)", ...style,
+      background: "#1e1219", border: "1px solid #3a2430", borderRadius: 16, padding: "1rem 1.1rem",
+      marginBottom: "0.85rem", boxShadow: "0 4px 14px rgba(0,0,0,0.35)", ...style,
     }}>{children}</div>
   );
 }
@@ -607,15 +607,15 @@ function Card({ children, style }: { children: React.ReactNode; style?: React.CS
 function Field({ label, children }: { label?: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: "0.6rem" }}>
-      {label && <p style={{ margin: "0 0 4px", fontSize: 10.5, fontWeight: 700, color: "#c288a0", letterSpacing: 0.3 }}>{label}</p>}
+      {label && <p style={{ margin: "0 0 4px", fontSize: 10.5, fontWeight: 700, color: "#b98aa0", letterSpacing: 0.3 }}>{label}</p>}
       {children}
     </div>
   );
 }
 
 const inputStyle: React.CSSProperties = {
-  width: "100%", border: "1px solid #f4c2d6", borderRadius: 10, padding: "0.6rem 0.75rem",
-  fontSize: 13.5, color: "#5a2540", background: "#fffafc",
+  width: "100%", border: "1px solid #4a2f3a", borderRadius: 10, padding: "0.6rem 0.75rem",
+  fontSize: 13.5, color: "#f3e2ea", background: "#170e14",
 };
 
 function PrimaryBtn({ children, onClick, disabled }: { children: React.ReactNode; onClick: () => void; disabled?: boolean }) {
@@ -632,7 +632,7 @@ function PrimaryBtn({ children, onClick, disabled }: { children: React.ReactNode
 function DeleteBtn({ onClick }: { onClick: () => void }) {
   return (
     <button onClick={onClick} style={{
-      background: "#fff0f5", border: "1px solid #f4b8cf", color: "#c2447a", borderRadius: 8, width: 26, height: 26,
+      background: "#2f1c27", border: "1px solid #5a3346", color: "#ff7fae", borderRadius: 8, width: 26, height: 26,
       cursor: "pointer", fontSize: 12, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
     }}>✕</button>
   );
@@ -686,16 +686,16 @@ function VentasTab({ sales, addSale, removeSale, rate }: {
   return (
     <>
       <Card>
-        <p style={{ margin: "0 0 0.75rem", fontSize: 13, fontWeight: 700, color: "#a3134f" }}>Registrar venta del día</p>
+        <p style={{ margin: "0 0 0.75rem", fontSize: 13, fontWeight: 700, color: "#ff6fa8" }}>Registrar venta del día</p>
         <Field label="Cliente"><input style={inputStyle} value={name} onChange={e => setName(e.target.value)} placeholder="Nombre del cliente" /></Field>
         <Field label="Teléfono"><input style={inputStyle} value={phone} onChange={e => setPhone(e.target.value)} placeholder="Teléfono (opcional)" /></Field>
         <Field label="Productos que se llevó">
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
             {catalog.map(p => (
               <button key={p.name} type="button" onClick={() => toggleCategory(p.name)} style={{
-                border: "1px solid " + (items.some(it => it.category === p.name) ? "transparent" : "#f4c2d6"),
+                border: "1px solid " + (items.some(it => it.category === p.name) ? "transparent" : "#4a2f3a"),
                 background: items.some(it => it.category === p.name) ? "linear-gradient(135deg,#ff8fb3,#e05485)" : "#fff",
-                color: items.some(it => it.category === p.name) ? "#fff" : "#b56e89",
+                color: items.some(it => it.category === p.name) ? "#fff" : "#c99bb0",
                 borderRadius: 16, padding: "0.35rem 0.75rem", fontSize: 11.5, fontWeight: 700, cursor: "pointer",
               }}>{p.name} (${p.price})</button>
             ))}
@@ -703,13 +703,13 @@ function VentasTab({ sales, addSale, removeSale, rate }: {
           <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
             <input style={{ ...inputStyle, flex: 2 }} placeholder="Nuevo producto" value={newProdName} onChange={e => setNewProdName(e.target.value)} />
             <input style={{ ...inputStyle, flex: 1 }} type="number" min={0} step={0.01} placeholder="$/L" value={newProdPrice} onChange={e => setNewProdPrice(e.target.value)} />
-            <button type="button" onClick={addProduct} style={{ border: "1px solid #f4c2d6", borderRadius: 9, background: "#fff0f5", color: "#c2447a", fontSize: 11, fontWeight: 700, padding: "0 0.75rem", cursor: "pointer" }}>+</button>
+            <button type="button" onClick={addProduct} style={{ border: "1px solid #4a2f3a", borderRadius: 9, background: "#2f1c27", color: "#ff7fae", fontSize: 11, fontWeight: 700, padding: "0 0.75rem", cursor: "pointer" }}>+</button>
           </div>
         </Field>
         {items.map(it => (
           <div key={it.category} style={{ marginBottom: "0.5rem" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-              <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: "#5a2540" }}>{it.category}</p>
+              <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: "#f3e2ea" }}>{it.category}</p>
               <DeleteBtn onClick={() => toggleCategory(it.category)} />
             </div>
             <div style={{ display: "flex", gap: 6 }}>
@@ -728,28 +728,28 @@ function VentasTab({ sales, addSale, removeSale, rate }: {
           </select>
         </Field>
         <Field label="Fecha"><input style={inputStyle} type="date" value={date} onChange={e => setDate(e.target.value)} /></Field>
-        {totalAmount > 0 && <p style={{ margin: "0 0 0.6rem", fontSize: 11.5, color: "#c2447a" }}>Total: {fmtUSD(totalAmount)} ≈ {fmtBs(totalAmount * rate)}</p>}
-        {err && <p style={{ margin: "0 0 0.6rem", fontSize: 11.5, color: "#c2447a", background: "#fff0f5", padding: "0.5rem 0.75rem", borderRadius: 8 }}>{err}</p>}
+        {totalAmount > 0 && <p style={{ margin: "0 0 0.6rem", fontSize: 11.5, color: "#ff7fae" }}>Total: {fmtUSD(totalAmount)} ≈ {fmtBs(totalAmount * rate)}</p>}
+        {err && <p style={{ margin: "0 0 0.6rem", fontSize: 11.5, color: "#ff7fae", background: "#2f1c27", padding: "0.5rem 0.75rem", borderRadius: 8 }}>{err}</p>}
         <PrimaryBtn onClick={add}>Registrar venta</PrimaryBtn>
       </Card>
 
       {grouped.length === 0 ? (
-        <p style={{ textAlign: "center", color: "#c9a3b6", fontSize: 12.5, padding: "1.5rem 0" }}>Aún no hay ventas registradas</p>
+        <p style={{ textAlign: "center", color: "#9c7a89", fontSize: 12.5, padding: "1.5rem 0" }}>Aún no hay ventas registradas</p>
       ) : grouped.map(([d, dayItems]) => (
         <div key={d} style={{ marginBottom: "0.9rem" }}>
-          <p style={{ fontSize: 11, fontWeight: 700, color: "#c288a0", margin: "0 0 0.4rem 0.2rem" }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: "#b98aa0", margin: "0 0 0.4rem 0.2rem" }}>
             {fmtDate(d)} · {fmtUSD(dayItems.reduce((a, s) => a + s.amount, 0))}
           </p>
           {dayItems.map(s => (
-            <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#fffdfe", border: "1px solid #ffe0ec", borderRadius: 12, padding: "0.6rem 0.8rem", marginBottom: 6 }}>
+            <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#1e1219", border: "1px solid #3a2430", borderRadius: 12, padding: "0.6rem 0.8rem", marginBottom: 6 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ margin: "0 0 2px", fontSize: 12.5, fontWeight: 700, color: "#5a2540" }}>{s.name}{s.phone ? ` · ${s.phone}` : ""}</p>
-                <p style={{ margin: 0, fontSize: 11, color: "#b56e89" }}>{s.product}</p>
-                <p style={{ margin: 0, fontSize: 10, color: "#c9a3b6" }}>{PAYMENT_METHODS.find(m => m.id === s.paymentMethod)?.label || s.paymentMethod}</p>
+                <p style={{ margin: "0 0 2px", fontSize: 12.5, fontWeight: 700, color: "#f3e2ea" }}>{s.name}{s.phone ? ` · ${s.phone}` : ""}</p>
+                <p style={{ margin: 0, fontSize: 11, color: "#c99bb0" }}>{s.product}</p>
+                <p style={{ margin: 0, fontSize: 10, color: "#9c7a89" }}>{PAYMENT_METHODS.find(m => m.id === s.paymentMethod)?.label || s.paymentMethod}</p>
               </div>
               <div style={{ textAlign: "right", flexShrink: 0 }}>
                 <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: "#e05485" }}>{fmtUSD(s.amount)}</p>
-                <p style={{ margin: 0, fontSize: 10, color: "#c9a3b6" }}>{fmtBs(s.amount * rate)}</p>
+                <p style={{ margin: 0, fontSize: 10, color: "#9c7a89" }}>{fmtBs(s.amount * rate)}</p>
               </div>
               <DeleteBtn onClick={() => removeSale(s.id)} />
             </div>
@@ -811,23 +811,23 @@ function InversionTab({ invs, addInv, removeInv }: {
 
   return (
     <>
-      <Card style={{ background: "linear-gradient(135deg,#fff0f6,#ffe4ee)", border: "1px solid #f4b8cf" }}>
-        <p style={{ margin: 0, fontSize: 10.5, fontWeight: 700, color: "#c2447a", letterSpacing: 0.3 }}>INVERTIDO ESTE MES</p>
-        <p style={{ margin: "2px 0 0", fontSize: 22, fontWeight: 800, color: "#a3134f" }}>{fmtUSD(totalMes)}</p>
+      <Card style={{ background: "linear-gradient(135deg,#fff0f6,#ffe4ee)", border: "1px solid #5a3346" }}>
+        <p style={{ margin: 0, fontSize: 10.5, fontWeight: 700, color: "#ff7fae", letterSpacing: 0.3 }}>INVERTIDO ESTE MES</p>
+        <p style={{ margin: "2px 0 0", fontSize: 22, fontWeight: 800, color: "#ff6fa8" }}>{fmtUSD(totalMes)}</p>
       </Card>
 
       <Card>
-        <p style={{ margin: "0 0 0.5rem", fontSize: 12, fontWeight: 700, color: "#a3134f" }}>Total comprado por materia prima</p>
-        {totalsByMaterial.length === 0 ? <p style={{ margin: 0, fontSize: 11.5, color: "#c9a3b6" }}>Aún no hay compras registradas</p> : totalsByMaterial.map(([m, t]) => (
-          <div key={m} style={{ display: "flex", justifyContent: "space-between", padding: "0.3rem 0", borderBottom: "1px solid #ffeaf1" }}>
-            <span style={{ fontSize: 11.5, color: "#5a2540" }}>{m}{t.quantity ? ` · ${t.quantity}${t.unit}` : ""}</span>
-            <span style={{ fontSize: 11.5, fontWeight: 700, color: "#a3134f" }}>{fmtUSD(t.amount)}</span>
+        <p style={{ margin: "0 0 0.5rem", fontSize: 12, fontWeight: 700, color: "#ff6fa8" }}>Total comprado por materia prima</p>
+        {totalsByMaterial.length === 0 ? <p style={{ margin: 0, fontSize: 11.5, color: "#9c7a89" }}>Aún no hay compras registradas</p> : totalsByMaterial.map(([m, t]) => (
+          <div key={m} style={{ display: "flex", justifyContent: "space-between", padding: "0.3rem 0", borderBottom: "1px solid #241720" }}>
+            <span style={{ fontSize: 11.5, color: "#f3e2ea" }}>{m}{t.quantity ? ` · ${t.quantity}${t.unit}` : ""}</span>
+            <span style={{ fontSize: 11.5, fontWeight: 700, color: "#ff6fa8" }}>{fmtUSD(t.amount)}</span>
           </div>
         ))}
       </Card>
 
       <Card>
-        <p style={{ margin: "0 0 0.75rem", fontSize: 13, fontWeight: 700, color: "#a3134f" }}>Registrar inversión</p>
+        <p style={{ margin: "0 0 0.75rem", fontSize: 13, fontWeight: 700, color: "#ff6fa8" }}>Registrar inversión</p>
         <Field label="Tipo de materia prima">
           <select style={inputStyle} value={groupIdx} onChange={e => { setGroupIdx(Number(e.target.value)); setMaterial(""); }}>
             {MATERIAL_GROUPS.map((g, i) => <option key={g.label} value={i}>{g.label}</option>)}
@@ -840,7 +840,7 @@ function InversionTab({ invs, addInv, removeInv }: {
           </select>
           <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
             <input style={{ ...inputStyle, flex: 1 }} placeholder="Agregar nueva" value={newMaterial} onChange={e => setNewMaterial(e.target.value)} />
-            <button type="button" onClick={addNewMaterial} style={{ border: "1px solid #f4c2d6", borderRadius: 9, background: "#fff0f5", color: "#c2447a", fontSize: 11, fontWeight: 700, padding: "0 0.75rem", cursor: "pointer" }}>+</button>
+            <button type="button" onClick={addNewMaterial} style={{ border: "1px solid #4a2f3a", borderRadius: 9, background: "#2f1c27", color: "#ff7fae", fontSize: 11, fontWeight: 700, padding: "0 0.75rem", cursor: "pointer" }}>+</button>
           </div>
         </Field>
         <div style={{ display: "flex", gap: "0.6rem" }}>
@@ -861,19 +861,19 @@ function InversionTab({ invs, addInv, removeInv }: {
           <Field label="Monto (USD)"><input style={inputStyle} type="number" min={0} step={0.01} value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" /></Field>
           <Field label="Fecha"><input style={inputStyle} type="date" value={date} onChange={e => setDate(e.target.value)} /></Field>
         </div>
-        {err && <p style={{ margin: "0 0 0.6rem", fontSize: 11.5, color: "#c2447a", background: "#fff0f5", padding: "0.5rem 0.75rem", borderRadius: 8 }}>{err}</p>}
+        {err && <p style={{ margin: "0 0 0.6rem", fontSize: 11.5, color: "#ff7fae", background: "#2f1c27", padding: "0.5rem 0.75rem", borderRadius: 8 }}>{err}</p>}
         <PrimaryBtn onClick={add}>Registrar inversión</PrimaryBtn>
       </Card>
 
       {sorted.length === 0 ? (
-        <p style={{ textAlign: "center", color: "#c9a3b6", fontSize: 12.5, padding: "1rem 0" }}>Aún no has registrado inversiones</p>
+        <p style={{ textAlign: "center", color: "#9c7a89", fontSize: 12.5, padding: "1rem 0" }}>Aún no has registrado inversiones</p>
       ) : sorted.map(i => (
-        <div key={i.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#fffdfe", border: "1px solid #ffe0ec", borderRadius: 12, padding: "0.6rem 0.8rem", marginBottom: 6 }}>
+        <div key={i.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#1e1219", border: "1px solid #3a2430", borderRadius: 12, padding: "0.6rem 0.8rem", marginBottom: 6 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ margin: "0 0 2px", fontSize: 12.5, fontWeight: 700, color: "#5a2540" }}>{i.material || i.desc}{i.quantity ? ` · ${i.quantity}${i.unit}` : ""}</p>
-            <p style={{ margin: 0, fontSize: 10.5, color: "#c9a3b6" }}>{i.category}{i.desc && i.material ? ` · ${i.desc}` : ""} · {fmtDate(i.date)}</p>
+            <p style={{ margin: "0 0 2px", fontSize: 12.5, fontWeight: 700, color: "#f3e2ea" }}>{i.material || i.desc}{i.quantity ? ` · ${i.quantity}${i.unit}` : ""}</p>
+            <p style={{ margin: 0, fontSize: 10.5, color: "#9c7a89" }}>{i.category}{i.desc && i.material ? ` · ${i.desc}` : ""} · {fmtDate(i.date)}</p>
           </div>
-          <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: "#a3134f", flexShrink: 0 }}>-{fmtUSD(i.amount)}</p>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: "#ff6fa8", flexShrink: 0 }}>-{fmtUSD(i.amount)}</p>
           <DeleteBtn onClick={() => removeInv(i.id)} />
         </div>
       ))}
@@ -890,9 +890,9 @@ function StatsTab({ periodId, setPeriodId, totalVentas, totalInv, ganancia, stat
       <div style={{ display: "flex", gap: 6, overflowX: "auto", marginBottom: "0.9rem", paddingBottom: 2 }}>
         {PERIODS.map(p => (
           <button key={p.id} onClick={() => setPeriodId(p.id)} style={{
-            flexShrink: 0, border: "1px solid " + (periodId === p.id ? "transparent" : "#f4c2d6"),
+            flexShrink: 0, border: "1px solid " + (periodId === p.id ? "transparent" : "#4a2f3a"),
             background: periodId === p.id ? "linear-gradient(135deg,#ff8fb3,#e05485)" : "#fff",
-            color: periodId === p.id ? "#fff" : "#b56e89", borderRadius: 20, padding: "0.4rem 0.9rem",
+            color: periodId === p.id ? "#fff" : "#c99bb0", borderRadius: 20, padding: "0.4rem 0.9rem",
             fontSize: 11.5, fontWeight: 700, cursor: "pointer",
           }}>{p.label}</button>
         ))}
@@ -900,35 +900,35 @@ function StatsTab({ periodId, setPeriodId, totalVentas, totalInv, ganancia, stat
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: "0.9rem" }}>
         <Card style={{ margin: 0 }}>
-          <p style={{ margin: 0, fontSize: 9.5, fontWeight: 700, color: "#c288a0" }}>VENTAS</p>
+          <p style={{ margin: 0, fontSize: 9.5, fontWeight: 700, color: "#b98aa0" }}>VENTAS</p>
           <p style={{ margin: "3px 0 0", fontSize: 18, fontWeight: 800, color: "#e05485" }}>{fmtUSD(totalVentas)}</p>
         </Card>
         <Card style={{ margin: 0 }}>
-          <p style={{ margin: 0, fontSize: 9.5, fontWeight: 700, color: "#c288a0" }}>INVERSIÓN</p>
-          <p style={{ margin: "3px 0 0", fontSize: 18, fontWeight: 800, color: "#a3134f" }}>{fmtUSD(totalInv)}</p>
+          <p style={{ margin: 0, fontSize: 9.5, fontWeight: 700, color: "#b98aa0" }}>INVERSIÓN</p>
+          <p style={{ margin: "3px 0 0", fontSize: 18, fontWeight: 800, color: "#ff6fa8" }}>{fmtUSD(totalInv)}</p>
         </Card>
       </div>
 
-      <Card style={{ background: ganancia >= 0 ? "linear-gradient(135deg,#2a1620,#3a1f2c)" : "linear-gradient(135deg,#2c1616,#3a1c1c)", border: "1px solid " + (ganancia >= 0 ? "#f4b8cf" : "#f4b8b8") }}>
-        <p style={{ margin: 0, fontSize: 10.5, fontWeight: 700, color: "#a3134f", letterSpacing: 0.3 }}>GANANCIA NETA</p>
-        <p style={{ margin: "3px 0 0", fontSize: 26, fontWeight: 800, color: ganancia >= 0 ? "#a3134f" : "#c23838" }}>{fmtUSD(ganancia)}</p>
-        <p style={{ margin: "2px 0 0", fontSize: 11, color: "#c2447a" }}>≈ {fmtBs(ganancia * rate)}</p>
+      <Card style={{ background: ganancia >= 0 ? "linear-gradient(135deg,#2a1620,#3a1f2c)" : "linear-gradient(135deg,#2c1616,#3a1c1c)", border: "1px solid " + (ganancia >= 0 ? "#5a3346" : "#5a2f2f") }}>
+        <p style={{ margin: 0, fontSize: 10.5, fontWeight: 700, color: "#ff6fa8", letterSpacing: 0.3 }}>GANANCIA NETA</p>
+        <p style={{ margin: "3px 0 0", fontSize: 26, fontWeight: 800, color: ganancia >= 0 ? "#ff6fa8" : "#ff6b6b" }}>{fmtUSD(ganancia)}</p>
+        <p style={{ margin: "2px 0 0", fontSize: 11, color: "#ff7fae" }}>≈ {fmtBs(ganancia * rate)}</p>
       </Card>
 
       <Card> 
-        <p style={{ margin: 0, fontSize: 10.5, fontWeight: 700, color: "#c288a0" }}>PENDIENTE POR COBRAR (AGENDA)</p>
-        <p style={{ margin: "3px 0 0", fontSize: 18, fontWeight: 800, color: "#e0a13a" }}>{fmtUSD(totalPendiente)}</p>
-        <p style={{ margin: "2px 0 0", fontSize: 11, color: "#c9a3b6" }}>{pendientesCount} cliente(s) con pago pendiente</p>
-      </Card> 
+        <p style={{ margin: 0, fontSize: 10.5, fontWeight: 700, color: "#b98aa0" }}>PENDIENTE POR COBRAR (AGENDA)</p>
+        <p style={{ margin: "3px 0 0", fontSize: 18, fontWeight: 800, color: "#f0b458" }}>{fmtUSD(totalPendiente)}</p>
+        <p style={{ margin: "2px 0 0", fontSize: 11, color: "#9c7a89" }}>{pendientesCount} cliente(s) con pago pendiente</p>
+      </Card>
 
       <Card>
-        <p style={{ margin: "0 0 0.6rem", fontSize: 12, fontWeight: 700, color: "#a3134f" }}>Ventas en este período ({statsSales.length})</p>
+        <p style={{ margin: "0 0 0.6rem", fontSize: 12, fontWeight: 700, color: "#ff6fa8" }}>Ventas en este período ({statsSales.length})</p>
         {statsSales.length === 0 ? (
-          <p style={{ margin: 0, fontSize: 12, color: "#c9a3b6" }}>No hay ventas en este período</p>
+          <p style={{ margin: 0, fontSize: 12, color: "#9c7a89" }}>No hay ventas en este período</p>
         ) : (
           [...statsSales].sort((a, b) => b.createdAt - a.createdAt).slice(0, 20).map(s => (
-            <div key={s.id} style={{ display: "flex", justifyContent: "space-between", padding: "0.4rem 0", borderBottom: "1px solid #ffeaf1" }}>
-              <span style={{ fontSize: 11.5, color: "#5a2540" }}>{s.name} · {fmtDate(s.date)}</span>
+            <div key={s.id} style={{ display: "flex", justifyContent: "space-between", padding: "0.4rem 0", borderBottom: "1px solid #241720" }}>
+              <span style={{ fontSize: 11.5, color: "#f3e2ea" }}>{s.name} · {fmtDate(s.date)}</span>
               <span style={{ fontSize: 11.5, fontWeight: 700, color: "#e05485" }}>{fmtUSD(s.amount)}</span>
             </div>
           ))
@@ -995,16 +995,16 @@ function AgendaTab({ agenda, addAgenda, removeAgenda, togglePaid, abonar, rate }
   return (
     <>
       <Card>
-        <p style={{ margin: "0 0 0.75rem", fontSize: 13, fontWeight: 700, color: "#a3134f" }}>Agendar cliente pendiente</p>
+        <p style={{ margin: "0 0 0.75rem", fontSize: 13, fontWeight: 700, color: "#ff6fa8" }}>Agendar cliente pendiente</p>
         <Field label="Cliente"><input style={inputStyle} value={name} onChange={e => setName(e.target.value)} placeholder="Nombre del cliente" /></Field>
         <Field label="Teléfono"><input style={inputStyle} value={phone} onChange={e => setPhone(e.target.value)} placeholder="Teléfono (opcional)" /></Field>
         <Field label="Productos que se llevó">
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
             {catalog.map(p => (
               <button key={p.name} type="button" onClick={() => toggleCategory(p.name)} style={{
-                border: "1px solid " + (items.some(it => it.category === p.name) ? "transparent" : "#f4c2d6"),
+                border: "1px solid " + (items.some(it => it.category === p.name) ? "transparent" : "#4a2f3a"),
                 background: items.some(it => it.category === p.name) ? "linear-gradient(135deg,#ff8fb3,#e05485)" : "#fff",
-                color: items.some(it => it.category === p.name) ? "#fff" : "#b56e89",
+                color: items.some(it => it.category === p.name) ? "#fff" : "#c99bb0",
                 borderRadius: 16, padding: "0.35rem 0.75rem", fontSize: 11.5, fontWeight: 700, cursor: "pointer",
               }}>{p.name} (${p.price})</button>
             ))}
@@ -1012,12 +1012,12 @@ function AgendaTab({ agenda, addAgenda, removeAgenda, togglePaid, abonar, rate }
           <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
             <input style={{ ...inputStyle, flex: 2 }} placeholder="Nuevo producto" value={newProdName} onChange={e => setNewProdName(e.target.value)} />
             <input style={{ ...inputStyle, flex: 1 }} type="number" min={0} step={0.01} placeholder="$/L" value={newProdPrice} onChange={e => setNewProdPrice(e.target.value)} />
-            <button type="button" onClick={addProduct} style={{ border: "1px solid #f4c2d6", borderRadius: 9, background: "#fff0f5", color: "#c2447a", fontSize: 11, fontWeight: 700, padding: "0 0.75rem", cursor: "pointer" }}>+</button>
+            <button type="button" onClick={addProduct} style={{ border: "1px solid #4a2f3a", borderRadius: 9, background: "#2f1c27", color: "#ff7fae", fontSize: 11, fontWeight: 700, padding: "0 0.75rem", cursor: "pointer" }}>+</button>
           </div>
         </Field>
         {items.map(it => (
           <div key={it.category} style={{ marginBottom: "0.5rem" }}>
-            <p style={{ margin: "0 0 4px", fontSize: 11, fontWeight: 700, color: "#5a2540" }}>{it.category}</p>
+            <p style={{ margin: "0 0 4px", fontSize: 11, fontWeight: 700, color: "#f3e2ea" }}>{it.category}</p>
             <div style={{ display: "flex", gap: 6 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <Field label="Litros"><input style={inputStyle} type="number" min={0} step={0.5} value={it.liters} onChange={e => updateItem(it.category, "liters", parseFloat(e.target.value) || 0)} /></Field>
@@ -1034,31 +1034,31 @@ function AgendaTab({ agenda, addAgenda, removeAgenda, togglePaid, abonar, rate }
           </select>
         </Field>
         <Field label="Notas (opcional)"><textarea style={{ ...inputStyle, resize: "vertical", minHeight: 50 }} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Ej: promete pagar el viernes" /></Field>
-        {totalAmount > 0 && <p style={{ margin: "0 0 0.6rem", fontSize: 11.5, color: "#c2447a" }}>Debe: {fmtUSD(totalAmount)} ≈ {fmtBs(totalAmount * rate)}</p>}
-        {err && <p style={{ margin: "0 0 0.6rem", fontSize: 11.5, color: "#c2447a", background: "#fff0f5", padding: "0.5rem 0.75rem", borderRadius: 8 }}>{err}</p>}
+        {totalAmount > 0 && <p style={{ margin: "0 0 0.6rem", fontSize: 11.5, color: "#ff7fae" }}>Debe: {fmtUSD(totalAmount)} ≈ {fmtBs(totalAmount * rate)}</p>}
+        {err && <p style={{ margin: "0 0 0.6rem", fontSize: 11.5, color: "#ff7fae", background: "#2f1c27", padding: "0.5rem 0.75rem", borderRadius: 8 }}>{err}</p>}
         <PrimaryBtn onClick={add}>Agendar cliente</PrimaryBtn>
       </Card>
 
       {sorted.length === 0 ? (
-        <p style={{ textAlign: "center", color: "#c9a3b6", fontSize: 12.5, padding: "1rem 0" }}>No hay clientes pendientes agendados</p>
+        <p style={{ textAlign: "center", color: "#9c7a89", fontSize: 12.5, padding: "1rem 0" }}>No hay clientes pendientes agendados</p>
       ) : sorted.map(c => {
         const restante = Math.max(0, c.amount - (c.paidAmount || 0));
         return (
         <div key={c.id} style={{
-          background: c.paid ? "#f7fff2" : "#fffdfe", border: "1px solid " + (c.paid ? "#cdeeb8" : "#ffe0ec"),
+          background: c.paid ? "#132013" : "#1e1219", border: "1px solid " + (c.paid ? "#2e4a2a" : "#3a2430"),
           borderRadius: 14, padding: "0.75rem 0.9rem", marginBottom: 8,
         }}>
           <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ margin: "0 0 2px", fontSize: 12.5, fontWeight: 700, color: "#5a2540" }}>{c.name}{c.phone ? ` · ${c.phone}` : ""}</p>
-              {c.product && <p style={{ margin: "0 0 3px", fontSize: 11, color: "#b56e89" }}>{c.product}</p>}
-              {c.notes && <p style={{ margin: "0 0 3px", fontSize: 10.5, color: "#c9a3b6", fontStyle: "italic" }}>{c.notes}</p>}
-              <p style={{ margin: 0, fontSize: 9.5, color: "#c9a3b6" }}>Agendado {fmtDate(new Date(c.createdAt).toISOString().slice(0, 10))}</p>
-              {!c.paid && (c.paidAmount || 0) > 0 && <p style={{ margin: "2px 0 0", fontSize: 10.5, fontWeight: 700, color: "#5a9a3e" }}>Abonado: {fmtUSD(c.paidAmount)} · Resta: {fmtUSD(restante)}</p>}
+              <p style={{ margin: "0 0 2px", fontSize: 12.5, fontWeight: 700, color: "#f3e2ea" }}>{c.name}{c.phone ? ` · ${c.phone}` : ""}</p>
+              {c.product && <p style={{ margin: "0 0 3px", fontSize: 11, color: "#c99bb0" }}>{c.product}</p>}
+              {c.notes && <p style={{ margin: "0 0 3px", fontSize: 10.5, color: "#9c7a89", fontStyle: "italic" }}>{c.notes}</p>}
+              <p style={{ margin: 0, fontSize: 9.5, color: "#9c7a89" }}>Agendado {fmtDate(new Date(c.createdAt).toISOString().slice(0, 10))}</p>
+              {!c.paid && (c.paidAmount || 0) > 0 && <p style={{ margin: "2px 0 0", fontSize: 10.5, fontWeight: 700, color: "#7bc55a" }}>Abonado: {fmtUSD(c.paidAmount)} · Resta: {fmtUSD(restante)}</p>}
             </div>
             <div style={{ textAlign: "right", flexShrink: 0 }}>
-              <p style={{ margin: 0, fontSize: 14, fontWeight: 800, color: c.paid ? "#5a9a3e" : "#e0a13a" }}>{fmtUSD(c.amount)}</p>
-              <p style={{ margin: 0, fontSize: 10, color: "#c9a3b6" }}>{fmtBs(c.amount * rate)}</p>
+              <p style={{ margin: 0, fontSize: 14, fontWeight: 800, color: c.paid ? "#7bc55a" : "#f0b458" }}>{fmtUSD(c.amount)}</p>
+              <p style={{ margin: 0, fontSize: 10, color: "#9c7a89" }}>{fmtBs(c.amount * rate)}</p>
             </div>
           </div>
           {!c.paid && (
@@ -1066,15 +1066,15 @@ function AgendaTab({ agenda, addAgenda, removeAgenda, togglePaid, abonar, rate }
               <input style={{ ...inputStyle, flex: 1 }} type="number" min={0} step={0.01} placeholder="Monto a abonar (USD)"
                 value={abonoInputs[c.id] || ""} onChange={e => setAbonoInputs(prev => ({ ...prev, [c.id]: e.target.value }))} />
               <button onClick={() => doAbono(c)} style={{
-                border: "1px solid #f4c2d6", borderRadius: 9, background: "#fff0f5", color: "#c2447a",
+                border: "1px solid #4a2f3a", borderRadius: 9, background: "#2f1c27", color: "#ff7fae",
                 fontSize: 11, fontWeight: 700, padding: "0 0.75rem", cursor: "pointer",
               }}>Abonar</button>
             </div>
           )}
           <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
             <button onClick={() => togglePaid(c)} style={{
-              flex: 1, border: "1px solid " + (c.paid ? "#a9d98f" : "#f4c2d6"), borderRadius: 9,
-              background: c.paid ? "#e9f7de" : "#fff0f5", color: c.paid ? "#4a7a30" : "#c2447a",
+              flex: 1, border: "1px solid " + (c.paid ? "#3f6b38" : "#4a2f3a"), borderRadius: 9,
+              background: c.paid ? "#1c2e18" : "#2f1c27", color: c.paid ? "#8fd66a" : "#ff7fae",
               fontSize: 11, fontWeight: 700, padding: "0.4rem", cursor: "pointer",
             }}>{c.paid ? "✓ Pagado" : "Marcar como pagado por completo"}</button>
             <DeleteBtn onClick={() => removeAgenda(c.id)} />
@@ -1108,7 +1108,7 @@ function InvRowsEditor({ title, rows, onChange, options, grouped }: { title: str
   const remove = (n: string) => onChange(rows.filter(r => r.name !== n));
   return (
     <Card>
-      <p style={{ margin: "0 0 0.6rem", fontSize: 12.5, fontWeight: 700, color: "#a3134f" }}>{title}</p>
+      <p style={{ margin: "0 0 0.6rem", fontSize: 12.5, fontWeight: 700, color: "#ff6fa8" }}>{title}</p>
       <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
         {grouped ? (
           <select style={{ ...inputStyle, flex: 2 }} value={name} onChange={e => setName(e.target.value)}>
@@ -1129,17 +1129,17 @@ function InvRowsEditor({ title, rows, onChange, options, grouped }: { title: str
         <select style={{ ...inputStyle, flex: 1 }} value={unit} onChange={e => setUnit(e.target.value)}>
           <option value="kg">kg</option><option value="L">L</option><option value="unid">unid</option>
         </select>
-        <button type="button" onClick={add} style={{ border: "1px solid #f4c2d6", borderRadius: 9, background: "#fff0f5", color: "#c2447a", fontSize: 11, fontWeight: 700, padding: "0 0.75rem", cursor: "pointer" }}>+</button>
+        <button type="button" onClick={add} style={{ border: "1px solid #4a2f3a", borderRadius: 9, background: "#2f1c27", color: "#ff7fae", fontSize: 11, fontWeight: 700, padding: "0 0.75rem", cursor: "pointer" }}>+</button>
       </div>
       {grouped && (
         <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
           <input style={{ ...inputStyle, flex: 1 }} placeholder="Agregar nueva materia prima" value={newName} onChange={e => setNewName(e.target.value)} />
-          <button type="button" onClick={addNewOption} style={{ border: "1px solid #f4c2d6", borderRadius: 9, background: "#fff0f5", color: "#c2447a", fontSize: 11, fontWeight: 700, padding: "0 0.75rem", cursor: "pointer" }}>+ nueva</button>
+          <button type="button" onClick={addNewOption} style={{ border: "1px solid #4a2f3a", borderRadius: 9, background: "#2f1c27", color: "#ff7fae", fontSize: 11, fontWeight: 700, padding: "0 0.75rem", cursor: "pointer" }}>+ nueva</button>
         </div>
       )}
-      {rows.length === 0 ? <p style={{ margin: 0, fontSize: 11.5, color: "#c9a3b6" }}>Sin existencias registradas</p> : rows.map(r => (
-        <div key={r.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.3rem 0", borderBottom: "1px solid #ffeaf1" }}>
-          <span style={{ fontSize: 11.5, color: "#5a2540" }}>{r.name}</span>
+      {rows.length === 0 ? <p style={{ margin: 0, fontSize: 11.5, color: "#9c7a89" }}>Sin existencias registradas</p> : rows.map(r => (
+        <div key={r.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.3rem 0", borderBottom: "1px solid #241720" }}>
+          <span style={{ fontSize: 11.5, color: "#f3e2ea" }}>{r.name}</span>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontSize: 11.5, fontWeight: 700, color: "#e05485" }}>{r.qty}{r.unit}</span>
             <DeleteBtn onClick={() => remove(r.name)} />
@@ -1161,7 +1161,7 @@ function ShoppingListEditor({ items, onChange }: { items: string[]; onChange: (l
   const remove = (n: string) => onChange(items.filter(i => i !== n));
   return (
     <Card>
-      <p style={{ margin: "0 0 0.6rem", fontSize: 12.5, fontWeight: 700, color: "#a3134f" }}>Próximo a comprar</p>
+      <p style={{ margin: "0 0 0.6rem", fontSize: 12.5, fontWeight: 700, color: "#ff6fa8" }}>Próximo a comprar</p>
       <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
         <select style={{ ...inputStyle, flex: 2 }} value={sel} onChange={e => { setSel(e.target.value); if (e.target.value) { add(e.target.value); setSel(""); } }}>
           <option value="">De la lista…</option>
@@ -1174,11 +1174,11 @@ function ShoppingListEditor({ items, onChange }: { items: string[]; onChange: (l
       </div>
       <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
         <input style={{ ...inputStyle, flex: 1 }} placeholder="Otro (escribe y agrega)" value={text} onChange={e => setText(e.target.value)} />
-        <button type="button" onClick={() => { add(text); setText(""); }} style={{ border: "1px solid #f4c2d6", borderRadius: 9, background: "#fff0f5", color: "#c2447a", fontSize: 11, fontWeight: 700, padding: "0 0.75rem", cursor: "pointer" }}>+</button>
+        <button type="button" onClick={() => { add(text); setText(""); }} style={{ border: "1px solid #4a2f3a", borderRadius: 9, background: "#2f1c27", color: "#ff7fae", fontSize: 11, fontWeight: 700, padding: "0 0.75rem", cursor: "pointer" }}>+</button>
       </div>
-      {items.length === 0 ? <p style={{ margin: 0, fontSize: 11.5, color: "#c9a3b6" }}>Nada pendiente por comprar</p> : items.map(i => (
-        <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.3rem 0", borderBottom: "1px solid #ffeaf1" }}>
-          <span style={{ fontSize: 11.5, color: "#5a2540" }}>{i}</span>
+      {items.length === 0 ? <p style={{ margin: 0, fontSize: 11.5, color: "#9c7a89" }}>Nada pendiente por comprar</p> : items.map(i => (
+        <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.3rem 0", borderBottom: "1px solid #241720" }}>
+          <span style={{ fontSize: 11.5, color: "#f3e2ea" }}>{i}</span>
           <DeleteBtn onClick={() => remove(i)} />
         </div>
       ))}
@@ -1196,7 +1196,7 @@ function InventarioTab({ month, setMonth, data, onSave, loading }: {
     <>
       <Card>
         <Field label="Mes del inventario"><input style={inputStyle} type="month" value={month} onChange={e => setMonth(e.target.value)} /></Field>
-        {loading && <p style={{ margin: 0, fontSize: 11, color: "#c9a3b6" }}>Cargando…</p>}
+        {loading && <p style={{ margin: 0, fontSize: 11, color: "#9c7a89" }}>Cargando…</p>}
       </Card>
       <ShoppingListEditor items={data.porComprar} onChange={l => onSave({ ...data, porComprar: l })} />
       <InvRowsEditor title="Materia prima en existencia" rows={data.materiaPrima} options={getFullMaterials()} grouped={MATERIAL_GROUPS} onChange={r => onSave({ ...data, materiaPrima: r })} />
