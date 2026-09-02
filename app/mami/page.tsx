@@ -81,7 +81,7 @@ async function fsSetSingleDoc(collection: string, id: string, data: Record<strin
 }
 
 // Colecciones dedicadas al panel de Mami (separadas de las de la tienda)
-const COL = { ventas: "mami_sales", inv: "mami_investments", agenda: "mami_agenda" };
+const COL = { ventas: "mami_sales", inv: "mami_investments", agenda: "mami_agenda", inventario: "mami_inventory" };
 const CONFIG_COL = "mami_config";
 const CONFIG_ID = "settings";
 const BCV_CACHE_KEY = "mami_bcv_rate";
@@ -107,15 +107,70 @@ function fmtDate(d: string) {
 
 interface SaleItem { category: string; liters: number; value: number; }
 interface Sale { id: string; name: string; phone: string; product: string; items: SaleItem[]; amount: number; paymentMethod: string; date: string; createdAt: number; }
-interface Investment { id: string; desc: string; amount: number; category: string; date: string; createdAt: number; }
+interface Investment { id: string; desc: string; amount: number; category: string; material: string; quantity: number; unit: string; date: string; createdAt: number; }
 interface AgendaClient { id: string; name: string; phone: string; product: string; items: SaleItem[]; amount: number; paidAmount: number; paid: boolean; paymentMethod: string; notes: string; createdAt: number; }
+interface InvRow { name: string; qty: number; unit: string; }
 
-const PRODUCT_CATEGORIES = ["Cloro", "Lavaplatos", "Desinfectante", "Suavizante", "Cera de piso", "Desengrasante", "Ariel líquido"];
+const PRODUCT_CATALOG: { name: string; price: number }[] = [
+  { name: "Champú carros y motos", price: 3 },
+  { name: "Desengrasante multiusos", price: 1.5 },
+  { name: "Lavaplatos", price: 2 },
+  { name: "Detergente líquido", price: 2 },
+  { name: "Detergente premium", price: 2.4 },
+  { name: "Suavizante morado", price: 2 },
+  { name: "Suavizante normal", price: 1.5 },
+  { name: "Vanish desmanchador", price: 2 },
+  { name: "Cloro", price: 1 },
+  { name: "Cloro jabonoso", price: 1.2 },
+  { name: "Desinfectante", price: 1.2 },
+  { name: "Cera blanca autobrillante", price: 1.4 },
+  { name: "Limpia poceta/cerámica", price: 2 },
+  { name: "Limpia tapicería", price: 2 },
+  { name: "Ambientador spray", price: 5 },
+];
+const CUSTOM_PRODUCTS_KEY = "mami_custom_products";
+function loadCustomProducts(): { name: string; price: number }[] {
+  try { return JSON.parse(localStorage.getItem(CUSTOM_PRODUCTS_KEY) || "[]"); } catch { return []; }
+}
+function saveCustomProduct(name: string, price: number) {
+  try {
+    const list = loadCustomProducts();
+    if (!list.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+      list.push({ name, price });
+      localStorage.setItem(CUSTOM_PRODUCTS_KEY, JSON.stringify(list));
+      fsSetSingleDoc(CONFIG_COL, CONFIG_ID, { customProducts: JSON.stringify(list) }).catch(() => {});
+    }
+  } catch { /* silencioso */ }
+}
+function getFullCatalog(): { name: string; price: number }[] { return [...PRODUCT_CATALOG, ...loadCustomProducts()]; }
+function getDefaultPrice(name: string): number { return getFullCatalog().find(p => p.name === name)?.price || 0; }
+const PRODUCT_CATEGORIES = PRODUCT_CATALOG.map(p => p.name);
+
 const PAYMENT_METHODS = [
   { id: "efectivo", label: "Efectivo" },
   { id: "pagomovil", label: "Pago Móvil" },
 ];
 const INV_CATEGORIES = ["Materia prima", "Envases/Empaque", "Transporte", "Otro"];
+
+const FRAGANCIAS = ["Lavanda", "Menta", "Cherry", "Bebés talco", "Pino", "Vainilla", "Parchita", "Mandarina", "Suavitel", "Caricias de algodón"];
+const QUIMICOS = ["Nonil", "Kimicel", "Genapol", "Soda", "Cera en escama", "Tripilus", "Tripolifosfato", "Sulfónico", "Hipoclorito", "Glicerina", "Concentrado de limpia poceta", "Ácido cítrico", "Dietanolamina", "Cilicon", "Prepajen", "Butilicol", "Cocoamida", "Ácido esteárico", "Formol", "Dodigen", "Nipagin", "Metasilicato", "Sal industrial", "Nipasol", "Cloruro de benzalconio", "Alcohol cetílico", "Genamin"];
+const PRODUCTOS_TERMINADOS_COMPRA = ["Suavizante morado", "Ambientadores", "Ariel premium", "Kerosén", "Silicón", "Otros"];
+const MATERIALES_TODOS = [...FRAGANCIAS, ...QUIMICOS];
+const CUSTOM_MATERIALS_KEY = "mami_custom_materials";
+function loadCustomMaterials(): string[] {
+  try { return JSON.parse(localStorage.getItem(CUSTOM_MATERIALS_KEY) || "[]"); } catch { return []; }
+}
+function saveCustomMaterial(name: string) {
+  try {
+    const list = loadCustomMaterials();
+    if (!list.some(m => m.toLowerCase() === name.toLowerCase())) {
+      list.push(name);
+      localStorage.setItem(CUSTOM_MATERIALS_KEY, JSON.stringify(list));
+      fsSetSingleDoc(CONFIG_COL, CONFIG_ID, { customMaterials: JSON.stringify(list) }).catch(() => {});
+    }
+  } catch { /* silencioso */ }
+}
+function getFullMaterials(): string[] { return [...MATERIALES_TODOS, ...loadCustomMaterials()]; }
 
 function parseItems(raw: unknown): SaleItem[] {
   if (!raw) return [];
@@ -135,6 +190,7 @@ function parseItems(raw: unknown): SaleItem[] {
 const TABS = [
   { id: "ventas", label: "Ventas" },
   { id: "inversion", label: "Inversión" },
+  { id: "inventario", label: "Inventario" },
   { id: "stats", label: "Estadísticas" },
   { id: "agenda", label: "Agenda" },
 ];
@@ -233,16 +289,47 @@ function MamiPanel({ onLogout }: { onLogout: () => void }) {
   const [invs, setInvs] = useState<Investment[]>([]);
   const [agenda, setAgenda] = useState<AgendaClient[]>([]);
   const [periodId, setPeriodId] = useState("hoy");
+  const [invMonth, setInvMonth] = useState(todayISO().slice(0, 7));
+  const [invData, setInvData] = useState<{ materiaPrima: InvRow[]; comprados: InvRow[]; elaborados: InvRow[] }>({ materiaPrima: [], comprados: [], elaborados: [] });
+  const [invLoading, setInvLoading] = useState(false);
+  const loadInventario = useCallback(async (mes: string) => {
+    setInvLoading(true);
+    try {
+      const doc = await fsGetSingleDoc(COL.inventario, mes);
+      setInvData(doc ? {
+        materiaPrima: JSON.parse((doc.materiaPrima as string) || "[]"),
+        comprados: JSON.parse((doc.comprados as string) || "[]"),
+        elaborados: JSON.parse((doc.elaborados as string) || "[]"),
+      } : { materiaPrima: [], comprados: [], elaborados: [] });
+    } catch { setSyncErr("No se pudo cargar el inventario."); }
+    finally { setInvLoading(false); }
+  }, []);
+  useEffect(() => { if (tab === "inventario") loadInventario(invMonth); }, [tab, invMonth, loadInventario]);
+  const saveInventario = useCallback(async (data: typeof invData) => {
+    setInvData(data);
+    try {
+      await fsSetSingleDoc(COL.inventario, invMonth, {
+        materiaPrima: JSON.stringify(data.materiaPrima),
+        comprados: JSON.stringify(data.comprados),
+        elaborados: JSON.stringify(data.elaborados),
+      });
+    } catch { setSyncErr("No se pudo guardar el inventario."); }
+  }, [invMonth]);
 
  // Carga inicial desde Firestore — así se ve lo mismo sin importar desde qué dispositivo inicie sesión
   useEffect(() => {
     (async () => {
       try {
-        const [rawSales, rawInvs, rawAgenda] = await Promise.all([
+        const [rawSales, rawInvs, rawAgenda, remoteConfig] = await Promise.all([
           fsGetCollectionAll(COL.ventas),
           fsGetCollectionAll(COL.inv),
           fsGetCollectionAll(COL.agenda),
+          fsGetSingleDoc(CONFIG_COL, CONFIG_ID),
         ]);
+        try {
+          if (remoteConfig?.customProducts) localStorage.setItem(CUSTOM_PRODUCTS_KEY, remoteConfig.customProducts as string);
+          if (remoteConfig?.customMaterials) localStorage.setItem(CUSTOM_MATERIALS_KEY, remoteConfig.customMaterials as string);
+        } catch { /* silencioso */ }
         const s: Sale[] = rawSales.map(r => ({
           id: r.id, name: (r.name as string) || "", phone: (r.phone as string) || "",
           product: (r.product as string) || "", items: parseItems(r.items), amount: Number(r.amount) || 0,
@@ -252,6 +339,7 @@ function MamiPanel({ onLogout }: { onLogout: () => void }) {
         const i: Investment[] = rawInvs.map(r => ({
           id: r.id, desc: (r.desc as string) || "", amount: Number(r.amount) || 0,
           category: (r.category as string) || "Otro",
+          material: (r.material as string) || "", quantity: Number(r.quantity) || 0, unit: (r.unit as string) || "kg",
           date: (r.date as string) || todayISO(), createdAt: Number(r.createdAt) || 0,
         })).sort((a, b) => b.createdAt - a.createdAt);
         const a: AgendaClient[] = rawAgenda.map(r => ({
@@ -484,6 +572,7 @@ function MamiPanel({ onLogout }: { onLogout: () => void }) {
 
         {tab === "ventas" && <VentasTab sales={sales} addSale={addSale} removeSale={removeSale} rate={rate} />}
         {tab === "inversion" && <InversionTab invs={invs} addInv={addInv} removeInv={removeInv} />}
+        {tab === "inventario" && <InventarioTab month={invMonth} setMonth={setInvMonth} data={invData} onSave={saveInventario} loading={invLoading} />}
         {tab === "stats" && (
           <StatsTab periodId={periodId} setPeriodId={setPeriodId} totalVentas={totalVentas} totalInv={totalInv}
             ganancia={ganancia} statsSales={statsSales} rate={rate} totalPendiente={totalPendiente} pendientesCount={pendientes.length} />
@@ -552,13 +641,25 @@ function VentasTab({ sales, addSale, removeSale, rate }: {
   const [items, setItems] = useState<SaleItem[]>([]);
   const [err, setErr] = useState("");
 
+  const [catalogTick, setCatalogTick] = useState(0);
+  const catalog = useMemo(() => getFullCatalog(), [catalogTick]);
+  const [newProdName, setNewProdName] = useState("");
+  const [newProdPrice, setNewProdPrice] = useState("");
+  const addProduct = () => {
+    const n = newProdName.trim(); const p = parseFloat(newProdPrice);
+    if (!n || !p || p <= 0) return;
+    saveCustomProduct(n, p);
+    setNewProdName(""); setNewProdPrice(""); setCatalogTick(t => t + 1);
+  };
   const toggleCategory = (cat: string) => {
     setItems(prev => prev.some(it => it.category === cat)
       ? prev.filter(it => it.category !== cat)
-      : [...prev, { category: cat, liters: 1, value: 0 }]);
+      : [...prev, { category: cat, liters: 1, value: getDefaultPrice(cat) }]);
   };
   const updateItem = (cat: string, field: "liters" | "value", value: number) => {
-    setItems(prev => prev.map(it => it.category === cat ? { ...it, [field]: value } : it));
+    setItems(prev => prev.map(it => it.category === cat
+      ? { ...it, [field]: value, ...(field === "liters" ? { value: +(value * getDefaultPrice(cat)).toFixed(2) } : {}) }
+      : it));
   };
   const totalAmount = items.reduce((a, it) => a + (Number(it.value) || 0), 0);
 
@@ -583,14 +684,19 @@ function VentasTab({ sales, addSale, removeSale, rate }: {
         <Field label="Teléfono"><input style={inputStyle} value={phone} onChange={e => setPhone(e.target.value)} placeholder="Teléfono (opcional)" /></Field>
         <Field label="Productos que se llevó">
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {PRODUCT_CATEGORIES.map(cat => (
-              <button key={cat} type="button" onClick={() => toggleCategory(cat)} style={{
-                border: "1px solid " + (items.some(it => it.category === cat) ? "transparent" : "#f4c2d6"),
-                background: items.some(it => it.category === cat) ? "linear-gradient(135deg,#ff8fb3,#e05485)" : "#fff",
-                color: items.some(it => it.category === cat) ? "#fff" : "#b56e89",
+            {catalog.map(p => (
+              <button key={p.name} type="button" onClick={() => toggleCategory(p.name)} style={{
+                border: "1px solid " + (items.some(it => it.category === p.name) ? "transparent" : "#f4c2d6"),
+                background: items.some(it => it.category === p.name) ? "linear-gradient(135deg,#ff8fb3,#e05485)" : "#fff",
+                color: items.some(it => it.category === p.name) ? "#fff" : "#b56e89",
                 borderRadius: 16, padding: "0.35rem 0.75rem", fontSize: 11.5, fontWeight: 700, cursor: "pointer",
-              }}>{cat}</button>
+              }}>{p.name} (${p.price})</button>
             ))}
+          </div>
+          <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+            <input style={{ ...inputStyle, flex: 2 }} placeholder="Nuevo producto" value={newProdName} onChange={e => setNewProdName(e.target.value)} />
+            <input style={{ ...inputStyle, flex: 1 }} type="number" min={0} step={0.01} placeholder="$/L" value={newProdPrice} onChange={e => setNewProdPrice(e.target.value)} />
+            <button type="button" onClick={addProduct} style={{ border: "1px solid #f4c2d6", borderRadius: 9, background: "#fff0f5", color: "#c2447a", fontSize: 11, fontWeight: 700, padding: "0 0.75rem", cursor: "pointer" }}>+</button>
           </div>
         </Field>
         {items.map(it => (
@@ -653,11 +759,15 @@ function InversionTab({ invs, addInv, removeInv }: {
   const [date, setDate] = useState(todayISO());
   const [err, setErr] = useState("");
 
+  const [material, setMaterial] = useState("");
+  const [quantity, setQuantity] = useState("");
+  const [unit, setUnit] = useState("kg");
   const add = () => {
     const amt = parseFloat(amount);
-    if (!desc.trim() || !amt || amt <= 0) { setErr("Indica en qué se invirtió y un monto válido."); return; }
-    addInv({ desc: desc.trim(), amount: amt, category, date });
-    setDesc(""); setAmount(""); setCategory(INV_CATEGORIES[0]); setErr("");
+    if (!material.trim() || !amt || amt <= 0) { setErr("Selecciona o escribe la materia prima y un monto válido."); return; }
+    if (!getFullMaterials().some(m => m.toLowerCase() === material.trim().toLowerCase())) saveCustomMaterial(material.trim());
+    addInv({ desc: desc.trim(), amount: amt, category, material: material.trim(), quantity: parseFloat(quantity) || 0, unit, date });
+    setDesc(""); setAmount(""); setCategory(INV_CATEGORIES[0]); setMaterial(""); setQuantity(""); setErr("");
   };
   const sorted = useMemo(() => [...invs].sort((a, b) => b.createdAt - a.createdAt), [invs]);
   const totalMes = useMemo(() => {
@@ -674,12 +784,27 @@ function InversionTab({ invs, addInv, removeInv }: {
 
       <Card>
         <p style={{ margin: "0 0 0.75rem", fontSize: 13, fontWeight: 700, color: "#a3134f" }}>Registrar inversión</p>
-        <Field label="¿En qué se invirtió?"><input style={inputStyle} value={desc} onChange={e => setDesc(e.target.value)} placeholder="Ej: Compra de mercancía / envases / delivery" /></Field>
+        <Field label="Materia prima / producto">
+          <input style={inputStyle} list="materiales-list" value={material} onChange={e => setMaterial(e.target.value)} placeholder="Selecciona o escribe una nueva" />
+          <datalist id="materiales-list">
+            {getFullMaterials().map(m => <option key={m} value={m} />)}
+            {PRODUCTOS_TERMINADOS_COMPRA.map(m => <option key={m} value={m} />)}
+          </datalist>
+        </Field>
+        <div style={{ display: "flex", gap: "0.6rem" }}>
+          <Field label="Cantidad"><input style={inputStyle} type="number" min={0} step={0.01} value={quantity} onChange={e => setQuantity(e.target.value)} placeholder="0" /></Field>
+          <Field label="Unidad">
+            <select style={inputStyle} value={unit} onChange={e => setUnit(e.target.value)}>
+              <option value="kg">kg</option><option value="L">L</option><option value="unid">unid</option>
+            </select>
+          </Field>
+        </div>
         <Field label="Categoría">
           <select style={inputStyle} value={category} onChange={e => setCategory(e.target.value)}>
             {INV_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </Field>
+        <Field label="Nota (opcional)"><input style={inputStyle} value={desc} onChange={e => setDesc(e.target.value)} placeholder="Ej: proveedor, detalle" /></Field>
         <div style={{ display: "flex", gap: "0.6rem" }}>
           <Field label="Monto (USD)"><input style={inputStyle} type="number" min={0} step={0.01} value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" /></Field>
           <Field label="Fecha"><input style={inputStyle} type="date" value={date} onChange={e => setDate(e.target.value)} /></Field>
@@ -693,8 +818,8 @@ function InversionTab({ invs, addInv, removeInv }: {
       ) : sorted.map(i => (
         <div key={i.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#fffdfe", border: "1px solid #ffe0ec", borderRadius: 12, padding: "0.6rem 0.8rem", marginBottom: 6 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ margin: "0 0 2px", fontSize: 12.5, fontWeight: 700, color: "#5a2540" }}>{i.desc}</p>
-            <p style={{ margin: 0, fontSize: 10.5, color: "#c9a3b6" }}>{i.category} · {fmtDate(i.date)}</p>
+            <p style={{ margin: "0 0 2px", fontSize: 12.5, fontWeight: 700, color: "#5a2540" }}>{i.material || i.desc}{i.quantity ? ` · ${i.quantity}${i.unit}` : ""}</p>
+            <p style={{ margin: 0, fontSize: 10.5, color: "#c9a3b6" }}>{i.category}{i.desc && i.material ? ` · ${i.desc}` : ""} · {fmtDate(i.date)}</p>
           </div>
           <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: "#a3134f", flexShrink: 0 }}>-{fmtUSD(i.amount)}</p>
           <DeleteBtn onClick={() => removeInv(i.id)} />
@@ -777,13 +902,25 @@ function AgendaTab({ agenda, addAgenda, removeAgenda, togglePaid, abonar, rate }
   const [err, setErr] = useState("");
   const [abonoInputs, setAbonoInputs] = useState<Record<string, string>>({});
 
+  const [catalogTick, setCatalogTick] = useState(0);
+  const catalog = useMemo(() => getFullCatalog(), [catalogTick]);
+  const [newProdName, setNewProdName] = useState("");
+  const [newProdPrice, setNewProdPrice] = useState("");
+  const addProduct = () => {
+    const n = newProdName.trim(); const p = parseFloat(newProdPrice);
+    if (!n || !p || p <= 0) return;
+    saveCustomProduct(n, p);
+    setNewProdName(""); setNewProdPrice(""); setCatalogTick(t => t + 1);
+  };
   const toggleCategory = (cat: string) => {
     setItems(prev => prev.some(it => it.category === cat)
       ? prev.filter(it => it.category !== cat)
-      : [...prev, { category: cat, liters: 1, value: 0 }]);
+      : [...prev, { category: cat, liters: 1, value: getDefaultPrice(cat) }]);
   };
   const updateItem = (cat: string, field: "liters" | "value", value: number) => {
-    setItems(prev => prev.map(it => it.category === cat ? { ...it, [field]: value } : it));
+    setItems(prev => prev.map(it => it.category === cat
+      ? { ...it, [field]: value, ...(field === "liters" ? { value: +(value * getDefaultPrice(cat)).toFixed(2) } : {}) }
+      : it));
   };
   const totalAmount = items.reduce((a, it) => a + (Number(it.value) || 0), 0);
 
@@ -811,14 +948,19 @@ function AgendaTab({ agenda, addAgenda, removeAgenda, togglePaid, abonar, rate }
         <Field label="Teléfono"><input style={inputStyle} value={phone} onChange={e => setPhone(e.target.value)} placeholder="Teléfono (opcional)" /></Field>
         <Field label="Productos que se llevó">
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {PRODUCT_CATEGORIES.map(cat => (
-              <button key={cat} type="button" onClick={() => toggleCategory(cat)} style={{
-                border: "1px solid " + (items.some(it => it.category === cat) ? "transparent" : "#f4c2d6"),
-                background: items.some(it => it.category === cat) ? "linear-gradient(135deg,#ff8fb3,#e05485)" : "#fff",
-                color: items.some(it => it.category === cat) ? "#fff" : "#b56e89",
+            {catalog.map(p => (
+              <button key={p.name} type="button" onClick={() => toggleCategory(p.name)} style={{
+                border: "1px solid " + (items.some(it => it.category === p.name) ? "transparent" : "#f4c2d6"),
+                background: items.some(it => it.category === p.name) ? "linear-gradient(135deg,#ff8fb3,#e05485)" : "#fff",
+                color: items.some(it => it.category === p.name) ? "#fff" : "#b56e89",
                 borderRadius: 16, padding: "0.35rem 0.75rem", fontSize: 11.5, fontWeight: 700, cursor: "pointer",
-              }}>{cat}</button>
+              }}>{p.name} (${p.price})</button>
             ))}
+          </div>
+          <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+            <input style={{ ...inputStyle, flex: 2 }} placeholder="Nuevo producto" value={newProdName} onChange={e => setNewProdName(e.target.value)} />
+            <input style={{ ...inputStyle, flex: 1 }} type="number" min={0} step={0.01} placeholder="$/L" value={newProdPrice} onChange={e => setNewProdPrice(e.target.value)} />
+            <button type="button" onClick={addProduct} style={{ border: "1px solid #f4c2d6", borderRadius: 9, background: "#fff0f5", color: "#c2447a", fontSize: 11, fontWeight: 700, padding: "0 0.75rem", cursor: "pointer" }}>+</button>
           </div>
         </Field>
         {items.map(it => (
@@ -887,6 +1029,61 @@ function AgendaTab({ agenda, addAgenda, removeAgenda, togglePaid, abonar, rate }
           </div>
         </div>
       );})}
+    </>
+  );
+}
+function InvRowsEditor({ title, rows, onChange, options }: { title: string; rows: InvRow[]; onChange: (r: InvRow[]) => void; options: string[]; }) {
+  const [name, setName] = useState("");
+  const [qty, setQty] = useState("");
+  const [unit, setUnit] = useState("kg");
+  const add = () => {
+    const n = name.trim(); const q = parseFloat(qty);
+    if (!n || !q) return;
+    const idx = rows.findIndex(r => r.name.toLowerCase() === n.toLowerCase());
+    onChange(idx >= 0 ? rows.map((r, i) => i === idx ? { ...r, qty: q, unit } : r) : [...rows, { name: n, qty: q, unit }]);
+    setName(""); setQty("");
+  };
+  const remove = (n: string) => onChange(rows.filter(r => r.name !== n));
+  return (
+    <Card>
+      <p style={{ margin: "0 0 0.6rem", fontSize: 12.5, fontWeight: 700, color: "#a3134f" }}>{title}</p>
+      <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+        <input style={{ ...inputStyle, flex: 2 }} list={title + "-list"} placeholder="Nombre" value={name} onChange={e => setName(e.target.value)} />
+        <datalist id={title + "-list"}>{options.map(o => <option key={o} value={o} />)}</datalist>
+        <input style={{ ...inputStyle, flex: 1 }} type="number" min={0} step={0.01} placeholder="Cant." value={qty} onChange={e => setQty(e.target.value)} />
+        <select style={{ ...inputStyle, flex: 1 }} value={unit} onChange={e => setUnit(e.target.value)}>
+          <option value="kg">kg</option><option value="L">L</option><option value="unid">unid</option>
+        </select>
+        <button type="button" onClick={add} style={{ border: "1px solid #f4c2d6", borderRadius: 9, background: "#fff0f5", color: "#c2447a", fontSize: 11, fontWeight: 700, padding: "0 0.75rem", cursor: "pointer" }}>+</button>
+      </div>
+      {rows.length === 0 ? <p style={{ margin: 0, fontSize: 11.5, color: "#c9a3b6" }}>Sin existencias registradas</p> : rows.map(r => (
+        <div key={r.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.3rem 0", borderBottom: "1px solid #ffeaf1" }}>
+          <span style={{ fontSize: 11.5, color: "#5a2540" }}>{r.name}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 11.5, fontWeight: 700, color: "#e05485" }}>{r.qty}{r.unit}</span>
+            <DeleteBtn onClick={() => remove(r.name)} />
+          </div>
+        </div>
+      ))}
+    </Card>
+  );
+}
+
+function InventarioTab({ month, setMonth, data, onSave, loading }: {
+  month: string; setMonth: (m: string) => void;
+  data: { materiaPrima: InvRow[]; comprados: InvRow[]; elaborados: InvRow[] };
+  onSave: (d: { materiaPrima: InvRow[]; comprados: InvRow[]; elaborados: InvRow[] }) => void;
+  loading: boolean;
+}) {
+  return (
+    <>
+      <Card>
+        <Field label="Mes del inventario"><input style={inputStyle} type="month" value={month} onChange={e => setMonth(e.target.value)} /></Field>
+        {loading && <p style={{ margin: 0, fontSize: 11, color: "#c9a3b6" }}>Cargando…</p>}
+      </Card>
+      <InvRowsEditor title="Materia prima en existencia" rows={data.materiaPrima} options={getFullMaterials()} onChange={r => onSave({ ...data, materiaPrima: r })} />
+      <InvRowsEditor title="Productos terminados comprados" rows={data.comprados} options={PRODUCTOS_TERMINADOS_COMPRA} onChange={r => onSave({ ...data, comprados: r })} />
+      <InvRowsEditor title="Productos terminados elaborados aquí" rows={data.elaborados} options={getFullCatalog().map(p => p.name)} onChange={r => onSave({ ...data, elaborados: r })} />
     </>
   );
 }
