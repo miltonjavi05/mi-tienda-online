@@ -827,7 +827,7 @@ function AgendaTab({ agenda, addAgenda, removeAgenda, togglePaid, abonar, rate }
               </div>
             </div>
           </div>
-        ))}
+        ))}  
         <Field label="Método de pago (al cancelar)">
           <select style={inputStyle} value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}>
             {PAYMENT_METHODS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
