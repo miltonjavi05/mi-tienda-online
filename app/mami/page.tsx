@@ -919,7 +919,7 @@ function StatsTab({ periodId, setPeriodId, totalVentas, totalInv, ganancia, stat
         <p style={{ margin: 0, fontSize: 10.5, fontWeight: 700, color: "#c288a0" }}>PENDIENTE POR COBRAR (AGENDA)</p>
         <p style={{ margin: "3px 0 0", fontSize: 18, fontWeight: 800, color: "#e0a13a" }}>{fmtUSD(totalPendiente)}</p>
         <p style={{ margin: "2px 0 0", fontSize: 11, color: "#c9a3b6" }}>{pendientesCount} cliente(s) con pago pendiente</p>
-      </Card>
+      </Card> 
 
       <Card>
         <p style={{ margin: "0 0 0.6rem", fontSize: 12, fontWeight: 700, color: "#a3134f" }}>Ventas en este período ({statsSales.length})</p>
