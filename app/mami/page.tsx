@@ -156,6 +156,11 @@ const FRAGANCIAS = ["Lavanda", "Menta", "Cherry", "Bebés talco", "Pino", "Vaini
 const QUIMICOS = ["Nonil", "Kimicel", "Genapol", "Soda", "Cera en escama", "Tripilus", "Tripolifosfato", "Sulfónico", "Hipoclorito", "Glicerina", "Concentrado de limpia poceta", "Ácido cítrico", "Dietanolamina", "Cilicon", "Prepajen", "Butilicol", "Cocoamida", "Ácido esteárico", "Formol", "Dodigen", "Nipagin", "Metasilicato", "Sal industrial", "Nipasol", "Cloruro de benzalconio", "Alcohol cetílico", "Genamin"];
 const PRODUCTOS_TERMINADOS_COMPRA = ["Suavizante morado", "Ambientadores", "Ariel premium", "Kerosén", "Silicón", "Otros"];
 const MATERIALES_TODOS = [...FRAGANCIAS, ...QUIMICOS];
+const MATERIAL_GROUPS: { label: string; items: string[] }[] = [
+  { label: "Fragancias", items: FRAGANCIAS },
+  { label: "Químicos", items: QUIMICOS },
+  { label: "Productos terminados", items: PRODUCTOS_TERMINADOS_COMPRA },
+];
 const CUSTOM_MATERIALS_KEY = "mami_custom_materials";
 function loadCustomMaterials(): string[] {
   try { return JSON.parse(localStorage.getItem(CUSTOM_MATERIALS_KEY) || "[]"); } catch { return []; }
@@ -759,9 +764,23 @@ function InversionTab({ invs, addInv, removeInv }: {
   const [date, setDate] = useState(todayISO());
   const [err, setErr] = useState("");
 
+  const [groupIdx, setGroupIdx] = useState(0);
   const [material, setMaterial] = useState("");
+  const [newMaterial, setNewMaterial] = useState("");
   const [quantity, setQuantity] = useState("");
   const [unit, setUnit] = useState("kg");
+  const [matTick, setMatTick] = useState(0);
+  const groupOptions = useMemo(() => {
+    const base = [...MATERIAL_GROUPS[groupIdx].items];
+    const customs = loadCustomMaterials();
+    return groupIdx < 2 ? [...base, ...customs.filter(c => !MATERIALES_TODOS.includes(c))] : base;
+  }, [groupIdx, matTick]);
+  const addNewMaterial = () => {
+    const n = newMaterial.trim();
+    if (!n) return;
+    saveCustomMaterial(n);
+    setMaterial(n); setNewMaterial(""); setMatTick(t => t + 1);
+  };
   const add = () => {
     const amt = parseFloat(amount);
     if (!material.trim() || !amt || amt <= 0) { setErr("Selecciona o escribe la materia prima y un monto válido."); return; }
@@ -774,6 +793,16 @@ function InversionTab({ invs, addInv, removeInv }: {
     const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0);
     return invs.filter(i => new Date(i.date + "T00:00:00").getTime() >= d.getTime()).reduce((a, i) => a + i.amount, 0);
   }, [invs]);
+  const totalsByMaterial = useMemo(() => {
+    const map: Record<string, { amount: number; quantity: number; unit: string }> = {};
+    invs.forEach(i => {
+      const key = i.material || i.desc || "Sin nombre";
+      if (!map[key]) map[key] = { amount: 0, quantity: 0, unit: i.unit || "kg" };
+      map[key].amount += i.amount;
+      map[key].quantity += i.quantity || 0;
+    });
+    return Object.entries(map).sort((a, b) => b[1].amount - a[1].amount);
+  }, [invs]);
 
   return (
     <>
@@ -783,13 +812,31 @@ function InversionTab({ invs, addInv, removeInv }: {
       </Card>
 
       <Card>
+        <p style={{ margin: "0 0 0.5rem", fontSize: 12, fontWeight: 700, color: "#a3134f" }}>Total comprado por materia prima</p>
+        {totalsByMaterial.length === 0 ? <p style={{ margin: 0, fontSize: 11.5, color: "#c9a3b6" }}>Aún no hay compras registradas</p> : totalsByMaterial.map(([m, t]) => (
+          <div key={m} style={{ display: "flex", justifyContent: "space-between", padding: "0.3rem 0", borderBottom: "1px solid #ffeaf1" }}>
+            <span style={{ fontSize: 11.5, color: "#5a2540" }}>{m}{t.quantity ? ` · ${t.quantity}${t.unit}` : ""}</span>
+            <span style={{ fontSize: 11.5, fontWeight: 700, color: "#a3134f" }}>{fmtUSD(t.amount)}</span>
+          </div>
+        ))}
+      </Card>
+
+      <Card>
         <p style={{ margin: "0 0 0.75rem", fontSize: 13, fontWeight: 700, color: "#a3134f" }}>Registrar inversión</p>
-        <Field label="Materia prima / producto">
-          <input style={inputStyle} list="materiales-list" value={material} onChange={e => setMaterial(e.target.value)} placeholder="Selecciona o escribe una nueva" />
-          <datalist id="materiales-list">
-            {getFullMaterials().map(m => <option key={m} value={m} />)}
-            {PRODUCTOS_TERMINADOS_COMPRA.map(m => <option key={m} value={m} />)}
-          </datalist>
+        <Field label="Tipo de materia prima">
+          <select style={inputStyle} value={groupIdx} onChange={e => { setGroupIdx(Number(e.target.value)); setMaterial(""); }}>
+            {MATERIAL_GROUPS.map((g, i) => <option key={g.label} value={i}>{g.label}</option>)}
+          </select>
+        </Field>
+        <Field label="Materia prima">
+          <select style={inputStyle} value={material} onChange={e => setMaterial(e.target.value)}>
+            <option value="">Selecciona…</option>
+            {groupOptions.map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
+          <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+            <input style={{ ...inputStyle, flex: 1 }} placeholder="Agregar nueva" value={newMaterial} onChange={e => setNewMaterial(e.target.value)} />
+            <button type="button" onClick={addNewMaterial} style={{ border: "1px solid #f4c2d6", borderRadius: 9, background: "#fff0f5", color: "#c2447a", fontSize: 11, fontWeight: 700, padding: "0 0.75rem", cursor: "pointer" }}>+</button>
+          </div>
         </Field>
         <div style={{ display: "flex", gap: "0.6rem" }}>
           <Field label="Cantidad"><input style={inputStyle} type="number" min={0} step={0.01} value={quantity} onChange={e => setQuantity(e.target.value)} placeholder="0" /></Field>
