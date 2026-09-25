@@ -591,7 +591,7 @@ const GLOBAL_CSS = `
     .hr-arrow { display: none !important; }
   }
 
-  .pc, .hc, .cc { transition: transform 0.18s cubic-bezier(0.22,1,0.36,1), border-color 0.15s ease, box-shadow 0.18s cubic-bezier(0.22,1,0.36,1); backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+  .pc, .hc, .cc { transition: transform 0.18s cubic-bezier(0.22,1,0.36,1), border-color 0.15s ease, box-shadow 0.18s cubic-bezier(0.22,1,0.36,1); }
   @media(hover:hover) and (pointer:fine){
     .pc, .hc, .cc { contain: layout paint; }
   }
@@ -3837,13 +3837,13 @@ const filteredComments=useMemo(()=>{
               <div style={{height:1,background:"linear-gradient(90deg,rgba(255,255,255,0.15),transparent)"}}/>
             </div>
             <button onClick={()=>setLentesOpen(o=>!o)} style={{display:"flex",alignItems:"center",gap:"0.75rem",width:"100%",background:"none",border:"none",borderBottom:`1px solid ${C.border}`,padding:"0.7rem 0",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>
-              <div style={{width:38,height:38,borderRadius:10,overflow:"hidden",flexShrink:0,background:"#141414",border:"1px solid rgba(255,255,255,0.08)"}}>{catThumbs["LENTES"]&&<img src={optImg(catThumbs["LENTES"],80)} alt="" loading="lazy" decoding="async" style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/>}</div>
+              <div style={{width:38,height:38,borderRadius:10,overflow:"hidden",flexShrink:0,background:"#141414",border:"1px solid rgba(255,255,255,0.08)"}}>{catThumbs["LENTES"]&&<img src={optImg(catThumbs["LENTES"],80)} alt="" style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/>}</div>
               <span style={{flex:1,fontSize:14,color:"#d0d0d0",fontWeight:600,letterSpacing:0.3,textAlign:"left"}}>Lentes</span>
               {catCounts["LENTES"]>0&&<span style={{fontSize:9,color:"#333",background:"#1a1a1a",padding:"2px 7px",borderRadius:20,fontWeight:800,flexShrink:0}}>{catCounts["LENTES"]}</span>}
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#444" strokeWidth="2" style={{transition:"transform 0.22s",transform:lentesOpen?"rotate(180deg)":"rotate(0deg)",flexShrink:0}}><polyline points="6 9 12 15 18 9"/></svg>
             </button>
-            {lentesOpen&&<div style={{paddingLeft:"1rem",borderBottom:`1px solid ${C.border}`}}>{LENTES_SUBCATS.map(sub=>(<button key={sub} onClick={()=>{setShopFilter(sub);setMenuOpen(false);setMainView("shop");}} style={{display:"flex",alignItems:"center",gap:"0.6rem",width:"100%",background:"none",border:"none",padding:"0.55rem 0",textAlign:"left",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}><div style={{width:28,height:28,borderRadius:8,overflow:"hidden",flexShrink:0,background:"#141414",border:"1px solid rgba(255,255,255,0.06)"}}>{catThumbs[sub]&&<img src={optImg(catThumbs[sub],60)} alt="" loading="lazy" decoding="async" style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/>}</div><span style={{flex:1,fontSize:12.5,color:"#666"}}>{catLabel(sub)}</span>{catCounts[sub]>0&&<span style={{fontSize:9,color:"#2a2a2a",background:"#141414",padding:"1px 6px",borderRadius:10,flexShrink:0}}>{catCounts[sub]}</span>}</button>))}</div>}
-            {SHOP_CATS.filter(c=>c!=="LENTES").map(cat=>(<button key={cat} onClick={()=>{setShopFilter(cat);setMenuOpen(false);setMainView("shop");}} style={{display:"flex",alignItems:"center",gap:"0.75rem",width:"100%",background:"none",border:"none",borderBottom:`1px solid ${C.border}`,padding:"0.7rem 0",textAlign:"left",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}><div style={{width:38,height:38,borderRadius:10,overflow:"hidden",flexShrink:0,background:"#141414",border:"1px solid rgba(255,255,255,0.08)"}}>{catThumbs[cat]&&<img src={optImg(catThumbs[cat],80)} alt="" loading="lazy" decoding="async" style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/>}</div><span style={{flex:1,fontSize:14,color:"#d0d0d0",fontWeight:600,letterSpacing:0.3}}>{catLabel(cat)}</span>{catCounts[cat]>0&&<span style={{fontSize:9,color:"#333",background:"#1a1a1a",padding:"2px 7px",borderRadius:20,fontWeight:800,flexShrink:0}}>{catCounts[cat]}</span>}</button>))}
+            {lentesOpen&&<div style={{paddingLeft:"1rem",borderBottom:`1px solid ${C.border}`}}>{LENTES_SUBCATS.map(sub=>(<button key={sub} onClick={()=>{setShopFilter(sub);setMenuOpen(false);setMainView("shop");}} style={{display:"flex",alignItems:"center",gap:"0.6rem",width:"100%",background:"none",border:"none",padding:"0.55rem 0",textAlign:"left",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}><div style={{width:28,height:28,borderRadius:8,overflow:"hidden",flexShrink:0,background:"#141414",border:"1px solid rgba(255,255,255,0.06)"}}>{catThumbs[sub]&&<img src={optImg(catThumbs[sub],60)} alt="" style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/>}</div><span style={{flex:1,fontSize:12.5,color:"#666"}}>{catLabel(sub)}</span>{catCounts[sub]>0&&<span style={{fontSize:9,color:"#2a2a2a",background:"#141414",padding:"1px 6px",borderRadius:10,flexShrink:0}}>{catCounts[sub]}</span>}</button>))}</div>}
+            {SHOP_CATS.filter(c=>c!=="LENTES").map(cat=>(<button key={cat} onClick={()=>{setShopFilter(cat);setMenuOpen(false);setMainView("shop");}} style={{display:"flex",alignItems:"center",gap:"0.75rem",width:"100%",background:"none",border:"none",borderBottom:`1px solid ${C.border}`,padding:"0.7rem 0",textAlign:"left",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}><div style={{width:38,height:38,borderRadius:10,overflow:"hidden",flexShrink:0,background:"#141414",border:"1px solid rgba(255,255,255,0.08)"}}>{catThumbs[cat]&&<img src={optImg(catThumbs[cat],80)} alt="" style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/>}</div><span style={{flex:1,fontSize:14,color:"#d0d0d0",fontWeight:600,letterSpacing:0.3}}>{catLabel(cat)}</span>{catCounts[cat]>0&&<span style={{fontSize:9,color:"#333",background:"#1a1a1a",padding:"2px 7px",borderRadius:20,fontWeight:800,flexShrink:0}}>{catCounts[cat]}</span>}</button>))}
             <div style={{marginTop:"auto",paddingTop:"2rem"}}>
               {userReady&&currentUser?(
                 <div style={{marginBottom:"1rem",background:"#141414",borderRadius:10,padding:"0.85rem",border:"1px solid #1a1a1a"}}> 
@@ -5055,7 +5055,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                     <div style={{display:"flex",flexDirection:"column",gap:"0.6rem"}}>
                       {results.map(p=>(
                         <div key={p.id} style={{display:"flex",alignItems:"center",gap:"1rem",background:"linear-gradient(135deg,#141410 0%,#0d0d0a 100%)",border:"1px solid #2a4a2a",borderRadius:12,padding:"1rem"}}>
-                          <img src={optImg(p.img,800)} alt={p.name} loading="lazy" decoding="async" style={{width:140,height:140,objectFit:"cover",borderRadius:10,flexShrink:0,background:"#0a0a0a"}} draggable={false}/>
+                          <img src={optImg(p.img,800)} alt={p.name} style={{width:140,height:140,objectFit:"cover",borderRadius:10,flexShrink:0,background:"#0a0a0a"}} draggable={false}/>
                           <div style={{flex:1,minWidth:0}}>
                             <p style={{margin:"0 0 4px",fontSize:15,fontWeight:800,color:"#fff"}}>{p.name}</p>
                             <p style={{margin:"0 0 3px",fontSize:12,color:"#4caf50",fontFamily:"monospace",fontWeight:800}}>{p.code}</p>
@@ -5459,7 +5459,7 @@ if(i.zone==="otro"&&!i.cedula&&!i.nombre){
                     <div className="ts" style={{display:"flex",gap:"0.5rem",overflowX:"auto",marginBottom:"1.1rem",WebkitOverflowScrolling:"touch"}}>
                       {getAllImages(selectedProduct).map((src,i)=>(
                         <button key={i} onClick={()=>setModalImgIdx(i)} style={{flexShrink:0,width:56,height:56,borderRadius:8,overflow:"hidden",padding:0,cursor:"pointer",background:"#0a0a0a",border:`2px solid ${modalImgIdx===i?"#fff":"transparent"}`,WebkitTapHighlightColor:"transparent"}}>
-                          <img src={optImg(src,120)} alt="" loading="lazy" decoding="async" style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/>
+                          <img src={optImg(src,120)} alt="" style={{width:"100%",height:"100%",objectFit:"cover",pointerEvents:"none"}} draggable={false}/>
                         </button>
                       ))}
                     </div>
